@@ -17,6 +17,10 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
     });
   }
 
+  authorizationParams(): { [key: string]: string } {
+    return { prompt: 'login' };
+  }
+
   async validate(
     accessToken: string,
     refreshToken: string,

@@ -36,13 +36,15 @@ export function useChildren() {
       if (res.ok) {
         const data = await res.json();
         setChildren(
-          data.map((c: any) => ({
-            ...c,
-            birthDate:
-              typeof c.birthDate === 'string'
-                ? c.birthDate.slice(0, 10)
-                : c.birthDate,
-          })),
+          data
+            .map((c: any) => ({
+              ...c,
+              birthDate:
+                typeof c.birthDate === 'string'
+                  ? c.birthDate.slice(0, 10)
+                  : c.birthDate,
+            }))
+            .sort((a: Child, b: Child) => b.birthDate.localeCompare(a.birthDate)),
         );
       }
     } catch {

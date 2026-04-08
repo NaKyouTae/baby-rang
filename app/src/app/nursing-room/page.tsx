@@ -221,7 +221,14 @@ function NursingRoomContent() {
 
         {/* 선택된 수유실 정보 카드 */}
         {selectedRoom && (
+          <>
           <div
+            className="absolute inset-0 z-[5]"
+            onClick={() => setSelectedRoom(null)}
+            aria-hidden
+          />
+          <div
+            onClick={(e) => e.stopPropagation()}
             className="absolute left-4 right-4 bg-white rounded-2xl shadow-lg z-10 flex flex-col overflow-hidden"
             style={{
               bottom: "calc(env(safe-area-inset-bottom, 16px) + 88px)",
@@ -310,21 +317,8 @@ function NursingRoomContent() {
               )}
             </div>
 
-            {/* 하단 액션 바 */}
-            {selectedRoom.tel && (
-              <div className="border-t border-gray-100 px-4 py-2.5 bg-white">
-                <a
-                  href={`tel:${selectedRoom.tel}`}
-                  className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-pink-500 text-white text-sm font-semibold"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  전화하기 {selectedRoom.tel}
-                </a>
-              </div>
-            )}
           </div>
+          </>
         )}
         {/* 수유실 제보 FAB */}
         {!selectedRoom && (

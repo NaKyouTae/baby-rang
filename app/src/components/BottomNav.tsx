@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Reorder } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
+import { useLoginPrompt } from "./LoginPromptProvider";
 
-const DEFAULT_SLOTS: (MenuId | null)[] = ["growth-record", "growth-pattern", "wonder-weeks"];
+const DEFAULT_SLOTS: (MenuId | null)[] = ["nursing-room", "sleep-golden-time", null];
 const LONG_PRESS_MS = 500;
 const SLOT_COUNT = 3;
 
@@ -34,6 +35,7 @@ function sanitize(arr: unknown): (MenuId | null)[] {
 export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | null)[] } = {}) {
   const pathname = usePathname();
   const router = useRouter();
+  const { openLoginPrompt } = useLoginPrompt();
 
   const [slots, setSlots] = useState<Slot[]>(() => toSlots(initialSlots ?? DEFAULT_SLOTS));
   const [editMode, setEditMode] = useState(false);
@@ -132,6 +134,10 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     const id = slots[index].menu;
     if (id === null) {
       e.preventDefault();
+      if (!authenticated) {
+        openLoginPrompt('메뉴를 추가하려면\n로그인이 필요해요.');
+        return;
+      }
       setPickerOpen(index);
       return;
     }

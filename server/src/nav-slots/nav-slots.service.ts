@@ -10,11 +10,7 @@ const ALLOWED_MENU_IDS = new Set([
   'growth-record',
   'growth-pattern',
 ]);
-const DEFAULT_SLOTS: (string | null)[] = [
-  'nursing-room',
-  'temperament',
-  'wonder-weeks',
-];
+const DEFAULT_SLOTS: (string | null)[] = [null, null, null];
 
 type SlotsArray = (string | null)[];
 

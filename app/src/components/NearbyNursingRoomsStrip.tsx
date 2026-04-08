@@ -52,22 +52,32 @@ export default function NearbyNursingRoomsStrip() {
 
   return (
     <section>
-      <h2 className="text-sm font-bold text-gray-900 mb-2">가까운 수유실</h2>
+      <h2 className="text-[13px] font-bold text-gray-900 mb-2">가까운 수유실</h2>
       <div className="space-y-2">
-      {nearest.map((room) => (
+      {nearest.map((room, idx) => (
         <Link
           key={room.name}
           href={`/nursing-room?room=${encodeURIComponent(room.name)}`}
-          className="relative block h-12 rounded-[4px] overflow-hidden bg-white border border-gray-200"
+          className="relative block h-14 rounded-[8px] overflow-hidden bg-white border border-gray-200 active:opacity-70"
         >
           <div className="relative h-full flex items-center justify-between px-4">
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold text-gray-900 truncate">{room.name}</div>
-              <div className="text-[10px] text-gray-500 truncate">{room.address}</div>
+              <div className="flex items-center gap-1.5">
+                <div className="text-xs font-bold text-gray-900 truncate">{room.name}</div>
+                {idx === 0 && userLoc && (
+                  <span className="shrink-0 text-[9px] font-semibold text-rose-500">
+                    · 가장 가까워요
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-gray-500 truncate mt-0.5">{room.address}</div>
             </div>
             {userLoc && (
-              <div className="ml-2 text-[10px] text-gray-500 shrink-0">
-                {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
+              <div className="ml-2 shrink-0 text-right">
+                <div className="text-[11px] font-bold text-gray-900">
+                  {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
+                </div>
+                <div className="text-[9px] text-gray-400">길찾기 ›</div>
               </div>
             )}
           </div>

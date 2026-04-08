@@ -178,7 +178,7 @@ export default function ChildrenSettingsPage() {
               <button
                 onClick={handleUpdate}
                 disabled={submitting || !editName.trim() || !editGender || !editBirthDate}
-                className="w-full py-2.5 rounded-xl gradient-btn text-white text-sm font-semibold disabled:opacity-40"
+                className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-40"
               >
                 {submitting ? '저장 중...' : '저장하기'}
               </button>
@@ -303,7 +303,7 @@ export default function ChildrenSettingsPage() {
             <button
               onClick={handleAdd}
               disabled={submitting || !name.trim() || !gender || !birthDate}
-              className="w-full py-2.5 rounded-xl gradient-btn text-white text-sm font-semibold disabled:opacity-40"
+              className="w-full py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-40"
             >
               {submitting ? '등록 중...' : '저장하기'}
             </button>

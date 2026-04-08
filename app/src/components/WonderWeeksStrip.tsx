@@ -145,7 +145,7 @@ export default function WonderWeeksStrip() {
 
   return (
     <section>
-      <h2 className="text-sm font-bold text-gray-900 mb-2">우리 아이 원더윅스</h2>
+      <h2 className="text-[13px] font-bold text-gray-900 mb-2">우리 아이 원더윅스</h2>
       <div className="space-y-2">
         {children.map((child) => (
           <ChildWonderCard key={child.id} child={child} />

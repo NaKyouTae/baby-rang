@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useChildren } from "@/hooks/useChildren";
 import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
+import ConfirmModal from "@/components/ConfirmModal";
 
-const MENU_ITEMS = [
+const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
     label: "검사 이력",
     href: "/settings/history",
+    requireAuth: true,
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -21,6 +24,7 @@ const MENU_ITEMS = [
   {
     label: "결제 내역",
     href: "/settings/payments",
+    requireAuth: true,
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="5" width="20" height="14" rx="2" />
@@ -52,15 +56,70 @@ const MENU_ITEMS = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [bizOpen, setBizOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
   const { children, isLoaded } = useChildren();
-  const { isAuthenticated, isLoaded: isAuthLoaded } = useAuth();
+  const { isAuthenticated, user, isLoaded: isAuthLoaded } = useAuth();
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
-      {/* 우리아이 섹션 */}
+      {/* 사용자 정보 섹션 */}
       <section className="mx-4 mt-[max(env(safe-area-inset-top),16px)] rounded-2xl bg-white p-5 shadow-sm">
+        {!isAuthLoaded ? (
+          <div className="h-14" />
+        ) : isAuthenticated ? (
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100 overflow-hidden">
+              {user?.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt={user.nickname ?? "프로필"}
+                  className="h-14 w-14 rounded-full object-cover"
+                />
+              ) : (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-gray-900 truncate">
+                {user?.nickname ?? "아기랑 회원"}님
+              </p>
+              {user?.email && (
+                <p className="text-xs text-gray-400 mt-0.5 truncate">{user.email}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => openLoginPrompt('아기랑 서비스를 이용하려면\n로그인이 필요해요.')}
+            className="flex w-full items-center gap-4 text-left"
+          >
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-gray-900 truncate">로그인이 필요해요</p>
+              <p className="text-xs text-gray-400 mt-0.5">로그인하고 아기랑을 시작해보세요</p>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
+      </section>
+
+      {/* 우리아이 섹션 */}
+      <section className="mx-4 mt-3 rounded-2xl bg-white p-5 shadow-sm">
         {isLoaded && children.length > 0 ? (
           <>
             <h2 className="text-sm font-semibold text-gray-500 mb-3">
@@ -122,7 +181,7 @@ export default function SettingsPage() {
               if (!requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) {
                 e.preventDefault();
               } else {
-                window.location.href = "/settings/children";
+                router.push("/settings/children");
               }
             }}
             className="flex w-full items-center gap-4 text-left"
@@ -146,30 +205,47 @@ export default function SettingsPage() {
 
       {/* 메뉴 리스트 */}
       <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
-        {MENU_ITEMS.map((item, idx) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors ${
-              idx < MENU_ITEMS.length - 1 ? "border-b border-gray-100" : ""
-            }`}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
-              {item.icon}
-            </span>
-            <span className="flex-1 text-[15px] text-gray-800">{item.label}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
-        ))}
+        {MENU_ITEMS.map((item, idx) => {
+          const className = `flex items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors ${
+            idx < MENU_ITEMS.length - 1 ? "border-b border-gray-100" : ""
+          }`;
+          const inner = (
+            <>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
+                {item.icon}
+              </span>
+              <span className="flex-1 text-left text-[15px] text-gray-800">{item.label}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </>
+          );
+          if (item.requireAuth) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => {
+                  if (!requireLogin(`${item.label}을(를) 확인하려면\n로그인이 필요해요.`)) return;
+                  router.push(item.href);
+                }}
+                className={`w-full ${className}`}
+              >
+                {inner}
+              </button>
+            );
+          }
+          return (
+            <Link key={item.href} href={item.href} className={className}>
+              {inner}
+            </Link>
+          );
+        })}
       </section>
 
-      {/* 로그인 / 로그아웃 */}
-      <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
-        {!isAuthLoaded ? (
-          <div className="h-[60px]" />
-        ) : isAuthenticated ? (
+      {/* 로그아웃 (로그인 상태일 때만) */}
+      {isAuthLoaded && isAuthenticated && (
+        <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
           <button
             onClick={async () => {
               await fetch("/api/auth/logout", { method: "POST" });
@@ -186,23 +262,21 @@ export default function SettingsPage() {
             </span>
             <span className="flex-1 text-left text-[15px] text-red-500">로그아웃</span>
           </button>
-        ) : (
+        </section>
+      )}
+
+      {/* 탈퇴하기 (로그인 상태일 때만) */}
+      {isAuthLoaded && isAuthenticated && (
+        <div className="mx-4 mt-3 flex justify-center px-2">
           <button
             type="button"
-            onClick={() => openLoginPrompt('아기랑 서비스를 이용하려면\n로그인이 필요해요.')}
-            className="flex w-full items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors"
+            onClick={() => setWithdrawOpen(true)}
+            className="text-xs text-gray-400 underline underline-offset-2"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
-            </span>
-            <span className="flex-1 text-left text-[15px] text-gray-900 font-semibold">로그인</span>
+            탈퇴하기
           </button>
-        )}
-      </section>
+        </div>
+      )}
 
       {/* 사업자 정보 */}
       <section className="mx-4 mt-6">
@@ -236,6 +310,37 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        open={withdrawOpen}
+        emoji="⚠️"
+        variant="danger"
+        title={"정말 탈퇴하시겠어요?"}
+        description={
+          "탈퇴 시 우리 아이 정보, 검사 이력,\n결제 내역 등 모든 데이터가 삭제됩니다.\n삭제된 데이터는 복구할 수 없습니다."
+        }
+        confirmLabel={withdrawing ? "처리 중..." : "탈퇴하기"}
+        cancelLabel="취소"
+        onClose={() => {
+          if (!withdrawing) setWithdrawOpen(false);
+        }}
+        onConfirm={async () => {
+          if (withdrawing) return;
+          setWithdrawing(true);
+          try {
+            const res = await fetch("/api/auth/withdraw", { method: "POST" });
+            if (res.ok) {
+              window.location.href = "/home";
+            } else {
+              alert("탈퇴 처리 중 오류가 발생했어요.\n잠시 후 다시 시도해주세요.");
+              setWithdrawing(false);
+            }
+          } catch {
+            alert("탈퇴 처리 중 오류가 발생했어요.\n잠시 후 다시 시도해주세요.");
+            setWithdrawing(false);
+          }
+        }}
+      />
     </div>
   );
 }

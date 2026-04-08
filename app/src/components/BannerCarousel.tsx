@@ -45,7 +45,7 @@ export default function BannerCarousel() {
   };
 
   return (
-    <div className="relative px-5">
+    <div className="relative">
       <div
         ref={scrollerRef}
         onScroll={onScroll}
@@ -71,7 +71,7 @@ export default function BannerCarousel() {
       </div>
 
       {banners.length > 1 && (
-        <div className="absolute bottom-1.5 right-7 flex gap-1">
+        <div className="absolute bottom-1.5 right-2 flex gap-1">
           {banners.map((_, i) => (
             <span
               key={i}

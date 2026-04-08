@@ -2,9 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
-import EmptyChildState from '@/components/EmptyChildState';
 import ChildSelector from '@/components/ChildSelector';
-import ChildPickScreen from '@/components/ChildPickScreen';
 
 // 월령 계산 (개월수)
 function getAgeInMonths(birthDate: string): number {
@@ -106,11 +104,18 @@ function formatKoreanTime(hhmm: string): string {
 export default function SleepGoldenTimePage() {
   const { children, isLoaded } = useChildren();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [manualMonths, setManualMonths] = useState<number>(6);
   const [period, setPeriod] = useState<'AM' | 'PM'>('AM');
   const [hour12, setHour12] = useState<number>(7);
   const [minute, setMinute] = useState<number>(0);
 
-  const ageMonths = selectedChild ? getAgeInMonths(selectedChild.birthDate) : 0;
+  // 아이가 1명이면 자동 선택 (선택 화면 없이)
+  const effectiveChild =
+    selectedChild ?? (children.length === 1 ? children[0] : null);
+
+  const ageMonths = effectiveChild
+    ? getAgeInMonths(effectiveChild.birthDate)
+    : manualMonths;
   const wakeWindow = useMemo(() => findWindow(ageMonths), [ageMonths]);
 
   const morningWake = useMemo(() => {
@@ -158,49 +163,46 @@ export default function SleepGoldenTimePage() {
 
   if (!isLoaded) return null;
 
-  // 등록된 아이가 없으면 등록 유도
-  if (children.length === 0) {
-    return (
-      <EmptyChildState
-        emoji="🌙"
-        title="우리 아이 수면 골든타임"
-        description={
-          <>
-            아이를 등록하면<br />
-            맞춤 수면 골든타임을 확인할 수 있어요.
-          </>
-        }
-      />
-    );
-  }
-
-  // 아이 선택 전: 1명이면 자동 선택, 그 외에는 선택 화면
-  if (!selectedChild) {
-    if (children.length === 1) {
-      setSelectedChild(children[0]);
-      return null;
-    }
-    return (
-      <ChildPickScreen
-        emoji="🌙"
-        title="우리 아이 수면 골든타임"
-        description={<>골든타임을 확인할 아이를 선택해주세요.</>}
-        children={children}
-        onSelect={setSelectedChild}
-      />
-    );
-  }
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
       {/* 스티키 타이틀 바 — 다른 페이지들과 동일한 공통 ChildSelector */}
       <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">수면 골든타임</h1>
-        <ChildSelector
-          children={children}
-          selected={selectedChild}
-          onSelect={setSelectedChild}
-        />
+        {children.length > 0 && effectiveChild ? (
+          <ChildSelector
+            children={children}
+            selected={effectiveChild}
+            onSelect={setSelectedChild}
+          />
+        ) : (
+          <div className="relative">
+            <select
+              value={manualMonths}
+              onChange={(e) => setManualMonths(Number(e.target.value))}
+              className="text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-full pl-4 pr-8 py-1.5 shadow-sm appearance-none"
+              aria-label="개월 수 선택"
+            >
+              {Array.from({ length: 37 }, (_, i) => i).map((m) => (
+                <option key={m} value={m}>
+                  {m}개월
+                </option>
+              ))}
+            </select>
+            <svg
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        )}
       </div>
 
       <main className="px-4">

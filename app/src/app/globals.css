@@ -61,7 +61,7 @@ body {
 }
 
 .gradient-btn {
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-400));
+  background: var(--color-primary-500);
 }
 
 .gradient-page {
