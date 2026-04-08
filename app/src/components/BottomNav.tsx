@@ -38,6 +38,8 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   const [slots, setSlots] = useState<Slot[]>(() => toSlots(initialSlots ?? DEFAULT_SLOTS));
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState<number | null>(null);
+  // SSR로 initialSlots가 내려왔다면 이미 로그인 상태로 간주
+  const [authenticated, setAuthenticated] = useState<boolean>(!!initialSlots);
 
   const dragStartedRef = useRef(false);
   const longPressTimer = useRef<number | null>(null);
@@ -50,8 +52,9 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
       try {
         const authRes = await fetch("/api/auth/token", { cache: "no-store" });
         if (!authRes.ok) return;
-        const { authenticated } = await authRes.json();
-        if (!authenticated) return; // 비로그인 → 기본 슬롯 유지
+        const { authenticated: isAuthed } = await authRes.json();
+        if (!isAuthed) return; // 비로그인 → 기본 슬롯 유지
+        if (!cancelled) setAuthenticated(true);
         const res = await fetch("/api/nav-slots", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
@@ -106,6 +109,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   };
 
   const onSlotPointerDown = () => {
+    if (!authenticated) return; // 비로그인 → 꾹 눌러 편집 모드 진입 금지
     if (!editMode) startLongPress();
   };
 
