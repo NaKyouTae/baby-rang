@@ -48,4 +48,4 @@ USER appuser
 
 EXPOSE 18080
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
