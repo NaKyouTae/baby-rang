@@ -22,7 +22,7 @@ RUN pnpm --filter server build
 
 # server 패키지를 독립된 평평한 node_modules 로 추출 (prod deps 만)
 # → pnpm workspace 의 심링크 문제 회피
-RUN pnpm --filter server deploy --prod /prod/server
+RUN pnpm --filter server --legacy deploy --prod /prod/server
 # deploy 이후 prod deps 로 Prisma Client 재생성
 RUN cd /prod/server && pnpm exec prisma generate
 
