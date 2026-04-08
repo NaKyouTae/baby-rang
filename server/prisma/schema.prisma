@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  kakaoId       String   @unique
+  nickname      String?
+  email         String?
+  profileImage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  children      Child[]
+  payments      Payment[]
+  temperamentSubmissions TemperamentSubmission[]
+  navSlots      NavSlot[]
+  growthRecords GrowthRecord[]
+  growthQuickButtons GrowthQuickButton[]
+
+  @@map("users")
+}
+
+model Banner {
+  id          String   @id @default(uuid())
+  title       String
+  subtitle    String?
+  imageUrl    String?
+  bgColor     String?
+  linkUrl     String
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("banners")
+}
+
+model Notice {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  isPinned    Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, isPinned, publishedAt])
+  @@map("notices")
+}
+
+model NavSlot {
+  id        String   @id @default(uuid())
+  userId    String
+  position  Int
+  menuId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, position])
+  @@index([userId])
+  @@map("nav_slots")
+}
+
+enum AgeGroup {
+  newborn
+  before_first
+  after_first
+}
+
+enum SubmissionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model TemperamentSubmission {
+  id          String           @id @default(uuid())
+  userId      String
+  ageGroup    AgeGroup
+  childAge    Int?
+  status      SubmissionStatus @default(IN_PROGRESS)
+  startedAt   DateTime         @default(now())
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers TemperamentAnswer[]
+  result  TemperamentResult?
+
+  @@index([userId, createdAt])
+  @@map("temperament_submissions")
+}
+
+model TemperamentAnswer {
+  id           String   @id @default(uuid())
+  submissionId String
+  questionId   String
+  questionNo   Int
+  dimension    String
+  score        Int
+  createdAt    DateTime @default(now())
+
+  submission TemperamentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionNo])
+  @@map("temperament_answers")
+}
+
+model TemperamentResult {
+  id              String    @id @default(uuid())
+  submissionId    String    @unique
+  primaryType     String
+  primaryTypeLabel String
+  emotionModifier Boolean   @default(false)
+  isReliable      Boolean   @default(true)
+  reliabilityMsg  String?
+  scores          Json
+  summary         Json
+  freeContent     Json
+  paidContent     Json?
+  isPaid          Boolean   @default(false)
+  paymentId       String?
+  unlockedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  submission TemperamentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("temperament_results")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  PARTIAL_REFUNDED
+  REFUNDED
+}
+
+enum PaymentProductType {
+  TEMPERAMENT_REPORT
+  WONDER_WEEKS_PREMIUM
+  NURSING_ROOM_PREMIUM
+  OTHER
+}
+
+model Payment {
+  id              String             @id @default(uuid())
+  userId          String
+  childId         String?
+  orderId         String             @unique
+  productType     PaymentProductType
+  productName     String
+  productMeta     Json?
+  amount          Int
+  taxFreeAmount   Int                @default(0)
+  vatAmount       Int                @default(0)
+  discountAmount  Int                @default(0)
+  currency        String             @default("KRW")
+  status          PaymentStatus      @default(PENDING)
+  provider        String
+  method          String?
+  paymentKey      String?            @unique
+  transactionId   String?
+  receiptUrl      String?
+  cardCompany     String?
+  cardNumberMask  String?
+  cardInstallment Int?
+  buyerName       String?
+  buyerEmail      String?
+  buyerTel        String?
+  failureCode     String?
+  failureMessage  String?
+  rawRequest      Json?
+  rawResponse     Json?
+  metadata        Json?
+  ipAddress       String?
+  userAgent       String?
+  requestedAt     DateTime           @default(now())
+  approvedAt      DateTime?
+  cancelledAt     DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child           Child?             @relation(fields: [childId], references: [id], onDelete: SetNull)
+  events          PaymentEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([productType])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id          String   @id @default(uuid())
+  paymentId   String
+  type        String
+  status      PaymentStatus
+  amount      Int?
+  reason      String?
+  payload     Json?
+  createdAt   DateTime @default(now())
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, createdAt])
+  @@map("payment_events")
+}
+
+model Child {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  gender        String
+  birthDate     DateTime @db.Date
+  profileImage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  growthRecords GrowthRecord[]
+
+  @@map("children")
+}
+
+enum GrowthRecordType {
+  BREASTFEEDING
+  FORMULA
+  BABY_FOOD
+  SLEEP
+  PUMPED_FEEDING
+  PUMPING
+  BATH
+  HOSPITAL
+  TEMPERATURE
+  MEDICATION
+  DIAPER
+  SNACK
+  MILK
+  WATER
+  PLAY
+  TUMMY_TIME
+  ETC
+}
+
+model GrowthRecord {
+  id        String           @id @default(uuid())
+  userId    String
+  childId   String
+  type      GrowthRecordType
+  startAt   DateTime
+  endAt     DateTime?
+  memo      String?
+  imageUrl  String?
+  imageUrls String[] @default([])
+  data      Json?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, startAt])
+  @@index([userId, startAt])
+  @@map("growth_records")
+}
+
+enum NursingRoomReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model NursingRoomReport {
+  id             String                  @id @default(uuid())
+  userId         String?
+  name           String
+  type           String
+  sido           String
+  sigungu        String?
+  roadAddress    String
+  detailLocation String?
+  tel            String?
+  dadAvailable   Boolean                 @default(false)
+  facilities     String[]                @default([])
+  openHours      String?
+  notes          String?
+  reporterName   String?
+  lat            Float?
+  lng            Float?
+  status         NursingRoomReportStatus @default(PENDING)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([status, createdAt])
+  @@map("nursing_room_reports")
+}
+
+model GrowthQuickButton {
+  id        String           @id @default(uuid())
+  userId    String
+  type      GrowthRecordType
+  position  Int
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@unique([userId, position])
+  @@index([userId])
+  @@map("growth_quick_buttons")
+}

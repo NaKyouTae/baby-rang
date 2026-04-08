@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Build
+dist/
+build/
+
+# Server
+server/dist/
+server/node_modules/
+server/generated/
+
+# Next.js
+.next/
+**/.next/
+app/.next/
+app/out/
+app/node_modules/
+admin/.next/
+admin/out/
+admin/node_modules/

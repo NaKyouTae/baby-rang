@@ -1,0 +1,15 @@
+{
+  "name": "baby-rang",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n server,app,admin -c blue,green,magenta \"pnpm dev:server\" \"wait-on tcp:18080 && pnpm dev:app\" \"wait-on tcp:18080 && pnpm dev:admin\"",
+    "dev:server": "pnpm --filter server start:dev",
+    "dev:app": "pnpm --filter app dev",
+    "dev:admin": "pnpm --filter admin dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "wait-on": "^9.0.4"
+  }
+}

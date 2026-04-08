@@ -1,0 +1,106 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from './useAuth';
+import { useLoginPrompt } from '@/components/LoginPromptProvider';
+
+export type Gender = 'male' | 'female';
+
+export const GENDER_LABEL: Record<Gender, string> = {
+  male: '남자',
+  female: '여자',
+};
+
+export interface Child {
+  id: string;
+  name: string;
+  gender: string;
+  birthDate: string; // YYYY-MM-DD
+  profileImage?: string | null;
+}
+
+export function useChildren() {
+  const { isAuthenticated, isLoaded: authLoaded } = useAuth();
+  const { requireLogin } = useLoginPrompt();
+  const [children, setChildren] = useState<Child[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const fetchChildren = useCallback(async () => {
+    if (!isAuthenticated) {
+      setChildren([]);
+      setIsLoaded(true);
+      return;
+    }
+    try {
+      const res = await fetch('/api/children');
+      if (res.ok) {
+        const data = await res.json();
+        setChildren(
+          data.map((c: any) => ({
+            ...c,
+            birthDate:
+              typeof c.birthDate === 'string'
+                ? c.birthDate.slice(0, 10)
+                : c.birthDate,
+          })),
+        );
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!authLoaded) return;
+    fetchChildren();
+  }, [fetchChildren, authLoaded]);
+
+  const addChild = useCallback(
+    async (name: string, gender: string, birthDate: string, profileImage?: File) => {
+      if (!requireLogin()) return;
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('gender', gender);
+      formData.append('birthDate', birthDate);
+      if (profileImage) formData.append('profileImage', profileImage);
+
+      const res = await fetch('/api/children', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) await fetchChildren();
+    },
+    [fetchChildren, requireLogin],
+  );
+
+  const updateChild = useCallback(
+    async (id: string, name: string, gender: string, birthDate: string, profileImage?: File) => {
+      if (!requireLogin()) return;
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('gender', gender);
+      formData.append('birthDate', birthDate);
+      if (profileImage) formData.append('profileImage', profileImage);
+
+      const res = await fetch(`/api/children/${id}`, {
+        method: 'PUT',
+        body: formData,
+      });
+      if (res.ok) await fetchChildren();
+    },
+    [fetchChildren, requireLogin],
+  );
+
+  const removeChild = useCallback(
+    async (id: string) => {
+      if (!requireLogin()) return;
+      const res = await fetch(`/api/children/${id}`, { method: 'DELETE' });
+      if (res.ok) await fetchChildren();
+    },
+    [fetchChildren, requireLogin],
+  );
+
+  return { children, isLoaded, addChild, removeChild, updateChild };
+}

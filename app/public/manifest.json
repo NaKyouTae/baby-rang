@@ -1,0 +1,8 @@
+{
+  "name": "아기랑",
+  "short_name": "아기랑",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff"
+}

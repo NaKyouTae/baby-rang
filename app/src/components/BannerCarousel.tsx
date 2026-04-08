@@ -1,0 +1,87 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+
+export type Banner = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  imageUrl: string | null;
+  bgColor: string | null;
+  linkUrl: string;
+};
+
+export default function BannerCarousel() {
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [index, setIndex] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/banners", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setBanners(d.banners ?? []))
+      .catch(() => setBanners([]));
+  }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const id = setInterval(() => {
+      const next = (index + 1) % banners.length;
+      el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+    }, 4000);
+    return () => clearInterval(id);
+  }, [banners.length, index]);
+
+  if (banners.length === 0) return null;
+
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== index) setIndex(i);
+  };
+
+  return (
+    <div className="relative px-5">
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide rounded-[4px]"
+      >
+        {banners.map((b) => (
+          <Link
+            key={b.id}
+            href={b.linkUrl}
+            className="relative shrink-0 w-full snap-center h-14 overflow-hidden"
+            style={{ backgroundColor: b.bgColor ?? "#4b5563" }}
+          >
+            {b.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={b.imageUrl}
+                alt={b.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {banners.length > 1 && (
+        <div className="absolute bottom-1.5 right-7 flex gap-1">
+          {banners.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1 rounded-full transition-all ${
+                i === index ? "w-3 bg-white" : "w-1 bg-white/50"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
