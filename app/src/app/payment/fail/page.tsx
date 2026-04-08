@@ -1,9 +1,17 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 
 export default function PaymentFailPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+      <PaymentFailContent />
+    </Suspense>
+  );
+}
+
+function PaymentFailContent() {
   const router = useRouter();
   const search = useSearchParams();
   const calledRef = useRef(false);

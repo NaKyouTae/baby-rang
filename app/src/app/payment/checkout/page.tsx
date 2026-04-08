@@ -2,7 +2,7 @@
 
 import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 const CLIENT_KEY =
   process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
@@ -13,7 +13,7 @@ type ProductType =
   | 'NURSING_ROOM_PREMIUM'
   | 'OTHER';
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const search = useSearchParams();
 
@@ -148,6 +148,14 @@ export default function CheckoutPage() {
         {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
       </button>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
 

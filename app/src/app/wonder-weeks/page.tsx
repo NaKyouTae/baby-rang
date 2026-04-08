@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_components/WonderWeeksCalendar';
@@ -9,6 +9,14 @@ import ChildPickScreen from '@/components/ChildPickScreen';
 import EmptyChildState from '@/components/EmptyChildState';
 
 export default function WonderWeeksPage() {
+  return (
+    <Suspense fallback={null}>
+      <WonderWeeksContent />
+    </Suspense>
+  );
+}
+
+function WonderWeeksContent() {
   const { children, isLoaded } = useChildren();
   const searchParams = useSearchParams();
   const childIdParam = searchParams.get('childId');
