@@ -19,7 +19,12 @@ services:
         sync: false
       # JWT
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      # Client (웹앱 URL)
+      - key: CLIENT_URL
+        value: https://baby-rang.spectrify.kr
       # Kakao OAuth
       - key: KAKAO_CLIENT_ID
         sync: false
@@ -27,12 +32,24 @@ services:
         sync: false
       - key: KAKAO_CALLBACK_URL
         sync: false
-      # S3 (이미지 업로드용)
-      - key: AWS_REGION
+      # Supabase S3 (이미지 업로드용)
+      - key: SUPABASE_ACCESS_KEY
         sync: false
-      - key: AWS_ACCESS_KEY_ID
+      - key: SUPABASE_SECRET_KEY
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+      - key: SUPABASE_S3_ENDPOINT
+        value: https://lcsaxyxgfojwosdicddy.supabase.co/storage/v1/s3
+      - key: SUPABASE_S3_BUCKET
+        value: baby-rang
+      - key: SUPABASE_PUBLIC_URL
+        value: https://lcsaxyxgfojwosdicddy.supabase.co/storage/v1/object/public
+      # Admin
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: ADMIN_USERNAME
         sync: false
-      - key: S3_BUCKET
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Toss Payments
+      - key: TOSS_SECRET_KEY
         sync: false

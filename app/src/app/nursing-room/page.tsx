@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReportSheet, { NursingRoomReport } from "./ReportSheet";
 
@@ -35,7 +35,7 @@ declare global {
   }
 }
 
-export default function NursingRoomPage() {
+function NursingRoomContent() {
   const searchParams = useSearchParams();
   const initialRoomName = searchParams.get("room");
   const mapRef = useRef<HTMLDivElement>(null);
@@ -355,5 +355,13 @@ export default function NursingRoomPage() {
         <ReportSheet onClose={() => setShowReport(false)} onSubmit={handleReportSubmit} />
       )}
     </div>
+  );
+}
+
+export default function NursingRoomPage() {
+  return (
+    <Suspense fallback={<div className="h-dvh bg-gray-50" />}>
+      <NursingRoomContent />
+    </Suspense>
   );
 }
