@@ -1,0 +1,46 @@
+# ── Build Stage ──
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache libc6-compat openssl
+RUN corepack enable
+
+WORKDIR /build
+
+# pnpm workspace 매니페스트 (의존성 캐시 레이어)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY server/package.json server/package.json
+
+RUN pnpm install --filter server... --frozen-lockfile
+
+# 소스 복사 및 빌드
+COPY server server
+RUN pnpm --filter server exec prisma generate
+RUN pnpm --filter server build
+
+# 프로덕션 의존성만 다시 설치
+RUN pnpm install --filter server... --frozen-lockfile --prod
+RUN pnpm --filter server exec prisma generate
+
+# ── Runtime Stage ──
+FROM node:20-alpine
+
+RUN apk add --no-cache tzdata openssl
+ENV TZ=Asia/Seoul
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+WORKDIR /app
+
+COPY --from=builder /build/server/dist ./dist
+COPY --from=builder /build/server/node_modules ./node_modules
+COPY --from=builder /build/server/package.json ./package.json
+COPY --from=builder /build/server/prisma ./prisma
+
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 18080
+
+CMD ["node", "dist/main.js"]

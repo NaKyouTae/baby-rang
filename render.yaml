@@ -1,0 +1,38 @@
+services:
+  # ── 아기랑 NestJS Backend ──
+  - type: web
+    name: baby-rang-server
+    env: docker
+    region: singapore
+    plan: starter
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile.render
+    envVars:
+      # Render 포트 (NestJS main.ts의 process.env.PORT 와 일치)
+      - key: PORT
+        value: "18080"
+      - key: NODE_ENV
+        value: production
+      # PostgreSQL 연결 (Supabase 등 외부 DB, Dashboard에서 직접 입력)
+      - key: DATABASE_URL
+        sync: false
+      # JWT
+      - key: JWT_SECRET
+        sync: false
+      # Kakao OAuth
+      - key: KAKAO_CLIENT_ID
+        sync: false
+      - key: KAKAO_CLIENT_SECRET
+        sync: false
+      - key: KAKAO_CALLBACK_URL
+        sync: false
+      # S3 (이미지 업로드용)
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET
+        sync: false
