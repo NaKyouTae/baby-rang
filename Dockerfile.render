@@ -48,4 +48,4 @@ USER appuser
 
 EXPOSE 18080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "echo '--- running prisma migrate deploy ---' && node node_modules/prisma/build/index.js migrate deploy && echo '--- starting nest server ---' && node dist/src/main.js"]
