@@ -8,6 +8,15 @@ services:
     branch: main
     autoDeploy: true
     dockerfilePath: ./Dockerfile.render
+    # server 폴더 및 Docker/Render 설정 파일 변경시에만 배포
+    buildFilter:
+      paths:
+        - server/**
+        - Dockerfile.render
+        - render.yaml
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - package.json
     envVars:
       # Render 포트 (NestJS main.ts의 process.env.PORT 와 일치)
       - key: PORT
