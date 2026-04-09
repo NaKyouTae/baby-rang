@@ -29,7 +29,7 @@ export default function SettingsTermsPage() {
         <section>
           <h2 className="text-[15px] font-semibold text-gray-900 mb-2">제1조 (목적)</h2>
           <p>
-            본 약관은 아기랑(이하 &quot;회사&quot;)이 제공하는 모바일 웹 서비스 &quot;아기랑&quot;(이하
+            본 약관은 스펙트럼(이하 &quot;회사&quot;)이 제공하는 모바일 웹 서비스 &quot;아기랑&quot;(이하
             &quot;서비스&quot;)의 이용과 관련하여 회사와 이용자(이하 &quot;회원&quot;) 간의 권리, 의무
             및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
           </p>
@@ -119,8 +119,10 @@ export default function SettingsTermsPage() {
           </ol>
         </section>
 
-        <section className="pt-4 border-t border-gray-200">
+        <section className="pt-4 border-t border-gray-200 space-y-1">
           <p className="text-xs text-gray-400">부칙: 본 약관은 2026년 4월 8일부터 시행됩니다.</p>
+          <p className="text-xs text-gray-400">사업자명: 스펙트럼 | 대표자: 나규태 | 사업자등록번호: 244-20-02381</p>
+          <p className="text-xs text-gray-400">고객센터: spectrum.mesh@gmail.com</p>
         </section>
       </article>
     </div>

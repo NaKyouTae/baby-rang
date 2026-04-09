@@ -54,6 +54,16 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     ),
   },
   {
+    label: "환불정책",
+    href: "/settings/refund",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7" />
+        <polyline points="3 4 3 10 9 10" />
+      </svg>
+    ),
+  },
+  {
     label: "개인정보처리방침",
     href: "/settings/privacy",
     icon: (
