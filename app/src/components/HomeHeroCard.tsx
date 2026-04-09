@@ -224,7 +224,7 @@ function ChildHeroCard({
 
   return (
     <div className="rounded-2xl overflow-hidden bg-white border border-rose-100 shadow-[0_8px_24px_-12px_rgba(244,63,94,0.25)] ring-1 ring-rose-50">
-      <Link href="/growth-record" className="block active:opacity-95">
+      <div>
         {/* 프로필 헤더 — 그라데이션 강조 */}
         <div className="relative px-5 pt-5 pb-4 bg-gradient-to-br from-rose-50 via-white to-amber-50">
           <div className="flex items-center gap-3.5">
@@ -297,7 +297,7 @@ function ChildHeroCard({
         </div>
 
         {/* 오늘의 통계 */}
-        <div className="px-4 py-4 bg-white">
+        <Link href="/growth-record" className="block px-4 py-4 bg-white active:opacity-95">
           <div className="grid grid-cols-3 gap-2">
             <StatCell
               icon="🍼"
@@ -318,8 +318,8 @@ function ChildHeroCard({
               sub={stats ? formatLastTime(stats.lastDiaperAt) : '—'}
             />
           </div>
-        </div>
-      </Link>
+        </Link>
+      </div>
 
 
       {/* 원더윅스 영역 */}
@@ -523,7 +523,7 @@ function BirthYearModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40"
       onClick={onClose}
     >
       <div
@@ -560,7 +560,7 @@ function BirthYearModal({
           type="button"
           onClick={handleSave}
           disabled={!year || submitting}
-          className="mt-5 w-full py-3.5 rounded-2xl bg-rose-500 text-white text-sm font-bold disabled:opacity-40"
+          className="mt-5 w-full py-3.5 rounded-2xl bg-[#111] text-white text-sm font-bold disabled:opacity-40"
         >
           {submitting ? '저장 중...' : '저장하기'}
         </button>
