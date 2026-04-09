@@ -10,13 +10,7 @@ interface NursingRoom {
   lng: number;
 }
 
-const SAMPLE_NURSING_ROOMS: NursingRoom[] = [
-  { name: "서울역 수유실", address: "서울특별시 용산구 한강대로 405", lat: 37.5547, lng: 126.9707 },
-  { name: "시청역 수유실", address: "서울특별시 중구 세종대로 110", lat: 37.5666, lng: 126.9784 },
-  { name: "강남역 수유실", address: "서울특별시 강남구 강남대로 396", lat: 37.4979, lng: 127.0276 },
-  { name: "잠실역 수유실", address: "서울특별시 송파구 올림픽로 지하 265", lat: 37.5133, lng: 127.1001 },
-  { name: "홍대입구역 수유실", address: "서울특별시 마포구 양화로 160", lat: 37.5571, lng: 126.9236 },
-];
+type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -31,31 +25,70 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
 
 export default function NearbyNursingRoomsStrip() {
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
-  const [rooms, setRooms] = useState<NursingRoom[]>(SAMPLE_NURSING_ROOMS);
+  const [locStatus, setLocStatus] = useState<LocStatus>("idle");
+  const [rooms, setRooms] = useState<NursingRoom[]>([]);
+  const [roomsLoaded, setRoomsLoaded] = useState(false);
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setUserLoc({ lat: 37.5666, lng: 126.9784 });
+  const requestLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocStatus("unsupported");
       return;
     }
+    setLocStatus("loading");
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setUserLoc({ lat: 37.5666, lng: 126.9784 })
+      (pos) => {
+        setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocStatus("granted");
+      },
+      () => setLocStatus("denied"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
+  };
+
+  useEffect(() => {
+    requestLocation();
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/nursing-rooms/public", { cache: "force-cache" });
-        if (!res.ok) return;
-        const data = await res.json();
-        const list: NursingRoom[] = (data.rooms ?? [])
-          .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
-          .map((r: any) => ({ name: r.name, address: r.address, lat: r.lat, lng: r.lng }));
-        if (!cancelled && list.length > 0) setRooms(list);
-      } catch {}
+        const [reportedRes, publicRes] = await Promise.all([
+          fetch("/api/nursing-rooms", { cache: "no-store" }).catch(() => null),
+          fetch("/api/nursing-rooms/public", { cache: "no-store" }).catch(() => null),
+        ]);
+
+        const parse = async (res: Response | null): Promise<NursingRoom[]> => {
+          if (!res || !res.ok) return [];
+          const data = await res.json().catch(() => ({}));
+          return (data.rooms ?? [])
+            .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
+            .map((r: any) => ({
+              name: r.name,
+              address: r.address ?? [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
+              lat: r.lat,
+              lng: r.lng,
+            }));
+        };
+
+        const [reported, publicList] = await Promise.all([parse(reportedRes), parse(publicRes)]);
+        const seen = new Set<string>();
+        const merged: NursingRoom[] = [];
+        for (const list of [reported, publicList]) {
+          for (const r of list) {
+            const key = `${r.name}|${r.lat.toFixed(4)}|${r.lng.toFixed(4)}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            merged.push(r);
+          }
+        }
+        if (!cancelled) {
+          setRooms(merged);
+          setRoomsLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setRoomsLoaded(true);
+      }
     })();
     return () => {
       cancelled = true;
@@ -67,11 +100,48 @@ export default function NearbyNursingRoomsStrip() {
         .map((r) => ({ ...r, dist: distanceKm(userLoc, r) }))
         .sort((a, b) => a.dist - b.dist)
         .slice(0, 3)
-    : rooms.slice(0, 3).map((r) => ({ ...r, dist: 0 }));
+    : [];
+
+  const showSkeleton = !roomsLoaded || locStatus === "loading" || locStatus === "idle";
+  const showLocationPrompt =
+    roomsLoaded && (locStatus === "denied" || locStatus === "unsupported");
+  const showEmpty = roomsLoaded && locStatus === "granted" && nearest.length === 0;
 
   return (
     <section>
       <h2 className="text-[13px] font-bold text-gray-900 mb-2">가까운 수유실</h2>
+
+      {showSkeleton && (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-14 rounded-[8px] bg-gray-100 border border-gray-200 animate-pulse"
+            />
+          ))}
+        </div>
+      )}
+
+      {showLocationPrompt && (
+        <button
+          type="button"
+          onClick={requestLocation}
+          className="w-full h-14 rounded-[8px] bg-white border border-gray-200 active:opacity-70 flex items-center justify-center gap-1.5 px-4"
+        >
+          <span className="text-xs font-semibold text-gray-900">
+            위치 권한을 허용하면 가까운 수유실을 보여드려요
+          </span>
+          <span className="text-[11px] text-gray-500">›</span>
+        </button>
+      )}
+
+      {showEmpty && (
+        <div className="h-14 rounded-[8px] bg-white border border-gray-200 flex items-center justify-center">
+          <span className="text-xs text-gray-500">주변에 등록된 수유실이 없어요</span>
+        </div>
+      )}
+
+      {!showSkeleton && !showLocationPrompt && !showEmpty && (
       <div className="space-y-2">
       {nearest.map((room, idx) => (
         <Link
@@ -103,6 +173,7 @@ export default function NearbyNursingRoomsStrip() {
         </Link>
       ))}
       </div>
+      )}
     </section>
   );
 }

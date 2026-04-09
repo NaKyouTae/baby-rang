@@ -181,7 +181,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
       map,
       draggable: true,
       icon: {
-        content: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#ec4899;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(236,72,153,0.5);border:2px solid white;">
+        content: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#111;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,0.4);border:2px solid white;">
           <div style="width:10px;height:10px;background:white;border-radius:50%;transform:rotate(45deg);"></div>
         </div>`,
         anchor: new naverNs.maps.Point(18, 36),
@@ -278,7 +278,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               <button
                 type="button"
                 onClick={confirmPickedLocation}
-                className="w-full py-3.5 rounded-2xl bg-pink-500 text-white font-semibold text-sm"
+                className="w-full py-3.5 rounded-2xl bg-gray-900 text-white font-semibold text-sm"
               >
                 이 위치로 저장
               </button>
@@ -328,7 +328,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="예: ○○백화점 본점 수유실"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
             />
           </Field>
 
@@ -341,7 +341,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
                   onClick={() => setForm({ ...form, type: t })}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                     form.type === t
-                      ? "bg-pink-500 text-white border-pink-500"
+                      ? "bg-gray-900 text-white border-gray-900"
                       : "bg-white text-gray-600 border-gray-200"
                   }`}
                 >
@@ -355,7 +355,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
             <button
               type="button"
               onClick={openPostcode}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-left flex items-center gap-2 hover:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-left flex items-center gap-2 hover:border-gray-900"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
@@ -375,7 +375,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className="mt-2 w-full px-3 py-2.5 rounded-xl border border-pink-300 bg-pink-50 text-pink-600 text-sm font-medium flex items-center justify-center gap-1.5"
+                className="mt-2 w-full px-3 py-2.5 rounded-xl border border-gray-900 bg-gray-100 text-gray-900 text-sm font-medium flex items-center justify-center gap-1.5"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
@@ -392,7 +392,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               value={form.detailLocation}
               onChange={(e) => setForm({ ...form, detailLocation: e.target.value })}
               placeholder="예: 103동 1층 로비 / 본관 3층 화장실 옆"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
             />
             <p className="mt-1 text-[11px] text-gray-400">
               동·호수, 층, 건물 내 위치를 적어주세요. 지도의 좌표는 건물 기준으로 표시돼요.
@@ -405,7 +405,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               value={form.tel}
               onChange={(e) => setForm({ ...form, tel: e.target.value })}
               placeholder="02-1234-5678"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
             />
           </Field>
 
@@ -415,7 +415,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
                 type="checkbox"
                 checked={form.dadAvailable}
                 onChange={(e) => setForm({ ...form, dadAvailable: e.target.checked })}
-                className="w-5 h-5 rounded accent-pink-500"
+                className="w-5 h-5 rounded accent-gray-900"
               />
               <span className="text-sm text-gray-700">아빠도 함께 이용할 수 있어요</span>
             </label>
@@ -432,7 +432,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
                     onClick={() => toggleFacility(f)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                       on
-                        ? "bg-pink-50 text-pink-600 border-pink-300"
+                        ? "bg-gray-100 text-gray-900 border-gray-400"
                         : "bg-white text-gray-600 border-gray-200"
                     }`}
                   >
@@ -450,7 +450,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               value={form.openHours}
               onChange={(e) => setForm({ ...form, openHours: e.target.value })}
               placeholder="예: 평일 10:00 ~ 20:00"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
             />
           </Field>
 
@@ -460,7 +460,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="청결도, 분위기, 주의사항 등을 자유롭게 적어주세요"
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400 resize-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900 resize-none"
             />
           </Field>
 
@@ -470,7 +470,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               value={form.reporterName}
               onChange={(e) => setForm({ ...form, reporterName: e.target.value })}
               placeholder="아기랑 회원님"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
             />
           </Field>
         </div>
@@ -483,7 +483,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="w-full py-3.5 rounded-2xl bg-pink-500 text-white font-semibold text-sm disabled:bg-gray-200 disabled:text-gray-400"
+            className="w-full py-3.5 rounded-2xl bg-gray-900 text-white font-semibold text-sm disabled:bg-gray-200 disabled:text-gray-400"
           >
             제보하기
           </button>
@@ -506,7 +506,7 @@ function Field({
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1.5">
         {label}
-        {required && <span className="text-pink-500 ml-0.5">*</span>}
+        {required && <span className="text-gray-900 ml-0.5">*</span>}
       </label>
       {children}
     </div>

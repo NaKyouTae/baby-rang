@@ -170,18 +170,44 @@ function NursingRoomContent() {
   }, []);
 
   // 현재 위치 가져오기
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        },
-        () => {
-          // 위치 권한 거부 시 서울시청 기본 좌표
-          setUserLocation({ lat: 37.5666, lng: 126.9784 });
-        }
-      );
+  const fetchUserLocation = (opts?: { panTo?: boolean; showToast?: boolean }) => {
+    if (!navigator.geolocation) {
+      if (opts?.showToast) {
+        setToast("이 기기는 위치 조회를 지원하지 않아요.");
+        setTimeout(() => setToast(null), 2500);
+      }
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        if (opts?.panTo && mapInstanceRef.current) {
+          mapInstanceRef.current.panTo(
+            new naver.maps.LatLng(loc.lat, loc.lng),
+            { duration: 600, easing: "easeOutCubic" }
+          );
+        }
+        if (opts?.showToast) {
+          setToast("내 위치를 갱신했어요.");
+          setTimeout(() => setToast(null), 2000);
+        }
+      },
+      () => {
+        if (opts?.showToast) {
+          setToast("위치 권한을 허용해주세요.");
+          setTimeout(() => setToast(null), 2500);
+          return;
+        }
+        // 최초 로드 시 권한 거부: 서울시청 기본 좌표
+        setUserLocation({ lat: 37.5666, lng: 126.9784 });
+      }
+    );
+  };
+
+  useEffect(() => {
+    fetchUserLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 지도 초기화 및 마커 표시
@@ -551,11 +577,26 @@ function NursingRoomContent() {
           </div>
           </>
         )}
+        {/* 내 위치 갱신 FAB */}
+        {!selectedRoom && (
+        <button
+          onClick={() => fetchUserLocation({ panTo: true, showToast: true })}
+          className="absolute right-4 flex items-center justify-center bg-white text-gray-900 w-11 h-11 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
+          aria-label="내 위치 갱신"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
+        </button>
+        )}
+
         {/* 수유실 제보 FAB */}
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute right-4 flex items-center gap-1.5 bg-gray-900 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute left-4 flex items-center gap-1.5 bg-gray-900 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
           aria-label="수유실 제보하기"
         >
