@@ -28,7 +28,7 @@ export default function SettingsPrivacyPage() {
 
         <section>
           <p>
-            아기랑(이하 &quot;회사&quot;)은 「개인정보 보호법」 등 관련 법령을 준수하며, 회원의 개인정보를
+            스펙트럼(이하 &quot;회사&quot;)은 「개인정보 보호법」 등 관련 법령을 준수하며, 회원의 개인정보를
             보호하기 위해 최선을 다하고 있습니다. 본 개인정보처리방침은 회사가 제공하는 서비스
             &quot;아기랑&quot;(이하 &quot;서비스&quot;)에서 회원의 개인정보를 어떻게 수집·이용·보관·파기하는지를
             안내합니다.
@@ -202,8 +202,10 @@ export default function SettingsPrivacyPage() {
           </p>
         </section>
 
-        <section className="pt-4 border-t border-gray-200">
+        <section className="pt-4 border-t border-gray-200 space-y-1">
           <p className="text-xs text-gray-400">부칙: 본 개인정보처리방침은 2026년 4월 8일부터 시행됩니다.</p>
+          <p className="text-xs text-gray-400">사업자명: 스펙트럼 | 대표자: 나규태 | 사업자등록번호: 244-20-02381</p>
+          <p className="text-xs text-gray-400">고객센터: spectrum.mesh@gmail.com</p>
         </section>
       </article>
     </div>

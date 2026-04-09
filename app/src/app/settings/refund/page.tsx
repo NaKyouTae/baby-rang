@@ -37,7 +37,7 @@ export default function SettingsRefundPage() {
         <section>
           <h2 className="text-[15px] font-semibold text-gray-900 mb-2">1. 기본 원칙</h2>
           <p>
-            아기랑(이하 &quot;회사&quot;)은 「전자상거래 등에서의 소비자보호에 관한 법률」 및 관련 법령에서 정한
+            스펙트럼(이하 &quot;회사&quot;)이 운영하는 &quot;아기랑&quot; 서비스는 「전자상거래 등에서의 소비자보호에 관한 법률」 및 관련 법령에서 정한
             회원의 권리를 보장하며, 본 환불정책에 따라 결제 취소 및 환불을 처리합니다.
           </p>
         </section>
@@ -116,8 +116,10 @@ export default function SettingsRefundPage() {
           </p>
         </section>
 
-        <section className="pt-4 border-t border-gray-200">
+        <section className="pt-4 border-t border-gray-200 space-y-1">
           <p className="text-xs text-gray-400">부칙: 본 환불정책은 2026년 4월 8일부터 시행됩니다.</p>
+          <p className="text-xs text-gray-400">사업자명: 스펙트럼 | 대표자: 나규태 | 사업자등록번호: 244-20-02381</p>
+          <p className="text-xs text-gray-400">고객센터: spectrum.mesh@gmail.com</p>
         </section>
       </article>
     </div>
