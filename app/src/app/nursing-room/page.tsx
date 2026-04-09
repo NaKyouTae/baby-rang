@@ -28,6 +28,26 @@ const SAMPLE_NURSING_ROOMS: NursingRoom[] = [
   { name: "홍대입구역 수유실", address: "서울특별시 마포구 양화로 160", lat: 37.5571, lng: 126.9236 },
 ];
 
+function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function formatDistance(km: number) {
+  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
+}
+
 declare const naver: any;
 declare global {
   interface Window {
@@ -519,15 +539,28 @@ function NursingRoomContent() {
                 </p>
               </div>
 
-              {/* 전화번호 */}
-              {selectedRoom.tel && (
-                <div className="flex items-start gap-1.5 mt-1.5">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  <a href={`tel:${selectedRoom.tel}`} className="text-sm text-gray-600 underline decoration-gray-300 underline-offset-2">
-                    {selectedRoom.tel}
-                  </a>
+              {/* 전화번호 + 거리 */}
+              {(selectedRoom.tel || userLocation) && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  {selectedRoom.tel && (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <a href={`tel:${selectedRoom.tel}`} className="text-sm text-gray-600 underline decoration-gray-300 underline-offset-2">
+                        {selectedRoom.tel}
+                      </a>
+                    </>
+                  )}
+                  {userLocation && (
+                    <span className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-gray-900 whitespace-nowrap">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                        <circle cx="12" cy="9" r="2.5" />
+                      </svg>
+                      {formatDistance(distanceKm(userLocation, { lat: selectedRoom.lat, lng: selectedRoom.lng }))}
+                    </span>
+                  )}
                 </div>
               )}
 
