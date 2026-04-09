@@ -2,11 +2,15 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import SplashProvider from "@/components/SplashProvider";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
+import AdSenseScript from "@/components/ads/AdSenseScript";
 
 export const metadata: Metadata = {
   title: "아기랑",
   description: "우리 아기의 모든 순간",
   manifest: "/manifest.json",
+  verification: {
+    google: "7Z5qXHvXmaZVGUrCaUMCuRR5uMGbTCBwG8-fSJMouLE",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -34,6 +38,7 @@ export default function RootLayout({
           <SplashProvider>
             <LoginPromptProvider>{children}</LoginPromptProvider>
           </SplashProvider>
+          <AdSenseScript />
         </div>
       </body>
     </html>
