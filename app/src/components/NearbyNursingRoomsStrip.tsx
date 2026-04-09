@@ -31,6 +31,7 @@ function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: numb
 
 export default function NearbyNursingRoomsStrip() {
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [rooms, setRooms] = useState<NursingRoom[]>(SAMPLE_NURSING_ROOMS);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -43,12 +44,30 @@ export default function NearbyNursingRoomsStrip() {
     );
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/nursing-rooms/public", { cache: "force-cache" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const list: NursingRoom[] = (data.rooms ?? [])
+          .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
+          .map((r: any) => ({ name: r.name, address: r.address, lat: r.lat, lng: r.lng }));
+        if (!cancelled && list.length > 0) setRooms(list);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const nearest = userLoc
-    ? [...SAMPLE_NURSING_ROOMS]
+    ? [...rooms]
         .map((r) => ({ ...r, dist: distanceKm(userLoc, r) }))
         .sort((a, b) => a.dist - b.dist)
         .slice(0, 3)
-    : SAMPLE_NURSING_ROOMS.slice(0, 3).map((r) => ({ ...r, dist: 0 }));
+    : rooms.slice(0, 3).map((r) => ({ ...r, dist: 0 }));
 
   return (
     <section>

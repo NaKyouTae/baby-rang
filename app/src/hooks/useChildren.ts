@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
+import { toKstYmd } from '@/lib/childAge';
 
 export type Gender = 'male' | 'female';
 
@@ -39,10 +40,7 @@ export function useChildren() {
           data
             .map((c: any) => ({
               ...c,
-              birthDate:
-                typeof c.birthDate === 'string'
-                  ? c.birthDate.slice(0, 10)
-                  : c.birthDate,
+              birthDate: toKstYmd(c.birthDate),
             }))
             .sort((a: Child, b: Child) => b.birthDate.localeCompare(a.birthDate)),
         );

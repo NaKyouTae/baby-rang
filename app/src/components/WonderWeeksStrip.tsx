@@ -2,6 +2,12 @@
 
 import Link from 'next/link';
 import { useChildren, type Child } from '@/hooks/useChildren';
+import {
+  calcChildAge,
+  kstYmdToLocalMidnight,
+  toKstYmd,
+  todayKstYmd,
+} from '@/lib/childAge';
 
 // 원더윅스 폭풍(fussy) 기간 — 출생일 기준 주차 범위
 const WONDER_WEEKS_LEAPS = [
@@ -35,16 +41,12 @@ function diffDays(a: Date, b: Date) {
   return Math.round((a0 - b0) / MS_PER_DAY);
 }
 
-function calcAgeLabel(birthDate: Date, today: Date) {
-  let years = today.getFullYear() - birthDate.getFullYear();
-  let months = today.getMonth() - birthDate.getMonth();
-  if (today.getDate() < birthDate.getDate()) months--;
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-  if (years > 0) return `${years}세 ${months}개월`;
-  return `${months}개월`;
+function calcAgeLabel(birthDate: string): string {
+  const { months } = calcChildAge(birthDate);
+  const years = Math.floor(months / 12);
+  const mo = months % 12;
+  if (years > 0) return `${years}세 ${mo}개월`;
+  return `${mo}개월`;
 }
 
 interface LeapStatus {
@@ -76,10 +78,10 @@ function getLeapStatus(birthDate: Date, today: Date): LeapStatus {
 }
 
 function ChildWonderCard({ child }: { child: Child }) {
-  const today = new Date();
-  const birth = new Date(child.birthDate + 'T00:00:00');
+  const today = kstYmdToLocalMidnight(todayKstYmd());
+  const birth = kstYmdToLocalMidnight(toKstYmd(child.birthDate));
   const { current, next } = getLeapStatus(birth, today);
-  const ageLabel = calcAgeLabel(birth, today);
+  const ageLabel = calcAgeLabel(child.birthDate);
 
   return (
     <Link

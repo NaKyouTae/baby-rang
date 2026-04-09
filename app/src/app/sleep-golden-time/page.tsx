@@ -3,14 +3,11 @@
 import { useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
+import { calcChildAge } from '@/lib/childAge';
 
-// 월령 계산 (개월수)
+// 월령 계산 (KST 기준, 공통 함수 사용)
 function getAgeInMonths(birthDate: string): number {
-  const birth = new Date(birthDate);
-  const now = new Date();
-  let months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
-  if (now.getDate() < birth.getDate()) months -= 1;
-  return Math.max(months, 0);
+  return calcChildAge(birthDate).months;
 }
 
 type WakeWindow = {

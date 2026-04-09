@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 
 export interface WonderWeeksCalendarHandle {
   scrollToToday: () => void;
@@ -121,7 +122,10 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
   { birthDate },
   ref,
 ) {
-  const birth = useMemo(() => new Date(birthDate + 'T00:00:00'), [birthDate]);
+  const birth = useMemo(
+    () => kstYmdToLocalMidnight(toKstYmd(birthDate)),
+    [birthDate],
+  );
   const todayRef = useRef<HTMLDivElement | null>(null);
 
   useImperativeHandle(ref, () => ({

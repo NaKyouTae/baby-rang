@@ -39,7 +39,10 @@ function NursingRoomContent() {
   const searchParams = useSearchParams();
   const initialRoomName = searchParams.get("room");
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<NursingRoom | null>(
     initialRoomName
       ? SAMPLE_NURSING_ROOMS.find((r) => r.name === initialRoomName) ?? null
@@ -78,33 +81,60 @@ function NursingRoomContent() {
     }
   };
 
-  // 승인된 수유실 목록 로드 (DB + 샘플 병합)
+  // 승인된 수유실 목록 로드 (제보 DB + sooyusil 오픈 API + 샘플 병합)
   const loadRooms = async () => {
     try {
-      const res = await fetch("/api/nursing-rooms", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      const list: NursingRoom[] = (data.rooms ?? [])
-        .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
-        .map((r: any) => ({
+      const [reportedRes, publicRes] = await Promise.all([
+        fetch("/api/nursing-rooms", { cache: "no-store" }).catch(() => null),
+        fetch("/api/nursing-rooms/public", { cache: "no-store" }).catch(() => null),
+      ]);
+
+      let reported: NursingRoom[] = [];
+      if (reportedRes && reportedRes.ok) {
+        const data = await reportedRes.json();
+        reported = (data.rooms ?? [])
+          .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
+          .map((r: any) => ({
+            name: r.name,
+            address: [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
+            lat: r.lat,
+            lng: r.lng,
+            tel: r.tel ?? undefined,
+            type: r.type ?? undefined,
+            detailLocation: r.detailLocation ?? undefined,
+            dadAvailable: !!r.dadAvailable,
+            facilities: Array.isArray(r.facilities) ? r.facilities : [],
+            openHours: r.openHours ?? undefined,
+            notes: r.notes ?? undefined,
+            reporterName: r.reporterName ?? undefined,
+          }));
+      }
+
+      let publicList: NursingRoom[] = [];
+      if (publicRes && publicRes.ok) {
+        const data = await publicRes.json();
+        publicList = (data.rooms ?? []).map((r: any) => ({
           name: r.name,
-          address: [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
+          address: [r.address, r.detailLocation].filter(Boolean).join(" "),
           lat: r.lat,
           lng: r.lng,
           tel: r.tel ?? undefined,
           type: r.type ?? undefined,
           detailLocation: r.detailLocation ?? undefined,
           dadAvailable: !!r.dadAvailable,
-          facilities: Array.isArray(r.facilities) ? r.facilities : [],
-          openHours: r.openHours ?? undefined,
-          notes: r.notes ?? undefined,
-          reporterName: r.reporterName ?? undefined,
         }));
-      // 이름 기준 중복 제거(샘플 우선 제거)
-      const merged = [
-        ...list,
-        ...SAMPLE_NURSING_ROOMS.filter((s) => !list.some((r) => r.name === s.name)),
-      ];
+      }
+
+      // 이름 기준 중복 제거: 제보 DB > 오픈 API > 샘플
+      const seen = new Set<string>();
+      const merged: NursingRoom[] = [];
+      for (const list of [reported, publicList, SAMPLE_NURSING_ROOMS]) {
+        for (const r of list) {
+          if (seen.has(r.name)) continue;
+          seen.add(r.name);
+          merged.push(r);
+        }
+      }
       setRooms(merged);
     } catch (e) {
       console.error(e);
@@ -166,6 +196,7 @@ function NursingRoomContent() {
       zoom: 14,
       zoomControl: false,
     });
+    mapInstanceRef.current = map;
 
     // 컨테이너 크기가 0인 상태로 init된 경우 타일이 안 뜨는 이슈 방지
     const triggerResize = () => {
@@ -186,22 +217,132 @@ function NursingRoomContent() {
       },
     });
 
-    // 수유실 마커
-    rooms.forEach((room) => {
-      const marker = new naver.maps.Marker({
-        position: new naver.maps.LatLng(room.lat, room.lng),
-        map,
-        icon: {
-          content: `<div style="font-size:32px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">🍼</div>`,
-          anchor: new naver.maps.Point(16, 16),
-        },
+    // 줌 레벨에 따른 수유실 마커 클러스터링
+    // 낮은 줌: 격자 단위로 묶어 개수 배지, 높은 줌: 개별 👶 마커
+    let activeMarkers: any[] = [];
+    // 스케일바 500m 이하(줌 ≥ 15)면 개별, 1km 이상(줌 ≤ 14)부터 1000m 격자 병합
+    const CLUSTER_ZOOM_THRESHOLD = 15;
+    const GRID_SIZE_DEG = 1000 / 111000;
+
+    const clearMarkers = () => {
+      activeMarkers.forEach((m) => m.setMap(null));
+      activeMarkers = [];
+    };
+
+    const renderMarkers = () => {
+      clearMarkers();
+
+      // 현재 화면 범위 내 수유실만 대상으로 (약간의 여유 포함)
+      const bounds = map.getBounds();
+      const sw = bounds.getSW();
+      const ne = bounds.getNE();
+      const latPad = (ne.lat() - sw.lat()) * 0.2;
+      const lngPad = (ne.lng() - sw.lng()) * 0.2;
+      const minLat = sw.lat() - latPad;
+      const maxLat = ne.lat() + latPad;
+      const minLng = sw.lng() - lngPad;
+      const maxLng = ne.lng() + lngPad;
+      const visible = rooms.filter(
+        (r) => r.lat >= minLat && r.lat <= maxLat && r.lng >= minLng && r.lng <= maxLng
+      );
+
+      // 줌 ≥ 15 (스케일 500m 이하): 개별 마커
+      if (map.getZoom() >= CLUSTER_ZOOM_THRESHOLD) {
+        visible.forEach((room) => {
+          const marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(room.lat, room.lng),
+            map,
+            icon: {
+              content: `<div style="font-size:32px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">👶</div>`,
+              anchor: new naver.maps.Point(16, 16),
+            },
+            zIndex: 50,
+          });
+          naver.maps.Event.addListener(marker, "click", () => {
+            setSelectedRoom(room);
+            map.panTo(new naver.maps.LatLng(room.lat, room.lng));
+          });
+          activeMarkers.push(marker);
+        });
+        return;
+      }
+
+      // 줌 ≤ 14: 1000m 격자 단위로 병합
+      const gridSize = GRID_SIZE_DEG;
+      const cells = new Map<string, { lat: number; lng: number; rooms: NursingRoom[] }>();
+      visible.forEach((room) => {
+        const gx = Math.floor(room.lng / gridSize);
+        const gy = Math.floor(room.lat / gridSize);
+        const key = `${gx}:${gy}`;
+        const existing = cells.get(key);
+        if (existing) {
+          existing.lat += room.lat;
+          existing.lng += room.lng;
+          existing.rooms.push(room);
+        } else {
+          cells.set(key, { lat: room.lat, lng: room.lng, rooms: [room] });
+        }
       });
 
-      naver.maps.Event.addListener(marker, "click", () => {
-        setSelectedRoom(room);
-        map.panTo(new naver.maps.LatLng(room.lat, room.lng));
+      cells.forEach((cell) => {
+        const count = cell.rooms.length;
+        const centerLat = cell.lat / count;
+        const centerLng = cell.lng / count;
+
+        if (count === 1) {
+          const room = cell.rooms[0];
+          const marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(room.lat, room.lng),
+            map,
+            icon: {
+              content: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">👶</div>`,
+              anchor: new naver.maps.Point(13, 13),
+            },
+            zIndex: 50,
+          });
+          naver.maps.Event.addListener(marker, "click", () => {
+            setSelectedRoom(room);
+            map.panTo(new naver.maps.LatLng(room.lat, room.lng));
+          });
+          activeMarkers.push(marker);
+          return;
+        }
+
+        // 개수에 따라 크기 스케일
+        const size = count >= 100 ? 56 : count >= 30 ? 48 : count >= 10 ? 42 : 36;
+        const fontSize = count >= 100 ? 14 : count >= 10 ? 13 : 12;
+        const cluster = new naver.maps.Marker({
+          position: new naver.maps.LatLng(centerLat, centerLng),
+          map,
+          icon: {
+            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(17,17,17,0.92);color:#fff;font-weight:700;font-size:${fontSize}px;border:3px solid rgba(255,255,255,0.95);border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.35);">${count}</div>`,
+            anchor: new naver.maps.Point(size / 2, size / 2),
+          },
+          zIndex: 40,
+        });
+        naver.maps.Event.addListener(cluster, "click", () => {
+          map.morph(
+            new naver.maps.LatLng(centerLat, centerLng),
+            Math.min(map.getZoom() + 2, 16)
+          );
+        });
+        activeMarkers.push(cluster);
       });
+    };
+
+    // 줌/이동이 끝난 뒤 1회만 재렌더 (zoom_changed는 애니메이션 중 연속 발사되어 성능 저하)
+    renderMarkers();
+    const idleListener = naver.maps.Event.addListener(map, "idle", renderMarkers);
+    // 빈 지도 클릭 시 선택 해제 (마커 클릭은 이 이벤트를 발생시키지 않음)
+    const mapClickListener = naver.maps.Event.addListener(map, "click", () => {
+      setSelectedRoom(null);
     });
+
+    return () => {
+      naver.maps.Event.removeListener(idleListener);
+      naver.maps.Event.removeListener(mapClickListener);
+      clearMarkers();
+    };
   }, [mapLoaded, userLocation, rooms]);
 
   return (
@@ -209,6 +350,90 @@ function NursingRoomContent() {
       {/* 지도 영역 */}
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" />
+
+        {/* 상단 검색바 */}
+        <div
+          className="absolute left-3 right-3 z-20"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+        >
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-3">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                placeholder="수유실 이름 또는 지역 검색"
+                className="flex-1 text-sm text-gray-900 placeholder:text-gray-400 outline-none bg-transparent min-w-0"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-gray-500"
+                  aria-label="지우기"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {searchFocused && searchQuery.trim().length > 0 && (() => {
+              const q = searchQuery.trim().toLowerCase();
+              const results = rooms
+                .filter((r) => r.name.toLowerCase().includes(q) || r.address.toLowerCase().includes(q))
+                .slice(0, 30);
+              return (
+                <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg overflow-hidden max-h-[60dvh] overflow-y-auto">
+                  {results.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-sm text-gray-400">
+                      검색 결과가 없어요
+                    </div>
+                  ) : (
+                    results.map((room) => (
+                      <button
+                        key={`${room.name}-${room.lat}-${room.lng}`}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setSelectedRoom(room);
+                          setSearchQuery("");
+                          setSearchFocused(false);
+                          const map = mapInstanceRef.current;
+                          if (map) {
+                            map.setZoom(16, false);
+                            map.panTo(new naver.maps.LatLng(room.lat, room.lng));
+                          }
+                        }}
+                        className="w-full text-left px-4 py-3 border-b border-gray-100 last:border-b-0 active:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {room.type && (
+                            <span className="inline-block px-1.5 py-0.5 rounded-full bg-pink-50 text-pink-600 text-[9px] font-semibold">
+                              {room.type}
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold text-gray-900 truncate">
+                            {room.name}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-0.5 truncate">
+                          {room.address}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
 
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
@@ -223,12 +448,6 @@ function NursingRoomContent() {
         {selectedRoom && (
           <>
           <div
-            className="absolute inset-0 z-[5]"
-            onClick={() => setSelectedRoom(null)}
-            aria-hidden
-          />
-          <div
-            onClick={(e) => e.stopPropagation()}
             className="absolute left-4 right-4 bg-white rounded-2xl shadow-lg z-10 flex flex-col overflow-hidden"
             style={{
               bottom: "calc(env(safe-area-inset-bottom, 16px) + 88px)",
@@ -273,6 +492,18 @@ function NursingRoomContent() {
                   {selectedRoom.address}
                 </p>
               </div>
+
+              {/* 전화번호 */}
+              {selectedRoom.tel && (
+                <div className="flex items-start gap-1.5 mt-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <a href={`tel:${selectedRoom.tel}`} className="text-sm text-gray-600 underline decoration-gray-300 underline-offset-2">
+                    {selectedRoom.tel}
+                  </a>
+                </div>
+              )}
 
               {/* 이용 시간 */}
               {selectedRoom.openHours && (
@@ -324,7 +555,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute right-4 flex items-center gap-1.5 bg-pink-500 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute right-4 flex items-center gap-1.5 bg-gray-900 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
           aria-label="수유실 제보하기"
         >

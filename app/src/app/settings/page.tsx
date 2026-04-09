@@ -91,7 +91,10 @@ export default function SettingsPage() {
         {!isAuthLoaded ? (
           <div className="h-14" />
         ) : isAuthenticated ? (
-          <div className="flex items-center gap-4">
+          <Link
+            href="/settings/profile"
+            className="flex w-full items-center gap-4 text-left"
+          >
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100 overflow-hidden">
               {user?.profileImage ? (
                 <img
@@ -114,7 +117,10 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-400 mt-0.5 truncate">{user.email}</p>
               )}
             </div>
-          </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
         ) : (
           <button
             type="button"
@@ -129,7 +135,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold text-gray-900 truncate">로그인이 필요해요</p>
-              <p className="text-xs text-gray-400 mt-0.5">로그인하고 아기랑을 시작해보세요</p>
+              <p className="text-xs text-gray-400 mt-0.5">로그인하고 아기랑을 시작해 보세요</p>
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
@@ -213,8 +219,8 @@ export default function SettingsPage() {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-gray-900 truncate">우리아이 등록하러가기</p>
-              <p className="text-sm text-gray-400 mt-0.5">아이를 등록하고 기질검사를 시작해보세요</p>
+              <p className="text-base font-bold text-gray-900 truncate">우리 아이 등록하러 가기</p>
+              <p className="text-sm text-gray-400 mt-0.5">아이를 등록하고 기질 검사를 시작해 보세요</p>
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />

@@ -2,10 +2,15 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, type AuthUser } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
-import { calcChildAge } from '@/lib/childAge';
+import {
+  calcChildAge,
+  kstYmdToLocalMidnight,
+  toKstYmd,
+  todayKstYmd,
+} from '@/lib/childAge';
 import { type GrowthRecord } from '@/app/growth-record/types';
 
 // 원더윅스 폭풍(fussy) 기간 — 출생일 기준 주차 범위
@@ -170,9 +175,27 @@ function formatLastTime(iso: string | null): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function ChildHeroCard({ child }: { child: Child }) {
+function computeAgeDiff(parentBirthYear: number, childBirthDate: string): number {
+  const now = new Date();
+  const parentAge = now.getFullYear() - parentBirthYear;
+  const childYear = parseInt(childBirthDate.slice(0, 4), 10);
+  const childAge = now.getFullYear() - childYear;
+  return parentAge - childAge;
+}
+
+function ChildHeroCard({
+  child,
+  user,
+  onRequestBirthYear,
+}: {
+  child: Child;
+  user: AuthUser | null;
+  onRequestBirthYear: () => void;
+}) {
   const [stats, setStats] = useState<TodayStats | null>(null);
   const { days, months, extraDays } = calcChildAge(child.birthDate);
+  const hasBirthYear = !!user?.birthYear;
+  const ageDiff = hasBirthYear ? computeAgeDiff(user!.birthYear!, child.birthDate) : null;
 
   useEffect(() => {
     let cancel = false;
@@ -195,8 +218,8 @@ function ChildHeroCard({ child }: { child: Child }) {
 
   const ageLabel = months > 0 ? `${months}개월 ${extraDays}일` : `${days}일`;
 
-  const today = new Date();
-  const birth = new Date(child.birthDate + 'T00:00:00');
+  const today = kstYmdToLocalMidnight(todayKstYmd());
+  const birth = kstYmdToLocalMidnight(toKstYmd(child.birthDate));
   const { current, next } = getLeapStatus(birth, today);
 
   return (
@@ -242,6 +265,33 @@ function ChildHeroCard({ child }: { child: Child }) {
                 </span>
                 <span className="text-[12px] text-gray-600 font-medium">{ageLabel}</span>
               </div>
+              {hasBirthYear ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRequestBirthYear();
+                  }}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full active:opacity-70"
+                >
+                  <span>👪</span>
+                  <span>나와 {ageDiff}살 차이</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRequestBirthYear();
+                  }}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full active:opacity-70"
+                >
+                  <span>👪</span>
+                  <span>아이와 나의 나이 차이 확인하기 ›</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -342,7 +392,15 @@ function StatCell({
   );
 }
 
-function ChildrenCarousel({ children }: { children: Child[] }) {
+function ChildrenCarousel({
+  children,
+  user,
+  onRequestBirthYear,
+}: {
+  children: Child[];
+  user: AuthUser | null;
+  onRequestBirthYear: () => void;
+}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -356,7 +414,7 @@ function ChildrenCarousel({ children }: { children: Child[] }) {
   if (children.length === 1) {
     return (
       <div className="px-5">
-        <ChildHeroCard child={children[0]} />
+        <ChildHeroCard child={children[0]} user={user} onRequestBirthYear={onRequestBirthYear} />
       </div>
     );
   }
@@ -374,7 +432,7 @@ function ChildrenCarousel({ children }: { children: Child[] }) {
             key={child.id}
             className="snap-center shrink-0 w-full px-5"
           >
-            <ChildHeroCard child={child} />
+            <ChildHeroCard child={child} user={user} onRequestBirthYear={onRequestBirthYear} />
           </div>
         ))}
       </div>
@@ -407,10 +465,115 @@ function WelcomeHeader({ nickname }: { nickname: string | null }) {
   );
 }
 
+function BirthYearModal({
+  open,
+  user,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  user: AuthUser | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [year, setYear] = useState<string>('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setYear(user?.birthYear ? String(user.birthYear) : '');
+      setError(null);
+    }
+  }, [open, user?.birthYear]);
+
+  if (!open) return null;
+
+  const thisYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 60 }, (_, i) => thisYear - 18 - i);
+
+  const handleSave = async () => {
+    if (!year) return;
+    if (!user?.nickname || !user?.parentRole) {
+      setError('프로필 정보가 부족해요. 먼저 회원 정보를 완성해주세요.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nickname: user.nickname,
+          parentRole: user.parentRole,
+          birthYear: Number(year),
+          children: [],
+        }),
+      });
+      if (!res.ok) throw new Error('저장에 실패했어요.');
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || '오류가 발생했어요.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[430px] rounded-t-3xl bg-white px-5 pt-5 pb-[max(env(safe-area-inset-bottom),20px)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-[16px] font-extrabold text-gray-900">나의 출생연도</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 text-[13px] font-medium"
+          >
+            닫기
+          </button>
+        </div>
+        <p className="mt-1 text-[12px] text-gray-500">
+          아이와 나의 나이 차이를 확인해볼 수 있어요.
+        </p>
+        <select
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+          className="mt-4 w-full text-base font-bold text-gray-900 border-b border-gray-200 pb-2 outline-none focus:border-gray-400 bg-transparent"
+        >
+          <option value="">출생연도 선택</option>
+          {yearOptions.map((y) => (
+            <option key={y} value={y}>
+              {y}년생
+            </option>
+          ))}
+        </select>
+        {error && <p className="mt-3 text-[12px] text-red-500">{error}</p>}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!year || submitting}
+          className="mt-5 w-full py-3.5 rounded-2xl bg-rose-500 text-white text-sm font-bold disabled:opacity-40"
+        >
+          {submitting ? '저장 중...' : '저장하기'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function HomeHeroCard() {
-  const { isAuthenticated, isLoaded: authLoaded, user } = useAuth();
+  const { isAuthenticated, isLoaded: authLoaded, user, refresh } = useAuth();
   const { children, isLoaded: childrenLoaded } = useChildren();
   const { openLoginPrompt } = useLoginPrompt();
+  const [birthYearOpen, setBirthYearOpen] = useState(false);
 
   if (!authLoaded) return null;
 
@@ -484,8 +647,14 @@ export default function HomeHeroCard() {
     <>
       <WelcomeHeader nickname={user?.nickname ?? null} />
       <div className="pt-3">
-        <ChildrenCarousel children={children} />
+        <ChildrenCarousel children={children} user={user} onRequestBirthYear={() => setBirthYearOpen(true)} />
       </div>
+      <BirthYearModal
+        open={birthYearOpen}
+        user={user}
+        onClose={() => setBirthYearOpen(false)}
+        onSaved={() => refresh()}
+      />
     </>
   );
 }
