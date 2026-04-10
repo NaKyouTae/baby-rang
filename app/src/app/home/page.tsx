@@ -7,7 +7,7 @@ import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-gray-50">
       <main className="flex-1 pb-24" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
         <HomeHeroCard />
 

@@ -112,7 +112,7 @@ export default function GrowthPatternClient() {
 
   // 차트 높이를 디바이스 뷰포트에 맞춰 계산 (하단 네비 + 여백 제외)
   useEffect(() => {
-    const BOTTOM_NAV_OFFSET = 88; // 하단 네비 높이 + safe-area + 여백
+    const BOTTOM_NAV_OFFSET = 112; // 하단 네비 높이 + safe-area + 여유 여백
     const CHART_CHROME = 56; // 카드 패딩 + 하단 날짜 라벨
     const recompute = () => {
       const el = chartWrapRef.current;
@@ -371,7 +371,7 @@ export default function GrowthPatternClient() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(env(safe-area-inset-bottom)+72px)] overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(env(safe-area-inset-bottom,0px)+96px)] overflow-hidden">
       <header className="px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
         <ChildSelector
           children={children}

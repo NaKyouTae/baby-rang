@@ -7,6 +7,7 @@ import { useChildren } from "@/hooks/useChildren";
 import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
+import { useLocationConsent } from "@/hooks/useLocationConsent";
 import ConfirmModal from "@/components/ConfirmModal";
 
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
@@ -83,9 +84,11 @@ export default function SettingsPage() {
   const { children, isLoaded } = useChildren();
   const { isAuthenticated, user, isLoaded: isAuthLoaded } = useAuth();
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
+  const { consent, setConsent } = useLocationConsent();
+  const locationEnabled = consent === "granted";
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-gray-50">
       {/* 사용자 정보 섹션 */}
       <section className="mx-4 mt-[max(env(safe-area-inset-top),24px)] rounded-2xl bg-white p-5 shadow-sm">
         {!isAuthLoaded ? (
@@ -267,6 +270,51 @@ export default function SettingsPage() {
             </Link>
           );
         })}
+      </section>
+
+      {/* 앱 권한 설정 */}
+      <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
+        <h2 className="px-5 pt-4 pb-1 text-xs font-semibold text-gray-400">앱 권한 설정</h2>
+        <div className="flex items-center gap-4 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] text-gray-800">위치 정보</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">가까운 수유실 찾기에 사용돼요</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={locationEnabled}
+            onClick={() => {
+              if (locationEnabled) {
+                setConsent("denied");
+              } else {
+                // 켤 때는 브라우저 권한도 다시 요청
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    () => setConsent("granted"),
+                    () => setConsent("denied"),
+                    { timeout: 8000 }
+                  );
+                }
+              }
+            }}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${
+              locationEnabled ? "bg-primary-500" : "bg-gray-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${
+                locationEnabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       {/* 로그아웃 (로그인 상태일 때만) */}

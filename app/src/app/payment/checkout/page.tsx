@@ -110,7 +110,7 @@ function CheckoutContent() {
   };
 
   return (
-    <main className="flex min-h-screen w-full flex-col gap-4 bg-white p-4">
+    <main className="flex min-h-dvh w-full flex-col gap-4 bg-white p-4">
       <header className="flex items-center justify-between">
         <button
           onClick={() => router.back()}
@@ -153,7 +153,7 @@ function CheckoutContent() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+    <Suspense fallback={<main className="min-h-dvh bg-white" />}>
       <CheckoutContent />
     </Suspense>
   );

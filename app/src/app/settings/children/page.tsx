@@ -86,7 +86,7 @@ export default function ChildrenSettingsPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-gray-50">
       {/* 헤더 */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
         <button type="button" onClick={() => router.push('/settings')} aria-label="뒤로가기" className="p-2">

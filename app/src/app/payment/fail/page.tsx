@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef } from 'react';
 
 export default function PaymentFailPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+    <Suspense fallback={<main className="min-h-dvh bg-white" />}>
       <PaymentFailContent />
     </Suspense>
   );
@@ -32,7 +32,7 @@ function PaymentFailContent() {
   }, [orderId, code, message]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
       <p className="text-base font-semibold text-red-600">결제 실패</p>
       <p className="text-xs text-neutral-500">[{code}] {message}</p>
       <button

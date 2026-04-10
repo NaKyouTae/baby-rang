@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReportSheet, { NursingRoomReport } from "./ReportSheet";
+import { useLocationConsent } from "@/hooks/useLocationConsent";
 
 interface NursingRoom {
   name: string;
@@ -56,6 +57,7 @@ declare global {
 }
 
 function NursingRoomContent() {
+  const { consent, setConsent } = useLocationConsent();
   const searchParams = useSearchParams();
   const initialRoomName = searchParams.get("room");
   const initialLat = searchParams.get("lat");
@@ -236,6 +238,7 @@ function NursingRoomContent() {
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserLocation(loc);
+        setConsent("granted");
         if (opts?.panTo && mapInstanceRef.current) {
           mapInstanceRef.current.panTo(
             new naver.maps.LatLng(loc.lat, loc.lng),
@@ -248,6 +251,7 @@ function NursingRoomContent() {
         }
       },
       () => {
+        setConsent("denied");
         if (opts?.showToast) {
           setToast("위치 권한을 허용해주세요.");
           setTimeout(() => setToast(null), 2500);
@@ -260,6 +264,11 @@ function NursingRoomContent() {
   };
 
   useEffect(() => {
+    if (consent === "denied") {
+      // 이전에 거부한 경우 브라우저 팝업 없이 기본 좌표 사용
+      setUserLocation({ lat: 37.5666, lng: 126.9784 });
+      return;
+    }
     fetchUserLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

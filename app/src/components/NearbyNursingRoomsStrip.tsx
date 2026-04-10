@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useLocationConsent } from "@/hooks/useLocationConsent";
 
 interface NursingRoom {
   name: string;
@@ -28,6 +29,7 @@ export default function NearbyNursingRoomsStrip() {
   const [locStatus, setLocStatus] = useState<LocStatus>("idle");
   const [rooms, setRooms] = useState<NursingRoom[]>([]);
   const [roomsLoaded, setRoomsLoaded] = useState(false);
+  const { consent, setConsent } = useLocationConsent();
 
   const requestLocation = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -39,15 +41,26 @@ export default function NearbyNursingRoomsStrip() {
       (pos) => {
         setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocStatus("granted");
+        setConsent("granted");
       },
-      () => setLocStatus("denied"),
+      () => {
+        setLocStatus("denied");
+        setConsent("denied");
+      },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
   };
 
   useEffect(() => {
-    requestLocation();
-  }, []);
+    if (consent === "denied") {
+      setLocStatus("denied");
+      return;
+    }
+    if (consent === "granted" || consent === null) {
+      requestLocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consent]);
 
   useEffect(() => {
     let cancelled = false;

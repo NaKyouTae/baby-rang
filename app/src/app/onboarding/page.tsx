@@ -94,7 +94,7 @@ export default function OnboardingPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex flex-1 items-center justify-center min-h-screen">
+      <div className="flex flex-1 items-center justify-center min-h-dvh">
         <p className="text-sm text-gray-400">로딩 중...</p>
       </div>
     );
@@ -103,7 +103,7 @@ export default function OnboardingPage() {
   const datePickerChild = children.find((c) => c.key === datePickerFor);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-32">
+    <div className="flex flex-col min-h-dvh bg-gray-50 pb-32">
       {/* 헤더 */}
       <header className="px-5 pt-[max(env(safe-area-inset-top),24px)] pb-2">
         <p className="text-xs text-primary-600 font-semibold">회원가입</p>

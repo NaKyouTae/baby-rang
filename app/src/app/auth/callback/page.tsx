@@ -33,7 +33,7 @@ function AuthCallback() {
   }, [searchParams]);
 
   return (
-    <div className="flex flex-1 items-center justify-center min-h-screen">
+    <div className="flex flex-1 items-center justify-center min-h-dvh">
       <p className="text-gray-500">로그인 중...</p>
     </div>
   );

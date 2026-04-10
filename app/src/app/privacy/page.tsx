@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
+    <div className="flex flex-col min-h-dvh bg-gray-50 pb-24">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
         <button
           type="button"

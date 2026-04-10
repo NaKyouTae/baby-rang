@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 
 export default function PaymentSuccessPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen bg-white" />}>
+    <Suspense fallback={<main className="min-h-dvh bg-white" />}>
       <PaymentSuccessContent />
     </Suspense>
   );
@@ -54,7 +54,7 @@ function PaymentSuccessContent() {
   }, [paymentKey, orderId, amount, redirectTo, router]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">
       {error ? (
         <>
           <p className="text-base font-semibold text-red-600">결제 승인 실패</p>
