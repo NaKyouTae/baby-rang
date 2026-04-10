@@ -8,7 +8,6 @@ export type AuthUser = {
   email: string | null;
   profileImage: string | null;
   parentRole?: string | null;
-  birthYear?: number | null;
   onboardedAt?: string | null;
 };
 

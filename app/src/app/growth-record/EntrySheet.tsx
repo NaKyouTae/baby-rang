@@ -314,7 +314,7 @@ export default function EntrySheet({
                       onClick={() => setData({ ...data, [f.key]: o.value })}
                       className={`py-3 rounded-xl text-sm font-medium transition ${
                         data[f.key] === o.value
-                          ? 'bg-gray-900 text-white'
+                          ? 'bg-primary-500 text-white'
                           : 'bg-gray-50 text-gray-600'
                       }`}
                     >
@@ -456,7 +456,7 @@ export default function EntrySheet({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-50"
+            className="flex-1 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold disabled:opacity-50"
           >
             {saving ? '저장 중...' : '저장'}
           </button>

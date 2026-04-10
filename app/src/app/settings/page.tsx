@@ -85,9 +85,9 @@ export default function SettingsPage() {
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* 사용자 정보 섹션 */}
-      <section className="mx-4 mt-[max(env(safe-area-inset-top),16px)] rounded-2xl bg-white p-5 shadow-sm">
+      <section className="mx-4 mt-[max(env(safe-area-inset-top),24px)] rounded-2xl bg-white p-5 shadow-sm">
         {!isAuthLoaded ? (
           <div className="h-14" />
         ) : isAuthenticated ? (

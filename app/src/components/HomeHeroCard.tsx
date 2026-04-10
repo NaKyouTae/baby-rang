@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useAuth, type AuthUser } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import {
@@ -175,27 +175,13 @@ function formatLastTime(iso: string | null): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function computeAgeDiff(parentBirthYear: number, childBirthDate: string): number {
-  const now = new Date();
-  const parentAge = now.getFullYear() - parentBirthYear;
-  const childYear = parseInt(childBirthDate.slice(0, 4), 10);
-  const childAge = now.getFullYear() - childYear;
-  return parentAge - childAge;
-}
-
 function ChildHeroCard({
   child,
-  user,
-  onRequestBirthYear,
 }: {
   child: Child;
-  user: AuthUser | null;
-  onRequestBirthYear: () => void;
 }) {
   const [stats, setStats] = useState<TodayStats | null>(null);
   const { days, months, extraDays } = calcChildAge(child.birthDate);
-  const hasBirthYear = !!user?.birthYear;
-  const ageDiff = hasBirthYear ? computeAgeDiff(user!.birthYear!, child.birthDate) : null;
 
   useEffect(() => {
     let cancel = false;
@@ -223,14 +209,14 @@ function ChildHeroCard({
   const { current, next } = getLeapStatus(birth, today);
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-white border border-rose-100 shadow-[0_8px_24px_-12px_rgba(244,63,94,0.25)] ring-1 ring-rose-50">
+    <div className="rounded-2xl overflow-hidden bg-white border border-primary-200 shadow-[0_8px_24px_-12px_rgba(255,199,44,0.25)] ring-1 ring-primary-100">
       <div>
         {/* 프로필 헤더 — 그라데이션 강조 */}
-        <div className="relative px-5 pt-5 pb-4 bg-gradient-to-br from-rose-50 via-white to-amber-50">
-          <div className="flex items-center gap-3.5">
+        <div className="relative px-4 pt-3.5 pb-3 bg-gradient-to-br from-primary-50 via-white to-primary-100">
+          <div className="flex items-center gap-3">
             <div className="relative shrink-0">
-              <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-rose-400 to-amber-300" />
-              <div className="relative w-16 h-16 rounded-full bg-white overflow-hidden flex items-center justify-center text-3xl ring-2 ring-white">
+              <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-primary-400 to-primary-300" />
+              <div className="relative w-12 h-12 rounded-full bg-white overflow-hidden flex items-center justify-center text-2xl ring-2 ring-white leading-none">
                 {child.profileImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -239,17 +225,17 @@ function ChildHeroCard({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span>{child.gender === 'female' ? '👧' : '👦'}</span>
+                  <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧' : '👦'}</span>
                 )}
               </div>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <div className="text-[20px] font-extrabold text-gray-900 truncate leading-tight">
+                <div className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
                   {child.name}
                 </div>
                 <span
-                  className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[12px] font-bold leading-none ${
+                  className={`inline-flex items-center justify-center w-4.5 h-4.5 rounded-full text-[11px] font-bold leading-none ${
                     child.gender === 'female'
                       ? 'bg-pink-100 text-pink-600'
                       : 'bg-sky-100 text-sky-600'
@@ -259,45 +245,18 @@ function ChildHeroCard({
                   {child.gender === 'female' ? '♀' : '♂'}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[11px] font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-full">
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-1.5 py-0.5 rounded-full">
                   D+{days}
                 </span>
-                <span className="text-[12px] text-gray-600 font-medium">{ageLabel}</span>
+                <span className="text-[11px] text-gray-600 font-medium">{ageLabel}</span>
               </div>
-              {hasBirthYear ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onRequestBirthYear();
-                  }}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full active:opacity-70"
-                >
-                  <span>👪</span>
-                  <span>나와 {ageDiff}살 차이</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onRequestBirthYear();
-                  }}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full active:opacity-70"
-                >
-                  <span>👪</span>
-                  <span>아이와 나의 나이 차이 확인하기 ›</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
 
         {/* 오늘의 통계 */}
-        <Link href="/growth-record" className="block px-4 py-4 bg-white active:opacity-95">
+        <Link href="/growth-record" className="block px-3 py-3 bg-white active:opacity-95">
           <div className="grid grid-cols-3 gap-2">
             <StatCell
               icon="🍼"
@@ -325,13 +284,13 @@ function ChildHeroCard({
       {/* 원더윅스 영역 */}
       <Link
         href={`/wonder-weeks?childId=${encodeURIComponent(child.id)}`}
-        className="block px-5 py-3 border-t border-gray-100 bg-gray-50/60 active:opacity-80"
+        className="block px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 active:opacity-80"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[11px] font-bold text-gray-700 shrink-0">원더윅스</span>
             {current ? (
-              <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full shrink-0">
                 진행중
               </span>
             ) : (
@@ -344,7 +303,7 @@ function ChildHeroCard({
         </div>
         {current ? (
           <div className="text-[11px] text-gray-700 mt-1 truncate">
-            <span className="font-semibold text-rose-600">
+            <span className="font-semibold text-primary-700">
               Leap {current.leap}. {current.name}
             </span>
             <span className="text-gray-500">
@@ -377,10 +336,10 @@ function StatCell({
   sub: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-rose-50/60 ring-1 ring-rose-100/70 py-2.5 px-1">
+    <div className="flex flex-col items-center justify-center rounded-xl bg-primary-50/60 ring-1 ring-primary-200/70 py-2 px-1">
       <div className="flex items-center gap-1 leading-none">
         <span className="text-[13px]">{icon}</span>
-        <span className="text-[10px] font-semibold text-rose-500">{label}</span>
+        <span className="text-[10px] font-semibold text-primary-600">{label}</span>
       </div>
       <div className="text-[14px] font-extrabold text-gray-900 leading-none mt-1.5">
         {value}
@@ -392,188 +351,122 @@ function StatCell({
   );
 }
 
+function AddChildCard() {
+  return (
+    <Link
+      href="/settings/children"
+      className="rounded-2xl overflow-hidden bg-white border-2 border-dashed border-gray-200 flex flex-col items-center justify-center py-12 active:bg-gray-50 transition-colors"
+    >
+      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </div>
+      <span className="text-sm font-semibold text-gray-400">아이 추가하기</span>
+    </Link>
+  );
+}
+
 function ChildrenCarousel({
   children,
-  user,
-  onRequestBirthYear,
+  onActiveChange,
 }: {
   children: Child[];
-  user: AuthUser | null;
-  onRequestBirthYear: () => void;
+  onActiveChange?: (idx: number) => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const totalSlides = children.length + 1; // +1 for add card
 
   const onScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    if (idx !== activeIdx) setActiveIdx(idx);
+    const slideW = el.clientWidth - 40 + 12; // card width + gap
+    const idx = Math.round(el.scrollLeft / slideW);
+    if (idx !== activeIdx) {
+      setActiveIdx(idx);
+      onActiveChange?.(idx);
+    }
   };
-
-  if (children.length === 1) {
-    return (
-      <div className="px-5">
-        <ChildHeroCard child={children[0]} user={user} onRequestBirthYear={onRequestBirthYear} />
-      </div>
-    );
-  }
 
   return (
     <div>
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar px-5"
         style={{ scrollbarWidth: 'none' }}
       >
         {children.map((child) => (
           <div
             key={child.id}
-            className="snap-center shrink-0 w-full px-5"
+            className="snap-center shrink-0"
+            style={{ width: 'calc(100% - 40px)' }}
           >
-            <ChildHeroCard child={child} user={user} onRequestBirthYear={onRequestBirthYear} />
+            <ChildHeroCard child={child} />
           </div>
         ))}
+        <div
+          className="snap-center shrink-0"
+          style={{ width: 'calc(100% - 40px)' }}
+        >
+          <AddChildCard />
+        </div>
       </div>
-      <div className="flex justify-center gap-1.5 mt-2.5">
-        {children.map((child, i) => (
-          <span
-            key={child.id}
-            className={`h-1.5 rounded-full transition-all ${
-              i === activeIdx ? 'w-4 bg-rose-500' : 'w-1.5 bg-gray-300'
-            }`}
-          />
-        ))}
-      </div>
+      {totalSlides > 1 && (
+        <div className="flex justify-center gap-1.5 mt-2.5">
+          {Array.from({ length: totalSlides }).map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeIdx ? 'w-4 bg-primary-500' : 'w-1.5 bg-gray-300'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function WelcomeHeader({ nickname }: { nickname: string | null }) {
+function getRoleLabel(parentRole: string | null | undefined): string {
+  if (parentRole === 'mom') return '어머님';
+  if (parentRole === 'dad') return '아버님';
+  return '보호자님';
+}
+
+function WelcomeHeader({
+  parentRole,
+  childName,
+}: {
+  parentRole: string | null | undefined;
+  childName: string | null;
+}) {
   const greeting = getTimeGreeting();
-  const displayName = nickname?.trim() || '아기랑 회원';
+  const roleLabel = getRoleLabel(parentRole);
+  const displayName = childName
+    ? `${childName} ${roleLabel}`
+    : `아기랑 ${roleLabel}`;
   return (
     <div className="px-5">
       <div className="text-[18px] font-extrabold text-gray-900 leading-tight">
-        {displayName}님, {greeting.text}
-      </div>
-      <div className="text-[11px] text-gray-500 mt-1">
-        오늘도 아기랑 함께해요 {greeting.emoji}
-      </div>
-    </div>
-  );
-}
-
-function BirthYearModal({
-  open,
-  user,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  user: AuthUser | null;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [year, setYear] = useState<string>('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setYear(user?.birthYear ? String(user.birthYear) : '');
-      setError(null);
-    }
-  }, [open, user?.birthYear]);
-
-  if (!open) return null;
-
-  const thisYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 60 }, (_, i) => thisYear - 18 - i);
-
-  const handleSave = async () => {
-    if (!year) return;
-    if (!user?.nickname || !user?.parentRole) {
-      setError('프로필 정보가 부족해요. 먼저 회원 정보를 완성해주세요.');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nickname: user.nickname,
-          parentRole: user.parentRole,
-          birthYear: Number(year),
-          children: [],
-        }),
-      });
-      if (!res.ok) throw new Error('저장에 실패했어요.');
-      onSaved();
-      onClose();
-    } catch (e: any) {
-      setError(e?.message || '오류가 발생했어요.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-[430px] rounded-t-3xl bg-white px-5 pt-5 pb-[max(env(safe-area-inset-bottom),20px)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h3 className="text-[16px] font-extrabold text-gray-900">나의 출생연도</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 text-[13px] font-medium"
-          >
-            닫기
-          </button>
-        </div>
-        <p className="mt-1 text-[12px] text-gray-500">
-          아이와 나의 나이 차이를 확인해볼 수 있어요.
-        </p>
-        <select
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="mt-4 w-full text-base font-bold text-gray-900 border-b border-gray-200 pb-2 outline-none focus:border-gray-400 bg-transparent"
-        >
-          <option value="">출생연도 선택</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>
-              {y}년생
-            </option>
-          ))}
-        </select>
-        {error && <p className="mt-3 text-[12px] text-red-500">{error}</p>}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!year || submitting}
-          className="mt-5 w-full py-3.5 rounded-2xl bg-[#111] text-white text-sm font-bold disabled:opacity-40"
-        >
-          {submitting ? '저장 중...' : '저장하기'}
-        </button>
+        {displayName}, {greeting.text} {greeting.emoji}
       </div>
     </div>
   );
 }
 
 export default function HomeHeroCard() {
-  const { isAuthenticated, isLoaded: authLoaded, user, refresh } = useAuth();
+  const { isAuthenticated, isLoaded: authLoaded, user } = useAuth();
   const { children, isLoaded: childrenLoaded } = useChildren();
   const { openLoginPrompt } = useLoginPrompt();
-  const [birthYearOpen, setBirthYearOpen] = useState(false);
+  const [activeChildIdx, setActiveChildIdx] = useState(0);
+
+  const activeChildName =
+    children.length > 0 && activeChildIdx < children.length
+      ? children[activeChildIdx].name
+      : null;
 
   if (!authLoaded) return null;
 
@@ -594,17 +487,17 @@ export default function HomeHeroCard() {
           <button
             type="button"
             onClick={() => openLoginPrompt('로그인하고 우리 아이 맞춤 정보를 확인하세요.')}
-            className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-br from-rose-500 to-rose-400 px-5 py-4 shadow-[0_10px_24px_-10px_rgba(244,63,94,0.55)] ring-1 ring-rose-300/40 active:opacity-95"
+            className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-br from-primary-500 to-primary-400 px-5 py-4 shadow-[0_10px_24px_-10px_rgba(255,199,44,0.45)] ring-1 ring-primary-300/40 active:opacity-95"
           >
             <div className="min-w-0 text-left">
               <div className="text-[15px] font-extrabold text-white">
                 로그인하고 시작하기
               </div>
-              <div className="text-[11px] text-rose-50/90 mt-1">
+              <div className="text-[11px] text-white/80 mt-1">
                 우리 아이 맞춤 정보를 볼 수 있어요
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 text-[12px] font-bold text-rose-500 bg-white shrink-0 ml-3 px-3 py-1.5 rounded-full shadow-sm">
+            <span className="inline-flex items-center gap-1 text-[12px] font-bold text-primary-700 bg-white shrink-0 ml-3 px-3 py-1.5 rounded-full shadow-sm">
               로그인 <span aria-hidden>›</span>
             </span>
           </button>
@@ -617,7 +510,7 @@ export default function HomeHeroCard() {
   if (childrenLoaded && children.length === 0) {
     return (
       <>
-        <WelcomeHeader nickname={user?.nickname ?? null} />
+        <WelcomeHeader parentRole={user?.parentRole} childName={null} />
         <div className="px-5 pt-3">
           <div className="rounded-2xl bg-white border border-gray-300 px-5 py-4 shadow-sm">
             <div className="text-[14px] font-bold text-gray-900">
@@ -628,7 +521,7 @@ export default function HomeHeroCard() {
             </div>
             <Link
               href="/settings/children"
-              className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-rose-500 text-white text-[13px] font-bold py-3 active:bg-rose-600 shadow-sm"
+              className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-primary-500 text-white text-[13px] font-bold py-3 active:bg-primary-600 shadow-sm"
             >
               우리 아이 등록하기
               <span aria-hidden>→</span>
@@ -640,21 +533,15 @@ export default function HomeHeroCard() {
   }
 
   if (!childrenLoaded || children.length === 0) {
-    return <WelcomeHeader nickname={user?.nickname ?? null} />;
+    return <WelcomeHeader parentRole={user?.parentRole} childName={null} />;
   }
 
   return (
     <>
-      <WelcomeHeader nickname={user?.nickname ?? null} />
+      <WelcomeHeader parentRole={user?.parentRole} childName={activeChildName} />
       <div className="pt-3">
-        <ChildrenCarousel children={children} user={user} onRequestBirthYear={() => setBirthYearOpen(true)} />
+        <ChildrenCarousel children={children} onActiveChange={setActiveChildIdx} />
       </div>
-      <BirthYearModal
-        open={birthYearOpen}
-        user={user}
-        onClose={() => setBirthYearOpen(false)}
-        onSaved={() => refresh()}
-      />
     </>
   );
 }

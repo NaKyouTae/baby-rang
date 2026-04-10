@@ -26,12 +26,10 @@ const FACILITIES = [
   "전자레인지",
   "정수기",
   "세면대",
-  "소파/의자",
-  "에어컨",
-  "유아용 변기",
-  "쓰레기통",
-  "조명조절",
   "잠금장치",
+  "모유 수유 쿠션",
+  "기저귀",
+  "물티슈",
 ];
 
 interface Props {
@@ -464,15 +462,6 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
             />
           </Field>
 
-          <Field label="제보자 닉네임 (선택)">
-            <input
-              type="text"
-              value={form.reporterName}
-              onChange={(e) => setForm({ ...form, reporterName: e.target.value })}
-              placeholder="아기랑 회원님"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
-            />
-          </Field>
         </div>
 
         {/* 푸터 */}
@@ -483,7 +472,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="w-full py-3.5 rounded-2xl bg-gray-900 text-white font-semibold text-sm disabled:bg-gray-200 disabled:text-gray-400"
+            className="w-full py-3.5 rounded-2xl bg-primary-500 text-white font-semibold text-sm disabled:bg-gray-200 disabled:text-gray-400"
           >
             제보하기
           </button>

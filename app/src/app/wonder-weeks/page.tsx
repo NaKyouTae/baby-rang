@@ -22,6 +22,7 @@ function WonderWeeksContent() {
   const childIdParam = searchParams.get('childId');
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const calendarRef = useRef<WonderWeeksCalendarHandle | null>(null);
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   // 첫 진입 시 ?childId= 가 있으면 해당 아이 자동 선택, 아이가 1명이면 자동 선택,
   // 그 외에는 아이 선택 화면을 먼저 보여준다.
@@ -70,10 +71,10 @@ function WonderWeeksContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
-      {/* 스티키 타이틀 바 — 성장 기록과 동일한 공통 ChildSelector */}
-      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">원더 윅스</h1>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div ref={topRef} />
+      {/* 스티키 타이틀 바 */}
+      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
         <ChildSelector
           children={children}
           selected={selectedChild}
@@ -85,23 +86,29 @@ function WonderWeeksContent() {
         <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />
       </div>
 
-      {/* 오늘로 이동 버튼 — 하단 네비 위 우측 고정 (모바일 컨테이너 내부) */}
+      {/* 하단 버튼들 — 오늘(왼쪽) + 상단 이동(오른쪽) */}
       <div
         className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-4 pointer-events-none"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
       >
-        <div className="flex justify-end">
+        <div className="flex justify-between">
           <button
             type="button"
             onClick={() => calendarRef.current?.scrollToToday()}
-            className="pointer-events-auto px-4 py-2.5 rounded-full bg-gray-900 text-white text-sm font-semibold shadow-lg active:scale-95 transition-transform flex items-center gap-1.5"
+            className="pointer-events-auto px-4 py-2.5 rounded-full bg-primary-500 text-white text-sm font-semibold shadow-lg active:scale-95 transition-transform"
             aria-label="오늘로 이동"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
             오늘
+          </button>
+          <button
+            type="button"
+            onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="pointer-events-auto w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            aria-label="맨 위로 이동"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
           </button>
         </div>
       </div>

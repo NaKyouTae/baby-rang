@@ -182,24 +182,6 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
 
   return (
     <div>
-      {/* 아기 생일 표시 */}
-      <div className="bg-primary-50 rounded-xl p-3 mb-3 text-center">
-        <p className="text-sm text-primary-700">
-          <span className="font-semibold">
-            {birth.getFullYear()}년 {birth.getMonth() + 1}월 {birth.getDate()}일
-          </span>{' '}
-          출생 기준
-        </p>
-      </div>
-
-      {/* 범례 */}
-      <div className="flex items-center gap-3 mb-4 justify-center">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm bg-rose-50" />
-          <span className="text-xs text-gray-500">원더윅스 (힘든 시기)</span>
-        </div>
-      </div>
-
       {/* 모든 달 연속 표시 */}
       <div className="space-y-10">
         {months.map(({ year, month, leapMap, activeLeaps }) => {
@@ -230,7 +212,7 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
               {/* 달력 그리드 */}
               <div className="grid grid-cols-7 border-l border-gray-300">
                 {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={`empty-${i}`} className="aspect-[1/1.1] border-r border-b border-gray-300" />
+                  <div key={`empty-${i}`} className="h-8 border-r border-b border-gray-300" />
                 ))}
 
                 {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -245,8 +227,8 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                     <div
                       key={day}
                       ref={isToday ? todayRef : undefined}
-                      className={`aspect-[1/1.1] flex flex-col items-center justify-center border-r border-b border-gray-300 ${
-                        leapInfo ? 'bg-rose-50' : ''
+                      className={`h-8 flex flex-col items-center justify-center border-r border-b border-gray-300 ${
+                        leapInfo ? 'bg-primary-50' : ''
                       }`}
                     >
                       <span
@@ -278,7 +260,7 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                   const remainder = totalCells % 7;
                   if (remainder === 0) return null;
                   return Array.from({ length: 7 - remainder }).map((_, i) => (
-                    <div key={`trail-${i}`} className="aspect-[1/1.1] border-r border-b border-gray-300" />
+                    <div key={`trail-${i}`} className="h-8 border-r border-b border-gray-300" />
                   ));
                 })()}
               </div>

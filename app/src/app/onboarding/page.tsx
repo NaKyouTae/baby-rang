@@ -29,7 +29,6 @@ export default function OnboardingPage() {
 
   const [nickname, setNickname] = useState('');
   const [parentRole, setParentRole] = useState<ParentRole>('');
-  const [birthYear, setBirthYear] = useState<string>('');
   const [children, setChildren] = useState<ChildDraft[]>([]);
   const [datePickerFor, setDatePickerFor] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -78,7 +77,6 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           nickname: nickname.trim(),
           parentRole,
-          birthYear: birthYear ? Number(birthYear) : null,
           children: validChildren,
         }),
       });
@@ -102,15 +100,12 @@ export default function OnboardingPage() {
     );
   }
 
-  const thisYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 60 }, (_, i) => thisYear - 18 - i);
-
   const datePickerChild = children.find((c) => c.key === datePickerFor);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-32">
       {/* 헤더 */}
-      <header className="px-5 pt-[max(env(safe-area-inset-top),20px)] pb-2">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),24px)] pb-2">
         <p className="text-xs text-primary-600 font-semibold">회원가입</p>
         <h1 className="mt-1 text-2xl font-extrabold text-gray-900 leading-tight">
           아기랑에 오신 걸 환영해요
@@ -183,23 +178,6 @@ export default function OnboardingPage() {
               👨 아빠
             </button>
           </div>
-        </section>
-
-        {/* 출생연도 (선택) */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500">나이 (선택)</p>
-          <select
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            className="mt-2 w-full text-base font-bold text-gray-900 border-b border-gray-200 pb-1.5 outline-none focus:border-gray-400 bg-transparent"
-          >
-            <option value="">출생연도 선택</option>
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}년생
-              </option>
-            ))}
-          </select>
         </section>
 
         {/* 아이 등록 (선택, 여러 명) */}
@@ -302,7 +280,6 @@ export default function OnboardingPage() {
         open={datePickerFor !== null}
         value={datePickerChild?.birthDate || ''}
         max={new Date().toISOString().slice(0, 10)}
-        title="생년월일 선택"
         onClose={() => setDatePickerFor(null)}
         onConfirm={(d) => {
           if (datePickerFor) updateChild(datePickerFor, { birthDate: d });

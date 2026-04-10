@@ -146,7 +146,7 @@ export default function NearbyNursingRoomsStrip() {
       {nearest.map((room, idx) => (
         <Link
           key={room.name}
-          href={`/nursing-room?room=${encodeURIComponent(room.name)}`}
+          href={`/nursing-room?room=${encodeURIComponent(room.name)}&lat=${room.lat}&lng=${room.lng}&addr=${encodeURIComponent(room.address)}`}
           className="relative block h-14 rounded-[8px] overflow-hidden bg-white border border-gray-200 active:opacity-70"
         >
           <div className="relative h-full flex items-center justify-between px-4">
@@ -154,8 +154,8 @@ export default function NearbyNursingRoomsStrip() {
               <div className="flex items-center gap-1.5">
                 <div className="text-xs font-bold text-gray-900 truncate">{room.name}</div>
                 {idx === 0 && userLoc && (
-                  <span className="shrink-0 text-[9px] font-semibold text-rose-500">
-                    · 가장 가까워요
+                  <span className="shrink-0 text-[9px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">
+                    가장 가까워요
                   </span>
                 )}
               </div>

@@ -161,10 +161,8 @@ export default function SleepGoldenTimePage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
-      {/* 스티키 타이틀 바 — 다른 페이지들과 동일한 공통 ChildSelector */}
-      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">수면 골든타임</h1>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
         {children.length > 0 && effectiveChild ? (
           <ChildSelector
             children={children}
@@ -172,7 +170,7 @@ export default function SleepGoldenTimePage() {
             onSelect={setSelectedChild}
           />
         ) : (
-          <div className="relative">
+          <div className="relative inline-block">
             <select
               value={manualMonths}
               onChange={(e) => setManualMonths(Number(e.target.value))}
@@ -368,13 +366,13 @@ export default function SleepGoldenTimePage() {
             );
           })}
 
-          {/* 밤잠 (골든타임) */}
+          {/* 밤잠 (수면코칭) */}
           <div className="flex items-start gap-3 relative">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg shrink-0 z-10 ring-4 ring-white shadow-md">
               🌙
             </div>
             <div className="flex-1 pt-1">
-              <p className="text-[11px] text-indigo-600 font-semibold">밤잠 골든타임</p>
+              <p className="text-[11px] text-indigo-600 font-semibold">밤잠 추천 시간</p>
               <p className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight tabular-nums">
                 {formatKoreanTime(schedule.bedtime)}
               </p>
@@ -393,10 +391,10 @@ export default function SleepGoldenTimePage() {
         </p>
       </section>
 
-      {/* 골든타임 정보 (접힘 가능) */}
+      {/* 수면코칭 정보 (접힘 가능) */}
       <details className="bg-white rounded-2xl shadow-sm overflow-hidden group">
         <summary className="p-4 cursor-pointer flex items-center justify-between list-none">
-          <span className="text-sm font-bold text-gray-900">수면 골든타임이란?</span>
+          <span className="text-sm font-bold text-gray-900">수면코칭이란?</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-open:rotate-180 transition-transform">
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -408,7 +406,7 @@ export default function SleepGoldenTimePage() {
           </p>
           <ul className="text-xs text-gray-600 space-y-1.5 leading-relaxed">
             <li>• 멜라토닌은 해 진 뒤 1–2시간 후부터 분비가 시작돼요</li>
-            <li>• 골든타임 30분 전부터 조명을 어둡게 하고 차분한 루틴을 시작하세요</li>
+            <li>• 취침 30분 전부터 조명을 어둡게 하고 차분한 루틴을 시작하세요</li>
             <li>• 자극적인 놀이·화면 노출은 피해주세요</li>
           </ul>
         </div>

@@ -7,7 +7,7 @@ export default function WonderWeeksLayout({
 }) {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <div className="flex-1">{children}</div>
+      <div className="flex-1 pb-24">{children}</div>
       <BottomNav />
     </div>
   );

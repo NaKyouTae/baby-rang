@@ -58,6 +58,9 @@ declare global {
 function NursingRoomContent() {
   const searchParams = useSearchParams();
   const initialRoomName = searchParams.get("room");
+  const initialLat = searchParams.get("lat");
+  const initialLng = searchParams.get("lng");
+  const initialAddr = searchParams.get("addr");
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -68,6 +71,7 @@ function NursingRoomContent() {
       ? SAMPLE_NURSING_ROOMS.find((r) => r.name === initialRoomName) ?? null
       : null
   );
+  const initialRoomResolved = useRef(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [rooms, setRooms] = useState<NursingRoom[]>(SAMPLE_NURSING_ROOMS);
   const [showReport, setShowReport] = useState(false);
@@ -116,7 +120,7 @@ function NursingRoomContent() {
           .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
           .map((r: any) => ({
             name: r.name,
-            address: [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
+            address: r.address ?? [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
             lat: r.lat,
             lng: r.lng,
             tel: r.tel ?? undefined,
@@ -164,6 +168,36 @@ function NursingRoomContent() {
   useEffect(() => {
     loadRooms();
   }, []);
+
+  // 홈에서 넘어온 경우: rooms 로드 후 해당 수유실 선택 + 포커스
+  useEffect(() => {
+    if (initialRoomResolved.current || !initialRoomName || rooms.length === 0) return;
+    const found = rooms.find((r) => r.name === initialRoomName);
+    if (found) {
+      initialRoomResolved.current = true;
+      setSelectedRoom(found);
+      const map = mapInstanceRef.current;
+      if (map) {
+        map.setZoom(16, false);
+        map.panTo(new naver.maps.LatLng(found.lat, found.lng));
+      }
+    } else if (initialLat && initialLng) {
+      // rooms에서 못 찾았지만 좌표가 있으면 임시 선택
+      initialRoomResolved.current = true;
+      const tempRoom: NursingRoom = {
+        name: initialRoomName,
+        address: initialAddr ?? "",
+        lat: parseFloat(initialLat),
+        lng: parseFloat(initialLng),
+      };
+      setSelectedRoom(tempRoom);
+      const map = mapInstanceRef.current;
+      if (map) {
+        map.setZoom(16, false);
+        map.panTo(new naver.maps.LatLng(tempRoom.lat, tempRoom.lng));
+      }
+    }
+  }, [rooms, initialRoomName, initialLat, initialLng]);
 
   // 네이버 지도 스크립트 로드
   useEffect(() => {
@@ -234,12 +268,17 @@ function NursingRoomContent() {
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || !userLocation) return;
 
-    const center = selectedRoom
-      ? new naver.maps.LatLng(selectedRoom.lat, selectedRoom.lng)
-      : new naver.maps.LatLng(userLocation.lat, userLocation.lng);
+    const initialCenter = initialLat && initialLng
+      ? new naver.maps.LatLng(parseFloat(initialLat), parseFloat(initialLng))
+      : null;
+    const center = initialCenter
+      ?? (selectedRoom
+        ? new naver.maps.LatLng(selectedRoom.lat, selectedRoom.lng)
+        : new naver.maps.LatLng(userLocation.lat, userLocation.lng));
+    const initialZoom = initialCenter ? 16 : 14;
     const map = new naver.maps.Map(mapRef.current, {
       center,
-      zoom: 14,
+      zoom: initialZoom,
       zoomControl: false,
     });
     mapInstanceRef.current = map;
@@ -361,7 +400,7 @@ function NursingRoomContent() {
           position: new naver.maps.LatLng(centerLat, centerLng),
           map,
           icon: {
-            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(17,17,17,0.92);color:#fff;font-weight:700;font-size:${fontSize}px;border:3px solid rgba(255,255,255,0.95);border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.35);">${count}</div>`,
+            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(255,199,44,0.92);color:#fff;font-weight:700;font-size:${fontSize}px;border:3px solid rgba(255,255,255,0.95);border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.25);">${count}</div>`,
             anchor: new naver.maps.Point(size / 2, size / 2),
           },
           zIndex: 40,
@@ -629,7 +668,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute left-4 flex items-center gap-1.5 bg-gray-900 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute left-4 flex items-center gap-1.5 bg-primary-500 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
           aria-label="수유실 제보하기"
         >

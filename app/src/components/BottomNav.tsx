@@ -172,9 +172,9 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         data-bottom-nav-root
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
       >
-        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),16px)] pointer-events-auto">
+        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),12px)] pointer-events-auto">
           {editMode && (
-            <div className="mb-2 flex justify-center">
+            <div className="mb-4 flex justify-center">
               <button
                 type="button"
                 onClick={() => setEditMode(false)}
@@ -193,7 +193,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
             >
               <HomeIcon active={isHomeActive} />
-              <span className={`text-[10px] ${isHomeActive ? "text-gray-900 font-bold" : "text-gray-400 font-medium"}`}>홈</span>
+              <span className={`text-[10px] ${isHomeActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>홈</span>
             </Link>
 
             {/* MIDDLE 3 SLOTS — framer-motion Reorder */}
@@ -227,7 +227,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
             >
               <MyIcon active={!!isSettingsActive} />
-              <span className={`text-[10px] ${isSettingsActive ? "text-gray-900 font-bold" : "text-gray-400 font-medium"}`}>마이</span>
+              <span className={`text-[10px] ${isSettingsActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>마이</span>
             </Link>
           </div>
         </div>
@@ -323,7 +323,7 @@ function ReorderSlot({
       onPointerLeave={onPointerCancel}
       onClick={onClickSlot}
     >
-      <div className={`flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer ${editMode ? "nav-wiggle" : ""}`}>
+      <div className={`flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer`}>
         {menuId === null ? (
           <>
             <PlusIcon />
@@ -331,8 +331,8 @@ function ReorderSlot({
           </>
         ) : (
           <>
-            {MENU_CATALOG[menuId].icon(isActive)}
-            <span className={`text-[10px] ${isActive ? "text-gray-900 font-bold" : "text-gray-400 font-medium"}`}>
+            {MENU_CATALOG[menuId].icon(isActive, "#FFC72C")}
+            <span className={`text-[10px] ${isActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>
               {MENU_CATALOG[menuId].label}
             </span>
           </>
@@ -356,7 +356,7 @@ function ReorderSlot({
 }
 
 function HomeIcon({ active }: { active: boolean }) {
-  const c = active ? "#171717" : "#9ca3af";
+  const c = active ? "#FFC72C" : "#9ca3af";
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 11l9-8 9 8" />
@@ -366,7 +366,7 @@ function HomeIcon({ active }: { active: boolean }) {
 }
 
 function MyIcon({ active }: { active: boolean }) {
-  const c = active ? "#171717" : "#9ca3af";
+  const c = active ? "#FFC72C" : "#9ca3af";
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" />

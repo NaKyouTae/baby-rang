@@ -34,6 +34,7 @@ export default function ChildrenSettingsPage() {
   const [editDatePickerOpen, setEditDatePickerOpen] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
     const file = e.target.files?.[0];
@@ -85,15 +86,17 @@ export default function ChildrenSettingsPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),16px)] pb-3 flex items-center gap-3">
-        <button onClick={() => router.back()} className="text-primary-600">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-5">
-            <path fillRule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clipRule="evenodd" />
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
+        <button type="button" onClick={() => router.push('/settings')} aria-label="뒤로가기" className="p-2">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900">우리아이 등록하기</h1>
+        <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
+          우리아이 등록하기
+        </h1>
       </header>
 
       {/* 등록된 아이 목록 */}
@@ -220,7 +223,7 @@ export default function ChildrenSettingsPage() {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </button>
-              <button onClick={() => removeChild(child.id)} className="p-2 text-gray-300">
+              <button onClick={() => setDeleteTarget({ id: child.id, name: child.name })} className="p-2 text-gray-300">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
@@ -332,7 +335,6 @@ export default function ChildrenSettingsPage() {
         open={datePickerOpen}
         value={birthDate}
         max={new Date().toISOString().slice(0, 10)}
-        title="생년월일 선택"
         onClose={() => setDatePickerOpen(false)}
         onConfirm={(d) => setBirthDate(d)}
       />
@@ -341,10 +343,42 @@ export default function ChildrenSettingsPage() {
         open={editDatePickerOpen}
         value={editBirthDate}
         max={new Date().toISOString().slice(0, 10)}
-        title="생년월일 선택"
         onClose={() => setEditDatePickerOpen(false)}
         onConfirm={(d) => setEditBirthDate(d)}
       />
+
+      {/* 삭제 확인 모달 */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-6" onClick={() => setDeleteTarget(null)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-full max-w-[320px] bg-white rounded-2xl p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-gray-900 text-center">아이 삭제</h3>
+            <p className="mt-2 text-sm text-gray-500 text-center">
+              <span className="font-semibold text-gray-900">{deleteTarget.name}</span>의 정보를 삭제할까요?<br />
+              삭제하면 되돌릴 수 없어요.
+            </p>
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  removeChild(deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-sm font-semibold text-white"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

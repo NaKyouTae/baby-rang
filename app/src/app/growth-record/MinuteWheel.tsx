@@ -144,7 +144,7 @@ export default function MinuteWheel({ value, onChange, onOverflow, onTap }: Prop
     <div className="relative">
       {/* 중앙 인디케이터 */}
       <div
-        className="pointer-events-none absolute top-1 bottom-1 left-1/2 -translate-x-1/2 rounded-2xl bg-gray-900 shadow-md z-0"
+        className="pointer-events-none absolute top-1 bottom-1 left-1/2 -translate-x-1/2 rounded-2xl bg-primary-500 shadow-md z-0"
         style={{ width: ITEM_W + 4 }}
       />
       <div

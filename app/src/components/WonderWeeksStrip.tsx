@@ -107,7 +107,7 @@ function ChildWonderCard({ child }: { child: Child }) {
             <span className="text-[10px] text-gray-500 shrink-0">{ageLabel}</span>
           </div>
           {current ? (
-            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full shrink-0">
+            <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full shrink-0">
               원더윅스 진행중
             </span>
           ) : (
@@ -119,7 +119,7 @@ function ChildWonderCard({ child }: { child: Child }) {
 
         {current ? (
           <div className="text-[11px] text-gray-700">
-            <span className="font-semibold text-rose-600">Leap {current.leap}. {current.name}</span>
+            <span className="font-semibold text-primary-700">Leap {current.leap}. {current.name}</span>
             <span className="text-gray-500"> · {fmt(current.startDate)} ~ {fmt(current.endDate)}</span>
           </div>
         ) : (

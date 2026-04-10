@@ -12,7 +12,6 @@ export default function ProfileSettingsPage() {
 
   const [nickname, setNickname] = useState('');
   const [parentRole, setParentRole] = useState<ParentRole>('');
-  const [birthYear, setBirthYear] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -25,7 +24,6 @@ export default function ProfileSettingsPage() {
     }
     setNickname(user?.nickname ?? '');
     setParentRole(((user?.parentRole as ParentRole) ?? '') || '');
-    setBirthYear(user?.birthYear ? String(user.birthYear) : '');
   }, [isLoaded, isAuthenticated, user, router]);
 
   const canSubmit =
@@ -42,7 +40,6 @@ export default function ProfileSettingsPage() {
         body: JSON.stringify({
           nickname: nickname.trim(),
           parentRole,
-          birthYear: birthYear ? Number(birthYear) : null,
         }),
       });
       if (!res.ok) {
@@ -59,9 +56,6 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const thisYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 60 }, (_, i) => thisYear - 18 - i);
-
   if (!isLoaded) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-screen">
@@ -71,7 +65,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 pb-32">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
         <button
           type="button"
@@ -156,23 +150,6 @@ export default function ProfileSettingsPage() {
               👨 아빠
             </button>
           </div>
-        </section>
-
-        {/* 출생연도 */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500">나이 (선택)</p>
-          <select
-            value={birthYear}
-            onChange={(e) => setBirthYear(e.target.value)}
-            className="mt-2 w-full text-base font-bold text-gray-900 border-b border-gray-200 pb-1.5 outline-none focus:border-gray-400 bg-transparent"
-          >
-            <option value="">출생연도 선택</option>
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}년생
-              </option>
-            ))}
-          </select>
         </section>
 
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}

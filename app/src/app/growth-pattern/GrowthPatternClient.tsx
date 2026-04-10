@@ -359,7 +359,7 @@ export default function GrowthPatternClient() {
     return (
       <EmptyChildState
         emoji="📊"
-        title="성장 패턴"
+        title="패턴"
         description={
           <>
             아이를 등록하면<br />
@@ -371,19 +371,13 @@ export default function GrowthPatternClient() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="px-5 pt-8 pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">성장 패턴</h1>
-            <p className="text-sm text-gray-500 mt-1">아기랑의 하루 리듬을 한눈에</p>
-          </div>
-          <ChildSelector
-            children={children}
-            selected={selectedChild}
-            onSelect={setSelectedChild}
-          />
-        </div>
+    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(env(safe-area-inset-bottom)+72px)] overflow-hidden">
+      <header className="px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
+        <ChildSelector
+          children={children}
+          selected={selectedChild}
+          onSelect={setSelectedChild}
+        />
       </header>
 
       {/* 타입 필터 */}

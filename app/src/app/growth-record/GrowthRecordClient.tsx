@@ -17,7 +17,7 @@ import DatePickerModal from '@/components/DatePickerModal';
 
 const DEFAULT_QUICK_TYPES: GrowthType[] = ['FORMULA', 'SLEEP', 'DIAPER'];
 const QUICK_LONG_PRESS_MS = 500;
-const MAX_QUICK_TYPES = 6;
+const MAX_QUICK_TYPES = Infinity;
 
 function todayString(): string {
   const d = new Date();
@@ -322,7 +322,6 @@ export default function GrowthRecordPage() {
     if (longPressRef.current !== null) window.clearTimeout(longPressRef.current);
     longPressRef.current = window.setTimeout(() => {
       setEditQuickMode(true);
-      try { navigator.vibrate?.(20); } catch {}
     }, QUICK_LONG_PRESS_MS);
   }, []);
 
@@ -384,7 +383,7 @@ export default function GrowthRecordPage() {
     return (
       <EmptyChildState
         emoji="📒"
-        title="성장 기록"
+        title="기록"
         description={
           <>
             아이를 등록하면<br />
@@ -399,9 +398,7 @@ export default function GrowthRecordPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* 스티키 타이틀 바 */}
-      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-6 pb-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">성장 기록</h1>
+      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
         <ChildSelector
           children={children}
           selected={selectedChild}
@@ -606,7 +603,7 @@ export default function GrowthRecordPage() {
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
       >
         {editQuickMode && (
-          <div className="mb-2 flex justify-center pointer-events-auto">
+          <div className="mb-4 flex justify-center pointer-events-auto">
             <button
               type="button"
               onClick={() => setEditQuickMode(false)}
@@ -616,95 +613,95 @@ export default function GrowthRecordPage() {
             </button>
           </div>
         )}
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-lg p-2 flex items-center gap-2 pointer-events-auto">
-          <Reorder.Group
-            axis="x"
-            as="div"
-            values={quickTypes}
-            onReorder={(next: GrowthType[]) => persistQuick(next)}
-            className={`flex-1 flex gap-1.5 ${editQuickMode ? 'overflow-visible' : ''}`}
+        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-lg pointer-events-auto flex items-stretch overflow-hidden">
+          {/* 스크롤 영역: 간편 버튼들 */}
+          <div
+            className="flex-1 min-w-0 overflow-x-auto no-scrollbar"
+            style={{
+              scrollbarWidth: 'none',
+              maskImage: 'linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent)',
+            }}
           >
-            {quickTypes.map((t) => {
-              const cfg = TYPE_CONFIG[t];
-              return (
-                <Reorder.Item
-                  key={t}
-                  value={t}
-                  as="div"
-                  drag={editQuickMode ? 'x' : false}
-                  dragListener={editQuickMode}
-                  onDragStart={() => { draggingRef.current = true; }}
-                  onDragEnd={() => { setTimeout(() => { draggingRef.current = false; }, 0); }}
-                  whileDrag={{ scale: 1.1, zIndex: 10 }}
-                  style={{ touchAction: editQuickMode ? 'none' : 'auto' }}
-                  className="relative flex-1 min-w-0"
-                >
-                  <button
-                    type="button"
-                    onPointerDown={() => { if (!editQuickMode) startQuickLongPress(); }}
-                    onPointerUp={clearQuickLongPress}
-                    onPointerCancel={clearQuickLongPress}
-                    onPointerLeave={clearQuickLongPress}
-                    onClick={(e) => {
-                      if (draggingRef.current) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return;
-                      }
-                      if (editQuickMode) {
-                        e.preventDefault();
-                        return;
-                      }
-                      setEditing(null);
-                      setSheetType(t);
-                    }}
-                    className={`w-full flex flex-col items-center gap-0.5 py-2 rounded-xl ${cfg.color} ${editQuickMode ? 'nav-wiggle' : ''}`}
-                  >
-                    <span className="text-lg leading-none">{cfg.emoji}</span>
-                    <span className="text-[10px] font-semibold">{cfg.label}</span>
-                  </button>
-                  {editQuickMode && (
-                    <button
-                      type="button"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        persistQuick(quickTypes.filter((x) => x !== t));
-                      }}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center shadow"
-                      aria-label="삭제"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-                        <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  )}
-                </Reorder.Item>
-              );
-            })}
-            {Array.from({ length: Math.max(0, MAX_QUICK_TYPES - quickTypes.length) }).map((_, i) => (
-              <button
-                key={`empty-${i}`}
-                type="button"
-                onClick={() => setShowAddQuick(true)}
-                className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2 rounded-xl border border-dashed border-gray-200 text-gray-300"
-                aria-label="간편 버튼 추가"
+            <div className="inline-flex gap-1 p-1.5">
+              <Reorder.Group
+                axis="x"
+                as="div"
+                values={quickTypes}
+                onReorder={(next: GrowthType[]) => persistQuick(next)}
+                className="flex"
               >
-                <span className="text-lg leading-none">+</span>
-                <span className="text-[10px] font-semibold">추가</span>
-              </button>
-            ))}
-          </Reorder.Group>
+                {quickTypes.map((t) => {
+                  const cfg = TYPE_CONFIG[t];
+                  return (
+                    <Reorder.Item
+                      key={t}
+                      value={t}
+                      as="div"
+                      drag={editQuickMode ? 'x' : false}
+                      dragListener={editQuickMode}
+                      onDragStart={() => { draggingRef.current = true; }}
+                      onDragEnd={() => { setTimeout(() => { draggingRef.current = false; }, 0); }}
+                      whileDrag={{ scale: 1.05, zIndex: 10 }}
+                      transition={{ layout: { duration: 0 } }}
+                      style={{ touchAction: editQuickMode ? 'none' : 'auto' }}
+                      className="relative shrink-0 w-[60px] px-0.5"
+                    >
+                      <button
+                        type="button"
+                        onPointerDown={() => { if (!editQuickMode) startQuickLongPress(); }}
+                        onPointerUp={clearQuickLongPress}
+                        onPointerCancel={clearQuickLongPress}
+                        onPointerLeave={clearQuickLongPress}
+                        onClick={(e) => {
+                          if (draggingRef.current) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                          }
+                          if (editQuickMode) {
+                            e.preventDefault();
+                            return;
+                          }
+                          setEditing(null);
+                          setSheetType(t);
+                        }}
+                        className={`w-full flex flex-col items-center gap-0.5 py-1.5 rounded-lg ${cfg.color}`}
+                      >
+                        <span className="text-base leading-none">{cfg.emoji}</span>
+                        <span className="text-[9px] font-semibold">{cfg.label}</span>
+                      </button>
+                      {editQuickMode && (
+                        <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            persistQuick(quickTypes.filter((x) => x !== t));
+                          }}
+                          className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gray-800 text-white flex items-center justify-center shadow z-10"
+                          aria-label="삭제"
+                        >
+                          <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true">
+                            <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      )}
+                    </Reorder.Item>
+                  );
+                })}
+              </Reorder.Group>
+            </div>
+          </div>
+          {/* 고정 + 버튼 */}
           <button
-            onClick={() => setShowAllPicker(true)}
-            className="shrink-0 w-11 h-11 rounded-xl bg-gray-900 text-white flex items-center justify-center"
-            aria-label="기록 추가"
+            type="button"
+            onClick={() => setShowAddQuick(true)}
+            className="shrink-0 w-11 flex items-center justify-center border-l border-gray-100 text-gray-400 rounded-r-2xl active:bg-gray-50"
+            aria-label="간편 버튼 추가"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
+            <span className="text-xl leading-none">+</span>
           </button>
         </div>
       </div>
@@ -788,37 +785,39 @@ export default function GrowthRecordPage() {
               </button>
             </div>
             <div className="overflow-y-auto px-5 py-4 grid grid-cols-3 gap-2">
-              {ALL_TYPES.filter((t) => !quickTypes.includes(t)).map((t) => {
+              {ALL_TYPES.map((t) => {
                 const cfg = TYPE_CONFIG[t];
-                const full = quickTypes.length >= MAX_QUICK_TYPES;
+                const selected = quickTypes.includes(t);
                 return (
                   <button
                     key={t}
-                    disabled={full}
                     onClick={() => {
-                      if (quickTypes.length >= MAX_QUICK_TYPES) return;
-                      persistQuick([...quickTypes, t]);
-                      setShowAddQuick(false);
+                      if (selected) {
+                        persistQuick(quickTypes.filter((x) => x !== t));
+                      } else {
+                        persistQuick([...quickTypes, t]);
+                      }
                     }}
-                    className="flex flex-col items-center gap-1 py-3 rounded-2xl bg-gray-50 active:bg-gray-100 disabled:opacity-40"
+                    className={`relative flex flex-col items-center gap-1 py-3 rounded-2xl transition ${
+                      selected
+                        ? 'bg-primary-50 ring-2 ring-primary-500'
+                        : 'bg-gray-50 active:bg-gray-100'
+                    }`}
                   >
+                    {selected && (
+                      <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
                     <span className="text-2xl">{cfg.emoji}</span>
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className={`text-xs font-medium ${selected ? 'text-primary-700' : 'text-gray-700'}`}>
                       {cfg.label}
                     </span>
                   </button>
                 );
               })}
-              {ALL_TYPES.filter((t) => !quickTypes.includes(t)).length === 0 && (
-                <p className="col-span-3 text-center text-sm text-gray-400 py-6">
-                  추가할 수 있는 항목이 없어요.
-                </p>
-              )}
-              {quickTypes.length >= MAX_QUICK_TYPES && (
-                <p className="col-span-3 text-center text-xs text-gray-400 pt-2">
-                  최대 {MAX_QUICK_TYPES}개까지 등록할 수 있어요.
-                </p>
-              )}
             </div>
           </div>
         </div>

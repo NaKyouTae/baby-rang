@@ -201,7 +201,7 @@ export default function TimePickerModal({
               onConfirm(mo, safeDay, h, m);
               onClose();
             }}
-            className="flex-1 py-2.5 rounded-xl bg-gray-900 text-sm font-semibold text-white"
+            className="flex-1 py-2.5 rounded-xl bg-primary-500 text-sm font-semibold text-white"
           >
             확인
           </button>

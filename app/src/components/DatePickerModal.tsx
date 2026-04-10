@@ -148,7 +148,7 @@ export default function DatePickerModal({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const currentYear = today.getFullYear();
-  const yearOptions = Array.from({ length: 30 }, (_, i) => currentYear - 25 + i);
+  const yearOptions = Array.from({ length: 30 }, (_, i) => currentYear + 5 - i);
 
   // 모드별 헤더 타이틀
   const headerTitle =
@@ -165,7 +165,7 @@ export default function DatePickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
     >
@@ -178,11 +178,7 @@ export default function DatePickerModal({
       />
 
       {/* 시트 */}
-      <div className="relative w-full max-w-[430px] bg-white rounded-3xl shadow-xl pb-[max(env(safe-area-inset-bottom),16px)] mb-3 sm:mb-0">
-        {/* 핸들 */}
-        <div className="flex justify-center pt-2.5 pb-1 sm:hidden">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
-        </div>
+      <div className="relative w-full max-w-[430px] bg-white rounded-3xl shadow-xl pb-4">
 
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-3">
