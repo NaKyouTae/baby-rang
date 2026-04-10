@@ -52,6 +52,18 @@ body {
   height: 0;
 }
 
+/* 모바일 뷰포트 높이 폴백 (dvh 미지원 브라우저용) */
+.h-screen-safe {
+  height: 100vh; /* 최후 폴백 */
+  height: calc(var(--vh, 1vh) * 100); /* JS 기반 정확한 높이 */
+  height: 100dvh; /* 모던 브라우저 */
+}
+.min-h-screen-safe {
+  min-height: 100vh;
+  min-height: calc(var(--vh, 1vh) * 100);
+  min-height: 100dvh;
+}
+
 .gradient-btn {
   background: var(--color-primary-500);
 }

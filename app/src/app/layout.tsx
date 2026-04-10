@@ -3,6 +3,7 @@ import "./globals.css";
 import SplashProvider from "@/components/SplashProvider";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
+import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
 const SITE_NAME = "아기랑";
@@ -157,7 +158,8 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
-        <div className="relative w-full max-w-[430px] h-dvh overflow-y-auto overscroll-contain">
+        <ViewportHeightSetter />
+        <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
           {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
           <div
             aria-hidden
