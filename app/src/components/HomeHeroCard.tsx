@@ -402,14 +402,14 @@ function ChildrenCarousel({
           <div
             key={child.id}
             className="snap-center shrink-0"
-            style={{ width: 'calc(100% - 40px)' }}
+            style={{ width: 'calc(100% - 40px)', scrollSnapStop: 'always' }}
           >
             <ChildHeroCard child={child} />
           </div>
         ))}
         <div
           className="snap-center shrink-0"
-          style={{ width: 'calc(100% - 40px)' }}
+          style={{ width: 'calc(100% - 40px)', scrollSnapStop: 'always' }}
         >
           <AddChildCard />
         </div>
