@@ -71,11 +71,12 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
           <div className="flex items-center gap-1.5">
             <span className="text-[15px] font-bold text-gray-900 truncate">{selected.name}</span>
             <span
-              className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold leading-none ${
+              className={`inline-flex items-center justify-center w-[16px] h-[16px] rounded-full text-[10px] font-bold ${
                 selected.gender === 'female'
                   ? 'bg-pink-100 text-pink-600'
                   : 'bg-sky-100 text-sky-600'
               }`}
+              style={{ lineHeight: '16px', textAlign: 'center' }}
             >
               {selected.gender === 'female' ? '♀' : '♂'}
             </span>
@@ -127,11 +128,12 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                       {c.name}
                     </p>
                     <span
-                      className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold leading-none ${
+                      className={`inline-flex items-center justify-center w-[16px] h-[16px] rounded-full text-[10px] font-bold ${
                         c.gender === 'female'
                           ? 'bg-pink-100 text-pink-600'
                           : 'bg-sky-100 text-sky-600'
                       }`}
+                      style={{ lineHeight: '16px', textAlign: 'center' }}
                     >
                       {c.gender === 'female' ? '♀' : '♂'}
                     </span>
