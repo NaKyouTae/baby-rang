@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useChildren, type Child } from '@/hooks/useChildren';
+import { calcChildAge, toKstYmd } from '@/lib/childAge';
 import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_components/WonderWeeksCalendar';
 import ChildSelector from '@/components/ChildSelector';
 import ChildPickScreen from '@/components/ChildPickScreen';
@@ -70,6 +71,10 @@ function WonderWeeksContent() {
     );
   }
 
+  const { days, months, extraDays } = calcChildAge(selectedChild.birthDate);
+  const ageLabel = months > 0 ? `${months}개월 ${extraDays}일` : `${days}일`;
+  const birthYmd = toKstYmd(selectedChild.birthDate);
+
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
       <div ref={topRef} />
@@ -80,6 +85,53 @@ function WonderWeeksContent() {
           selected={selectedChild}
           onSelect={setSelectedChild}
         />
+      </div>
+
+      {/* 아이 프로필 */}
+      <div className="px-4 mb-4">
+        <div className="rounded-2xl bg-white border border-primary-200 shadow-sm p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative shrink-0">
+              <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-primary-400 to-primary-300" />
+              <div className="relative w-12 h-12 rounded-full bg-white overflow-hidden flex items-center justify-center text-2xl ring-2 ring-white leading-none">
+                {selectedChild.profileImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedChild.profileImage}
+                    alt={selectedChild.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="flex items-center justify-center w-full h-full leading-[1]">{selectedChild.gender === 'female' ? '👧' : '👦'}</span>
+                )}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
+                  {selectedChild.name}
+                </span>
+                <span
+                  className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full font-bold ${
+                    selectedChild.gender === 'female'
+                      ? 'bg-pink-100 text-pink-600'
+                      : 'bg-sky-100 text-sky-600'
+                  }`}
+                  style={{ fontSize: '11px', lineHeight: 1, paddingBottom: '1.5px' }}
+                >
+                  {selectedChild.gender === 'female' ? '♀' : '♂'}
+                </span>
+                <span className="text-[11px] text-gray-400 font-medium">{birthYmd}</span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-1.5 py-0.5 rounded-full">
+                  D+{days}
+                </span>
+                <span className="text-[11px] text-gray-600 font-medium">{ageLabel}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="px-4">
