@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import SplashProvider from "@/components/SplashProvider";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
@@ -166,9 +165,7 @@ export default function RootLayout({
             className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
             style={{ height: 'env(safe-area-inset-top, 0px)' }}
           />
-          <SplashProvider>
             <LoginPromptProvider>{children}</LoginPromptProvider>
-          </SplashProvider>
           <AdSenseScript />
         </div>
       </body>

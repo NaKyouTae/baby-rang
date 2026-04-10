@@ -1,3 +1,10 @@
+//
+//  BabyRangApp.swift
+//  BabyRang
+//
+//  Created by 나규태 on 4/10/26.
+//
+
 import SwiftUI
 
 @main
