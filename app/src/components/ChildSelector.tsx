@@ -16,7 +16,7 @@ function formatBirth(date: string): string {
   return `${y}. ${m}. ${d}`;
 }
 
-function Avatar({ child, size = 40 }: { child: Child; size?: number }) {
+function Avatar({ child, size = 48 }: { child: Child; size?: number }) {
   const style = { width: size, height: size };
   if (child.profileImage) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -24,7 +24,7 @@ function Avatar({ child, size = 40 }: { child: Child; size?: number }) {
       <img
         src={child.profileImage}
         alt={child.name}
-        className="rounded-full object-cover bg-gray-200 shrink-0"
+        className="rounded-full object-cover bg-gray-100 shrink-0"
         style={style}
       />
     );
@@ -64,29 +64,29 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
       <button
         type="button"
         onClick={() => children.length > 1 && setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 active:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 active:bg-gray-50 transition-colors"
       >
-        <Avatar child={selected} size={44} />
+        <Avatar child={selected} size={48} />
         <div className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
-            <span className="text-[15px] font-bold text-gray-900 truncate">{selected.name}</span>
+            <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">{selected.name}</span>
             <span
-              className={`inline-flex items-center justify-center w-[16px] h-[16px] rounded-full font-bold ${
+              className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full font-bold ${
                 selected.gender === 'female'
                   ? 'bg-pink-100 text-pink-600'
                   : 'bg-sky-100 text-sky-600'
               }`}
-              style={{ fontSize: '10px', lineHeight: 1, paddingBottom: '1.5px' }}
+              style={{ fontSize: '11px', lineHeight: 1, paddingBottom: '1.5px' }}
             >
               {selected.gender === 'female' ? '♀' : '♂'}
             </span>
-            <span className="text-[11px] text-gray-400">{formatBirth(selected.birthDate)}</span>
+            <span className="text-[11px] text-gray-400 font-medium">{formatBirth(selected.birthDate)}</span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded-full">
               D+{days}
             </span>
-            <span className="text-[11px] text-gray-500">{months}개월 {extraDays}일</span>
+            <span className="text-[11px] text-gray-600 font-medium">{months}개월 {extraDays}일</span>
           </div>
         </div>
         {children.length > 1 && (
@@ -128,12 +128,12 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                       {c.name}
                     </p>
                     <span
-                      className={`inline-flex items-center justify-center w-[16px] h-[16px] rounded-full font-bold ${
+                      className={`w-[16px] h-[16px] rounded-full font-bold ${
                         c.gender === 'female'
                           ? 'bg-pink-100 text-pink-600'
                           : 'bg-sky-100 text-sky-600'
                       }`}
-                      style={{ fontSize: '10px', lineHeight: 1, paddingBottom: '1.5px' }}
+                      style={{ display: 'grid', placeItems: 'center', fontSize: '10px', lineHeight: 1 }}
                     >
                       {c.gender === 'female' ? '♀' : '♂'}
                     </span>

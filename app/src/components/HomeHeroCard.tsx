@@ -235,12 +235,12 @@ function ChildHeroCard({
                   {child.name}
                 </div>
                 <span
-                  className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full font-bold ${
+                  className={`w-[18px] h-[18px] rounded-full font-bold ${
                     child.gender === 'female'
                       ? 'bg-pink-100 text-pink-600'
                       : 'bg-sky-100 text-sky-600'
                   }`}
-                  style={{ fontSize: '11px', lineHeight: 1, paddingBottom: '1.5px' }}
+                  style={{ display: 'grid', placeItems: 'center', fontSize: '11px', lineHeight: 1 }}
                   aria-label={child.gender === 'female' ? '여아' : '남아'}
                 >
                   {child.gender === 'female' ? '♀' : '♂'}
