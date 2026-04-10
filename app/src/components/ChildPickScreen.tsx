@@ -39,7 +39,7 @@ export default function ChildPickScreen({
               onClick={() => onSelect(child)}
               className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white border border-gray-200 shadow-sm active:bg-gray-50 transition-colors text-left"
             >
-              <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center text-2xl shrink-0 leading-none">
+              <div className="relative w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center text-2xl shrink-0 leading-none">
                 {child.profileImage ? (
                   <Image src={child.profileImage} alt={child.name} fill className="object-cover" />
                 ) : (
