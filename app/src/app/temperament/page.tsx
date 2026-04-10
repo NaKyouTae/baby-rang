@@ -87,7 +87,7 @@ export default function TemperamentPage() {
       <button
         onClick={handleStart}
         disabled={loading || !selectedAge}
-        className="w-full max-w-xs py-4 bg-gray-900 text-white font-bold rounded-2xl transition-all disabled:opacity-50 active:scale-[0.97]"
+        className="w-full max-w-xs py-4 bg-primary-500 text-white font-bold rounded-2xl transition-all disabled:opacity-50 active:scale-[0.97] active:bg-primary-600"
       >
         {loading ? '준비 중...' : !selectedAge ? '나이대를 선택해 주세요' : '검사 시작하기'}
       </button>

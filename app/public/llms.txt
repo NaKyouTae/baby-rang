@@ -24,7 +24,6 @@
 
 - [홈](https://baby-rang.spectrify.kr/): 오늘의 육아 요약과 빠른 접근
 - [기질 검사](https://baby-rang.spectrify.kr/temperament): 9차원 기질 검사
-- [기질 검사 이벤트](https://baby-rang.spectrify.kr/events/temperament): 프로모션/이벤트 안내
 - [성장 기록](https://baby-rang.spectrify.kr/growth-record): 키·몸무게·머리둘레 기록
 - [성장 패턴](https://baby-rang.spectrify.kr/growth-pattern): WHO 곡선 기반 성장 분석
 - [원더윅스](https://baby-rang.spectrify.kr/wonder-weeks): 정신발달 급등기 가이드
