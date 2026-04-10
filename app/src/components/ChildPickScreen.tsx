@@ -51,15 +51,8 @@ export default function ChildPickScreen({
                   <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
                     {child.name}
                   </span>
-                  <span
-                    className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full font-bold ${
-                      child.gender === 'female'
-                        ? 'bg-pink-100 text-pink-600'
-                        : 'bg-sky-100 text-sky-600'
-                    }`}
-                    style={{ fontSize: '11px', lineHeight: 1, paddingBottom: '1.5px' }}
-                  >
-                    {child.gender === 'female' ? '♀' : '♂'}
+                  <span className="text-[13px] leading-none">
+                    {child.gender === 'female' ? '👧' : '👦'}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">{birthYmd}</span>
                 </div>

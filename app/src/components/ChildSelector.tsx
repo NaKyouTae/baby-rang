@@ -70,15 +70,8 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
         <div className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
             <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">{selected.name}</span>
-            <span
-              className={`inline-flex items-center justify-center w-[18px] h-[18px] rounded-full font-bold ${
-                selected.gender === 'female'
-                  ? 'bg-pink-100 text-pink-600'
-                  : 'bg-sky-100 text-sky-600'
-              }`}
-              style={{ fontSize: '11px', lineHeight: 1, paddingBottom: '1.5px' }}
-            >
-              {selected.gender === 'female' ? '♀' : '♂'}
+            <span className="text-[13px] leading-none">
+              {selected.gender === 'female' ? '👧' : '👦'}
             </span>
             <span className="text-[11px] text-gray-400 font-medium">{formatBirth(selected.birthDate)}</span>
           </div>
@@ -127,15 +120,8 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                     >
                       {c.name}
                     </p>
-                    <span
-                      className={`w-[16px] h-[16px] rounded-full font-bold ${
-                        c.gender === 'female'
-                          ? 'bg-pink-100 text-pink-600'
-                          : 'bg-sky-100 text-sky-600'
-                      }`}
-                      style={{ display: 'grid', placeItems: 'center', fontSize: '10px', lineHeight: 1 }}
-                    >
-                      {c.gender === 'female' ? '♀' : '♂'}
+                    <span className="text-[13px] leading-none">
+                      {c.gender === 'female' ? '👧' : '👦'}
                     </span>
                     <span className="text-[11px] text-gray-400">{formatBirth(c.birthDate)}</span>
                   </div>
