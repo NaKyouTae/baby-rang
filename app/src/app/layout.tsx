@@ -3,6 +3,7 @@ import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
+import SplashProvider from "@/components/SplashProvider";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
 const SITE_NAME = "아기랑";
@@ -165,7 +166,9 @@ export default function RootLayout({
             className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
             style={{ height: 'env(safe-area-inset-top, 0px)' }}
           />
+          <SplashProvider>
             <LoginPromptProvider>{children}</LoginPromptProvider>
+          </SplashProvider>
           <AdSenseScript />
         </div>
       </body>

@@ -10,9 +10,22 @@
 		6E47E1FB2F88E6A600AEEA6B /* BabyRang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BabyRang.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		6E47E2132F893E3400AEEA6B /* Exceptions for "BabyRang" folder in "BabyRang" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6E47E1FA2F88E6A600AEEA6B /* BabyRang */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6E47E1FD2F88E6A600AEEA6B /* BabyRang */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6E47E2132F893E3400AEEA6B /* Exceptions for "BabyRang" folder in "BabyRang" target */,
+			);
 			path = BabyRang;
 			sourceTree = "<group>";
 		};
@@ -257,6 +270,8 @@
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BabyRang/Info.plist;
+				"INFOPLIST_FILE[sdk=*]" = BabyRang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -293,6 +308,7 @@
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BabyRang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
