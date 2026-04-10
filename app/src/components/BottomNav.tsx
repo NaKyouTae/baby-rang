@@ -172,7 +172,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         data-bottom-nav-root
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
       >
-        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),12px)] pointer-events-auto">
+        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),16px)] pointer-events-auto">
           {editMode && (
             <div className="mb-4 flex justify-center">
               <button
