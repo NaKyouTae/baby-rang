@@ -234,12 +234,11 @@ function ChildHeroCard({
                 <div className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
                   {child.name}
                 </div>
-                <span
-                  className="text-[13px] leading-none"
-                  aria-label={child.gender === 'female' ? '여아' : '남아'}
-                >
-                  {child.gender === 'female' ? '👧' : '👦'}
-                </span>
+                <img
+                  src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
+                  alt={child.gender === 'female' ? '여아' : '남아'}
+                  className="w-[16px] h-[16px]"
+                />
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-1.5 py-0.5 rounded-full">

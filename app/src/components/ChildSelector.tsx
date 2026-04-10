@@ -70,9 +70,11 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
         <div className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-1.5">
             <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">{selected.name}</span>
-            <span className="text-[13px] leading-none">
-              {selected.gender === 'female' ? '👧' : '👦'}
-            </span>
+            <img
+              src={selected.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
+              alt={selected.gender === 'female' ? '여아' : '남아'}
+              className="w-[16px] h-[16px]"
+            />
             <span className="text-[11px] text-gray-400 font-medium">{formatBirth(selected.birthDate)}</span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -120,9 +122,11 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                     >
                       {c.name}
                     </p>
-                    <span className="text-[13px] leading-none">
-                      {c.gender === 'female' ? '👧' : '👦'}
-                    </span>
+                    <img
+                      src={c.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
+                      alt={c.gender === 'female' ? '여아' : '남아'}
+                      className="w-[16px] h-[16px]"
+                    />
                     <span className="text-[11px] text-gray-400">{formatBirth(c.birthDate)}</span>
                   </div>
                   <p className="text-[11px] text-gray-400 mt-0.5">

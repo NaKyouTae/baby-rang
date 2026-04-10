@@ -51,9 +51,11 @@ export default function ChildPickScreen({
                   <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
                     {child.name}
                   </span>
-                  <span className="text-[13px] leading-none">
-                    {child.gender === 'female' ? '👧' : '👦'}
-                  </span>
+                  <img
+                    src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
+                    alt={child.gender === 'female' ? '여아' : '남아'}
+                    className="w-[16px] h-[16px]"
+                  />
                   <span className="text-[11px] text-gray-400 font-medium">{birthYmd}</span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
