@@ -190,12 +190,7 @@ export default function TestPage() {
   }
 
   if (screen.type === 'submitting') {
-    return (
-      <main className="flex flex-col items-center justify-center min-h-dvh gap-4 gradient-page">
-        <div className="w-14 h-14 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-        <p className="text-sm font-medium text-gray-500">결과를 분석하고 있어요...</p>
-      </main>
-    );
+    return null;
   }
 
   if (screen.type === 'break') {
@@ -230,7 +225,7 @@ export default function TestPage() {
             </button>
             <button
               onClick={handleNext}
-              className="flex-1 py-4 rounded-2xl text-sm font-bold bg-gray-900 text-white shadow-lg shadow-gray-300 active:scale-[0.97] transition-transform"
+              className="flex-1 py-4 rounded-2xl text-sm font-bold bg-primary-500 text-white shadow-lg shadow-primary-200 active:scale-[0.97] active:bg-primary-600 transition-transform"
             >
               계속하기
             </button>
@@ -277,7 +272,7 @@ export default function TestPage() {
         {isLastQuestion && hasAnswer && (
           <button
             onClick={handleNext}
-            className="flex-1 py-4 rounded-2xl text-sm font-bold bg-gray-900 text-white shadow-lg shadow-gray-300 active:scale-[0.97] transition-transform"
+            className="flex-1 py-4 rounded-2xl text-sm font-bold bg-primary-500 text-white shadow-lg shadow-primary-200 active:scale-[0.97] active:bg-primary-600 transition-transform"
           >
             결과 보러가기
           </button>

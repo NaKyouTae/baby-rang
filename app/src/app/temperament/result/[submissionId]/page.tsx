@@ -129,6 +129,15 @@ export default function ResultPage() {
       )}
 
       <div className="px-4 mt-6">
+        <button
+          onClick={() => router.push('/temperament')}
+          className="w-full py-3.5 rounded-xl border border-primary-200 bg-white text-primary-600 font-semibold text-sm active:bg-primary-50 active:scale-[0.97] transition-all"
+        >
+          다시 검사하기
+        </button>
+      </div>
+
+      <div className="px-4 mt-4">
         <p className="text-[11px] text-gray-300 text-center leading-relaxed">
           이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나
           전문 심리 평가를 대신하지 않습니다.
