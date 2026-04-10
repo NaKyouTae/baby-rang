@@ -76,7 +76,7 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                   ? 'bg-pink-100 text-pink-600'
                   : 'bg-sky-100 text-sky-600'
               }`}
-              style={{ fontSize: '10px', lineHeight: 1, paddingTop: '1px' }}
+              style={{ fontSize: '10px', lineHeight: 1, paddingBottom: '1.5px' }}
             >
               {selected.gender === 'female' ? '♀' : '♂'}
             </span>
@@ -133,7 +133,7 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                           ? 'bg-pink-100 text-pink-600'
                           : 'bg-sky-100 text-sky-600'
                       }`}
-                      style={{ fontSize: '10px', lineHeight: 1, paddingTop: '1px' }}
+                      style={{ fontSize: '10px', lineHeight: 1, paddingBottom: '1.5px' }}
                     >
                       {c.gender === 'female' ? '♀' : '♂'}
                     </span>
