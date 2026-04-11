@@ -1,0 +1,46 @@
+# ── Build Stage ──
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache libc6-compat
+RUN corepack enable
+
+WORKDIR /build
+
+# pnpm workspace 매니페스트 (의존성 캐시 레이어)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY admin/package.json admin/package.json
+
+RUN pnpm install --filter admin... --frozen-lockfile
+
+# 소스 복사
+COPY admin admin
+
+# Next.js standalone 빌드
+RUN pnpm --filter admin build
+
+# ── Runtime Stage ──
+FROM node:20-alpine
+
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Seoul
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+WORKDIR /app
+
+# standalone 출력 복사
+COPY --from=builder /build/admin/.next/standalone ./
+COPY --from=builder /build/admin/.next/static ./admin/.next/static
+COPY --from=builder /build/admin/public ./admin/public
+
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 18000
+
+ENV HOSTNAME=0.0.0.0
+ENV PORT=18000
+
+CMD ["node", "admin/server.js"]

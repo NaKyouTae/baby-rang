@@ -14,22 +14,6 @@ import {
 import EntrySheet from './EntrySheet';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
-import { toKstYmd } from '@/lib/childAge';
-
-export interface GrowthRecordInitData {
-  children: Array<{
-    id: string;
-    name: string;
-    gender: string;
-    birthDate: string;
-    profileImage?: string | null;
-  }>;
-  quickButtons: GrowthType[];
-  earliestDate: string | null;
-  records: GrowthRecord[];
-  from: string;
-  to: string;
-}
 
 const DEFAULT_QUICK_TYPES: GrowthType[] = ['FORMULA', 'SLEEP', 'DIAPER'];
 const QUICK_LONG_PRESS_MS = 500;
@@ -131,67 +115,15 @@ const PAGE_SIZE = 3;
 
 type DayGroup = { date: string; records: GrowthRecord[] };
 
-function buildInitialDays(
-  initData: GrowthRecordInitData,
-): DayGroup[] {
-  const records: GrowthRecord[] = initData.records ?? [];
-  const dateMap = new Map<string, GrowthRecord[]>();
-  for (const r of records) {
-    const d = r.startAt.slice(0, 10);
-    if (!dateMap.has(d)) dateMap.set(d, []);
-    dateMap.get(d)!.push(r);
-  }
-  const today = todayString();
-  const targets: string[] = [];
-  for (let i = 0; i < PAGE_SIZE; i++) targets.push(shiftDate(today, -i));
-  return targets
-    .map((d) => ({ date: d, records: dateMap.get(d) ?? [] }))
-    .filter((g) => g.records.length > 0);
-}
-
-export default function GrowthRecordPage({
-  initialData,
-}: {
-  initialData?: GrowthRecordInitData | null;
-}) {
+export default function GrowthRecordPage() {
   const { children, isLoaded } = useChildren();
-  const hasInit = !!initialData;
-
-  // SSR prefetch 데이터가 있으면 즉시 사용
-  const initChildren: Child[] = hasInit
-    ? initialData.children.map((c) => ({
-        ...c,
-        birthDate: toKstYmd(c.birthDate),
-      }))
-    : [];
-
-  const [selectedChild, setSelectedChild] = useState<Child | null>(
-    initChildren.length > 0 ? initChildren[0] : null,
-  );
-  const [days, setDays] = useState<DayGroup[]>(
-    hasInit ? buildInitialDays(initialData) : [],
-  );
-  const [cursor, setCursor] = useState<string>(() =>
-    hasInit ? shiftDate(initialData.from, -1) : todayString(),
-  );
-  const [hasMore, setHasMore] = useState(() => {
-    if (!hasInit) return true;
-    const nextCursor = shiftDate(initialData.from, -1);
-    return !!initialData.earliestDate && nextCursor >= initialData.earliestDate;
-  });
-  const [earliestDate, setEarliestDate] = useState<string | null>(
-    hasInit ? initialData.earliestDate : null,
-  );
-  const [quickTypes, setQuickTypes] = useState<GrowthType[]>(() => {
-    if (!hasInit) return [];
-    const types = (initialData.quickButtons ?? []).filter(
-      (t: GrowthType) => TYPE_CONFIG[t],
-    );
-    return types.length > 0 ? types : DEFAULT_QUICK_TYPES;
-  });
-  // SSR 데이터가 있으면 초기 로딩 건너뜀
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [days, setDays] = useState<DayGroup[]>([]);
+  const [cursor, setCursor] = useState<string>(todayString());
+  const [hasMore, setHasMore] = useState(true);
+  const [earliestDate, setEarliestDate] = useState<string | null>(null);
+  const [quickTypes, setQuickTypes] = useState<GrowthType[]>([]);
   const [initialLoading, setInitialLoading] = useState(false);
-  const initUsedRef = useRef(hasInit);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
@@ -216,20 +148,12 @@ export default function GrowthRecordPage({
     return () => ro.disconnect();
   }, []);
 
-  // 첫 진입 시 자동 선택 (SSR prefetch가 없을 때만)
+  // 첫 진입 시 자동 선택
   useEffect(() => {
     if (isLoaded && children.length > 0 && !selectedChild) {
       setSelectedChild(children[0]);
     }
   }, [isLoaded, children, selectedChild]);
-
-  // SSR prefetch 후 useChildren 캐시가 로드되면 children 목록 동기화
-  useEffect(() => {
-    if (hasInit && isLoaded && children.length > 0 && selectedChild) {
-      const updated = children.find((c) => c.id === selectedChild.id);
-      if (updated && updated !== selectedChild) setSelectedChild(updated);
-    }
-  }, [isLoaded, children, hasInit, selectedChild]);
 
   const fetchDay = useCallback(
     async (childId: string, d: string): Promise<GrowthRecord[]> => {
@@ -293,11 +217,6 @@ export default function GrowthRecordPage({
   // 자식 선택/변경 시 초기화 & 첫 로드 — BFF로 한 번에 가져오기
   useEffect(() => {
     if (!selectedChild) return;
-    // SSR prefetch 데이터를 이미 사용한 첫 렌더에서는 스킵
-    if (initUsedRef.current) {
-      initUsedRef.current = false;
-      return;
-    }
     let cancelled = false;
     const init = async () => {
       setInitialLoading(true);
@@ -494,10 +413,9 @@ export default function GrowthRecordPage({
     [days],
   );
 
-  // SSR prefetch가 있으면 useChildren 로딩 기다리지 않고 바로 렌더
-  if (!hasInit && !isLoaded) return null;
+  if (!isLoaded) return null;
 
-  if ((hasInit ? initChildren : children).length === 0) {
+  if (children.length === 0) {
     return (
       <EmptyChildState
         emoji="📒"
@@ -518,7 +436,7 @@ export default function GrowthRecordPage({
     <div className="flex flex-col min-h-dvh bg-gray-50">
       <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-[calc(env(safe-area-inset-top,24px)+16px)] pb-3">
         <ChildSelector
-          children={isLoaded ? children : initChildren}
+          children={children}
           selected={selectedChild}
           onSelect={setSelectedChild}
         />

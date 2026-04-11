@@ -10,22 +10,6 @@ import {
   GrowthType,
   TYPE_CONFIG,
 } from '../growth-record/types';
-import { toKstYmd } from '@/lib/childAge';
-
-export interface GrowthPatternInitData {
-  children: Array<{
-    id: string;
-    name: string;
-    gender: string;
-    birthDate: string;
-    profileImage?: string | null;
-  }>;
-  earliestDate: string | null;
-  records: GrowthRecord[];
-  from: string;
-  to: string;
-}
-
 function pad(n: number) {
   return String(n).padStart(2, '0');
 }
@@ -95,54 +79,8 @@ const TYPE_CHART_COLOR: Record<GrowthType, string> = {
 
 const HOURS = [0, 3, 6, 9, 12, 15, 18, 21];
 
-function buildInitialDaysMap(records: GrowthRecord[]): Record<string, GrowthRecord[]> {
-  const map: Record<string, GrowthRecord[]> = {};
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  const toKstKey = (ms: number) => {
-    const kst = new Date(ms + 9 * 60 * 60 * 1000);
-    return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}`;
-  };
-  for (const r of records) {
-    const startMs = new Date(r.startAt).getTime();
-    const endMs = r.endAt ? new Date(r.endAt).getTime() : startMs;
-    const startKey = toKstKey(startMs);
-    (map[startKey] ||= []).push(r);
-    if (endMs > startMs) {
-      const endKey = toKstKey(endMs);
-      if (endKey !== startKey) {
-        let cursor = startMs;
-        for (let i = 0; i < 7; i++) {
-          const kst = new Date(cursor + 9 * 60 * 60 * 1000);
-          kst.setUTCHours(0, 0, 0, 0);
-          const nextKstMidnightMs = kst.getTime() + DAY_MS - 9 * 60 * 60 * 1000;
-          if (nextKstMidnightMs >= endMs) break;
-          const key = toKstKey(nextKstMidnightMs);
-          if (key !== startKey && (map[key]?.[map[key].length - 1] !== r)) {
-            (map[key] ||= []).push(r);
-          }
-          cursor = nextKstMidnightMs;
-          if (key === endKey) break;
-        }
-      }
-    }
-  }
-  return map;
-}
-
-export default function GrowthPatternClient({
-  initialData,
-}: {
-  initialData?: GrowthPatternInitData | null;
-}) {
+export default function GrowthPatternClient() {
   const { children, isLoaded } = useChildren();
-  const hasInit = !!initialData;
-
-  const initChildren: Child[] = hasInit
-    ? initialData.children.map((c) => ({
-        ...c,
-        birthDate: toKstYmd(c.birthDate),
-      }))
-    : [];
 
   // 윈도우 로딩 설정
   const INITIAL_WEEKS = 4; // 현재 주 + 이전 3주
@@ -151,9 +89,7 @@ export default function GrowthPatternClient({
   const todayStr = toDateStr(new Date());
   const currentWeekStart = startOfWeek(todayStr);
 
-  const [selectedChild, setSelectedChild] = useState<Child | null>(
-    initChildren.length > 0 ? initChildren[0] : null,
-  );
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   // 표시 중인 주 시작일 배열 (오름차순: 과거 → 현재). 좌측으로 prepend
   const [weekStarts, setWeekStarts] = useState<string[]>(() =>
     Array.from({ length: INITIAL_WEEKS }, (_, i) =>
@@ -167,18 +103,13 @@ export default function GrowthPatternClient({
     () => new Set<GrowthType>(['SLEEP', 'FORMULA', 'DIAPER']),
   );
   const [typesLoaded, setTypesLoaded] = useState(false);
-  const [days, setDays] = useState<Record<string, GrowthRecord[]>>(
-    hasInit ? buildInitialDaysMap(initialData.records ?? []) : {},
-  );
+  const [days, setDays] = useState<Record<string, GrowthRecord[]>>({});
   const [loading, setLoading] = useState(false);
-  const [earliestDate, setEarliestDate] = useState<string | null>(
-    hasInit ? initialData.earliestDate : null,
-  );
+  const [earliestDate, setEarliestDate] = useState<string | null>(null);
   const loadingOlderRef = useRef(false);
   const didInitScrollRef = useRef(false);
   const chartWrapRef = useRef<HTMLElement | null>(null);
   const [chartHeight, setChartHeight] = useState(360);
-  const initUsedRef = useRef(hasInit);
 
   // 차트 높이를 디바이스 뷰포트에 맞춰 계산 (하단 네비 + 여백 제외)
   useEffect(() => {
@@ -205,14 +136,6 @@ export default function GrowthPatternClient({
       setSelectedChild(children[0]);
     }
   }, [isLoaded, children, selectedChild]);
-
-  // SSR prefetch 후 useChildren 캐시가 로드되면 children 동기화
-  useEffect(() => {
-    if (hasInit && isLoaded && children.length > 0 && selectedChild) {
-      const updated = children.find((c) => c.id === selectedChild.id);
-      if (updated && updated !== selectedChild) setSelectedChild(updated);
-    }
-  }, [isLoaded, children, hasInit, selectedChild]);
 
   // localStorage에서 선택 항목 복원
   useEffect(() => {
@@ -300,11 +223,6 @@ export default function GrowthPatternClient({
   // 자식 선택 변경 시 초기화 + 초기 N주 로드 — BFF로 한 번에 가져오기
   useEffect(() => {
     if (!selectedChild) return;
-    // SSR prefetch 데이터를 이미 사용한 첫 렌더에서는 스킵
-    if (initUsedRef.current) {
-      initUsedRef.current = false;
-      return;
-    }
     let cancelled = false;
     const initial = Array.from({ length: INITIAL_WEEKS }, (_, i) =>
       shiftDate(currentWeekStart, (i - (INITIAL_WEEKS - 1)) * 7),
@@ -485,10 +403,9 @@ export default function GrowthPatternClient({
     }
   };
 
-  // SSR prefetch가 있으면 useChildren 로딩 기다리지 않고 바로 렌더
-  if (!hasInit && !isLoaded) return null;
+  if (!isLoaded) return null;
 
-  if ((hasInit ? initChildren : children).length === 0) {
+  if (children.length === 0) {
     return (
       <EmptyChildState
         emoji="📊"
@@ -507,7 +424,7 @@ export default function GrowthPatternClient({
     <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(env(safe-area-inset-bottom,0px)+96px)] overflow-hidden">
       <header className="px-5 pt-[calc(env(safe-area-inset-top,24px)+16px)] pb-3">
         <ChildSelector
-          children={isLoaded ? children : initChildren}
+          children={children}
           selected={selectedChild}
           onSelect={setSelectedChild}
         />
