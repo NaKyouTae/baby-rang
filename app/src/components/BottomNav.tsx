@@ -52,14 +52,17 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     let cancelled = false;
     (async () => {
       try {
-        const authRes = await fetch("/api/auth/token", { cache: "no-store" });
+        // auth와 nav-slots를 병렬로 호출
+        const [authRes, slotsRes] = await Promise.all([
+          fetch("/api/auth/token", { cache: "no-store" }),
+          fetch("/api/nav-slots", { cache: "no-store" }),
+        ]);
         if (!authRes.ok) return;
         const { authenticated: isAuthed } = await authRes.json();
         if (!isAuthed) return; // 비로그인 → 기본 슬롯 유지
         if (!cancelled) setAuthenticated(true);
-        const res = await fetch("/api/nav-slots", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = await res.json();
+        if (!slotsRes.ok) return;
+        const data = await slotsRes.json();
         if (!cancelled) setSlots(toSlots(sanitize(data?.slots)));
       } catch {
         /* noop */

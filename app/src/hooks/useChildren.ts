@@ -4,6 +4,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import { toKstYmd } from '@/lib/childAge';
+import {
+  cachedChildren,
+  childrenCacheLoaded,
+  childListeners,
+  setChildrenCache,
+} from './appCache';
 
 export type Gender = 'male' | 'female';
 
@@ -20,14 +26,24 @@ export interface Child {
   profileImage?: string | null;
 }
 
+function normalizeChildren(data: any[]): Child[] {
+  return data
+    .map((c: any) => ({
+      ...c,
+      birthDate: toKstYmd(c.birthDate),
+    }))
+    .sort((a: Child, b: Child) => b.birthDate.localeCompare(a.birthDate));
+}
+
 export function useChildren() {
   const { isAuthenticated, isLoaded: authLoaded } = useAuth();
   const { requireLogin } = useLoginPrompt();
-  const [children, setChildren] = useState<Child[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [children, setChildren] = useState<Child[]>((cachedChildren as Child[]) ?? []);
+  const [isLoaded, setIsLoaded] = useState(childrenCacheLoaded);
 
   const fetchChildren = useCallback(async () => {
     if (!isAuthenticated) {
+      setChildrenCache([]);
       setChildren([]);
       setIsLoaded(true);
       return;
@@ -36,14 +52,9 @@ export function useChildren() {
       const res = await fetch('/api/children');
       if (res.ok) {
         const data = await res.json();
-        setChildren(
-          data
-            .map((c: any) => ({
-              ...c,
-              birthDate: toKstYmd(c.birthDate),
-            }))
-            .sort((a: Child, b: Child) => b.birthDate.localeCompare(a.birthDate)),
-        );
+        const sorted = normalizeChildren(data);
+        setChildrenCache(sorted);
+        setChildren(sorted);
       }
     } catch {
       // ignore
@@ -53,7 +64,22 @@ export function useChildren() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    const l = (c: Child[]) => {
+      setChildren(c as Child[]);
+      setIsLoaded(true);
+    };
+    childListeners.add(l);
+    return () => { childListeners.delete(l); };
+  }, []);
+
+  useEffect(() => {
     if (!authLoaded) return;
+    // 캐시가 있으면 재요청하지 않음
+    if (cachedChildren !== null) {
+      setChildren(cachedChildren as Child[]);
+      setIsLoaded(true);
+      return;
+    }
     fetchChildren();
   }, [fetchChildren, authLoaded]);
 
