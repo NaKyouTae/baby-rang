@@ -214,7 +214,7 @@ export default function GrowthRecordPage() {
     }
   }, [selectedChild, cursor, hasMore, fetchDay, earliestDate]);
 
-  // 자식 선택/변경 시 초기화 & 첫 로드
+  // 자식 선택/변경 시 초기화 & 첫 로드 — BFF로 한 번에 가져오기
   useEffect(() => {
     if (!selectedChild) return;
     let cancelled = false;
@@ -222,16 +222,57 @@ export default function GrowthRecordPage() {
       setInitialLoading(true);
       setDays([]);
       setHasMore(true);
-      // earliest 동시 조회
+      const today = todayString();
+      const targets: string[] = [];
+      for (let i = 0; i < PAGE_SIZE; i++) targets.push(shiftDate(today, -i));
+      const from = targets[targets.length - 1];
+      const to = today;
+
+      try {
+        // BFF: quick-buttons + earliest + range 를 Vercel Function 1개에서 병렬 처리
+        const res = await fetch(
+          `/api/growth-records/page-init?childId=${selectedChild.id}&from=${from}&to=${to}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (cancelled) return;
+          // quick buttons
+          const types: GrowthType[] = (data.quickButtons ?? []).filter(
+            (t: GrowthType) => TYPE_CONFIG[t],
+          );
+          setQuickTypes(types.length > 0 ? types : DEFAULT_QUICK_TYPES);
+          // earliest
+          const earliest = data.earliestDate ?? null;
+          setEarliestDate(earliest);
+          // records — range API 응답을 날짜별로 그룹핑
+          const allRecords: GrowthRecord[] = data.records ?? [];
+          const dateMap = new Map<string, GrowthRecord[]>();
+          for (const r of allRecords) {
+            const d = r.startAt.slice(0, 10);
+            if (!dateMap.has(d)) dateMap.set(d, []);
+            dateMap.get(d)!.push(r);
+          }
+          const grouped = targets
+            .map((d) => ({ date: d, records: dateMap.get(d) ?? [] }))
+            .filter((g) => g.records.length > 0);
+          setDays(grouped);
+          const nextCursor = shiftDate(from, -1);
+          setCursor(nextCursor);
+          if (!earliest || nextCursor < earliest) setHasMore(false);
+          setInitialLoading(false);
+          return;
+        }
+      } catch {
+        /* BFF 실패 시 fallback */
+      }
+
+      // fallback: 개별 호출
       const earliestPromise = fetch(
         `/api/growth-records/earliest?childId=${selectedChild.id}`,
       )
         .then((r) => (r.ok ? r.json() : { date: null }))
         .then((j) => (j?.date as string | null) ?? null)
         .catch(() => null);
-      const today = todayString();
-      const targets: string[] = [];
-      for (let i = 0; i < PAGE_SIZE; i++) targets.push(shiftDate(today, -i));
       const [earliest, results] = await Promise.all([
         earliestPromise,
         Promise.all(
@@ -246,9 +287,7 @@ export default function GrowthRecordPage() {
       setDays(next);
       const nextCursor = shiftDate(targets[targets.length - 1], -1);
       setCursor(nextCursor);
-      if (!earliest || nextCursor < earliest) {
-        setHasMore(false);
-      }
+      if (!earliest || nextCursor < earliest) setHasMore(false);
       setInitialLoading(false);
     };
     init();
@@ -345,10 +384,7 @@ export default function GrowthRecordPage() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [editQuickMode]);
 
-  useEffect(() => {
-    if (!isLoaded || children.length === 0) return;
-    fetchQuick();
-  }, [fetchQuick, isLoaded, children.length]);
+  // fetchQuick은 BFF page-init에서 처리됨 — fallback/reload 시에만 개별 호출
 
   // 무한 스크롤 옵저버
   useEffect(() => {

@@ -219,7 +219,7 @@ export default function GrowthPatternClient() {
     [],
   );
 
-  // 자식 선택 변경 시 초기화 + 초기 N주 로드 + earliest 조회
+  // 자식 선택 변경 시 초기화 + 초기 N주 로드 — BFF로 한 번에 가져오기
   useEffect(() => {
     if (!selectedChild) return;
     let cancelled = false;
@@ -235,21 +235,70 @@ export default function GrowthPatternClient() {
 
     const from = initial[0];
     const to = shiftDate(initial[initial.length - 1], 6);
-    const earliestPromise = fetch(
-      `/api/growth-records/earliest?childId=${selectedChild.id}`,
-    )
-      .then((r) => (r.ok ? r.json() : { date: null }))
-      .then((j) => (j?.date as string | null) ?? null)
-      .catch(() => null);
 
-    Promise.all([fetchRange(selectedChild.id, from, to), earliestPromise]).then(
-      ([map, earliest]) => {
-        if (cancelled) return;
-        setDays(map);
-        setEarliestDate(earliest);
-        setLoading(false);
-      },
-    );
+    (async () => {
+      let map: Record<string, GrowthRecord[]> = {};
+      let earliest: string | null = null;
+
+      try {
+        // BFF: earliest + range 를 Vercel Function 1개에서 병렬 처리
+        const res = await fetch(
+          `/api/growth-records/pattern-init?childId=${selectedChild.id}&from=${from}&to=${to}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          earliest = data.earliestDate ?? null;
+          // range 응답을 날짜별로 그룹핑 (fetchRange와 동일 로직)
+          const records: GrowthRecord[] = data.records ?? [];
+          const DAY_MS = 24 * 60 * 60 * 1000;
+          const toKstKey = (ms: number) => {
+            const kst = new Date(ms + 9 * 60 * 60 * 1000);
+            return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}`;
+          };
+          for (const r of records) {
+            const startMs = new Date(r.startAt).getTime();
+            const endMs = r.endAt ? new Date(r.endAt).getTime() : startMs;
+            const startKey = toKstKey(startMs);
+            (map[startKey] ||= []).push(r);
+            if (endMs > startMs) {
+              const endKey = toKstKey(endMs);
+              if (endKey !== startKey) {
+                let cursor = startMs;
+                for (let i = 0; i < 7; i++) {
+                  const kst = new Date(cursor + 9 * 60 * 60 * 1000);
+                  kst.setUTCHours(0, 0, 0, 0);
+                  const nextKstMidnightMs = kst.getTime() + DAY_MS - 9 * 60 * 60 * 1000;
+                  if (nextKstMidnightMs >= endMs) break;
+                  const key = toKstKey(nextKstMidnightMs);
+                  if (key !== startKey && (map[key]?.[map[key].length - 1] !== r)) {
+                    (map[key] ||= []).push(r);
+                  }
+                  cursor = nextKstMidnightMs;
+                  if (key === endKey) break;
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // fallback: 개별 호출
+        const [rangeMap, e] = await Promise.all([
+          fetchRange(selectedChild.id, from, to),
+          fetch(`/api/growth-records/earliest?childId=${selectedChild.id}`)
+            .then((r) => (r.ok ? r.json() : { date: null }))
+            .then((j) => (j?.date as string | null) ?? null)
+            .catch(() => null),
+        ]);
+        map = rangeMap;
+        earliest = e;
+      }
+
+      if (cancelled) return;
+      setDays(map);
+      setEarliestDate(earliest);
+      setLoading(false);
+    })();
+
     return () => {
       cancelled = true;
     };
