@@ -180,7 +180,7 @@ function LibraryContent() {
   return (
     <div className="flex flex-col h-dvh bg-gray-50">
       {/* 지도 영역 */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative isolate">
         <div ref={mapRef} className="w-full h-full" />
 
         {/* 상단 검색바 */}

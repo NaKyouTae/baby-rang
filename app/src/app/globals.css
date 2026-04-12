@@ -86,6 +86,12 @@ body {
   }
 }
 
+/* 네이버 지도 저작권·축척 컨트롤이 바텀시트/바텀네비 위로 뜨지 않도록 */
+.nmap_logo_area,
+.nmap_scalecontrol {
+  z-index: 0 !important;
+}
+
 /* View Transitions API — 네이티브급 화면 전환 애니메이션 */
 @view-transition {
   navigation: auto;

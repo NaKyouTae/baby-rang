@@ -45,7 +45,13 @@ function recordSpans(
   const dayStart = new Date(`${dateStr}T00:00:00`).getTime();
   const dayEnd = dayStart + 24 * 60 * 60 * 1000;
   const start = new Date(r.startAt).getTime();
-  const end = r.endAt ? new Date(r.endAt).getTime() : start + 60 * 1000;
+  const cfg = TYPE_CONFIG[r.type];
+  // 종료시간이 있는 타입인데 아직 측정되지 않았으면 현재 시간까지 표시
+  const end = r.endAt
+    ? new Date(r.endAt).getTime()
+    : cfg.hasEnd
+      ? Date.now()
+      : start + 60 * 1000;
   const s = Math.max(start, dayStart);
   const e = Math.min(end, dayEnd);
   if (e <= s) return null;

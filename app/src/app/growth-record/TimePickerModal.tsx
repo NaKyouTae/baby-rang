@@ -26,21 +26,32 @@ function VerticalWheel({
   count,
   format,
   onChange,
+  loop = false,
 }: {
   value: number;
   count: number;
   format?: (v: number) => string;
   onChange: (v: number) => void;
+  loop?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const lastRef = useRef(value);
   const timer = useRef<number | null>(null);
-  const [scrollTop, setScrollTop] = useState(value * ITEM_H);
+  const isResetting = useRef(false);
+
+  const REPEATS = loop ? 21 : 1;
+  const CENTER = Math.floor(REPEATS / 2);
+  const totalCount = count * REPEATS;
+
+  const valueToScroll = (v: number) =>
+    loop ? (CENTER * count + v) * ITEM_H : v * ITEM_H;
+
+  const [scrollTop, setScrollTop] = useState(() => valueToScroll(value));
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.scrollTop = value * ITEM_H;
+    el.scrollTop = valueToScroll(value);
     setScrollTop(el.scrollTop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -50,35 +61,57 @@ function VerticalWheel({
     if (!el) return;
     if (lastRef.current !== value) {
       lastRef.current = value;
-      el.scrollTop = value * ITEM_H;
+      el.scrollTop = valueToScroll(value);
       setScrollTop(el.scrollTop);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   const onScroll = () => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || isResetting.current) return;
     setScrollTop(el.scrollTop);
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      const idx = Math.max(
-        0,
-        Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)),
-      );
-      const target = idx * ITEM_H;
-      if (Math.abs(el.scrollTop - target) > 0.5) {
-        el.scrollTo({ top: target, behavior: 'smooth' });
-      }
-      if (idx !== lastRef.current) {
-        lastRef.current = idx;
-        onChange(idx);
+      const rawIdx = Math.round(el.scrollTop / ITEM_H);
+
+      if (loop) {
+        const realVal = ((rawIdx % count) + count) % count;
+        const target = rawIdx * ITEM_H;
+        if (Math.abs(el.scrollTop - target) > 0.5) {
+          el.scrollTo({ top: target, behavior: 'smooth' });
+        }
+        if (realVal !== lastRef.current) {
+          lastRef.current = realVal;
+          onChange(realVal);
+        }
+        if (rawIdx < count * 2 || rawIdx > count * (REPEATS - 2)) {
+          isResetting.current = true;
+          const centerScroll = (CENTER * count + realVal) * ITEM_H;
+          el.scrollTop = centerScroll;
+          setScrollTop(centerScroll);
+          requestAnimationFrame(() => {
+            isResetting.current = false;
+          });
+        }
+      } else {
+        const idx = Math.max(0, Math.min(count - 1, rawIdx));
+        const target = idx * ITEM_H;
+        if (Math.abs(el.scrollTop - target) > 0.5) {
+          el.scrollTo({ top: target, behavior: 'smooth' });
+        }
+        if (idx !== lastRef.current) {
+          lastRef.current = idx;
+          onChange(idx);
+        }
       }
     }, 90);
   };
 
   const currentIdx = Math.round(scrollTop / ITEM_H);
   const items: React.ReactElement[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < totalCount; i++) {
+    const realVal = loop ? ((i % count) + count) % count : i;
     const selected = i === currentIdx;
     items.push(
       <div
@@ -90,7 +123,7 @@ function VerticalWheel({
         }`}
         style={{ height: ITEM_H }}
       >
-        {format ? format(i) : i}
+        {format ? format(realVal) : realVal}
       </div>,
     );
   }
@@ -129,6 +162,10 @@ export default function TimePickerModal({
   const [d, setD] = useState(day);
   const [h, setH] = useState(hour);
   const [m, setM] = useState(minute);
+
+  // 12시간제 변환
+  const isAm = h < 12;
+  const h12 = h % 12; // 0~11 (표시는 format에서 0→12로 변환)
 
   useEffect(() => {
     if (open) {
@@ -173,17 +210,30 @@ export default function TimePickerModal({
             format={(v) => `${v + 1}일`}
           />
           <VerticalWheel
-            value={h}
-            count={24}
-            onChange={setH}
-            format={(v) => String(v).padStart(2, '0')}
+            value={isAm ? 0 : 1}
+            count={2}
+            onChange={(v) => {
+              // AM/PM 전환: 현재 h12 유지하며 오전/오후만 변경
+              setH(v === 0 ? h12 : h12 + 12);
+            }}
+            format={(v) => (v === 0 ? '오전' : '오후')}
+          />
+          <VerticalWheel
+            value={h12}
+            count={12}
+            loop
+            onChange={(v) => {
+              setH(isAm ? v : v + 12);
+            }}
+            format={(v) => `${String(v === 0 ? 12 : v).padStart(2, '0')}시`}
           />
           <span className="text-2xl font-bold text-gray-400">:</span>
           <VerticalWheel
             value={m}
             count={60}
+            loop
             onChange={setM}
-            format={(v) => String(v).padStart(2, '0')}
+            format={(v) => `${String(v).padStart(2, '0')}분`}
           />
         </div>
         <div className="mt-5 flex gap-2">

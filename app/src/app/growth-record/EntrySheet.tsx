@@ -31,6 +31,7 @@ interface Props {
   childId: string;
   type: GrowthType;
   initial?: GrowthRecord | null;
+  lastRecord?: GrowthRecord | null;
   defaultDate: string; // YYYY-MM-DD
   onClose: () => void;
   onSaved: () => void;
@@ -85,6 +86,7 @@ export default function EntrySheet({
   childId,
   type,
   initial,
+  lastRecord,
   defaultDate,
   onClose,
   onSaved,
@@ -100,8 +102,10 @@ export default function EntrySheet({
   const [data, setData] = useState<Record<string, string>>(() => {
     const d: Record<string, string> = {};
     const src = (initial?.data ?? {}) as Record<string, unknown>;
+    const prev = (!initial && lastRecord?.data ? lastRecord.data : {}) as Record<string, unknown>;
     cfg.fields.forEach((f) => {
       if (src[f.key] != null) d[f.key] = String(src[f.key]);
+      else if (prev[f.key] != null) d[f.key] = String(prev[f.key]);
       else if (f.kind === 'segmented' && f.options) d[f.key] = f.options[0].value;
     });
     return d;

@@ -634,7 +634,7 @@ export default function GrowthRecordPage() {
       <div
         data-quick-bar-root
         className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-4 pointer-events-none"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
+        style={{ bottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 72px)' }}
       >
         {editQuickMode && (
           <div className="mb-4 flex justify-center pointer-events-auto">

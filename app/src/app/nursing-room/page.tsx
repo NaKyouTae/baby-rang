@@ -433,7 +433,7 @@ function NursingRoomContent() {
   return (
     <div className="flex flex-col h-dvh bg-gray-50">
       {/* 지도 영역 */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative isolate">
         <div ref={mapRef} className="w-full h-full" />
 
         {/* 상단 검색바 */}
@@ -535,7 +535,7 @@ function NursingRoomContent() {
           <div
             className="absolute left-4 right-4 bg-white rounded-2xl shadow-lg z-10 flex flex-col overflow-hidden"
             style={{
-              bottom: "calc(env(safe-area-inset-bottom, 16px) + 88px)",
+              bottom: "calc(max(env(safe-area-inset-bottom, 0px), 16px) + 80px)",
               maxHeight: "60dvh",
             }}
           >
@@ -654,7 +654,7 @@ function NursingRoomContent() {
         <button
           onClick={() => fetchUserLocation({ panTo: true, showToast: true })}
           className="absolute right-4 flex items-center justify-center bg-white text-gray-900 w-11 h-11 rounded-full shadow-lg active:scale-95 transition-transform z-10"
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
+          style={{ bottom: "calc(max(env(safe-area-inset-bottom, 0px), 16px) + 80px)" }}
           aria-label="내 위치 갱신"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -669,7 +669,7 @@ function NursingRoomContent() {
         <button
           onClick={() => setShowReport(true)}
           className="absolute left-4 flex items-center gap-1.5 bg-primary-500 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 82px)" }}
+          style={{ bottom: "calc(max(env(safe-area-inset-bottom, 0px), 16px) + 80px)" }}
           aria-label="수유실 제보하기"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -682,7 +682,7 @@ function NursingRoomContent() {
         {toast && (
           <div
             className="absolute left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-sm px-4 py-2.5 rounded-full shadow-lg z-20"
-            style={{ bottom: "calc(env(safe-area-inset-bottom, 16px) + 170px)" }}
+            style={{ bottom: "calc(max(env(safe-area-inset-bottom, 0px), 16px) + 136px)" }}
           >
             {toast}
           </div>
