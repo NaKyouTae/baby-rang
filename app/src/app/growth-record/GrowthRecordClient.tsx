@@ -442,10 +442,6 @@ export default function GrowthRecordPage() {
           selected={selectedChild}
           onSelect={setSelectedChild}
         />
-      </div>
-
-      {/* 헤더 */}
-      <header className="px-5 pb-3">
 
         {(() => {
           const nowMs = Date.now();
@@ -472,14 +468,14 @@ export default function GrowthRecordPage() {
             </div>
           );
           return (
-            <div className="flex items-stretch gap-2 mt-6">
+            <div className="flex items-stretch gap-2 mt-2">
               <Item emoji="🩲" label="마지막 기저귀" rec={lastDiaper} />
               <Item emoji="🍼" label="마지막 수유" rec={lastFeed} />
               <Item emoji="😴" label="마지막 수면" rec={lastSleep} />
             </div>
           );
         })()}
-      </header>
+      </div>
 
       {/* 타임라인 - 날짜별 세로 나열 + 무한 스크롤 */}
       <main className="flex-1 px-5 pb-56">

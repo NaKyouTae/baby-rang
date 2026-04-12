@@ -42,7 +42,7 @@ function dateLabel(y: number, mo: number, d: number) {
 
 /* ── 인라인 스크롤 휠 ── */
 const ITEM_H = 40;
-const VISIBLE = 3;
+const VISIBLE = 5;
 const WHEEL_H = ITEM_H * VISIBLE;
 
 function InlineWheel({
@@ -168,7 +168,7 @@ function InlineWheel({
         className="overflow-y-auto scrollbar-hide relative"
         style={{ height: WHEEL_H, scrollBehavior: 'auto' }}
       >
-        <div style={{ paddingTop: ITEM_H, paddingBottom: ITEM_H }}>
+        <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
           {items}
         </div>
       </div>

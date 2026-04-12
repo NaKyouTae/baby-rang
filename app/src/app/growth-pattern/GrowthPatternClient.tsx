@@ -56,6 +56,15 @@ function recordSpans(
   return { top, height };
 }
 
+// 항상 면적(바)으로 표시할 타입 — 수면 + 모든 수유
+const ALWAYS_BAR_TYPES: Set<GrowthType> = new Set([
+  'SLEEP',
+  'FORMULA',
+  'BREASTFEEDING',
+  'PUMPED_FEEDING',
+  'MILK',
+]);
+
 // 컬러 매핑(차트용)
 const TYPE_CHART_COLOR: Record<GrowthType, string> = {
   FORMULA: '#fbbf24',
@@ -607,14 +616,19 @@ function DayColumn({
           const span = recordSpans(r, date);
           if (!span) return null;
           const color = TYPE_CHART_COLOR[r.type];
-          if (cfg.hasEnd && r.endAt) {
+          const showAsBar =
+            (cfg.hasEnd && r.endAt) || ALWAYS_BAR_TYPES.has(r.type);
+          if (showAsBar) {
+            // endAt 없는 경우 최소 높이 보장
+            const barHeight =
+              cfg.hasEnd && r.endAt ? span.height : Math.max(1.2, span.height);
             return (
               <div
                 key={r.id}
                 className="absolute left-0 right-0 opacity-90"
                 style={{
                   top: `${span.top}%`,
-                  height: `${span.height}%`,
+                  height: `${barHeight}%`,
                   background: color,
                 }}
                 title={cfg.label}
@@ -622,6 +636,11 @@ function DayColumn({
             );
           }
           // 점형
+          let emoji = cfg.emoji;
+          if (r.type === 'DIAPER') {
+            const kind = (r.data as Record<string, unknown>)?.kind;
+            if (kind === 'POO' || kind === 'BOTH') emoji = '💩';
+          }
           return (
             <div
               key={r.id}
@@ -629,7 +648,7 @@ function DayColumn({
               style={{ top: `${span.top}%` }}
               title={cfg.label}
             >
-              {cfg.emoji}
+              {emoji}
             </div>
           );
         })}
