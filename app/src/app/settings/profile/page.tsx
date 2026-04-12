@@ -156,7 +156,7 @@ export default function ProfileSettingsPage() {
       </main>
 
       {/* 하단 고정 저장 버튼 (BottomNav 위) */}
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+84px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4">
+      <div className="fixed bottom-[calc(var(--safe-area-bottom)+84px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4">
         <button
           onClick={handleSave}
           disabled={!canSubmit}

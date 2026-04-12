@@ -154,7 +154,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         data-bottom-nav-root
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
       >
-        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),16px)] pointer-events-auto">
+        <div className="mx-4 mb-[max(var(--safe-area-bottom),16px)] pointer-events-auto">
           <div
             className="flex items-center bg-white/90 backdrop-blur-xl rounded-3xl px-2 shadow-[0_4px_24px_rgba(0,0,0,0.12)]"
             onPointerDown={onNavPointerDown}

@@ -191,7 +191,7 @@ export default function EntrySheet({
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[env(safe-area-inset-bottom)]">
+      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[var(--safe-area-bottom)]">
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{cfg.emoji}</span>

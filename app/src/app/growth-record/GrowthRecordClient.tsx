@@ -634,7 +634,7 @@ export default function GrowthRecordPage() {
       <div
         data-quick-bar-root
         className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-4 pointer-events-none"
-        style={{ bottom: 'calc(max(env(safe-area-inset-bottom), 16px) + 72px)' }}
+        style={{ bottom: 'calc(max(var(--safe-area-bottom), 16px) + 72px)' }}
       >
         {editQuickMode && (
           <div className="mb-4 flex justify-center pointer-events-auto">
@@ -748,7 +748,7 @@ export default function GrowthRecordPage() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowAllPicker(false)}
           />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[env(safe-area-inset-bottom)]">
+          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[var(--safe-area-bottom)]">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">기록 추가</h2>
               <button
@@ -807,7 +807,7 @@ export default function GrowthRecordPage() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowAddQuick(false)}
           />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[env(safe-area-inset-bottom)]">
+          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[var(--safe-area-bottom)]">
             <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">간편 버튼 추가</h2>
               <button

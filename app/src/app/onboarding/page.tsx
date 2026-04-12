@@ -265,7 +265,7 @@ export default function OnboardingPage() {
       </main>
 
       {/* 하단 고정 CTA */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-[max(env(safe-area-inset-bottom),16px)] px-4">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-[max(var(--safe-area-bottom),16px)] px-4">
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}

@@ -436,7 +436,7 @@ export default function GrowthPatternClient() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(env(safe-area-inset-bottom,0px)+96px)] overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(var(--safe-area-bottom)+96px)] overflow-hidden">
       <header className="px-5 pt-[calc(var(--safe-area-top)+16px)] pb-3">
         <ChildSelector
           children={children}

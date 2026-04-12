@@ -270,7 +270,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               className="px-4 pt-3 border-t border-gray-100"
               style={{
                 paddingBottom:
-                  "calc(env(safe-area-inset-bottom, 12px) + 12px)",
+                  "calc(var(--safe-area-bottom) + 12px)",
               }}
             >
               <button
@@ -467,7 +467,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
         {/* 푸터 */}
         <div
           className="px-5 pt-3 border-t border-gray-100"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 12px) + 12px)" }}
+          style={{ paddingBottom: "calc(var(--safe-area-bottom) + 12px)" }}
         >
           <button
             onClick={handleSubmit}

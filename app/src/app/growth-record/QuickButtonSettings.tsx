@@ -47,7 +47,7 @@ export default function QuickButtonSettings({ current, onClose, onSaved }: Props
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col pb-[env(safe-area-inset-bottom)]">
+      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col pb-[var(--safe-area-bottom)]">
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">간편 버튼 설정</h2>
           <button
