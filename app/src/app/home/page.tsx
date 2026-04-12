@@ -10,7 +10,7 @@ const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursing
 export default function HomePage() {
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
-      <main className="flex-1 pb-24" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
+      <main className="flex-1 pb-24" style={{ paddingTop: 'var(--safe-area-top)' }}>
         <HomeHeroCard />
 
         <div className="px-5 pt-5 space-y-6">

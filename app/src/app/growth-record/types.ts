@@ -256,7 +256,13 @@ export function summarizeRecord(r: GrowthRecord): string {
     const mins = Math.round(
       (new Date(r.endAt).getTime() - new Date(r.startAt).getTime()) / 60000,
     );
-    if (mins > 0) parts.push(`${mins}분`);
+    if (mins > 0) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h === 0) parts.push(`${m}분`);
+      else if (m === 0) parts.push(`${h}시간`);
+      else parts.push(`${h}시간 ${m}분`);
+    }
   }
   return parts.join(' · ');
 }

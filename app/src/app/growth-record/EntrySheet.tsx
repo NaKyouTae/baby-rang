@@ -347,6 +347,7 @@ export default function EntrySheet({
             />
           </div>
 
+          {/* 사진 추가 기능 임시 비활성화
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-bold text-gray-900">사진</label>
@@ -358,7 +359,6 @@ export default function EntrySheet({
                   key={url}
                   className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -377,7 +377,6 @@ export default function EntrySheet({
                     key={`${file.name}-${idx}`}
                     className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="" className="w-full h-full object-cover" />
                     <button
                       type="button"
@@ -415,6 +414,7 @@ export default function EntrySheet({
               )}
             </div>
           </div>
+          */}
         </div>
 
         <div className="px-5 py-3 border-t border-gray-100 flex gap-2">

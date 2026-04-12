@@ -162,7 +162,7 @@ export default function SleepGoldenTimePage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
-      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[max(env(safe-area-inset-top),24px)] pb-3">
+      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[var(--safe-area-top)] pb-3">
         {children.length > 0 && effectiveChild ? (
           <ChildSelector
             children={children}

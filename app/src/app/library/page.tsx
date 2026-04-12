@@ -186,7 +186,7 @@ function LibraryContent() {
         {/* 상단 검색바 */}
         <div
           className="absolute left-3 right-3 z-20"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+          style={{ top: "calc(var(--safe-area-top) + 12px)" }}
         >
           <div className="relative">
             <div className="flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-3">

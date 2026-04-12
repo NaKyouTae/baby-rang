@@ -60,7 +60,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[max(env(safe-area-inset-top),12px)] pb-3 border-b border-gray-100">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100">
         <button
           type="button"
           onClick={() => router.back()}

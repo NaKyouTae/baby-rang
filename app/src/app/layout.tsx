@@ -164,7 +164,7 @@ export default function RootLayout({
           <div
             aria-hidden
             className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
-            style={{ height: 'env(safe-area-inset-top, 0px)' }}
+            style={{ height: 'var(--safe-area-top)' }}
           />
           <SplashProvider>
             <LoginPromptProvider>{children}</LoginPromptProvider>

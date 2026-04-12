@@ -40,7 +40,6 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
 
   const [slots, setSlots] = useState<Slot[]>(() => toSlots(initialSlots ?? DEFAULT_SLOTS));
   const [editMode, setEditMode] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState<number | null>(null);
   // SSR로 initialSlots가 내려왔다면 이미 로그인 상태로 간주
   const [authenticated, setAuthenticated] = useState<boolean>(!!initialSlots);
 
@@ -124,6 +123,30 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     persist(fromSlots(next));
   };
 
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editChecked, setEditChecked] = useState<MenuId[]>([]);
+
+  const openEditSheet = () => {
+    setEditChecked(slots.filter((s) => s.menu !== null).map((s) => s.menu!));
+    setEditSheetOpen(true);
+  };
+
+  const toggleEditCheck = (id: MenuId) => {
+    setEditChecked((prev) => {
+      if (prev.includes(id)) return prev.filter((m) => m !== id);
+      if (prev.length >= SLOT_COUNT) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const confirmEditSheet = () => {
+    const next: (MenuId | null)[] = Array(SLOT_COUNT).fill(null);
+    editChecked.forEach((id, i) => { next[i] = id; });
+    setSlots(toSlots(next));
+    persist(next);
+    setEditSheetOpen(false);
+  };
+
   const handleSlotClick = (index: number) => (e: React.MouseEvent) => {
     if (dragStartedRef.current) {
       e.preventDefault();
@@ -132,7 +155,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     }
     if (editMode) {
       e.preventDefault();
-      if (slots[index].menu === null) setPickerOpen(index);
+      if (slots[index].menu === null) openEditSheet();
       return;
     }
     const id = slots[index].menu;
@@ -142,7 +165,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         openLoginPrompt('메뉴를 추가하려면\n로그인이 필요해요.');
         return;
       }
-      setPickerOpen(index);
+      openEditSheet();
       return;
     }
     router.push(MENU_CATALOG[id].href);
@@ -154,18 +177,6 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     persist(fromSlots(next));
   };
 
-  const addToSlot = (index: number, id: MenuId) => {
-    const next = slots.map((s) => (s.menu === id ? { ...s, menu: null } : s));
-    next[index] = { ...next[index], menu: id };
-    setSlots(next);
-    persist(fromSlots(next));
-    setPickerOpen(null);
-  };
-
-  const currentMenus = slots.map((s) => s.menu);
-  const availableForPicker = ALL_MENU_IDS.filter(
-    (id) => !currentMenus.includes(id) && id !== "temperament",
-  );
 
   // 슬롯에 등록된 메뉴의 경로를 미리 prefetch
   const slotHrefs = useMemo(
@@ -246,48 +257,72 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         </div>
       </nav>
 
-      {/* PICKER MODAL */}
-      {pickerOpen !== null && (
+      {/* EDIT BOTTOM SHEET */}
+      {editSheetOpen && (
         <div
           data-nav-picker
           className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40"
-          onClick={() => setPickerOpen(null)}
+          onClick={() => setEditSheetOpen(false)}
         >
           <div
             className="w-full max-w-[430px] bg-white rounded-t-3xl p-5 pb-8"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto mb-4" />
-            <h3 className="text-base font-bold text-gray-900 mb-4">메뉴 추가</h3>
-            {availableForPicker.length === 0 ? (
-              <p className="text-sm text-gray-500 py-6 text-center">추가할 수 있는 메뉴가 없어요.</p>
-            ) : (
-              <div className="grid grid-cols-4 gap-3">
-                {availableForPicker.map((id) => {
-                  const item = MENU_CATALOG[id];
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => addToSlot(pickerOpen, id)}
-                      className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-gray-50 active:bg-gray-100"
-                    >
-                      <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
-                        {item.icon(true)}
-                      </div>
-                      <span className="text-[11px] text-gray-700 font-medium">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setPickerOpen(null)}
-              className="mt-5 w-full py-3 rounded-2xl bg-gray-100 text-sm font-semibold text-gray-700"
-            >
-              취소
-            </button>
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-base font-bold text-gray-900">메뉴 편집</h3>
+              <span className="text-xs text-gray-400">{editChecked.length}/{SLOT_COUNT}개 선택</span>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">하단 네비게이션에 표시할 메뉴를 선택하세요.</p>
+            <div className="flex flex-col gap-1">
+              {ALL_MENU_IDS.filter((id) => id !== "temperament").map((id) => {
+                const item = MENU_CATALOG[id];
+                const checked = editChecked.includes(id);
+                const disabled = !checked && editChecked.length >= SLOT_COUNT;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => !disabled && toggleEditCheck(id)}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${
+                      checked ? "bg-amber-50" : disabled ? "opacity-40" : "bg-gray-50 active:bg-gray-100"
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                      checked ? "bg-amber-400 border-amber-400" : "border-gray-300 bg-white"
+                    }`}>
+                      {checked && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm">
+                      {item.icon(checked, "#FFC72C")}
+                    </div>
+                    <span className={`text-sm font-medium ${checked ? "text-gray-900" : "text-gray-500"}`}>
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setEditSheetOpen(false)}
+                className="flex-1 py-3 rounded-2xl bg-gray-100 text-sm font-semibold text-gray-700"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmEditSheet}
+                className="flex-1 py-3 rounded-2xl bg-gray-900 text-sm font-semibold text-white"
+              >
+                완료
+              </button>
+            </div>
           </div>
         </div>
       )}

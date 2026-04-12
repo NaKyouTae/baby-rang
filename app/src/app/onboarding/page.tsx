@@ -105,7 +105,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50 pb-32">
       {/* 헤더 */}
-      <header className="px-5 pt-[max(env(safe-area-inset-top),24px)] pb-2">
+      <header className="px-5 pt-[var(--safe-area-top)] pb-2">
         <p className="text-xs text-primary-600 font-semibold">회원가입</p>
         <h1 className="mt-1 text-2xl font-extrabold text-gray-900 leading-tight">
           아기랑에 오신 걸 환영해요

@@ -101,7 +101,7 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
       {/* 사용자 정보 섹션 */}
-      <section className="mx-4 mt-[calc(env(safe-area-inset-top,24px)+16px)] rounded-2xl bg-white p-5 shadow-sm">
+      <section className="mx-4 mt-[calc(var(--safe-area-top)+16px)] rounded-2xl bg-white p-5 shadow-sm">
         {!isAuthLoaded ? (
           <div className="h-14" />
         ) : isAuthenticated ? (

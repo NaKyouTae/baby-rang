@@ -11,6 +11,10 @@
   --color-primary-700: #C89B1E;
 }
 
+:root {
+  --safe-area-top: max(env(safe-area-inset-top, 0px), 44px);
+}
+
 body {
   background: #ffffff;
   color: #171717;

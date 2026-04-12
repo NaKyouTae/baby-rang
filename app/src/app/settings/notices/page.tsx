@@ -47,7 +47,7 @@ export default function NoticesPage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
         <button
           type="button"
           onClick={() => router.push('/settings')}

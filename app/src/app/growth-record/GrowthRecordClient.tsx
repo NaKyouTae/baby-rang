@@ -409,7 +409,7 @@ export default function GrowthRecordPage() {
       days.map((g) => ({
         date: g.date,
         records: [...g.records].sort(
-          (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
+          (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime(),
         ),
       })),
     [days],
@@ -436,7 +436,7 @@ export default function GrowthRecordPage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50">
-      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-[calc(env(safe-area-inset-top,24px)+16px)] pb-3">
+      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-[calc(var(--safe-area-top)+16px)] pb-3">
         <ChildSelector
           children={children}
           selected={selectedChild}
