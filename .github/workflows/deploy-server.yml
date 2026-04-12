@@ -1,0 +1,35 @@
+name: Deploy server to cloudtype
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Connect
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHP_TOKEN }}
+          scope: ${{ secrets.CLOUDTYPE_SCOPE }}
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: ${{ secrets.CLOUDTYPE_SCOPE }}/${{ secrets.CLOUDTYPE_PROJECT }}
+          stage: main
+          yaml: |-
+            name: server
+            app: dockerfile
+            options:
+              dockerfile: Dockerfile.render
+              rootdir: /server
+            context:
+              git:
+                ref: ${{ github.ref }}
+                url: git@github.com:${{ github.repository }}.git

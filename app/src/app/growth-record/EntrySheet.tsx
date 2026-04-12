@@ -248,31 +248,6 @@ export default function EntrySheet({
                 )
               )}
             </div>
-            <div className="mb-2 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
-              {[
-                { label: '방금', min: 0 },
-                { label: '5분 전', min: 5 },
-                { label: '10분 전', min: 10 },
-                { label: '30분 전', min: 30 },
-                { label: '1시간 전', min: 60 },
-                { label: '2시간 전', min: 120 },
-              ].map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => {
-                    const d = new Date(Date.now() - p.min * 60000);
-                    const pad = (n: number) => String(n).padStart(2, '0');
-                    setStartAt(
-                      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
-                    );
-                  }}
-                  className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 active:bg-gray-100"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
             <DateTimeDragPicker value={startAt} onChange={setStartAt} />
           </div>
 
