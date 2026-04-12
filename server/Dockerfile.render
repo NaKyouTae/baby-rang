@@ -1,0 +1,50 @@
+# ── Build Stage ──
+FROM node:20-alpine AS builder
+
+RUN apk add --no-cache libc6-compat openssl python3 make g++
+RUN corepack enable
+
+WORKDIR /build
+
+# 의존성 캐시 레이어
+COPY package.json pnpm-lock.yaml ./
+
+# devDeps 포함하여 설치 (nest build 에 필요)
+RUN pnpm install --frozen-lockfile
+
+# 소스 복사
+COPY . .
+
+# Prisma Client 생성 + NestJS 빌드
+RUN pnpm exec prisma generate
+RUN pnpm run build
+
+# prod deps 만 별도 설치
+RUN pnpm install --prod --frozen-lockfile
+# prod deps 로 Prisma Client 재생성
+RUN pnpm exec prisma generate
+
+# ── Runtime Stage ──
+FROM node:20-alpine
+
+RUN apk add --no-cache tzdata openssl
+ENV TZ=Asia/Seoul
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+WORKDIR /app
+
+COPY --from=builder /build/dist ./dist
+COPY --from=builder /build/node_modules ./node_modules
+COPY --from=builder /build/package.json ./package.json
+COPY --from=builder /build/prisma ./prisma
+COPY --from=builder /build/prisma.config.ts ./prisma.config.ts
+
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+EXPOSE 18080
+
+CMD ["sh", "-c", "echo '--- running prisma migrate deploy ---' && node node_modules/prisma/build/index.js migrate deploy && echo '--- starting nest server ---' && node dist/src/main.js"]
