@@ -122,7 +122,7 @@ export default function GrowthRecordPage() {
   const [cursor, setCursor] = useState<string>(todayString());
   const [hasMore, setHasMore] = useState(true);
   const [earliestDate, setEarliestDate] = useState<string | null>(null);
-  const [quickTypes, setQuickTypes] = useState<GrowthType[]>([]);
+  const [quickTypes, setQuickTypes] = useState<GrowthType[]>(DEFAULT_QUICK_TYPES);
   const [initialLoading, setInitialLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
@@ -248,7 +248,9 @@ export default function GrowthRecordPage() {
           const allRecords: GrowthRecord[] = data.records ?? [];
           const dateMap = new Map<string, GrowthRecord[]>();
           for (const r of allRecords) {
-            const d = r.startAt.slice(0, 10);
+            const dt = new Date(r.startAt);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
             if (!dateMap.has(d)) dateMap.set(d, []);
             dateMap.get(d)!.push(r);
           }
