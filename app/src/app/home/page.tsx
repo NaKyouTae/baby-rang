@@ -1,9 +1,11 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNavServer";
-import BannerCarousel from "@/components/BannerCarousel";
-import HomeHeroCard from "@/components/HomeHeroCard";
-import NearbyNursingRoomsStrip from "@/components/NearbyNursingRoomsStrip";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
+
+const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"));
+const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"));
+const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"));
 
 export default function HomePage() {
   return (

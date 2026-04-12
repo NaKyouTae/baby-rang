@@ -35,3 +35,26 @@ export function setChildrenCache(children: ChildData[]) {
   childrenCacheLoaded = true;
   childListeners.forEach((l) => l(children));
 }
+
+// --- Generic fetch cache ---
+// URL 기반의 단순 메모리 캐시. 같은 URL에 대해 TTL 내 재요청을 방지한다.
+const fetchCache = new Map<string, { data: any; ts: number }>();
+const DEFAULT_TTL = 60_000; // 1분
+
+export async function cachedFetch<T>(url: string, ttl = DEFAULT_TTL): Promise<T> {
+  const now = Date.now();
+  const cached = fetchCache.get(url);
+  if (cached && now - cached.ts < ttl) return cached.data as T;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`fetch ${url} failed: ${res.status}`);
+  const data = await res.json();
+  fetchCache.set(url, { data, ts: now });
+  return data as T;
+}
+
+export function invalidateCache(urlPrefix: string) {
+  for (const key of fetchCache.keys()) {
+    if (key.startsWith(urlPrefix)) fetchCache.delete(key);
+  }
+}

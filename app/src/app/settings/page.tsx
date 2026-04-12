@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useViewTransitionRouter } from "@/hooks/useViewTransition";
 import { useChildren } from "@/hooks/useChildren";
 import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,7 +76,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
 ];
 
 export default function SettingsPage() {
-  const router = useRouter();
+  const router = useViewTransitionRouter();
   const [bizOpen, setBizOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);

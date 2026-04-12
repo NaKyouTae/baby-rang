@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { cachedFetch } from "@/hooks/appCache";
 
 export type Banner = {
   id: string;
@@ -18,8 +19,7 @@ export default function BannerCarousel() {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/banners", { cache: "no-store" })
-      .then((r) => r.json())
+    cachedFetch<{ banners: Banner[] }>("/api/banners", 5 * 60_000)
       .then((d) => setBanners(d.banners ?? []))
       .catch(() => setBanners([]));
   }, []);

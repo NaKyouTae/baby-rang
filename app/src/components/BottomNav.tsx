@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { useViewTransitionRouter } from "@/hooks/useViewTransition";
 import { Reorder } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
@@ -34,7 +35,7 @@ function sanitize(arr: unknown): (MenuId | null)[] {
 
 export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | null)[] } = {}) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router = useViewTransitionRouter();
   const { openLoginPrompt } = useLoginPrompt();
 
   const [slots, setSlots] = useState<Slot[]>(() => toSlots(initialSlots ?? DEFAULT_SLOTS));
@@ -165,6 +166,15 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   const availableForPicker = ALL_MENU_IDS.filter(
     (id) => !currentMenus.includes(id) && id !== "temperament",
   );
+
+  // 슬롯에 등록된 메뉴의 경로를 미리 prefetch
+  const slotHrefs = useMemo(
+    () => slots.filter((s) => s.menu !== null).map((s) => MENU_CATALOG[s.menu!].href),
+    [slots],
+  );
+  useEffect(() => {
+    slotHrefs.forEach((href) => router.prefetch(href));
+  }, [slotHrefs, router]);
 
   const isHomeActive = pathname === HOME_HREF || pathname === "/";
   const isSettingsActive = pathname?.startsWith("/settings");

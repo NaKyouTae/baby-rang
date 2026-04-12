@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
+import { cachedFetch } from '@/hooks/appCache';
 import {
   calcChildAge,
   kstYmdToLocalMidnight,
@@ -186,12 +187,9 @@ function ChildHeroCard({
   useEffect(() => {
     let cancel = false;
     const t = todayStr();
-    fetch(
-      `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${t}&to=${t}`,
-      { cache: 'no-store' },
-    )
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: GrowthRecord[]) => {
+    const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${t}&to=${t}`;
+    cachedFetch<GrowthRecord[]>(url, 30_000)
+      .then((data) => {
         if (!cancel) setStats(computeStats(data ?? []));
       })
       .catch(() => {

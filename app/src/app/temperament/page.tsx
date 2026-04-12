@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useViewTransitionRouter } from '@/hooks/useViewTransition';
 import { useState } from 'react';
 import { createSubmission } from '@/lib/api';
 import type { AgeGroup } from '@/lib/api';
@@ -14,7 +14,7 @@ const AGE_GROUPS: { key: AgeGroup; label: string; sub: string; emoji: string }[]
 ];
 
 export default function TemperamentPage() {
-  const router = useRouter();
+  const router = useViewTransitionRouter();
   const { requireLogin } = useLoginPrompt();
   const [loading, setLoading] = useState(false);
   const [selectedAge, setSelectedAge] = useState<AgeGroup | null>(null);

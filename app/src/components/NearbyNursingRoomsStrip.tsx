@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/hooks/appCache";
 
 interface NursingRoom {
   name: string;
@@ -51,17 +52,16 @@ export default function NearbyNursingRoomsStrip() {
 
   useEffect(() => {
     let cancelled = false;
+    const TTL = 3 * 60_000; // 3분 캐시
     (async () => {
       try {
-        const [reportedRes, publicRes] = await Promise.all([
-          fetch("/api/nursing-rooms", { cache: "no-store" }).catch(() => null),
-          fetch("/api/nursing-rooms/public", { cache: "no-store" }).catch(() => null),
+        const [reportedData, publicData] = await Promise.all([
+          cachedFetch<{ rooms?: any[] }>("/api/nursing-rooms", TTL).catch(() => ({ rooms: [] })),
+          cachedFetch<{ rooms?: any[] }>("/api/nursing-rooms/public", TTL).catch(() => ({ rooms: [] })),
         ]);
 
-        const parse = async (res: Response | null): Promise<NursingRoom[]> => {
-          if (!res || !res.ok) return [];
-          const data = await res.json().catch(() => ({}));
-          return (data.rooms ?? [])
+        const parse = (data: { rooms?: any[] }): NursingRoom[] =>
+          (data.rooms ?? [])
             .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
             .map((r: any) => ({
               name: r.name,
@@ -69,9 +69,9 @@ export default function NearbyNursingRoomsStrip() {
               lat: r.lat,
               lng: r.lng,
             }));
-        };
 
-        const [reported, publicList] = await Promise.all([parse(reportedRes), parse(publicRes)]);
+        const reported = parse(reportedData);
+        const publicList = parse(publicData);
         const seen = new Set<string>();
         const merged: NursingRoom[] = [];
         for (const list of [reported, publicList]) {
