@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNavServer";
-
-const GrowthPatternClient = dynamic(() => import("./GrowthPatternClient"), {
-  ssr: false,
-});
+import GrowthPatternClient from "./GrowthPatternClient";
 
 export default function GrowthPatternPage() {
   return (
