@@ -102,7 +102,7 @@ export default function NearbyNursingRoomsStrip() {
         .slice(0, 3)
     : [];
 
-  const showSkeleton = !roomsLoaded || locStatus === "loading" || locStatus === "idle";
+  const showLoading = !roomsLoaded || locStatus === "loading" || locStatus === "idle";
   const showLocationPrompt =
     roomsLoaded && (locStatus === "denied" || locStatus === "unsupported");
   const showEmpty = roomsLoaded && locStatus === "granted" && nearest.length === 0;
@@ -110,17 +110,6 @@ export default function NearbyNursingRoomsStrip() {
   return (
     <section>
       <h2 className="text-[13px] font-bold text-gray-900 mb-2">가까운 수유실</h2>
-
-      {showSkeleton && (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-14 rounded-[8px] bg-gray-100 border border-gray-200 animate-pulse"
-            />
-          ))}
-        </div>
-      )}
 
       {showLocationPrompt && (
         <button
@@ -141,7 +130,7 @@ export default function NearbyNursingRoomsStrip() {
         </div>
       )}
 
-      {!showSkeleton && !showLocationPrompt && !showEmpty && (
+      {!showLoading && !showLocationPrompt && !showEmpty && (
       <div className="space-y-2">
       {nearest.map((room, idx) => (
         <Link

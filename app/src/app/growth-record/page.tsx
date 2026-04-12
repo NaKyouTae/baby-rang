@@ -1,9 +1,8 @@
 import dynamic from 'next/dynamic';
 import BottomNav from '@/components/BottomNavServer';
-import { GrowthRecordSkeleton } from '@/components/Skeleton';
 
 const GrowthRecordClient = dynamic(() => import('./GrowthRecordClient'), {
-  loading: () => <GrowthRecordSkeleton />,
+  ssr: false,
 });
 
 export default function GrowthRecordPage() {

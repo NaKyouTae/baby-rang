@@ -17,20 +17,6 @@ function tipFor(months: number) {
   return "상상놀이가 풍부해지는 시기예요. 함께 역할놀이를 해보세요.";
 }
 
-function CardSkeleton() {
-  return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 rounded-full bg-gray-100 animate-pulse" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-          <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function EmptyCard() {
   return (
     <Link
@@ -95,7 +81,7 @@ export default function BabyTodayCard() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
 
-  if (!isLoaded) return <CardSkeleton />;
+  if (!isLoaded) return null;
   if (children.length === 0) return <EmptyCard />;
 
   if (children.length === 1) {
