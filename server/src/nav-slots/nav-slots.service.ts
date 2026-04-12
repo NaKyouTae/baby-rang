@@ -9,6 +9,7 @@ const ALLOWED_MENU_IDS = new Set([
   'sleep-golden-time',
   'growth-record',
   'growth-pattern',
+  'library',
 ]);
 const DEFAULT_SLOTS: (string | null)[] = [null, null, null];
 

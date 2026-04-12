@@ -24,6 +24,8 @@ export interface Child {
   gender: string;
   birthDate: string; // YYYY-MM-DD
   profileImage?: string | null;
+  isShared?: boolean;
+  ownerNickname?: string | null;
 }
 
 function normalizeChildren(data: any[]): Child[] {

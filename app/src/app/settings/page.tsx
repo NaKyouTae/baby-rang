@@ -11,6 +11,20 @@ import ConfirmModal from "@/components/ConfirmModal";
 
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
+    label: "기록 공유",
+    href: "/settings/sharing",
+    requireAuth: true,
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+      </svg>
+    ),
+  },
+  {
     label: "검사 이력",
     href: "/settings/history",
     requireAuth: true,
@@ -232,7 +246,7 @@ export default function SettingsPage() {
       {/* 메뉴 리스트 */}
       <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
         {MENU_ITEMS.map((item, idx) => {
-          const className = `flex items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors ${
+          const className = `flex items-center gap-4 px-5 py-2 active:bg-gray-50 transition-colors ${
             idx < MENU_ITEMS.length - 1 ? "border-b border-gray-100" : ""
           }`;
           const inner = (
@@ -277,7 +291,7 @@ export default function SettingsPage() {
               await fetch("/api/auth/logout", { method: "POST" });
               window.location.href = "/home";
             }}
-            className="flex w-full items-center gap-4 px-5 py-4 active:bg-gray-50 transition-colors"
+            className="flex w-full items-center gap-4 px-5 py-2 active:bg-gray-50 transition-colors"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

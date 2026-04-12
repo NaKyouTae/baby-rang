@@ -19,10 +19,37 @@ export class ChildrenService {
   ) {}
 
   async findAll(userId: string) {
-    return this.prisma.child.findMany({
+    // 내 아이 목록
+    const ownChildren = await this.prisma.child.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
     });
+
+    // 공유받은 아이 목록
+    const sharedMemberships = await this.prisma.childShareMember.findMany({
+      where: { userId },
+      include: {
+        share: {
+          include: {
+            child: true,
+            owner: { select: { nickname: true } },
+          },
+        },
+      },
+    });
+
+    const sharedChildren = sharedMemberships
+      .filter((m) => m.share.isActive)
+      .map((m) => ({
+        ...m.share.child,
+        isShared: true,
+        ownerNickname: m.share.owner.nickname,
+      }));
+
+    return [
+      ...ownChildren.map((c) => ({ ...c, isShared: false })),
+      ...sharedChildren,
+    ];
   }
 
   async create(

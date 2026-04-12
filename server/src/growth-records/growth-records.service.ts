@@ -62,16 +62,26 @@ export class GrowthRecordsService {
     return raw as Prisma.InputJsonValue;
   }
 
-  private async assertChildOwnership(userId: string, childId: string) {
-    const child = await this.prisma.child.findFirst({
+  private async assertChildAccess(userId: string, childId: string) {
+    // 1. 직접 소유자인지
+    const isOwner = await this.prisma.child.findFirst({
       where: { id: childId, userId },
       select: { id: true },
     });
-    if (!child) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (isOwner) return;
+
+    // 2. 공유 멤버인지
+    const isMember = await this.prisma.childShareMember.findFirst({
+      where: {
+        userId,
+        share: { childId, isActive: true },
+      },
+    });
+    if (!isMember) throw new NotFoundException('아이를 찾을 수 없습니다.');
   }
 
   async earliestDate(userId: string, childId: string) {
-    await this.assertChildOwnership(userId, childId);
+    await this.assertChildAccess(userId, childId);
     const rec = await this.prisma.growthRecord.findFirst({
       where: { userId, childId },
       orderBy: { startAt: 'asc' },
@@ -92,7 +102,7 @@ export class GrowthRecordsService {
     from: string,
     to: string,
   ) {
-    await this.assertChildOwnership(userId, childId);
+    await this.assertChildAccess(userId, childId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
       throw new BadRequestException('from/to must be YYYY-MM-DD');
     }
@@ -111,7 +121,7 @@ export class GrowthRecordsService {
   }
 
   async findByDate(userId: string, childId: string, date: string) {
-    await this.assertChildOwnership(userId, childId);
+    await this.assertChildAccess(userId, childId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new BadRequestException('date must be YYYY-MM-DD');
     }
@@ -138,7 +148,7 @@ export class GrowthRecordsService {
     input: UpsertInput,
     files?: Express.Multer.File[],
   ) {
-    await this.assertChildOwnership(userId, input.childId);
+    await this.assertChildAccess(userId, input.childId);
     const type = this.validateType(input.type);
     if (!input.startAt) throw new BadRequestException('startAt is required');
 
@@ -171,10 +181,11 @@ export class GrowthRecordsService {
     files?: Express.Multer.File[],
     keepImageUrlsRaw?: string,
   ) {
-    const existing = await this.prisma.growthRecord.findFirst({
-      where: { id, userId },
+    const existing = await this.prisma.growthRecord.findUnique({
+      where: { id },
     });
     if (!existing) throw new NotFoundException('기록을 찾을 수 없습니다.');
+    await this.assertChildAccess(userId, existing.childId);
 
     let nextUrls: string[] | undefined = undefined;
     const hasImagePayload = files !== undefined || keepImageUrlsRaw !== undefined;
@@ -228,10 +239,11 @@ export class GrowthRecordsService {
   }
 
   async remove(userId: string, id: string) {
-    const existing = await this.prisma.growthRecord.findFirst({
-      where: { id, userId },
+    const existing = await this.prisma.growthRecord.findUnique({
+      where: { id },
     });
     if (!existing) throw new NotFoundException('기록을 찾을 수 없습니다.');
+    await this.assertChildAccess(userId, existing.childId);
     const urls = this.mergedExistingUrls(existing);
     for (const url of urls) await this.storage.delete(url).catch(() => {});
     await this.prisma.growthRecord.delete({ where: { id } });

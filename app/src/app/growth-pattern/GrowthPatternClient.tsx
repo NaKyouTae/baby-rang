@@ -464,30 +464,26 @@ export default function GrowthPatternClient() {
 
       {/* 차트 - 가로 스크롤로 주 이동 */}
       <main ref={chartWrapRef as React.RefObject<HTMLElement>} className="flex-1 mt-3">
-        {loading ? (
-          <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
-        ) : (
-          <div
-            ref={setScrollerRef}
-            onScroll={onWeeksScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth pb-6 px-8"
-          >
-            {weeks.map((dates) => (
-              <div
-                key={dates[0]}
-                className="snap-center [scroll-snap-stop:always] shrink-0 w-full px-1.5"
-                aria-current={dates[0] === activeWeekStart ? 'true' : undefined}
-              >
-                <PatternChart
-                  dates={dates}
-                  days={days}
-                  selectedTypes={selectedTypes}
-                  height={chartHeight}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        <div
+          ref={setScrollerRef}
+          onScroll={onWeeksScroll}
+          className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth pb-6 px-8"
+        >
+          {weeks.map((dates) => (
+            <div
+              key={dates[0]}
+              className="snap-center [scroll-snap-stop:always] shrink-0 w-full px-1.5"
+              aria-current={dates[0] === activeWeekStart ? 'true' : undefined}
+            >
+              <PatternChart
+                dates={dates}
+                days={loading ? {} : days}
+                selectedTypes={selectedTypes}
+                height={chartHeight}
+              />
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );

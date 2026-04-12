@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { GrowthRecordsModule } from './growth-records/growth-records.module';
 import { GrowthQuickButtonsModule } from './growth-quick-buttons/growth-quick-buttons.module';
 import { NursingRoomsModule } from './nursing-rooms/nursing-rooms.module';
+import { SharesModule } from './shares/shares.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { NursingRoomsModule } from './nursing-rooms/nursing-rooms.module';
     GrowthRecordsModule,
     GrowthQuickButtonsModule,
     NursingRoomsModule,
+    SharesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -23,6 +23,8 @@ model User {
   navSlots      NavSlot[]
   growthRecords GrowthRecord[]
   growthQuickButtons GrowthQuickButton[]
+  ownedShares   ChildShare[]       @relation("ownedShares")
+  sharedWith    ChildShareMember[] @relation("sharedWith")
 
   @@map("users")
 }
@@ -232,6 +234,7 @@ model Child {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments      Payment[]
   growthRecords GrowthRecord[]
+  shares        ChildShare[]
 
   @@map("children")
 }
@@ -322,4 +325,33 @@ model GrowthQuickButton {
   @@unique([userId, position])
   @@index([userId])
   @@map("growth_quick_buttons")
+}
+
+model ChildShare {
+  id        String   @id @default(uuid())
+  childId   String
+  ownerId   String
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  child   Child              @relation(fields: [childId], references: [id], onDelete: Cascade)
+  owner   User               @relation("ownedShares", fields: [ownerId], references: [id], onDelete: Cascade)
+  members ChildShareMember[]
+
+  @@unique([childId, ownerId])
+  @@map("child_shares")
+}
+
+model ChildShareMember {
+  id       String   @id @default(uuid())
+  shareId  String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  share ChildShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  user  User       @relation("sharedWith", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, userId])
+  @@map("child_share_members")
 }

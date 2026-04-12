@@ -15,7 +15,7 @@ export default function HomePage() {
 
         <div className="px-5 pt-5 space-y-6">
           <section>
-            <div className="flex justify-between">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px 8px" }}>
               {HOME_QUICK_MENUS.map((id) => {
                 const item = MENU_CATALOG[id];
                 return (
