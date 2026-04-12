@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useViewTransitionRouter } from "@/hooks/useViewTransition";
+import { useRouter } from "next/navigation";
 import { Reorder } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
@@ -35,7 +35,7 @@ function sanitize(arr: unknown): (MenuId | null)[] {
 
 export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | null)[] } = {}) {
   const pathname = usePathname();
-  const router = useViewTransitionRouter();
+  const router = useRouter();
   const { openLoginPrompt } = useLoginPrompt();
 
   const [slots, setSlots] = useState<Slot[]>(() => toSlots(initialSlots ?? DEFAULT_SLOTS));
