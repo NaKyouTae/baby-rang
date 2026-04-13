@@ -366,7 +366,7 @@ export default function SleepGoldenTimeClient() {
             );
           })}
 
-          {/* 밤잠 (수면코칭) */}
+          {/* 밤잠 (수면추천) */}
           <div className="flex items-start gap-3 relative">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg shrink-0 z-10 ring-4 ring-white shadow-md">
               🌙
@@ -391,10 +391,10 @@ export default function SleepGoldenTimeClient() {
         </p>
       </section>
 
-      {/* 수면코칭 정보 (접힘 가능) */}
+      {/* 수면추천 정보 (접힘 가능) */}
       <details className="bg-white rounded-2xl shadow-sm overflow-hidden group">
         <summary className="p-4 cursor-pointer flex items-center justify-between list-none">
-          <span className="text-sm font-bold text-gray-900">수면코칭이란?</span>
+          <span className="text-sm font-bold text-gray-900">수면추천이란?</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-open:rotate-180 transition-transform">
             <polyline points="6 9 12 15 18 9" />
           </svg>

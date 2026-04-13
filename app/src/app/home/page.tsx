@@ -7,7 +7,7 @@ import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 export const metadata: Metadata = {
   title: "홈",
   description:
-    "아기랑 홈 - 기질 검사, 성장 기록, 원더윅스, 수면코칭, 수유실 찾기 등 육아에 필요한 모든 기능을 한눈에 확인하세요.",
+    "아기랑 홈 - 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 육아에 필요한 모든 기능을 한눈에 확인하세요.",
   alternates: { canonical: "/home" },
 };
 

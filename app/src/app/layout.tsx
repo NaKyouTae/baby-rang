@@ -8,7 +8,7 @@ import SplashProvider from "@/components/SplashProvider";
 const SITE_URL = "https://baby-rang.spectrify.kr";
 const SITE_NAME = "아기랑";
 const SITE_DESCRIPTION =
-  "아기랑은 기질 검사, 성장 기록, 원더윅스, 수면코칭, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아이의 매일을 더 잘 이해할 수 있도록 돕습니다.";
+  "아기랑은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아이의 매일을 더 잘 이해할 수 있도록 돕습니다.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     "기질 검사",
     "아기 성장 기록",
     "원더윅스",
-    "수면코칭",
+    "수면추천",
     "수유실 찾기",
     "모유수유",
     "이유식",
@@ -134,7 +134,7 @@ export default function RootLayout({
       "아기 기질 검사",
       "성장 기록 및 성장 패턴 분석",
       "원더윅스(정신발달 급등기) 안내",
-      "수면코칭",
+      "수면추천",
       "수유실 찾기",
       "오늘의 육아 요약",
     ],

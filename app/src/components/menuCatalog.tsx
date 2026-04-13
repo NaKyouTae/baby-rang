@@ -78,7 +78,7 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
   },
   "sleep-golden-time": {
     id: "sleep-golden-time",
-    label: "수면코칭",
+    label: "수면추천",
     href: "/sleep-golden-time",
     icon: (active, activeColor) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={stroke(active, activeColor)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
