@@ -1,23 +1,18 @@
-'use client';
+import type { Metadata } from 'next';
+import BackButton from '@/components/BackButton';
 
-import { useRouter } from 'next/navigation';
+export const metadata: Metadata = {
+  title: '환불정책',
+  description:
+    '아기랑 환불정책 - 청약철회, 환불 조건, 정기결제 환불, 환불 신청 방법 및 처리 기간을 안내합니다.',
+  alternates: { canonical: '/refund' },
+};
 
 export default function RefundPage() {
-  const router = useRouter();
-
   return (
     <div className="flex flex-col min-h-dvh bg-gray-50 pb-24">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label="뒤로가기"
-          className="p-2"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
+        <BackButton />
         <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
           환불정책
         </h1>
