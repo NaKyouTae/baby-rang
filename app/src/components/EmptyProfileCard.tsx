@@ -31,7 +31,7 @@ export default function EmptyProfileCard({
     </>
   );
 
-  const rootClassName = `h-[218px] rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-5 flex flex-col items-center justify-center text-center active:opacity-90 ${className}`;
+  const rootClassName = `w-full h-[208px] rounded-2xl border border-dashed border-gray-300 bg-white px-5 py-5 flex flex-col items-center justify-center text-center active:opacity-90 ${className}`;
 
   if (href) {
     return (

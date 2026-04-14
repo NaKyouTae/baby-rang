@@ -198,12 +198,12 @@ function ChildHeroCard({
   const { current, next } = getLeapStatus(birth, today);
 
   return (
-    <div className="h-[218px] rounded-lg overflow-hidden bg-white border border-gray-200">
+    <div className="h-[208px] rounded-lg overflow-hidden bg-white border border-gray-200">
       <div>
         {/* 프로필 헤더 — 그라데이션 강조 */}
-        <div className="relative px-3 pt-3 pb-3 bg-gray-100">
+        <div className="relative px-3 pt-3 pb-0 bg-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex items-center justify-center text-xl ring-2 ring-primary-400 shrink-0 leading-none">
+            <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex items-center justify-center text-xl ring-1 ring-primary-400 shrink-0 leading-none">
               {child.profileImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -216,14 +216,14 @@ function ChildHeroCard({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[16px] font-extrabold text-gray-900 truncate leading-tight">
+              <div className="text-[16px] font-medium text-black truncate leading-tight">
                 {child.name}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] font-bold text-white bg-primary-500 px-1.5 py-0.5 rounded-sm">
+                <span className="inline-flex h-4 items-center justify-center px-1 text-[12px] leading-[12px] font-medium text-white bg-primary-500 rounded-[2px]">
                   D+{days}
                 </span>
-                <span className="text-[12px] text-black font-medium">{ageLabel}</span>
+                <span className="text-[12px] text-black font-normal">{ageLabel}</span>
               </div>
             </div>
           </div>
@@ -231,7 +231,7 @@ function ChildHeroCard({
 
         {/* 오늘의 통계 */}
         <Link href="/growth-record" className="block px-3 pt-2.5 pb-2.5 bg-gray-100 active:opacity-95">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1">
             <StatCell
               label="수유"
               value={stats ? `${stats.feedingCount}회` : '—'}
@@ -255,7 +255,7 @@ function ChildHeroCard({
       {/* 원더윅스 영역 */}
       <Link
         href={`/wonder-weeks?childId=${encodeURIComponent(child.id)}`}
-        className="block px-2 py-2.5 border-t border-gray-100 bg-white active:opacity-80"
+        className="block px-3 py-2.5 border-t border-gray-100 bg-white active:opacity-80"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -365,7 +365,7 @@ function ChildrenCarousel({
           <EmptyProfileCard
             href="/settings/children"
             ctaLabel="아기 추가하기"
-            className="rounded-lg border-2 border-dotted border-gray-200 active:bg-gray-50 transition-colors"
+            className="rounded-lg border border-dotted border-gray-200 active:bg-gray-50 transition-colors"
           />
         </div>
       </div>

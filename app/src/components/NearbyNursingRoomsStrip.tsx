@@ -110,7 +110,7 @@ export default function NearbyNursingRoomsStrip() {
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-[16px] font-medium text-black leading-none tracking-normal">가까운 수유실</h2>
 
         <Link href="/nursing-room" className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium leading-[12px]">더보기<img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></Link>
