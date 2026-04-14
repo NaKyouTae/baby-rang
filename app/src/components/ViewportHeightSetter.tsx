@@ -9,15 +9,33 @@ import { useEffect } from "react";
  */
 export default function ViewportHeightSetter() {
   useEffect(() => {
-    function setVh() {
+    function setViewportVars() {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
+
+      // Android Chrome 홈화면 추가(standalone)에서는
+      // 브라우저 하단 UI가 없는데도 inset이 남는 경우가 있어 0으로 보정.
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+      const isAndroid = /android/i.test(window.navigator.userAgent);
+
+      if (isStandalone && isAndroid) {
+        document.documentElement.style.setProperty("--safe-area-bottom", "0px");
+      } else {
+        document.documentElement.style.removeProperty("--safe-area-bottom");
+      }
     }
 
-    setVh();
-    window.addEventListener("resize", setVh);
+    const standaloneMq = window.matchMedia("(display-mode: standalone)");
+    setViewportVars();
+    window.addEventListener("resize", setViewportVars);
+    standaloneMq.addEventListener("change", setViewportVars);
 
-    return () => window.removeEventListener("resize", setVh);
+    return () => {
+      window.removeEventListener("resize", setViewportVars);
+      standaloneMq.removeEventListener("change", setViewportVars);
+    };
   }, []);
 
   return null;
