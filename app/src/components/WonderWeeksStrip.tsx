@@ -110,9 +110,13 @@ function ChildWonderCard({ child }: { child: Child }) {
             <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full shrink-0">
               원더윅스 진행중
             </span>
+          ) : next ? (
+            <span className="text-[12px] font-medium text-gray-600 bg-gray-400 px-2 py-0.5 rounded-full shrink-0">
+              예정
+            </span>
           ) : (
-            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
-              평온기
+            <span className="text-[12px] font-medium text-white bg-[#515C66] px-2 py-0.5 rounded-full shrink-0">
+              종료
             </span>
           )}
         </div>
@@ -133,7 +137,7 @@ function ChildWonderCard({ child }: { child: Child }) {
           </div>
         )}
         {!next && !current && (
-          <div className="text-[11px] text-gray-400 mt-0.5">예정된 원더윅스가 없어요</div>
+          <div className="text-[11px] text-gray-400 mt-0.5">예정된 원더윅스 일정이 없습니다.</div>
         )}
       </div>
     </Link>
