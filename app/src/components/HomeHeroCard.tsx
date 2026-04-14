@@ -369,7 +369,7 @@ function ChildrenCarousel({
           />
         </div>
       </div>
-      <div className="flex justify-center gap-1.5 mt-2.5">
+      <div className="flex justify-center gap-1.5 mt-3">
         {Array.from({ length: Math.max(totalSlides, 1) }).map((_, i) => (
           <span
             key={i}
@@ -442,8 +442,8 @@ export default function HomeHeroCard() {
             ctaLabel="로그인하고 시작하기"
             onClick={() => openLoginPrompt('로그인하고 우리 아이 맞춤 정보를 확인하세요.')}
           />
-          <div className="flex justify-center pt-4">
-            <span className="h-2 w-9 rounded-full bg-gray-500/80" />
+          <div className="flex justify-center pt-3">
+            <span className="h-1 w-3 rounded-full bg-gray-600" />
           </div>
         </div>
       </>
