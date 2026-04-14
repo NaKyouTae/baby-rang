@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Reorder } from "framer-motion";
+import { Reorder, motion } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
 import { HomeNavIcon, MyNavIcon, AddNavIcon } from "./nav-icons";
@@ -342,7 +342,14 @@ function ReorderSlot({
       onPointerLeave={onPointerCancel}
       onClick={onClickSlot}
     >
-      <div className={`flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer`}>
+      <motion.div
+        className={`flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer`}
+        animate={
+          editMode && menuId !== null
+            ? { rotate: [0, -2, 2, -2, 0], transition: { duration: 0.4, repeat: Infinity, repeatDelay: 0.1 } }
+            : { rotate: 0 }
+        }
+      >
         {menuId === null ? (
           <>
             <AddNavIcon />
@@ -356,7 +363,7 @@ function ReorderSlot({
             </span>
           </>
         )}
-      </div>
+      </motion.div>
       {editMode && menuId !== null && (
         <button
           type="button"
