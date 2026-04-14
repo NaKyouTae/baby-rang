@@ -111,7 +111,8 @@ export default function NearbyNursingRoomsStrip() {
 
   const isLocationResolved = locStatus === "granted" || locStatus === "denied" || locStatus === "unsupported";
   const showLoading = !roomsLoaded || !isLocationResolved;
-  const showEmpty = roomsLoaded && isLocationResolved && nearest.length === 0;
+  const showLocationPrompt = roomsLoaded && (locStatus === "denied" || locStatus === "unsupported");
+  const showEmpty = roomsLoaded && isLocationResolved && !showLocationPrompt && nearest.length === 0;
 
   return (
     <section>
@@ -121,13 +122,28 @@ export default function NearbyNursingRoomsStrip() {
         <Link href="/nursing-room" className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium leading-[12px]">더보기<img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></Link>
       </div>
 
+      {showLocationPrompt && (
+        <div className="w-full rounded-[8px] bg-white border border-gray-200 py-8 px-4 flex flex-col items-center gap-3">
+          <span className="text-[12px] font-normal text-gray-500 text-center leading-snug">
+            가까운 수유실을 찾으려면 위치 권한을 허용해 주세요.
+          </span>
+          <button
+            type="button"
+            onClick={requestLocation}
+            className="px-4 py-2 rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
+          >
+            설정 바로가기
+          </button>
+        </div>
+      )}
+
       {showEmpty && (
         <div className="h-14 rounded-[8px] bg-white border border-gray-200 flex items-center justify-center">
           <span className="text-xs text-gray-500">주변에 등록된 수유실이 없어요</span>
         </div>
       )}
 
-      {!showLoading && !showEmpty && (
+      {!showLoading && !showLocationPrompt && !showEmpty && (
       <div className="flex flex-col gap-2">
       {nearest.map((room, idx) => (
         <Link

@@ -573,14 +573,14 @@ function HourAxis({ height }: { height: number }) {
       {HOURS.map((h) => (
         <div
           key={h}
-          className="absolute left-0 right-0 text-[10px] text-gray-300 text-center -translate-y-1/2"
+          className="absolute left-0 right-0 text-[10px] text-gray-400 text-center -translate-y-1/2"
           style={{ top: `${minToPct(h * 60)}%` }}
         >
           {pad(h)}
         </div>
       ))}
       <div
-        className="absolute left-0 right-0 text-[10px] text-gray-300 text-center -translate-y-full"
+        className="absolute left-0 right-0 text-[10px] text-gray-400 text-center -translate-y-full"
         style={{ top: '100%' }}
       >
         23:40
@@ -612,14 +612,14 @@ function DayColumn({
   return (
     <div className="flex-1 px-[2px]">
       <div
-        className="relative bg-white rounded-md overflow-visible"
+        className="relative bg-gray-50/60 rounded-md overflow-visible"
         style={{ height }}
       >
         {/* 시간 가이드라인 */}
         {HOURS.map((h) => (
           <div
             key={h}
-            className="absolute left-0 right-0 border-t border-gray-100"
+            className="absolute left-0 right-0 border-t border-gray-200"
             style={{ top: `${minToPct(h * 60)}%` }}
           />
         ))}
