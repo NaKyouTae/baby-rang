@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cachedFetch } from "@/hooks/appCache";
 import { palette } from "@/lib/colors";
+import { openLocationSettings } from "@/lib/openLocationSettings";
 
 interface NursingRoom {
   name: string;
@@ -14,7 +15,6 @@ interface NursingRoom {
 
 type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
-const DEFAULT_LOCATION = { lat: 37.5666, lng: 126.9784 }; // 서울시청
 
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -35,7 +35,6 @@ export default function NearbyNursingRoomsStrip() {
 
   const requestLocation = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setUserLoc(DEFAULT_LOCATION);
       setLocStatus("unsupported");
       return;
     }
@@ -46,7 +45,6 @@ export default function NearbyNursingRoomsStrip() {
         setLocStatus("granted");
       },
       () => {
-        setUserLoc(DEFAULT_LOCATION);
         setLocStatus("denied");
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
@@ -54,7 +52,18 @@ export default function NearbyNursingRoomsStrip() {
   };
 
   useEffect(() => {
-    requestLocation();
+    if (typeof navigator === "undefined" || !navigator.permissions) {
+      requestLocation();
+      return;
+    }
+    navigator.permissions.query({ name: "geolocation" }).then((status) => {
+      if (status.state === "granted") {
+        requestLocation();
+      } else {
+        // prompt 또는 denied → 위치 요청하지 않고 바로 허용 안내 표시
+        setLocStatus("denied");
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -129,8 +138,14 @@ export default function NearbyNursingRoomsStrip() {
           </span>
           <button
             type="button"
-            onClick={requestLocation}
-            className="px-4 py-2 rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
+            onClick={() => openLocationSettings({
+              onGranted: (pos) => {
+                setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                setLocStatus("granted");
+              },
+              onDenied: () => setLocStatus("denied"),
+            })}
+            className="px-4 h-[20px] flex items-center rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
           >
             설정 바로가기
           </button>

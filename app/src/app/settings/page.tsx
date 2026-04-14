@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
+import { openLocationSettings } from "@/lib/openLocationSettings";
 
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
@@ -122,14 +123,10 @@ export default function SettingsPage() {
   }, []);
 
   const handleLocationClick = () => {
-    if (locationPerm === 'prompt') {
-      navigator.geolocation.getCurrentPosition(
-        () => setLocationPerm('granted'),
-        () => setLocationPerm('denied'),
-      );
-    } else {
-      alert('위치 권한을 변경하려면\n디바이스 설정 > 앱 > 아기랑 > 위치에서\n변경해 주세요.');
-    }
+    openLocationSettings({
+      onGranted: () => setLocationPerm('granted'),
+      onDenied: () => setLocationPerm('denied'),
+    });
   };
 
   return (
