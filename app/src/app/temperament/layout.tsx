@@ -6,7 +6,7 @@ export default function TemperamentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white">
       <div className="flex-1 pb-24">{children}</div>
       <BottomNav />
     </div>

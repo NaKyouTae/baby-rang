@@ -71,10 +71,10 @@ function WonderWeeksContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
       <div ref={topRef} />
       {/* 스티키 타이틀 바 */}
-      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[calc(var(--safe-area-top)+16px)] pb-3">
+      <div className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
         <ChildSelector
           children={children}
           selected={selectedChild}
@@ -82,13 +82,11 @@ function WonderWeeksContent() {
         />
       </div>
 
-      <div className="px-4">
-        <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />
-      </div>
+      <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />
 
       {/* 하단 버튼들 — 오늘(왼쪽) + 상단 이동(오른쪽) */}
       <div
-        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-4 pointer-events-none"
+        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
         style={{ bottom: 'calc(var(--safe-area-bottom) + 76px)' }}
       >
         <div className="flex justify-between">

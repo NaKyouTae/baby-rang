@@ -18,7 +18,7 @@ export default function EmptyChildState({
   const { requireLogin } = useLoginPrompt();
   return (
     <main
-      className={`flex flex-col items-center justify-center text-center min-h-[100dvh] pb-16 px-6 bg-gray-50 ${className}`}
+      className={`flex flex-col items-center justify-center text-center min-h-[100dvh] pb-16 px-6 bg-white ${className}`}
     >
       <span className="text-7xl mb-4">{emoji}</span>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>

@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useChildren } from "@/hooks/useChildren";
 import { TYPE_CONFIG, GrowthType } from "@/app/growth-record/types";
+import { palette } from "@/lib/colors";
 
 /* ── 한글 라벨 → GrowthType 매핑 ── */
 const LABEL_TO_TYPE: Record<string, GrowthType> = {
@@ -308,12 +309,12 @@ export default function ImportDataPage() {
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-gray-50">
+    <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 px-6">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 flex items-center h-12 px-4 bg-white border-b border-gray-100"
+      <header className="sticky top-0 z-10 flex items-center h-12 px-6 bg-white border-b border-gray-100 -mx-6"
         style={{ paddingTop: "var(--safe-area-top)" }}>
         <button onClick={() => router.back()} className="p-2 -ml-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -323,7 +324,7 @@ export default function ImportDataPage() {
         <div className="w-9" />
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto py-5 space-y-4">
         {/* 아이 선택 */}
         {isLoaded && children.length > 1 && (
           <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -416,7 +417,7 @@ export default function ImportDataPage() {
       </div>
 
       {/* 하단 CTA 버튼 */}
-      <div className="shrink-0 px-4 pb-[calc(var(--safe-area-bottom)+16px)] pt-3 bg-gray-50 border-t border-gray-100">
+      <div className="shrink-0 pb-[calc(var(--safe-area-bottom)+16px)] pt-3 bg-gray-50 border-t border-gray-100 -mx-6 px-6">
         {result ? (
           <button
             onClick={() => router.push("/growth-record")}

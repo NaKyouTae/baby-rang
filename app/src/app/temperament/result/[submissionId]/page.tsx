@@ -84,7 +84,7 @@ export default function ResultPage() {
   };
 
   return (
-    <main className="min-h-dvh pb-8">
+    <main className="min-h-dvh pb-8 px-6">
       <ResultCover
         primaryType={result.summary.primaryType}
         primaryTypeLabel={result.summary.primaryTypeLabel}
@@ -94,7 +94,7 @@ export default function ResultPage() {
 
       <DimensionBar scores={result.scores} />
 
-      <div className="px-4 mt-2">
+      <div className="mt-2">
         <h3 className="text-base font-bold text-gray-900 mb-3">
           지금 보이는 강점
         </h3>
@@ -106,7 +106,7 @@ export default function ResultPage() {
         ))}
       </div>
 
-      <div className="px-4 mt-4">
+      <div className="mt-4">
         <div className="bg-primary-50 rounded-xl p-4">
           <p className="text-xs font-semibold text-primary-600 mb-1">
             짧은 양육 팁
@@ -128,7 +128,7 @@ export default function ResultPage() {
         <ReliabilityNotice message={result.reliabilityMsg} />
       )}
 
-      <div className="px-4 mt-6">
+      <div className="mt-6">
         <button
           onClick={() => router.push('/temperament')}
           className="w-full py-3.5 rounded-xl border border-primary-200 bg-white text-primary-600 font-semibold text-sm active:bg-primary-50 active:scale-[0.97] transition-all"
@@ -137,7 +137,7 @@ export default function ResultPage() {
         </button>
       </div>
 
-      <div className="px-4 mt-4">
+      <div className="mt-4">
         <p className="text-[11px] text-gray-300 text-center leading-relaxed">
           이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나
           전문 심리 평가를 대신하지 않습니다.

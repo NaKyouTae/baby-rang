@@ -21,7 +21,7 @@ export default function ChildPickScreen({
   onSelect,
 }: Props) {
   return (
-    <main className="flex flex-col items-center justify-center text-center min-h-[calc(100dvh-4rem)] gradient-page px-4 py-8">
+    <main className="flex flex-col items-center justify-center text-center min-h-[calc(100dvh-4rem)] gradient-page px-6 py-8">
       <span className="text-7xl mb-4">{emoji}</span>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
       {description && (
@@ -43,7 +43,7 @@ export default function ChildPickScreen({
                 {child.profileImage ? (
                   <Image src={child.profileImage} alt={child.name} fill className="object-cover" />
                 ) : (
-                  <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧' : '👦'}</span>
+                  <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">

@@ -7,7 +7,7 @@ interface LockedSectionProps {
 
 export default function LockedSection({ sections, onUnlock }: LockedSectionProps) {
   return (
-    <div className="mx-4 mt-6 rounded-3xl bg-primary-50/50 p-5 relative overflow-hidden border border-primary-100">
+    <div className="mt-6 rounded-3xl bg-primary-50/50 p-5 relative overflow-hidden border border-primary-100">
       <div className="absolute inset-0 backdrop-blur-[2px]" />
       <div className="relative z-10">
         <div className="text-center mb-4">

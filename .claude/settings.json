@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i '' 's/bg-gray-50 ${className}/bg-white ${className}/g' app/src/components/EmptyChildState.tsx)",
+      "Bash(sed -i '' 's/bg-\\\\[#FDF6E3\\\\]/bg-white/g' app/src/components/SplashScreen.tsx)",
+      "Bash(grep -r \"#[0-9a-fA-F]\\\\{3,6\\\\}\" /Users/nakyutae/personal/git/baby-rang/app/src --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.css\")"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

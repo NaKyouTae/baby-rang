@@ -1,20 +1,21 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { palette } from '@/lib/colors';
 
 export default function SettingsTermsPage() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <button
           type="button"
           onClick={() => router.back()}
           aria-label="뒤로가기"
           className="p-2"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -23,7 +24,7 @@ export default function SettingsTermsPage() {
         </h1>
       </header>
 
-      <article className="px-5 py-6 text-[14px] leading-relaxed text-gray-700 space-y-6">
+      <article className="py-6 text-[14px] leading-relaxed text-gray-700 space-y-6">
         <p className="text-xs text-gray-400">시행일자: 2026년 4월 8일</p>
 
         <section>

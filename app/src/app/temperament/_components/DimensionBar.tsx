@@ -23,7 +23,7 @@ const DIMENSION_ORDER = [
 
 export default function DimensionBar({ scores }: DimensionBarProps) {
   return (
-    <div className="px-4 py-4">
+    <div className="py-4">
       <h3 className="text-base font-bold text-gray-900 mb-4">
         기질 한눈에 보기
       </h3>

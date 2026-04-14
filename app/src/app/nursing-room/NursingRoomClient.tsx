@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReportSheet, { NursingRoomReport } from "./ReportSheet";
+import { palette } from "@/lib/colors";
 
 interface NursingRoom {
   name: string;
@@ -400,7 +401,7 @@ function NursingRoomContent() {
           position: new naver.maps.LatLng(centerLat, centerLng),
           map,
           icon: {
-            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(255,199,44,0.92);color:#fff;font-weight:700;font-size:${fontSize}px;border:3px solid rgba(255,255,255,0.95);border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.25);">${count}</div>`,
+            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(48,176,199,0.92);color:#fff;font-weight:700;font-size:${fontSize}px;border:3px solid rgba(255,255,255,0.95);border-radius:9999px;box-shadow:0 4px 12px rgba(0,0,0,0.25);">${count}</div>`,
             anchor: new naver.maps.Point(size / 2, size / 2),
           },
           zIndex: 40,
@@ -438,12 +439,12 @@ function NursingRoomContent() {
 
         {/* 상단 검색바 */}
         <div
-          className="absolute left-3 right-3 z-20"
-          style={{ top: "calc(var(--safe-area-top) + 12px)" }}
+          className="absolute left-6 right-6 z-20"
+          style={{ top: "calc(var(--safe-area-top) + 24px)" }}
         >
           <div className="relative">
             <div className="flex items-center gap-2 bg-white rounded-full shadow-lg px-4 py-3">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
               </svg>
@@ -533,7 +534,7 @@ function NursingRoomContent() {
         {selectedRoom && (
           <>
           <div
-            className="absolute left-4 right-4 bg-white rounded-2xl shadow-lg z-10 flex flex-col overflow-hidden"
+            className="absolute left-6 right-6 bg-white rounded-2xl shadow-lg z-10 flex flex-col overflow-hidden"
             style={{
               bottom: "calc(max(var(--safe-area-bottom), 16px) + 80px)",
               maxHeight: "60dvh",
@@ -569,7 +570,7 @@ function NursingRoomContent() {
 
               {/* 주소 */}
               <div className="flex items-start gap-1.5 mt-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
                   <circle cx="12" cy="9" r="2.5" />
                 </svg>
@@ -583,7 +584,7 @@ function NursingRoomContent() {
                 <div className="flex items-center gap-1.5 mt-1.5">
                   {selectedRoom.tel && (
                     <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92z" />
                       </svg>
                       <a href={`tel:${selectedRoom.tel}`} className="text-sm text-gray-600 underline decoration-gray-300 underline-offset-2">
@@ -606,7 +607,7 @@ function NursingRoomContent() {
               {/* 이용 시간 */}
               {selectedRoom.openHours && (
                 <div className="flex items-start gap-1.5 mt-1.5">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" />
                   </svg>
@@ -653,7 +654,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => fetchUserLocation({ panTo: true, showToast: true })}
-          className="absolute right-4 flex items-center justify-center bg-white text-gray-900 w-11 h-11 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute right-6 flex items-center justify-center bg-white text-gray-900 w-11 h-11 rounded-full shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(max(var(--safe-area-bottom), 16px) + 80px)" }}
           aria-label="내 위치 갱신"
         >
@@ -668,7 +669,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute left-4 flex items-center gap-1.5 bg-primary-500 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute left-6 flex items-center gap-1.5 bg-primary-500 text-white text-sm font-semibold pl-3.5 pr-4 py-3 rounded-full shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(max(var(--safe-area-bottom), 16px) + 80px)" }}
           aria-label="수유실 제보하기"
         >

@@ -435,8 +435,8 @@ export default function GrowthRecordPage() {
   if (!selectedChild) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-50 px-5 pt-[calc(var(--safe-area-top)+16px)] pb-3">
+    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+      <div ref={titleBarRef} className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
         <ChildSelector
           children={children}
           selected={selectedChild}
@@ -478,7 +478,7 @@ export default function GrowthRecordPage() {
       </div>
 
       {/* 타임라인 - 날짜별 세로 나열 + 무한 스크롤 */}
-      <main className="flex-1 px-5 pb-56">
+      <main className="flex-1 pb-56">
         {initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 ? (
@@ -633,7 +633,7 @@ export default function GrowthRecordPage() {
       {/* 간편 버튼 바 — 하단 네비게이션 위 여백 유지 */}
       <div
         data-quick-bar-root
-        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-4 pointer-events-none"
+        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
         style={{ bottom: 'calc(max(var(--safe-area-bottom), 16px) + 72px)' }}
       >
         {editQuickMode && (

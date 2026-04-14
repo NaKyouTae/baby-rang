@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cachedFetch } from "@/hooks/appCache";
+import { palette } from "@/lib/colors";
 
 interface NursingRoom {
   name: string;
@@ -109,7 +110,11 @@ export default function NearbyNursingRoomsStrip() {
 
   return (
     <section>
-      <h2 className="text-[13px] font-bold text-gray-900 mb-2">가까운 수유실</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-[16px] font-medium text-black leading-none tracking-normal">가까운 수유실</h2>
+
+        <Link href="/nursing-room" className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium leading-[12px]">더보기<img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></Link>
+      </div>
 
       {showLocationPrompt && (
         <button
@@ -131,33 +136,31 @@ export default function NearbyNursingRoomsStrip() {
       )}
 
       {!showLoading && !showLocationPrompt && !showEmpty && (
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
       {nearest.map((room, idx) => (
         <Link
           key={room.name}
           href={`/nursing-room?room=${encodeURIComponent(room.name)}&lat=${room.lat}&lng=${room.lng}&addr=${encodeURIComponent(room.address)}`}
-          className="relative block h-14 rounded-[8px] overflow-hidden bg-white border border-gray-200 active:opacity-70"
+          className="block rounded-[8px] bg-white border border-gray-200 p-[10px] active:bg-gray-50"
         >
-          <div className="relative h-full flex items-center justify-between px-4">
-            <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-[4px]">
               <div className="flex items-center gap-1.5">
-                <div className="text-xs font-bold text-gray-900 truncate">{room.name}</div>
+                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif' }}>{room.name}</div>
                 {idx === 0 && userLoc && (
-                  <span className="shrink-0 text-[9px] font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">
+                  <span
+                    className="shrink-0 text-[12px] font-medium leading-none px-1 rounded-[2px]"
+                    style={{ color: palette.red, backgroundColor: 'rgba(255, 59, 48, 0.15)', height: '16px', display: 'inline-flex', alignItems: 'center' }}
+                  >
                     가장 가까워요
                   </span>
                 )}
+                {userLoc && (
+                  <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif' }}>
+                    {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
+                  </div>
+                )}
               </div>
-              <div className="text-[10px] text-gray-500 truncate mt-0.5">{room.address}</div>
-            </div>
-            {userLoc && (
-              <div className="ml-2 shrink-0 text-right">
-                <div className="text-[11px] font-bold text-gray-900">
-                  {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
-                </div>
-                <div className="text-[9px] text-gray-400">길찾기 ›</div>
-              </div>
-            )}
+              <div className="text-[12px] font-normal truncate" style={{ fontFamily: 'Pretendard, sans-serif', color: palette.gray500 }}>{room.address}</div>
           </div>
         </Link>
       ))}

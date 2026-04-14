@@ -24,7 +24,7 @@ export default function ResultCover({
   const style = TYPE_STYLES[primaryType] || TYPE_STYLES.balanced;
 
   return (
-    <div className={`bg-gradient-to-br ${style.gradient} rounded-3xl p-6 mx-4 mt-4 shadow-lg`}>
+    <div className={`bg-gradient-to-br ${style.gradient} rounded-3xl p-6 mt-4 shadow-lg`}>
       <div className="text-center">
         <span className="text-7xl block mx-auto mb-3">{style.emoji}</span>
         <span

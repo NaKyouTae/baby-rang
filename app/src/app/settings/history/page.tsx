@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getHistory, type HistoryItem } from '@/lib/api';
+import { palette } from '@/lib/colors';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -39,23 +40,23 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100 -mx-6">
         <button
           type="button"
           onClick={() => router.back()}
           className="flex h-10 w-10 items-center justify-center rounded-full active:bg-gray-100"
           aria-label="뒤로 가기"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
         <h1 className="text-[16px] font-semibold text-gray-900">검사 이력</h1>
       </header>
 
-      <div className="px-4 pt-4">
+      <div className="pt-4">
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
@@ -71,7 +72,7 @@ export default function HistoryPage() {
         ) : items.length === 0 ? (
           <div className="mt-20 flex flex-col items-center gap-4 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-100">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
@@ -117,7 +118,7 @@ export default function HistoryPage() {
                   className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-sm active:bg-gray-50 transition-colors"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9 11l3 3L22 4" />
                       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                     </svg>
@@ -139,7 +140,7 @@ export default function HistoryPage() {
                     </div>
                     <p className="mt-1 text-xs text-gray-500">{formatDate(item.completedAt)}</p>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
                 </Link>

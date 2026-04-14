@@ -8,6 +8,7 @@ import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import ConfirmModal from "@/components/ConfirmModal";
+import { palette } from "@/lib/colors";
 
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
@@ -15,7 +16,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     href: "/settings/sharing",
     requireAuth: true,
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="18" cy="5" r="3" />
         <circle cx="6" cy="12" r="3" />
         <circle cx="18" cy="19" r="3" />
@@ -29,7 +30,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     href: "/settings/history",
     requireAuth: true,
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
       </svg>
@@ -40,7 +41,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     href: "/settings/payments",
     requireAuth: true,
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="5" width="20" height="14" rx="2" />
         <line x1="2" y1="10" x2="22" y2="10" />
       </svg>
@@ -51,7 +52,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     href: "/settings/import-data",
     requireAuth: true,
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
         <polyline points="7 10 12 15 17 10" />
         <line x1="12" y1="15" x2="12" y2="3" />
@@ -62,7 +63,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     label: "공지사항",
     href: "/settings/notices",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
         <polyline points="14 2 14 8 20 8" />
         <line x1="16" y1="13" x2="8" y2="13" />
@@ -74,7 +75,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     label: "이용약관",
     href: "/settings/terms",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
     ),
@@ -83,7 +84,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     label: "환불정책",
     href: "/settings/refund",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 12a9 9 0 1 0 3-6.7" />
         <polyline points="3 4 3 10 9 10" />
       </svg>
@@ -93,7 +94,7 @@ const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; re
     label: "개인정보처리방침",
     href: "/settings/privacy",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#404040" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="11" width="18" height="11" rx="2" />
         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
       </svg>
@@ -111,9 +112,9 @@ export default function SettingsPage() {
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
       {/* 사용자 정보 섹션 */}
-      <section className="mx-4 mt-[calc(var(--safe-area-top)+16px)] rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-2xl bg-white p-5 shadow-sm">
         {!isAuthLoaded ? (
           <div className="h-14" />
         ) : isAuthenticated ? (
@@ -129,7 +130,7 @@ export default function SettingsPage() {
                   className="h-14 w-14 rounded-full object-cover"
                 />
               ) : (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
@@ -143,7 +144,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-400 mt-0.5 truncate">{user.email}</p>
               )}
             </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </Link>
@@ -154,7 +155,7 @@ export default function SettingsPage() {
             className="flex w-full items-center gap-4 text-left"
           >
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -163,7 +164,7 @@ export default function SettingsPage() {
               <p className="text-base font-bold text-gray-900 truncate">로그인이 필요해요</p>
               <p className="text-xs text-gray-400 mt-0.5">로그인하고 아기랑을 시작해 보세요</p>
             </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
@@ -171,7 +172,7 @@ export default function SettingsPage() {
       </section>
 
       {/* 우리아이 섹션 */}
-      <section className="mx-4 mt-3 rounded-2xl bg-white p-5 shadow-sm">
+      <section className="mt-3 rounded-2xl bg-white p-5 shadow-sm">
         {isLoaded && children.length > 0 ? (
           <>
             <h2 className="text-sm font-semibold text-gray-500 mb-3">
@@ -192,7 +193,7 @@ export default function SettingsPage() {
                       className="h-16 w-16 rounded-full object-cover"
                     />
                   ) : (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -217,7 +218,7 @@ export default function SettingsPage() {
               className="flex flex-col items-center shrink-0"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-gray-300">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
@@ -239,7 +240,7 @@ export default function SettingsPage() {
             className="flex w-full items-center gap-4 text-left"
           >
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-100">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -248,7 +249,7 @@ export default function SettingsPage() {
               <p className="text-base font-bold text-gray-900 truncate">우리 아이 등록하러 가기</p>
               <p className="text-sm text-gray-400 mt-0.5">아이를 등록하고 기질 검사를 시작해 보세요</p>
             </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
@@ -256,7 +257,7 @@ export default function SettingsPage() {
       </section>
 
       {/* 메뉴 리스트 */}
-      <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
+      <section className="mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
         {MENU_ITEMS.map((item, idx) => {
           const className = `flex items-center gap-4 px-5 py-2 active:bg-gray-50 transition-colors ${
             idx < MENU_ITEMS.length - 1 ? "border-b border-gray-100" : ""
@@ -267,7 +268,7 @@ export default function SettingsPage() {
                 {item.icon}
               </span>
               <span className="flex-1 text-left text-[15px] text-gray-800">{item.label}</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </>
@@ -297,7 +298,7 @@ export default function SettingsPage() {
 
       {/* 로그아웃 (로그인 상태일 때만) */}
       {isAuthLoaded && isAuthenticated && (
-        <section className="mx-4 mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
+        <section className="mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
           <button
             onClick={async () => {
               await fetch("/api/auth/logout", { method: "POST" });
@@ -306,7 +307,7 @@ export default function SettingsPage() {
             className="flex w-full items-center gap-4 px-5 py-2 active:bg-gray-50 transition-colors"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.red} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
@@ -319,7 +320,7 @@ export default function SettingsPage() {
 
       {/* 탈퇴하기 (로그인 상태일 때만) */}
       {isAuthLoaded && isAuthenticated && (
-        <div className="mx-4 mt-3 flex justify-center px-2">
+        <div className="mt-3 flex justify-center px-2">
           <button
             type="button"
             onClick={() => setWithdrawOpen(true)}
@@ -331,7 +332,7 @@ export default function SettingsPage() {
       )}
 
       {/* 사업자 정보 */}
-      <section className="mx-4 mt-6">
+      <section className="mt-6">
         <button
           type="button"
           onClick={() => setBizOpen((v) => !v)}
@@ -343,7 +344,7 @@ export default function SettingsPage() {
             height="12"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#9ca3af"
+            stroke={palette.gray400}
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"

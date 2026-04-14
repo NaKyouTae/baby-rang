@@ -103,9 +103,9 @@ export default function OnboardingClient() {
   const datePickerChild = children.find((c) => c.key === datePickerFor);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50 pb-32">
+    <div className="flex flex-col min-h-dvh bg-white px-6 pb-32" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
       {/* 헤더 */}
-      <header className="px-5 pt-[var(--safe-area-top)] pb-2">
+      <header className="pb-2">
         <p className="text-xs text-primary-600 font-semibold">회원가입</p>
         <h1 className="mt-1 text-2xl font-extrabold text-gray-900 leading-tight">
           아기랑에 오신 걸 환영해요
@@ -115,7 +115,7 @@ export default function OnboardingClient() {
         </p>
       </header>
 
-      <main className="flex-1 mx-4 mt-4 space-y-4">
+      <main className="flex-1 mt-4 space-y-4">
         {/* 카카오 프로필 표시 */}
         {user && (
           <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center gap-3">
@@ -265,7 +265,7 @@ export default function OnboardingClient() {
       </main>
 
       {/* 하단 고정 CTA */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-[max(var(--safe-area-bottom),16px)] px-4">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-[max(var(--safe-area-bottom),16px)] px-6">
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}

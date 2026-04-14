@@ -10,15 +10,15 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50 pb-24">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
+    <div className="flex flex-col min-h-dvh bg-white pb-24 px-6">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <BackButton />
         <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
           이용약관
         </h1>
       </header>
 
-      <article className="px-5 py-6 text-[14px] leading-relaxed text-gray-700 space-y-6">
+      <article className="py-6 text-[14px] leading-relaxed text-gray-700 space-y-6">
         <p className="text-xs text-gray-400">시행일자: 2026년 4월 8일</p>
 
         <section>

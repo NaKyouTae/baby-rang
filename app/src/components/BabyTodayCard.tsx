@@ -53,7 +53,7 @@ function ChildSlide({ child }: { child: Child }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span>{child.gender === "female" ? "👧" : "👦"}</span>
+              <span>{child.gender === "female" ? "👧🏻" : "👦🏻"}</span>
             )}
           </div>
           <div className="flex-1 min-w-0">

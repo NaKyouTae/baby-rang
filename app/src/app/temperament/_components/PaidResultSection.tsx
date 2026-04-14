@@ -14,7 +14,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-4 mt-5 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+    <div className="mt-5 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
       <h3 className="text-base font-bold text-gray-900 mb-3">{title}</h3>
       {children}
     </div>
@@ -190,7 +190,7 @@ export default function PaidResultSection({ content }: PaidResultSectionProps) {
         </div>
       </Card>
 
-      <div className="mx-4 mt-8">
+      <div className="mt-8">
         <div className="bg-gradient-to-br from-primary-50 to-amber-50 rounded-2xl p-6 text-center">
           <p className="text-base font-semibold text-gray-800 leading-relaxed">
             &ldquo;{content.closingMessage}&rdquo;
@@ -198,7 +198,7 @@ export default function PaidResultSection({ content }: PaidResultSectionProps) {
         </div>
       </div>
 
-      <div className="mx-4 mt-6 text-center">
+      <div className="mt-6 text-center">
         <a
           href="/temperament"
           className="inline-block w-full py-3.5 rounded-xl bg-primary-500 text-white font-semibold text-sm hover:bg-primary-600 transition-colors"

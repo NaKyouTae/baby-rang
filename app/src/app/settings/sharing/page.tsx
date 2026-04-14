@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useChildren } from '@/hooks/useChildren';
 import { calcChildAge } from '@/lib/childAge';
 import ConfirmModal from '@/components/ConfirmModal';
+import { palette } from '@/lib/colors';
 
 interface ShareMember {
   id: string;
@@ -172,16 +173,16 @@ export default function SharingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100 -mx-6">
         <button
           type="button"
           onClick={() => router.back()}
           className="flex h-10 w-10 items-center justify-center rounded-full active:bg-gray-100"
           aria-label="뒤로 가기"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -189,7 +190,7 @@ export default function SharingPage() {
       </header>
 
       {/* 탭 */}
-      <div className="flex border-b border-gray-200 bg-white">
+      <div className="flex border-b border-gray-200 bg-white -mx-6">
         {(['owned', 'joined'] as Tab[]).map((t) => (
           <button
             key={t}
@@ -206,7 +207,7 @@ export default function SharingPage() {
         ))}
       </div>
 
-      <div className="flex-1 px-4 pt-4 pb-8">
+      <div className="flex-1 pt-4 pb-8">
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
@@ -234,7 +235,7 @@ export default function SharingPage() {
             {ownedShares.length === 0 ? (
               <div className="mt-16 flex flex-col items-center gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="18" cy="5" r="3" />
                     <circle cx="6" cy="12" r="3" />
                     <circle cx="18" cy="19" r="3" />
@@ -255,7 +256,7 @@ export default function SharingPage() {
                         {share.child.profileImage ? (
                           <img src={share.child.profileImage} alt={share.child.name} className="h-10 w-10 rounded-full object-cover" />
                         ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -289,7 +290,7 @@ export default function SharingPage() {
                                 {m.user.profileImage ? (
                                   <img src={m.user.profileImage} alt="" className="h-7 w-7 rounded-full object-cover" />
                                 ) : (
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                                 )}
                               </div>
                               <span className="flex-1 text-sm text-gray-700 truncate">{m.user.nickname ?? '사용자'}</span>
@@ -348,7 +349,7 @@ export default function SharingPage() {
             {joinedItems.length === 0 ? (
               <div className="mt-16 flex flex-col items-center gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -366,7 +367,7 @@ export default function SharingPage() {
                       {item.share.child.profileImage ? (
                         <img src={item.share.child.profileImage} alt={item.share.child.name} className="h-12 w-12 rounded-full object-cover" />
                       ) : (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -409,7 +410,7 @@ export default function SharingPage() {
                       {child.profileImage ? (
                         <img src={child.profileImage} alt={child.name} className="h-9 w-9 rounded-full object-cover" />
                       ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                       )}
                     </div>
                     <span className="text-sm font-medium text-gray-900">{child.name}</span>

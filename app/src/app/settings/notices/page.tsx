@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { palette } from '@/lib/colors';
 
 type Notice = {
   id: string;
@@ -46,15 +47,15 @@ export default function NoticesPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <button
           type="button"
           onClick={() => router.push('/settings')}
           aria-label="뒤로가기"
           className="p-2"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -63,7 +64,7 @@ export default function NoticesPage() {
         </h1>
       </header>
 
-      <div className="px-4 mt-3">
+      <div className="mt-3">
         {loading && (
           <div className="py-20 text-center text-sm text-gray-400">불러오는 중...</div>
         )}
@@ -100,7 +101,7 @@ export default function NoticesPage() {
                         height="16"
                         viewBox="0 0 24 24"
                         fill="none"
-                        stroke="#9ca3af"
+                        stroke={palette.gray400}
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"

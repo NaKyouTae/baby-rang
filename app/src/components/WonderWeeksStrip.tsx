@@ -100,7 +100,7 @@ function ChildWonderCard({ child }: { child: Child }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span>{child.gender === 'female' ? '👧' : '👦'}</span>
+                <span>{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
               )}
             </div>
             <span className="text-sm font-bold text-gray-900 truncate">{child.name}</span>

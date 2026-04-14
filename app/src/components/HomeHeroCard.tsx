@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
+import EmptyProfileCard from '@/components/EmptyProfileCard';
 import { cachedFetch } from '@/hooks/appCache';
 import {
   calcChildAge,
@@ -72,16 +73,6 @@ function getLeapStatus(birthDate: Date, today: Date): LeapStatus {
     }
   }
   return { current, next };
-}
-
-function getTimeGreeting(): { text: string; emoji: string } {
-  const h = new Date().getHours();
-  if (h < 5) return { text: '늦은 밤이에요', emoji: '🌙' };
-  if (h < 11) return { text: '좋은 아침이에요', emoji: '☀️' };
-  if (h < 14) return { text: '좋은 점심이에요', emoji: '🌤️' };
-  if (h < 18) return { text: '좋은 오후예요', emoji: '🌿' };
-  if (h < 22) return { text: '좋은 저녁이에요', emoji: '🌆' };
-  return { text: '편안한 밤이에요', emoji: '🌙' };
 }
 
 function todayStr() {
@@ -207,64 +198,51 @@ function ChildHeroCard({
   const { current, next } = getLeapStatus(birth, today);
 
   return (
-    <div className="rounded-2xl overflow-hidden bg-white border border-primary-200 shadow-[0_8px_24px_-12px_rgba(255,199,44,0.25)] ring-1 ring-primary-100">
+    <div className="h-[218px] rounded-lg overflow-hidden bg-white border border-gray-200">
       <div>
         {/* 프로필 헤더 — 그라데이션 강조 */}
-        <div className="relative px-4 pt-3.5 pb-3 bg-gradient-to-br from-primary-50 via-white to-primary-100">
+        <div className="relative px-3 pt-3 pb-3 bg-gray-100">
           <div className="flex items-center gap-3">
-            <div className="relative shrink-0">
-              <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-primary-400 to-primary-300" />
-              <div className="relative w-12 h-12 rounded-full bg-white overflow-hidden flex items-center justify-center text-2xl ring-2 ring-white leading-none">
-                {child.profileImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={child.profileImage}
-                    alt={child.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧' : '👦'}</span>
-                )}
-              </div>
+            <div className="w-10 h-10 rounded-full bg-white overflow-hidden flex items-center justify-center text-xl ring-2 ring-primary-400 shrink-0 leading-none">
+              {child.profileImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={child.profileImage}
+                  alt={child.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <div className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">
-                  {child.name}
-                </div>
-                <img
-                  src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
-                  alt={child.gender === 'female' ? '여아' : '남아'}
-                  className="w-[16px] h-[16px]"
-                />
+              <div className="text-[16px] font-extrabold text-gray-900 truncate leading-tight">
+                {child.name}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-1.5 py-0.5 rounded-full">
+                <span className="text-[10px] font-bold text-white bg-primary-500 px-1.5 py-0.5 rounded-sm">
                   D+{days}
                 </span>
-                <span className="text-[11px] text-gray-600 font-medium">{ageLabel}</span>
+                <span className="text-[12px] text-black font-medium">{ageLabel}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 오늘의 통계 */}
-        <Link href="/growth-record" className="block px-3 py-3 bg-white active:opacity-95">
+        <Link href="/growth-record" className="block px-3 pt-2.5 pb-2.5 bg-gray-100 active:opacity-95">
           <div className="grid grid-cols-3 gap-2">
             <StatCell
-              icon="🍼"
               label="수유"
               value={stats ? `${stats.feedingCount}회` : '—'}
               sub={stats ? formatLastTime(stats.lastFeedingAt) : '—'}
             />
             <StatCell
-              icon="😴"
               label="수면"
               value={stats ? formatSleep(stats.sleepMinutes) : '—'}
               sub={stats ? formatLastTime(stats.lastSleepAt) : '—'}
             />
             <StatCell
-              icon="🩲"
               label="기저귀"
               value={stats ? `${stats.diaperCount}회` : '—'}
               sub={stats ? formatLastTime(stats.lastDiaperAt) : '—'}
@@ -277,40 +255,39 @@ function ChildHeroCard({
       {/* 원더윅스 영역 */}
       <Link
         href={`/wonder-weeks?childId=${encodeURIComponent(child.id)}`}
-        className="block px-4 py-2.5 border-t border-gray-100 bg-gray-50/60 active:opacity-80"
+        className="block px-2 py-2.5 border-t border-gray-100 bg-white active:opacity-80"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[11px] font-bold text-gray-700 shrink-0">원더윅스</span>
+            <span className="text-[12px] font-medium text-black shrink-0">원더윅스</span>
             {current ? (
-              <span className="text-[10px] font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-medium text-primary-500 shrink-0 rounded-[2px] px-1 py-0" style={{ backgroundColor: 'rgba(48,176,199,0.15)' }}>
                 진행중
               </span>
             ) : (
-              <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+              <span className="text-[10px] font-medium text-gray-500 bg-gray-100 shrink-0 rounded-[2px] px-1 py-0">
                 평온기
               </span>
             )}
           </div>
-          <span className="text-[10px] text-gray-400 shrink-0">자세히 ›</span>
+          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-gray-500 shrink-0">자세히 <img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></span>
         </div>
         {current ? (
-          <div className="text-[11px] text-gray-700 mt-1 truncate">
-            <span className="font-semibold text-primary-700">
-              Leap {current.leap}. {current.name}
+          <div className="text-[12px] text-black mt-1 truncate">
+            <span className="font-semibold text-primary-500">
+              {current.leap}번째.
             </span>
-            <span className="text-gray-500">
-              {' '}
-              · {fmtMD(current.startDate)} ~ {fmtMD(current.endDate)}
+            <span>
+              {' '}{current.name} | {WONDER_WEEKS_LEAPS[current.leap - 1].startWeek}-{WONDER_WEEKS_LEAPS[current.leap - 1].endWeek}주차 ({fmtMD(current.startDate)}-{fmtMD(current.endDate)})
             </span>
           </div>
         ) : next ? (
-          <div className="text-[11px] text-gray-500 mt-1 truncate">
-            다음: Leap {next.leap}. {next.name}
-            <span className="ml-1 font-bold text-primary-600">D-{next.dDay}</span>
+          <div className="text-[12px] text-black mt-1 truncate">
+            다음: {next.leap}번째. {next.name}
+            <span className="ml-1 font-bold text-primary-500">D-{next.dDay}</span>
           </div>
         ) : (
-          <div className="text-[11px] text-gray-400 mt-1">예정된 원더윅스가 없어요</div>
+          <div className="text-[12px] text-gray-400 mt-1">예정된 원더윅스가 없어요</div>
         )}
       </Link>
     </div>
@@ -318,46 +295,26 @@ function ChildHeroCard({
 }
 
 function StatCell({
-  icon,
   label,
   value,
   sub,
 }: {
-  icon: string;
   label: string;
   value: string;
   sub: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-primary-50/60 ring-1 ring-primary-200/70 py-2 px-1">
+    <div className="flex flex-col items-center justify-center rounded bg-white border border-gray-200 px-1" style={{ height: 74 }}>
       <div className="flex items-center gap-1 leading-none">
-        <span className="text-[13px]">{icon}</span>
-        <span className="text-[10px] font-semibold text-primary-600">{label}</span>
+        <span className="text-[12px] font-medium text-gray-500">{label}</span>
       </div>
-      <div className="text-[14px] font-extrabold text-gray-900 leading-none mt-1.5">
+      <div className="text-[16px] font-semibold text-primary-500 leading-none mt-1.5">
         {value}
       </div>
-      <div className="text-[10px] text-gray-400 mt-1 truncate max-w-full">
+      <div className="text-[12px] text-black mt-1 truncate max-w-full">
         {sub}
       </div>
     </div>
-  );
-}
-
-function AddChildCard() {
-  return (
-    <Link
-      href="/settings/children"
-      className="rounded-2xl overflow-hidden bg-white border-2 border-dashed border-gray-200 flex flex-col items-center justify-center py-12 active:bg-gray-50 transition-colors"
-    >
-      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </div>
-      <span className="text-sm font-semibold text-gray-400">아이 추가하기</span>
-    </Link>
   );
 }
 
@@ -375,7 +332,8 @@ function ChildrenCarousel({
   const onScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
-    const slideW = el.clientWidth - 40 + 12; // card width + gap
+    const firstSlide = el.firstElementChild as HTMLElement | null;
+    const slideW = (firstSlide?.clientWidth ?? el.clientWidth) + 12; // card width + gap
     const idx = Math.round(el.scrollLeft / slideW);
     if (idx !== activeIdx) {
       setActiveIdx(idx);
@@ -388,23 +346,27 @@ function ChildrenCarousel({
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar px-5"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar -mx-6 px-6"
         style={{ scrollbarWidth: 'none' }}
       >
         {children.map((child) => (
           <div
             key={child.id}
             className="snap-center shrink-0"
-            style={{ width: 'calc(100% - 40px)', scrollSnapStop: 'always' }}
+            style={{ width: '100%', scrollSnapStop: 'always' }}
           >
             <ChildHeroCard child={child} />
           </div>
         ))}
         <div
           className="snap-center shrink-0"
-          style={{ width: 'calc(100% - 40px)', scrollSnapStop: 'always' }}
+          style={{ width: '100%', scrollSnapStop: 'always' }}
         >
-          <AddChildCard />
+          <EmptyProfileCard
+            href="/settings/children"
+            ctaLabel="아기 추가하기"
+            className="rounded-lg border-2 border-dotted border-gray-200 active:bg-gray-50 transition-colors"
+          />
         </div>
       </div>
       {totalSlides > 1 && (
@@ -413,7 +375,7 @@ function ChildrenCarousel({
             <span
               key={i}
               className={`h-1.5 rounded-full transition-all ${
-                i === activeIdx ? 'w-4 bg-primary-500' : 'w-1.5 bg-gray-300'
+                i === activeIdx ? 'w-4 bg-gray-600' : 'w-1.5 bg-gray-300'
               }`}
             />
           ))}
@@ -424,8 +386,8 @@ function ChildrenCarousel({
 }
 
 function getRoleLabel(parentRole: string | null | undefined): string {
-  if (parentRole === 'mom') return '어머님';
-  if (parentRole === 'dad') return '아버님';
+  if (parentRole === 'mom') return '엄마';
+  if (parentRole === 'dad') return '아빠';
   return '보호자님';
 }
 
@@ -436,15 +398,17 @@ function WelcomeHeader({
   parentRole: string | null | undefined;
   childName: string | null;
 }) {
-  const greeting = getTimeGreeting();
   const roleLabel = getRoleLabel(parentRole);
   const displayName = childName
     ? `${childName} ${roleLabel}`
     : `아기랑 ${roleLabel}`;
   return (
-    <div className="px-5">
-      <div className="text-[18px] font-extrabold text-gray-900 leading-tight">
-        {displayName}, {greeting.text} {greeting.emoji}
+    <div>
+      <div className="text-[20px] font-medium text-black leading-[32px]">
+        {displayName},
+      </div>
+      <div className="text-[20px] font-medium text-black leading-[32px]">
+        아기와 행복한 추억 만들어봐요 ☺️
       </div>
     </div>
   );
@@ -465,35 +429,24 @@ export default function HomeHeroCard() {
 
   // 비로그인 → 로그인 유도
   if (!isAuthenticated) {
-    const greeting = getTimeGreeting();
     return (
       <>
-        <div className="px-5">
-          <div className="text-[18px] font-extrabold text-gray-900 leading-tight">
-            안녕하세요, {greeting.text}
+        <div>
+          <div className="text-[20px] font-medium text-black leading-[32px]">
+            반가워요,
           </div>
-          <div className="text-[11px] text-gray-500 mt-1">
-            오늘도 아기랑 함께해요 {greeting.emoji}
+          <div className="text-[20px] font-medium text-black leading-[32px]">
+            육아 동반자 아기랑과 함께해요.
           </div>
         </div>
-        <div className="px-5 pt-3">
-          <button
-            type="button"
+        <div className="pt-4">
+          <EmptyProfileCard
+            ctaLabel="로그인하고 시작하기"
             onClick={() => openLoginPrompt('로그인하고 우리 아이 맞춤 정보를 확인하세요.')}
-            className="w-full flex items-center justify-between rounded-2xl bg-gradient-to-br from-primary-500 to-primary-400 px-5 py-4 shadow-[0_10px_24px_-10px_rgba(255,199,44,0.45)] ring-1 ring-primary-300/40 active:opacity-95"
-          >
-            <div className="min-w-0 text-left">
-              <div className="text-[15px] font-extrabold text-white">
-                로그인하고 시작하기
-              </div>
-              <div className="text-[11px] text-white/80 mt-1">
-                우리 아이 맞춤 정보를 볼 수 있어요
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1 text-[12px] font-bold text-primary-700 bg-white shrink-0 ml-3 px-3 py-1.5 rounded-full shadow-sm">
-              로그인 <span aria-hidden>›</span>
-            </span>
-          </button>
+          />
+          <div className="flex justify-center pt-4">
+            <span className="h-2 w-9 rounded-full bg-gray-500/80" />
+          </div>
         </div>
       </>
     );
@@ -503,23 +456,16 @@ export default function HomeHeroCard() {
   if (childrenLoaded && children.length === 0) {
     return (
       <>
-        <WelcomeHeader parentRole={user?.parentRole} childName={null} />
-        <div className="px-5 pt-3">
-          <div className="rounded-2xl bg-white border border-gray-300 px-5 py-4 shadow-sm">
-            <div className="text-[14px] font-bold text-gray-900">
-              아직 등록된 아이가 없어요
-            </div>
-            <div className="text-[11px] text-gray-500 mt-1">
-              등록하면 맞춤 정보와 기록을 볼 수 있어요
-            </div>
-            <Link
-              href="/settings/children"
-              className="mt-3 flex items-center justify-center gap-1 rounded-xl bg-primary-500 text-white text-[13px] font-bold py-3 active:bg-primary-600 shadow-sm"
-            >
-              우리 아이 등록하기
-              <span aria-hidden>→</span>
-            </Link>
+        <div>
+          <div className="text-[20px] font-medium text-black leading-[32px]">
+            반가워요,
           </div>
+          <div className="text-[20px] font-medium text-black leading-[32px]">
+            첫 아기를 등록해 보세요.
+          </div>
+        </div>
+        <div className="pt-4">
+          <EmptyProfileCard href="/settings/children" ctaLabel="아기 추가하기" />
         </div>
       </>
     );
@@ -532,7 +478,7 @@ export default function HomeHeroCard() {
   return (
     <>
       <WelcomeHeader parentRole={user?.parentRole} childName={activeChildName} />
-      <div className="pt-3">
+      <div className="pt-4">
         <ChildrenCarousel children={children} onActiveChange={setActiveChildIdx} />
       </div>
     </>

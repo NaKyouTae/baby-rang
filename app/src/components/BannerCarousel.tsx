@@ -35,7 +35,7 @@ export default function BannerCarousel() {
     return () => clearInterval(id);
   }, [banners.length, index]);
 
-  if (banners.length === 0) return null;
+  if (banners.length === 0) return <div className="h-14 rounded-[4px]" />;
 
   const onScroll = () => {
     const el = scrollerRef.current;
@@ -56,7 +56,7 @@ export default function BannerCarousel() {
             key={b.id}
             href={b.linkUrl}
             className="relative shrink-0 w-full snap-center h-14 overflow-hidden"
-            style={{ backgroundColor: b.bgColor ?? "#4b5563" }}
+            style={{ backgroundColor: "transparent" }}
           >
             {b.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element

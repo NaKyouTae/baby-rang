@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { Reorder } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
+import { HomeNavIcon, MyNavIcon, AddNavIcon } from "./nav-icons";
+import { palette } from "@/lib/colors";
 
 const DEFAULT_SLOTS: (MenuId | null)[] = ["nursing-room", "sleep-golden-time", null];
 const LONG_PRESS_MS = 500;
@@ -189,7 +191,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         data-bottom-nav-root
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
       >
-        <div className="mx-4 mb-[max(env(safe-area-inset-bottom),16px)] pointer-events-auto">
+        <div className="mx-6 mb-[max(env(safe-area-inset-bottom),24px)] pointer-events-auto">
           {editMode && (
             <div className="mb-4 flex justify-center">
               <button
@@ -202,15 +204,15 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
             </div>
           )}
 
-          <div className="flex items-center bg-white/90 backdrop-blur-xl rounded-3xl px-2 shadow-[0_4px_24px_rgba(0,0,0,0.12)]">
+          <div className="flex items-center h-14 bg-white/90 backdrop-blur-xl rounded-[20px] px-2 shadow-[0_0_20px_rgba(0,0,0,0.04)]">
             {/* HOME */}
             <Link
               href={HOME_HREF}
               className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1"
               onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
             >
-              <HomeIcon active={isHomeActive} />
-              <span className={`text-[10px] ${isHomeActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>홈</span>
+              <HomeNavIcon active={isHomeActive} />
+              <span className={`text-[10px] ${isHomeActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>홈</span>
             </Link>
 
             {/* MIDDLE 3 SLOTS — framer-motion Reorder */}
@@ -243,8 +245,8 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               className="flex flex-col items-center justify-center gap-0.5 py-2 flex-1"
               onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
             >
-              <MyIcon active={!!isSettingsActive} />
-              <span className={`text-[10px] ${isSettingsActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>마이</span>
+              <MyNavIcon active={!!isSettingsActive} />
+              <span className={`text-[10px] ${isSettingsActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>마이</span>
             </Link>
           </div>
         </div>
@@ -277,7 +279,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
                       className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-gray-50 active:bg-gray-100"
                     >
                       <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
-                        {item.icon(true)}
+                        {item.icon(true, palette.black)}
                       </div>
                       <span className="text-[11px] text-gray-700 font-medium">{item.label}</span>
                     </button>
@@ -343,13 +345,13 @@ function ReorderSlot({
       <div className={`flex flex-col items-center justify-center gap-0.5 py-2 cursor-pointer`}>
         {menuId === null ? (
           <>
-            <PlusIcon />
+            <AddNavIcon />
             <span className="text-[10px] text-gray-400 font-medium">추가</span>
           </>
         ) : (
           <>
-            {MENU_CATALOG[menuId].icon(isActive, "#FFC72C")}
-            <span className={`text-[10px] ${isActive ? "text-primary-600 font-bold" : "text-gray-400 font-medium"}`}>
+            {MENU_CATALOG[menuId].icon(isActive, isActive ? palette.teal : palette.black)}
+            <span className={`text-[10px] ${isActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>
               {MENU_CATALOG[menuId].label}
             </span>
           </>
@@ -369,35 +371,5 @@ function ReorderSlot({
         </button>
       )}
     </Reorder.Item>
-  );
-}
-
-function HomeIcon({ active }: { active: boolean }) {
-  const c = active ? "#FFC72C" : "#9ca3af";
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 11l9-8 9 8" />
-      <path d="M5 10v10h14V10" />
-    </svg>
-  );
-}
-
-function MyIcon({ active }: { active: boolean }) {
-  const c = active ? "#FFC72C" : "#9ca3af";
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" strokeDasharray="2 3" />
-      <path d="M12 8v8" />
-      <path d="M8 12h8" />
-    </svg>
   );
 }

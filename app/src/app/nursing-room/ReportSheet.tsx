@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { palette } from "@/lib/colors";
 
 export interface NursingRoomReport {
   name: string;
@@ -179,7 +180,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
       map,
       draggable: true,
       icon: {
-        content: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#111;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,0.4);border:2px solid white;">
+        content: `<div style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:${palette.black};border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(0,0,0,0.4);border:2px solid white;">
           <div style="width:10px;height:10px;background:white;border-radius:50%;transform:rotate(45deg);"></div>
         </div>`,
         anchor: new naverNs.maps.Point(18, 36),
@@ -355,7 +356,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               onClick={openPostcode}
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-left flex items-center gap-2 hover:border-gray-900"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.3-4.3" />
               </svg>

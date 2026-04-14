@@ -34,7 +34,7 @@ function Avatar({ child, size = 48 }: { child: Child; size?: number }) {
       className="rounded-full bg-gray-100 shrink-0 flex items-center justify-center leading-[1]"
       style={{ ...style, fontSize: size * 0.55 }}
     >
-      {child.gender === 'female' ? '👧' : '👦'}
+      {child.gender === 'female' ? '👧🏻' : '👦🏻'}
     </div>
   );
 }

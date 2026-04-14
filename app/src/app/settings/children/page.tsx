@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useChildren, GENDER_LABEL } from '@/hooks/useChildren';
 import DatePickerModal from '@/components/DatePickerModal';
 import { calcChildAge } from '@/lib/childAge';
+import { palette } from '@/lib/colors';
 
 type Gender = 'male' | 'female' | '';
 
@@ -86,11 +87,11 @@ export default function ChildrenSettingsPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
       {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <button type="button" onClick={() => router.push('/settings')} aria-label="뒤로가기" className="p-2">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -100,7 +101,7 @@ export default function ChildrenSettingsPage() {
       </header>
 
       {/* 등록된 아이 목록 */}
-      <section className="mx-4 mt-2 space-y-3">
+      <section className="mt-2 space-y-3">
         {children.length === 0 && !showForm && (
           <div className="text-center py-12">
             <span className="text-5xl block mb-4">👶</span>
@@ -122,7 +123,7 @@ export default function ChildrenSettingsPage() {
                   {editPhotoPreview ? (
                     <Image src={editPhotoPreview} alt="프로필" fill className="object-cover" />
                   ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19" />
                       <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
@@ -193,7 +194,7 @@ export default function ChildrenSettingsPage() {
                 {child.profileImage ? (
                   <Image src={child.profileImage} alt={child.name} fill className="object-cover" />
                 ) : (
-                  <span className="text-xl">{child.gender === 'male' ? '👦' : '👧'}</span>
+                  <span className="text-xl">{child.gender === 'male' ? '👦🏻' : '👧🏻'}</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -246,7 +247,7 @@ export default function ChildrenSettingsPage() {
                 {photoPreview ? (
                   <Image src={photoPreview} alt="프로필" fill className="object-cover" />
                 ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
@@ -316,7 +317,7 @@ export default function ChildrenSettingsPage() {
 
       {/* 아이 추가 버튼 */}
       {!showForm && editingId === null && (
-        <div className="mx-4 mt-4">
+        <div className="mt-4">
           <button
             onClick={() => setShowForm(true)}
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-dashed border-gray-200 text-sm text-gray-400 active:bg-gray-50 transition-colors"

@@ -161,8 +161,8 @@ export default function SleepGoldenTimeClient() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <div className="sticky top-0 z-20 bg-gray-50 px-5 pt-[var(--safe-area-top)] pb-3">
+    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+      <div className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
         {children.length > 0 && effectiveChild ? (
           <ChildSelector
             children={children}
@@ -200,7 +200,7 @@ export default function SleepGoldenTimeClient() {
         )}
       </div>
 
-      <main className="px-4">
+      <main>
       {/* 수면 단계 요약 */}
       <div className="flex items-center justify-between bg-white rounded-2xl p-3.5 shadow-sm mb-4">
         <div className="flex items-center gap-3">

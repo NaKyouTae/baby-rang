@@ -17,7 +17,7 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
 
   return (
     <div
-      className="absolute inset-0 z-[200] flex items-center justify-center bg-[#FDF6E3] transition-opacity duration-500"
+      className="absolute inset-0 z-[200] flex items-center justify-center bg-white transition-opacity duration-500"
       style={{ opacity: phase === "exit" ? 0 : 1 }}
     >
       <img

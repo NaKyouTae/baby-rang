@@ -1,14 +1,29 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
 @import "tailwindcss";
 
 @theme {
-  --color-primary-50: #FFFEF8;
-  --color-primary-100: #FFF9E6;
-  --color-primary-200: #FFF2C6;
-  --color-primary-300: #FFE580;
-  --color-primary-400: #FFD84D;
-  --color-primary-500: #FFC72C;
-  --color-primary-600: #E4B528;
-  --color-primary-700: #C89B1E;
+  /* Primary (teal) */
+  --color-primary-50: #EEF8FB;
+  --color-primary-100: #D5EFF5;
+  --color-primary-200: #AAE0EB;
+  --color-primary-300: #70CCD9;
+  --color-primary-400: #4ABED0;
+  --color-primary-500: #30B0C7;
+  --color-primary-600: #289AAE;
+  --color-primary-700: #208090;
+
+  /* Gray scale */
+  --color-gray-100: #F7F8F9;
+  --color-gray-200: #EEF0F1;
+  --color-gray-300: #DFE0E1;
+  --color-gray-400: #BBC0C5;
+  --color-gray-500: #808991;
+  --color-gray-600: #515C66;
+
+  /* Semantic */
+  --color-app-black: #121212;
+  --color-app-white: #FDFDFE;
+  --color-app-red: #FF3B30;
 }
 
 :root {
@@ -19,9 +34,9 @@
 }
 
 body {
-  background: #ffffff;
-  color: #171717;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  background: var(--color-app-white);
+  color: var(--color-app-black);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -76,7 +91,7 @@ body {
 }
 
 .gradient-page {
-  background: #f9fafb;
+  background: var(--color-app-white);
 }
 
 @media (min-width: 431px) {

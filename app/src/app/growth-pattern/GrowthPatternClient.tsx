@@ -24,13 +24,9 @@ function shiftDate(date: string, days: number): string {
   return toDateStr(d);
 }
 
-// 주의 시작(월요일) 날짜 반환
-function startOfWeek(date: string): string {
-  const d = new Date(`${date}T00:00:00`);
-  const day = d.getDay(); // 0=일
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return toDateStr(d);
+// 오늘 기준 N번째 7일 구간의 시작일 반환 (0=최근 7일, 1=그 이전 7일, ...)
+function rollingWeekStart(today: string, weeksAgo: number): string {
+  return shiftDate(today, -(weeksAgo + 1) * 7 + 1);
 }
 
 // 하루 분 → top%
@@ -45,13 +41,10 @@ function recordSpans(
   const dayStart = new Date(`${dateStr}T00:00:00`).getTime();
   const dayEnd = dayStart + 24 * 60 * 60 * 1000;
   const start = new Date(r.startAt).getTime();
-  const cfg = TYPE_CONFIG[r.type];
-  // 종료시간이 있는 타입인데 아직 측정되지 않았으면 현재 시간까지 표시
+  // 종료시간이 없으면 10분으로 처리
   const end = r.endAt
     ? new Date(r.endAt).getTime()
-    : cfg.hasEnd
-      ? Date.now()
-      : start + 60 * 1000;
+    : start + 10 * 60 * 1000;
   const s = Math.max(start, dayStart);
   const e = Math.min(end, dayEnd);
   if (e <= s) return null;
@@ -62,9 +55,11 @@ function recordSpans(
   return { top, height };
 }
 
-// 항상 면적(바)으로 표시할 타입 — 수면 + 모든 수유
-const ALWAYS_BAR_TYPES: Set<GrowthType> = new Set([
-  'SLEEP',
+// 블록(면적)으로 표시할 타입 — 수면만
+const BLOCK_TYPES: Set<GrowthType> = new Set(['SLEEP']);
+
+// 얇은 라인으로 표시할 타입 — 수유류
+const LINE_TYPES: Set<GrowthType> = new Set([
   'FORMULA',
   'BREASTFEEDING',
   'PUMPED_FEEDING',
@@ -102,16 +97,17 @@ export default function GrowthPatternClient() {
   const CHUNK_WEEKS = 4; // 추가 로드 단위
   const PREFETCH_LEFT = 1; // 좌측 N주 남으면 prefetch
   const todayStr = toDateStr(new Date());
-  const currentWeekStart = startOfWeek(todayStr);
+  // 오늘 기준 역산: 최근 7일(today-6~today), 그 이전 7일, ...
+  const currentWeekStart = rollingWeekStart(todayStr, 0);
 
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  // 표시 중인 주 시작일 배열 (오름차순: 과거 → 현재). 좌측으로 prepend
+  // 표시 중인 구간 시작일 배열 (오름차순: 과거 → 현재). 좌측으로 prepend
   const [weekStarts, setWeekStarts] = useState<string[]>(() =>
     Array.from({ length: INITIAL_WEEKS }, (_, i) =>
-      shiftDate(currentWeekStart, (i - (INITIAL_WEEKS - 1)) * 7),
+      rollingWeekStart(todayStr, INITIAL_WEEKS - 1 - i),
     ),
   );
-  // 활성 주를 인덱스가 아닌 주 시작일로 추적 (prepend되어도 안정)
+  // 활성 구간을 시작일로 추적 (prepend되어도 안정)
   const [activeWeekStart, setActiveWeekStart] = useState<string>(currentWeekStart);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [selectedTypes, setSelectedTypes] = useState<Set<GrowthType>>(
@@ -240,10 +236,10 @@ export default function GrowthPatternClient() {
     if (!selectedChild) return;
     let cancelled = false;
     const initial = Array.from({ length: INITIAL_WEEKS }, (_, i) =>
-      shiftDate(currentWeekStart, (i - (INITIAL_WEEKS - 1)) * 7),
+      rollingWeekStart(todayStr, INITIAL_WEEKS - 1 - i),
     );
     setWeekStarts(initial);
-    setActiveWeekStart(currentWeekStart);
+    setActiveWeekStart(rollingWeekStart(todayStr, 0));
     setDays({});
     setLoading(true);
     didInitScrollRef.current = false;
@@ -374,7 +370,11 @@ export default function GrowthPatternClient() {
     if (!activeWeekStart) return '';
     const sd = new Date(`${activeWeekStart}T00:00:00`);
     const ed = new Date(`${shiftDate(activeWeekStart, 6)}T00:00:00`);
-    return `${sd.getMonth() + 1}월 ${sd.getDate()}일 - ${ed.getDate()}일`;
+    const sm = sd.getMonth() + 1;
+    const em = ed.getMonth() + 1;
+    return sm === em
+      ? `${sm}월 ${sd.getDate()}일 - ${ed.getDate()}일`
+      : `${sm}월 ${sd.getDate()}일 - ${em}월 ${ed.getDate()}일`;
   }, [activeWeekStart]);
 
   // scroller가 DOM에 붙는 즉시(레이아웃 직후) 현재 주(가장 우측)로 점프 — 애니메이션 없이 1회
@@ -436,8 +436,8 @@ export default function GrowthPatternClient() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50 pb-[calc(var(--safe-area-bottom)+96px)] overflow-hidden">
-      <header className="px-5 pt-[calc(var(--safe-area-top)+16px)] pb-3">
+    <div className="flex flex-col h-[100dvh] bg-white px-6 pb-[calc(var(--safe-area-bottom)+96px)] overflow-hidden" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+      <header className="pb-3">
         <ChildSelector
           children={children}
           selected={selectedChild}
@@ -446,7 +446,7 @@ export default function GrowthPatternClient() {
       </header>
 
       {/* 타입 필터 */}
-      <div className="mt-4 px-5">
+      <div className="mt-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {ALL_TYPES.map((t) => {
             const cfg = TYPE_CONFIG[t];
@@ -473,12 +473,12 @@ export default function GrowthPatternClient() {
       </div>
 
       {/* 날짜 라벨 */}
-      <div className="mt-3 px-5 flex items-center justify-center">
+      <div className="mt-3 flex items-center justify-center">
         <p className="text-base font-bold text-indigo-500">📅 {rangeLabel}</p>
       </div>
 
       {/* 차트 - 가로 스크롤로 주 이동 */}
-      <main ref={chartWrapRef as React.RefObject<HTMLElement>} className="flex-1 mt-3">
+      <main ref={chartWrapRef as React.RefObject<HTMLElement>} className="flex-1 mt-3 -mx-6">
         <div
           ref={setScrollerRef}
           onScroll={onWeeksScroll}
@@ -518,10 +518,8 @@ function PatternChart({
   const today = toDateStr(new Date());
   // 점 표시(시작/끝 없는 이벤트, 예: 기저귀)는 따로 그림
   return (
-    <div className="bg-white rounded-2xl shadow-sm pt-3 pb-4 pl-1 pr-1">
+    <div className="pt-3 pb-4 pl-1 pr-1">
       <div className="flex">
-        {/* 좌측 시간 축 */}
-        <HourAxis height={height} />
         {/* 컬럼들 */}
         <div className="flex-1 relative flex" style={{ height }}>
           {dates.map((date) => {
@@ -546,7 +544,6 @@ function PatternChart({
       </div>
       {/* 하단 날짜 라벨 */}
       <div className="flex mt-2">
-        <div className="w-7" />
         <div className="flex-1 flex">
           {dates.map((date) => {
             const d = new Date(`${date}T00:00:00`);
@@ -601,47 +598,74 @@ function DayColumn({
   records: GrowthRecord[];
   height: number;
 }) {
-  // 막대형(시간 범위 있는 기록) vs 점형(시점 기록) 구분
-  // 시점만 있는 기록은 작은 아이콘 점으로 표시
+  // 레이어링: 블록(수면) → 라인(수유) → 점(이모지) 순서로 렌더링
+  const blocks: GrowthRecord[] = [];
+  const lines: GrowthRecord[] = [];
+  const dots: GrowthRecord[] = [];
+  for (const r of records) {
+    if (BLOCK_TYPES.has(r.type)) blocks.push(r);
+    else if (LINE_TYPES.has(r.type)) lines.push(r);
+    else if (TYPE_CONFIG[r.type].hasEnd && r.endAt) lines.push(r);
+    else dots.push(r);
+  }
+
   return (
     <div className="flex-1 px-[2px]">
       <div
-        className="relative bg-gray-50 rounded-md overflow-visible"
+        className="relative bg-white rounded-md overflow-visible"
         style={{ height }}
       >
         {/* 시간 가이드라인 */}
         {HOURS.map((h) => (
           <div
             key={h}
-            className="absolute left-0 right-0 border-t border-white"
+            className="absolute left-0 right-0 border-t border-gray-100"
             style={{ top: `${minToPct(h * 60)}%` }}
           />
         ))}
-        {records.map((r) => {
-          const cfg = TYPE_CONFIG[r.type];
+        {/* 1) 블록: 수면 — 배경 레이어 */}
+        {blocks.map((r) => {
           const span = recordSpans(r, date);
           if (!span) return null;
           const color = TYPE_CHART_COLOR[r.type];
-          const showAsBar =
-            (cfg.hasEnd && r.endAt) || ALWAYS_BAR_TYPES.has(r.type);
-          if (showAsBar) {
-            // endAt 없는 경우 최소 높이 보장
-            const barHeight =
-              cfg.hasEnd && r.endAt ? span.height : Math.max(1.2, span.height);
-            return (
-              <div
-                key={r.id}
-                className="absolute left-0 right-0 opacity-90"
-                style={{
-                  top: `${span.top}%`,
-                  height: `${barHeight}%`,
-                  background: color,
-                }}
-                title={cfg.label}
-              />
-            );
-          }
-          // 점형
+          const barHeight = r.endAt ? span.height : Math.max(1.2, span.height);
+          return (
+            <div
+              key={r.id}
+              className="absolute left-0 right-0 z-[1]"
+              style={{
+                top: `${span.top}%`,
+                height: `${barHeight}%`,
+                background: color,
+                opacity: 0.7,
+              }}
+              title={TYPE_CONFIG[r.type].label}
+            />
+          );
+        })}
+        {/* 2) 라인: 수유 등 — 얇은 가로 라인 */}
+        {lines.map((r) => {
+          const span = recordSpans(r, date);
+          if (!span) return null;
+          const color = TYPE_CHART_COLOR[r.type];
+          return (
+            <div
+              key={r.id}
+              className="absolute left-0 right-0 z-[2]"
+              style={{
+                top: `${span.top}%`,
+                height: '3px',
+                background: color,
+              }}
+              title={TYPE_CONFIG[r.type].label}
+            />
+          );
+        })}
+        {/* 3) 점: 이모지 — 최상위 레이어 */}
+        {dots.map((r) => {
+          const cfg = TYPE_CONFIG[r.type];
+          const span = recordSpans(r, date);
+          if (!span) return null;
           let emoji = cfg.emoji;
           if (r.type === 'DIAPER') {
             const kind = (r.data as Record<string, unknown>)?.kind;
@@ -650,7 +674,7 @@ function DayColumn({
           return (
             <div
               key={r.id}
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-full text-[15px] leading-none pointer-events-none"
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-full text-[13px] leading-none pointer-events-none z-[3]"
               style={{ top: `${span.top}%` }}
               title={cfg.label}
             >

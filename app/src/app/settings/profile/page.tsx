@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { palette } from '@/lib/colors';
 
 type ParentRole = 'mom' | 'dad' | '';
 
@@ -65,15 +66,15 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)]">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <button
           type="button"
           onClick={() => router.push('/settings')}
           aria-label="뒤로가기"
           className="p-2"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -82,7 +83,7 @@ export default function ProfileSettingsPage() {
         </h1>
       </header>
 
-      <main className="flex-1 mx-4 mt-4 space-y-4">
+      <main className="flex-1 mt-4 space-y-4">
         {/* 프로필 사진 / 이메일 */}
         <section className="rounded-2xl bg-white p-5 shadow-sm flex items-center gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 overflow-hidden">
@@ -93,7 +94,7 @@ export default function ProfileSettingsPage() {
                 className="h-16 w-16 rounded-full object-cover"
               />
             ) : (
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
@@ -156,7 +157,7 @@ export default function ProfileSettingsPage() {
       </main>
 
       {/* 하단 고정 저장 버튼 (BottomNav 위) */}
-      <div className="fixed bottom-[calc(var(--safe-area-bottom)+84px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4">
+      <div className="fixed bottom-[calc(var(--safe-area-bottom)+84px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
         <button
           onClick={handleSave}
           disabled={!canSubmit}

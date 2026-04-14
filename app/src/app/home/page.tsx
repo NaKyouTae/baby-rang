@@ -3,6 +3,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import BottomNav from "@/components/BottomNavServer";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
+import { palette } from "@/lib/colors";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -12,30 +13,34 @@ export const metadata: Metadata = {
 };
 
 const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"));
-const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"));
+const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"), {
+  loading: () => <div className="h-14 rounded-[4px]" />,
+});
 const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"));
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <main className="flex-1 pb-24" style={{ paddingTop: 'var(--safe-area-top)' }}>
+    <div className="flex flex-col min-h-dvh bg-white">
+      <main className="flex-1 px-6 pb-32" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
         <HomeHeroCard />
 
-        <div className="px-5 pt-5 space-y-6">
+        <div className="mt-6">
+          {/* 퀵 메뉴 */}
           <section>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px 8px" }}>
+            <div className="flex justify-between">
               {HOME_QUICK_MENUS.map((id) => {
                 const item = MENU_CATALOG[id];
                 return (
                   <Link
                     key={id}
                     href={item.href}
-                    className="flex flex-col items-center gap-1.5 active:opacity-70"
+                    className="flex flex-col items-center gap-2 active:opacity-70"
+                    style={{ width: '56px' }}
                   >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white border border-gray-100">
-                      {item.icon(true)}
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white border border-gray-200">
+                      {item.icon(true, palette.black)}
                     </div>
-                    <span className="text-[11px] text-gray-700 font-medium text-center leading-tight">
+                    <span className="text-[12px] text-black font-medium text-center leading-tight">
                       {item.label}
                     </span>
                   </Link>
@@ -44,11 +49,13 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="space-y-4">
+          <div className="mt-6">
             <BannerCarousel />
+          </div>
 
+          <div className="mt-6">
             <NearbyNursingRoomsStrip />
-          </section>
+          </div>
         </div>
       </main>
 

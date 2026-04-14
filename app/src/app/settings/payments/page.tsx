@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPayments, type PaymentItem } from '@/lib/api';
+import { palette } from '@/lib/colors';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -59,22 +60,22 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-50">
-      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100">
+    <div className="flex flex-col min-h-dvh bg-white px-6">
+      <header className="sticky top-0 z-10 flex items-center gap-2 bg-white px-3 pt-[var(--safe-area-top)] pb-3 border-b border-gray-100 -mx-6">
         <button
           type="button"
           onClick={() => router.back()}
           className="flex h-10 w-10 items-center justify-center rounded-full active:bg-gray-100"
           aria-label="뒤로 가기"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#171717" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
         <h1 className="text-[16px] font-semibold text-gray-900">결제 내역</h1>
       </header>
 
-      <div className="px-4 pt-4">
+      <div className="pt-4">
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => (
@@ -90,7 +91,7 @@ export default function PaymentsPage() {
         ) : items.length === 0 ? (
           <div className="mt-20 flex flex-col items-center gap-4 text-center">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary-100">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="5" width="20" height="14" rx="2" />
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
@@ -108,7 +109,7 @@ export default function PaymentsPage() {
                 <li key={item.id} className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#737373" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="5" width="20" height="14" rx="2" />
                         <line x1="2" y1="10" x2="22" y2="10" />
                       </svg>

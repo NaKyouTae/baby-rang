@@ -195,11 +195,13 @@ export default function TestPage() {
 
   if (screen.type === 'break') {
     return (
-      <main className="min-h-dvh flex flex-col gradient-page">
-        <ProgressBar
-          current={Object.keys(answers).length}
-          total={questions.length}
-        />
+      <main className="min-h-dvh flex flex-col gradient-page px-6">
+        <div className="-mx-6">
+          <ProgressBar
+            current={Object.keys(answers).length}
+            total={questions.length}
+          />
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center -mt-12">
           <span className="text-8xl mb-4">
@@ -214,7 +216,7 @@ export default function TestPage() {
               : `${totalQuestions - nearEndPoint}문항만 더 답하면 끝이에요`}
           </p>
 
-          <div className="w-full px-5 flex gap-3">
+          <div className="w-full flex gap-3">
             <button
               onClick={handlePrev}
               className="w-14 h-13 rounded-2xl border border-primary-100 bg-white flex items-center justify-center active:bg-primary-50 transition-colors"
@@ -240,13 +242,15 @@ export default function TestPage() {
   const isLastQuestion = currentQuestion?.questionNo === totalQuestions;
 
   return (
-    <main className="flex flex-col overflow-hidden">
-      <ProgressBar
-        current={Object.keys(answers).length}
-        total={questions.length}
-      />
+    <main className="flex flex-col overflow-hidden px-6">
+      <div className="-mx-6">
+        <ProgressBar
+          current={Object.keys(answers).length}
+          total={questions.length}
+        />
+      </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-5">
+      <div className="flex-1 overflow-y-auto py-4">
         {currentQuestion && (
           <QuestionCard
             questionNo={currentQuestion.questionNo}
@@ -259,7 +263,7 @@ export default function TestPage() {
         )}
       </div>
 
-      <div className="flex gap-3 px-5">
+      <div className="flex gap-3">
         <button
           onClick={handlePrev}
           className="w-14 h-13 rounded-xl border border-gray-100 bg-white flex items-center justify-center hover:border-primary-200 hover:bg-primary-50/30 active:scale-[0.98] transition-all duration-200"
