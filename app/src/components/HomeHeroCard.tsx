@@ -369,18 +369,16 @@ function ChildrenCarousel({
           />
         </div>
       </div>
-      {totalSlides > 1 && (
-        <div className="flex justify-center gap-1.5 mt-2.5">
-          {Array.from({ length: totalSlides }).map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 rounded-full transition-all ${
-                i === activeIdx ? 'w-4 bg-gray-600' : 'w-1.5 bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex justify-center gap-1.5 mt-2.5">
+        {Array.from({ length: Math.max(totalSlides, 1) }).map((_, i) => (
+          <span
+            key={i}
+            className={`rounded-full transition-all ${
+              i === activeIdx ? 'w-3 h-1 bg-gray-600' : 'w-1 h-1 bg-gray-300'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
