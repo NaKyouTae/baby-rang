@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useChildren } from "@/hooks/useChildren";
@@ -110,6 +110,27 @@ export default function SettingsPage() {
   const { children, isLoaded } = useChildren();
   const { isAuthenticated, user, isLoaded: isAuthLoaded } = useAuth();
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
+
+  const [locationPerm, setLocationPerm] = useState<'granted' | 'denied' | 'prompt' | null>(null);
+
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((status) => {
+      setLocationPerm(status.state);
+      status.addEventListener('change', () => setLocationPerm(status.state));
+    });
+  }, []);
+
+  const handleLocationClick = () => {
+    if (locationPerm === 'prompt') {
+      navigator.geolocation.getCurrentPosition(
+        () => setLocationPerm('granted'),
+        () => setLocationPerm('denied'),
+      );
+    } else {
+      alert('위치 권한을 변경하려면\n디바이스 설정 > 앱 > 아기랑 > 위치에서\n변경해 주세요.');
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
@@ -295,6 +316,31 @@ export default function SettingsPage() {
           );
         })}
       </section>
+
+      {/* 앱 설정 */}
+      {locationPerm !== null && (
+        <section className="mt-3 rounded-2xl bg-white shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={handleLocationClick}
+            className="flex w-full items-center gap-4 px-5 py-2 active:bg-gray-50 transition-colors"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-50">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </span>
+            <span className="flex-1 text-left text-[15px] text-gray-800">위치 접근 허용</span>
+            <span className={`text-xs mr-1 ${locationPerm === 'granted' ? 'text-primary-500' : 'text-gray-400'}`}>
+              {locationPerm === 'granted' ? '허용됨' : locationPerm === 'denied' ? '허용 안 됨' : '설정 필요'}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray300} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </section>
+      )}
 
       {/* 로그아웃 (로그인 상태일 때만) */}
       {isAuthLoaded && isAuthenticated && (

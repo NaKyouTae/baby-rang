@@ -4,7 +4,10 @@
       "Bash(sed -i '' 's/bg-gray-50 ${className}/bg-white ${className}/g' app/src/components/EmptyChildState.tsx)",
       "Bash(sed -i '' 's/bg-\\\\[#FDF6E3\\\\]/bg-white/g' app/src/components/SplashScreen.tsx)",
       "Bash(grep -r \"#[0-9a-fA-F]\\\\{3,6\\\\}\" /Users/nakyutae/personal/git/baby-rang/app/src --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.css\")",
-      "Bash(pnpm --version)"
+      "Bash(pnpm --version)",
+      "Bash(find /Users/nakyutae/personal/git/baby-rang -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/dist/*\" -exec grep -l \"lat\\\\|lng\\\\|latitude\\\\|longitude\\\\|geolocation\\\\|navigator.geolocation\" {} \\\\;)",
+      "Bash(find /Users/nakyutae/personal/git/baby-rang/server -type f -name \"*.ts\" ! -path \"*/node_modules/*\" -exec grep -l \"lat\\\\|lng\\\\|latitude\\\\|longitude\" {} \\\\;)",
+      "Bash(grep -rn \"getCurrentPosition\\\\|watchPosition\\\\|geolocation\" /Users/nakyutae/personal/git/baby-rang --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/dist/*\")"
     ],
     "additionalDirectories": [
       "/tmp"

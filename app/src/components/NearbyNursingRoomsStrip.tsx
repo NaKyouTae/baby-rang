@@ -14,6 +14,8 @@ interface NursingRoom {
 
 type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
+const DEFAULT_LOCATION = { lat: 37.5666, lng: 126.9784 }; // 서울시청
+
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const R = 6371;
@@ -33,6 +35,7 @@ export default function NearbyNursingRoomsStrip() {
 
   const requestLocation = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setUserLoc(DEFAULT_LOCATION);
       setLocStatus("unsupported");
       return;
     }
@@ -42,7 +45,10 @@ export default function NearbyNursingRoomsStrip() {
         setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocStatus("granted");
       },
-      () => setLocStatus("denied"),
+      () => {
+        setUserLoc(DEFAULT_LOCATION);
+        setLocStatus("denied");
+      },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
   };
@@ -103,10 +109,9 @@ export default function NearbyNursingRoomsStrip() {
         .slice(0, 3)
     : [];
 
-  const showLoading = !roomsLoaded || locStatus === "loading" || locStatus === "idle";
-  const showLocationPrompt =
-    roomsLoaded && (locStatus === "denied" || locStatus === "unsupported");
-  const showEmpty = roomsLoaded && locStatus === "granted" && nearest.length === 0;
+  const isLocationResolved = locStatus === "granted" || locStatus === "denied" || locStatus === "unsupported";
+  const showLoading = !roomsLoaded || !isLocationResolved;
+  const showEmpty = roomsLoaded && isLocationResolved && nearest.length === 0;
 
   return (
     <section>
@@ -116,26 +121,13 @@ export default function NearbyNursingRoomsStrip() {
         <Link href="/nursing-room" className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium leading-[12px]">더보기<img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></Link>
       </div>
 
-      {showLocationPrompt && (
-        <button
-          type="button"
-          onClick={requestLocation}
-          className="w-full h-14 rounded-[8px] bg-white border border-gray-200 active:opacity-70 flex items-center justify-center gap-1.5 px-4"
-        >
-          <span className="text-xs font-semibold text-gray-900">
-            위치 권한을 허용하면 가까운 수유실을 보여드려요
-          </span>
-          <span className="text-[11px] text-gray-500">›</span>
-        </button>
-      )}
-
       {showEmpty && (
         <div className="h-14 rounded-[8px] bg-white border border-gray-200 flex items-center justify-center">
           <span className="text-xs text-gray-500">주변에 등록된 수유실이 없어요</span>
         </div>
       )}
 
-      {!showLoading && !showLocationPrompt && !showEmpty && (
+      {!showLoading && !showEmpty && (
       <div className="flex flex-col gap-2">
       {nearest.map((room, idx) => (
         <Link
@@ -146,7 +138,7 @@ export default function NearbyNursingRoomsStrip() {
           <div className="flex flex-col gap-[4px]">
               <div className="flex items-center gap-1.5">
                 <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif' }}>{room.name}</div>
-                {idx === 0 && userLoc && (
+                {idx === 0 && locStatus === "granted" && (
                   <span
                     className="shrink-0 text-[12px] font-medium leading-none px-1 rounded-[2px]"
                     style={{ color: palette.red, backgroundColor: 'rgba(255, 59, 48, 0.15)', height: '16px', display: 'inline-flex', alignItems: 'center' }}
@@ -154,7 +146,7 @@ export default function NearbyNursingRoomsStrip() {
                     가장 가까워요
                   </span>
                 )}
-                {userLoc && (
+                {locStatus === "granted" && (
                   <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif' }}>
                     {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
                   </div>
