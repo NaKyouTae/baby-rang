@@ -1,5 +1,16 @@
 import { adminFetch } from "@/lib/api";
 import { RefundButton } from "./RefundButton";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type PaymentRow = {
   id: string;
@@ -15,13 +26,13 @@ type PaymentRow = {
   user: { id: string; nickname: string | null; email: string | null } | null;
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  PAID: "bg-green-100 text-green-700",
-  PENDING: "bg-yellow-100 text-yellow-700",
-  FAILED: "bg-red-100 text-red-700",
-  CANCELLED: "bg-gray-100 text-gray-600",
-  REFUNDED: "bg-purple-100 text-purple-700",
-  PARTIAL_REFUNDED: "bg-purple-100 text-purple-700",
+const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "purple"> = {
+  PAID: "success",
+  PENDING: "warning",
+  FAILED: "destructive",
+  CANCELLED: "secondary",
+  REFUNDED: "purple",
+  PARTIAL_REFUNDED: "purple",
 };
 
 export default async function PaymentsPage({
@@ -44,51 +55,47 @@ export default async function PaymentsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">결제 내역</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-6">결제 내역</h1>
 
       <div className="flex flex-wrap gap-2 mb-4">
         {filters.map((f) => (
-          <a
+          <Button
             key={f || "all"}
-            href={`/payments${f ? `?status=${f}` : ""}`}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-              status === f
-                ? "bg-gray-900 text-white"
-                : "bg-white text-gray-600 border border-gray-200"
-            }`}
+            variant={status === f ? "default" : "outline"}
+            size="sm"
+            asChild
           >
-            {f || "전체"}
-          </a>
+            <a href={`/payments${f ? `?status=${f}` : ""}`}>{f || "전체"}</a>
+          </Button>
         ))}
       </div>
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
         {data.items.map((p) => (
-          <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm">
+          <Card key={p.id} className="p-4">
             <div className="flex justify-between items-start">
               <div className="min-w-0">
-                <div className="font-semibold text-gray-900 truncate">{p.productName}</div>
-                <div className="text-xs text-gray-500 truncate">{p.user?.nickname ?? p.user?.email ?? "-"}</div>
+                <div className="font-medium truncate">{p.productName}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {p.user?.nickname ?? p.user?.email ?? "-"}
+                </div>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS_COLORS[p.status] ?? "bg-gray-100"}`}>
+              <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"} className="text-[10px]">
                 {p.status}
-              </span>
+              </Badge>
             </div>
-            <div className="mt-3 flex justify-between text-xs text-gray-500">
+            <div className="mt-3 flex justify-between text-xs text-muted-foreground">
               <span>{p.amount.toLocaleString()}원</span>
               <span>{new Date(p.createdAt).toLocaleString()}</span>
             </div>
             <div className="mt-3 flex gap-2">
               {p.receiptUrl && (
-                <a
-                  href={p.receiptUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 text-center rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold py-2"
-                >
-                  영수증
-                </a>
+                <Button variant="outline" size="sm" className="flex-1" asChild>
+                  <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
+                    영수증
+                  </a>
+                </Button>
               )}
               <RefundButton
                 orderId={p.orderId}
@@ -97,57 +104,54 @@ export default async function PaymentsPage({
                 variant="card"
               />
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
-            <tr>
-              <th className="text-left px-5 py-3">상품</th>
-              <th className="text-left px-5 py-3">사용자</th>
-              <th className="text-right px-5 py-3">금액</th>
-              <th className="text-left px-5 py-3">상태</th>
-              <th className="text-left px-5 py-3">결제수단</th>
-              <th className="text-right px-5 py-3">일시</th>
-              <th className="text-right px-5 py-3">관리</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>상품</TableHead>
+              <TableHead>사용자</TableHead>
+              <TableHead className="text-right">금액</TableHead>
+              <TableHead>상태</TableHead>
+              <TableHead>결제수단</TableHead>
+              <TableHead className="text-right">일시</TableHead>
+              <TableHead className="text-right">관리</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {data.items.map((p) => (
-              <tr key={p.id} className="border-t border-gray-100">
-                <td className="px-5 py-3">
-                  <div className="font-medium text-gray-900">{p.productName}</div>
-                  <div className="text-xs text-gray-500">{p.productType}</div>
-                </td>
-                <td className="px-5 py-3 text-gray-700">
+              <TableRow key={p.id}>
+                <TableCell>
+                  <div className="font-medium">{p.productName}</div>
+                  <div className="text-xs text-muted-foreground">{p.productType}</div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
                   {p.user?.nickname ?? p.user?.email ?? "-"}
-                </td>
-                <td className="px-5 py-3 text-right font-semibold">
+                </TableCell>
+                <TableCell className="text-right font-semibold">
                   {p.amount.toLocaleString()}원
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS_COLORS[p.status] ?? "bg-gray-100"}`}>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"} className="text-[10px]">
                     {p.status}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-gray-600">{p.method ?? p.provider}</td>
-                <td className="px-5 py-3 text-right text-gray-500">
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{p.method ?? p.provider}</TableCell>
+                <TableCell className="text-right text-muted-foreground">
                   {new Date(p.createdAt).toLocaleString()}
-                </td>
-                <td className="px-5 py-3 text-right">
+                </TableCell>
+                <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     {p.receiptUrl && (
-                      <a
-                        href={p.receiptUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100"
-                      >
-                        영수증
-                      </a>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
+                          영수증
+                        </a>
+                      </Button>
                     )}
                     <RefundButton
                       orderId={p.orderId}
@@ -155,25 +159,24 @@ export default async function PaymentsPage({
                       status={p.status}
                     />
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-6">
+        <div className="flex justify-center gap-1 mt-6">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-            <a
+            <Button
               key={pg}
-              href={`/payments?page=${pg}${status ? `&status=${status}` : ""}`}
-              className={`px-3 py-1.5 rounded-lg text-sm ${
-                pg === data.page ? "bg-gray-900 text-white" : "bg-white text-gray-700"
-              }`}
+              variant={pg === data.page ? "default" : "outline"}
+              size="sm"
+              asChild
             >
-              {pg}
-            </a>
+              <a href={`/payments?page=${pg}${status ? `&status=${status}` : ""}`}>{pg}</a>
+            </Button>
           ))}
         </div>
       )}

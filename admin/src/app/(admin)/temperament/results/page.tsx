@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminFetch } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 
 type Level = "low" | "medium" | "high";
 
@@ -64,7 +65,6 @@ const TYPES = [
   { key: "balanced", label: "균형성장형" },
 ];
 
-// 잠금 섹션 제목 (서버 LOCKED_SECTIONS와 동일)
 const LOCKED_SECTIONS = [
   "우리 아이의 숨은 강점 3가지",
   "감정이 흔들릴 때 필요한 부모 대응법",
@@ -91,7 +91,7 @@ export default async function TemperamentResultsPage({
   } catch {}
 
   if (!data) {
-    return <div className="text-gray-500">결과를 불러오지 못했습니다.</div>;
+    return <div className="text-muted-foreground">결과를 불러오지 못했습니다.</div>;
   }
 
   const filtered = selected
@@ -114,72 +114,59 @@ export default async function TemperamentResultsPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">기질 검사 결과지</h1>
-        <Link
-          href="/temperament/questions"
-          className="text-sm px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700"
-        >
-          문항 보기 →
-        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">기질 검사 결과지</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/temperament/questions">문항 보기 →</Link>
+        </Button>
       </div>
 
-      {/* 유형 탭 */}
+      {/* Type tabs */}
       <div className="flex gap-2 mb-3 flex-wrap">
-        <Link
-          href={buildHref({ type: undefined })}
-          className={`px-3 py-1.5 rounded-lg text-sm ${
-            !selected
-              ? "bg-gray-900 text-white"
-              : "bg-white text-gray-700 border border-gray-200"
-          }`}
+        <Button
+          variant={!selected ? "default" : "outline"}
+          size="sm"
+          asChild
         >
-          전체
-        </Link>
-        {TYPES.map((t) => {
-          const active = t.key === selected;
-          return (
-            <Link
-              key={t.key}
-              href={buildHref({ type: t.key })}
-              className={`px-3 py-1.5 rounded-lg text-sm ${
-                active
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 border border-gray-200"
-              }`}
-            >
-              {t.label}
-            </Link>
-          );
-        })}
+          <Link href={buildHref({ type: undefined })}>전체</Link>
+        </Button>
+        {TYPES.map((t) => (
+          <Button
+            key={t.key}
+            variant={t.key === selected ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link href={buildHref({ type: t.key })}>{t.label}</Link>
+          </Button>
+        ))}
       </div>
 
-      {/* 토글 */}
+      {/* Toggles */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        <Link
-          href={buildHref({ paid: paid ? undefined : "1" })}
-          className={`px-3 py-1.5 rounded-lg text-sm border ${
-            paid
-              ? "bg-violet-100 border-violet-200 text-violet-800"
-              : "bg-white border-gray-200 text-gray-700"
-          }`}
+        <Button
+          variant="outline"
+          size="sm"
+          className={paid ? "bg-purple-100 border-purple-200 text-purple-800 hover:bg-purple-200" : ""}
+          asChild
         >
-          {paid ? "✓ 결제 완료(유료 공개)" : "미결제 (잠금 화면)"}
-        </Link>
-        <Link
-          href={buildHref({ emotion: emotion ? undefined : "1" })}
-          className={`px-3 py-1.5 rounded-lg text-sm border ${
-            emotion
-              ? "bg-amber-100 border-amber-200 text-amber-800"
-              : "bg-white border-gray-200 text-gray-700"
-          }`}
+          <Link href={buildHref({ paid: paid ? undefined : "1" })}>
+            {paid ? "✓ 결제 완료(유료 공개)" : "미결제 (잠금 화면)"}
+          </Link>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className={emotion ? "bg-amber-100 border-amber-200 text-amber-800 hover:bg-amber-200" : ""}
+          asChild
         >
-          {emotion ? "✓ 감정 강화 ON" : "감정 강화 OFF"}
-        </Link>
+          <Link href={buildHref({ emotion: emotion ? undefined : "1" })}>
+            {emotion ? "✓ 감정 강화 ON" : "감정 강화 OFF"}
+          </Link>
+        </Button>
       </div>
 
-      <p className="text-xs text-gray-500 mb-6">
-        실제 사용자가 보는 결과 화면 구조를 동일한 모바일 폭(390px)으로
-        재현합니다.
+      <p className="text-xs text-muted-foreground mb-6">
+        실제 사용자가 보는 결과 화면 구조를 동일한 모바일 폭(390px)으로 재현합니다.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
@@ -202,7 +189,7 @@ function PhoneFrame({
 }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="text-sm font-semibold text-gray-900 mb-2">{label}</div>
+      <div className="text-sm font-semibold mb-2">{label}</div>
       <div
         className="bg-black rounded-[2rem] p-1.5 shadow-xl"
         style={{ width: 322 }}
@@ -217,8 +204,6 @@ function PhoneFrame({
     </div>
   );
 }
-
-// ===== 사용자 결과 화면 재현 =====
 
 const TYPE_STYLES: Record<
   string,
@@ -252,12 +237,8 @@ const TYPE_STYLES: Record<
 };
 
 const DIMENSION_ORDER = [
-  "activity",
-  "adaptability",
-  "emotional_intensity",
-  "sociability",
-  "persistence",
-  "sensitivity",
+  "activity", "adaptability", "emotional_intensity",
+  "sociability", "persistence", "sensitivity",
 ];
 
 const DIMENSION_LABELS: Record<string, string> = {
@@ -271,17 +252,11 @@ const DIMENSION_LABELS: Record<string, string> = {
 
 const LEVEL_BAR: Record<Level, string> = {
   low: "bg-gray-300",
-  medium: "bg-primary-400",
-  high: "bg-gradient-to-r from-primary-500 to-primary-400",
+  medium: "bg-slate-400",
+  high: "bg-slate-700",
 };
 
-function ResultView({
-  result,
-  paid,
-}: {
-  result: TypeResult;
-  paid: boolean;
-}) {
+function ResultView({ result, paid }: { result: TypeResult; paid: boolean }) {
   return (
     <main className="min-h-full pb-8">
       <ResultCover
@@ -290,40 +265,30 @@ function ResultView({
         title={result.summary.title}
         description={result.summary.description}
       />
-
       <DimensionBar scores={result.scores} />
-
       <div className="px-4 mt-2">
-        <h3 className="text-base font-bold text-gray-900 mb-3">
-          지금 보이는 강점
-        </h3>
+        <h3 className="text-base font-bold text-gray-900 mb-3">지금 보이는 강점</h3>
         {result.freeContent.strengths.map((s, i) => (
           <div key={i} className="flex items-start gap-2 mb-2">
-            <span className="text-primary-500 mt-0.5 text-sm">✓</span>
+            <span className="text-emerald-500 mt-0.5 text-sm">✓</span>
             <p className="text-sm text-gray-700">{s}</p>
           </div>
         ))}
       </div>
-
       <div className="px-4 mt-4">
-        <div className="bg-primary-50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-primary-600 mb-1">
-            짧은 양육 팁
-          </p>
+        <div className="bg-slate-50 rounded-xl p-4">
+          <p className="text-xs font-semibold text-slate-600 mb-1">짧은 양육 팁</p>
           <p className="text-sm text-gray-700">{result.freeContent.tip}</p>
         </div>
       </div>
-
       {paid ? (
         <PaidResultSection content={result.paidContent} />
       ) : (
         <LockedSection sections={LOCKED_SECTIONS} />
       )}
-
       <div className="px-4 mt-6">
         <p className="text-[11px] text-gray-300 text-center leading-relaxed">
-          이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적
-          진단이나 전문 심리 평가를 대신하지 않습니다.
+          이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나 전문 심리 평가를 대신하지 않습니다.
         </p>
       </div>
     </main>
@@ -343,14 +308,10 @@ function ResultCover({
 }) {
   const style = TYPE_STYLES[primaryType] || TYPE_STYLES.balanced;
   return (
-    <div
-      className={`bg-gradient-to-br ${style.gradient} rounded-3xl p-6 mx-4 mt-4 shadow-lg`}
-    >
+    <div className={`bg-gradient-to-br ${style.gradient} rounded-3xl p-6 mx-4 mt-4 shadow-lg`}>
       <div className="text-center">
         <span className="text-7xl block mx-auto mb-3">{style.emoji}</span>
-        <span
-          className={`inline-block ${style.badge} text-sm font-bold px-4 py-1.5 rounded-full mb-3`}
-        >
+        <span className={`inline-block ${style.badge} text-sm font-bold px-4 py-1.5 rounded-full mb-3`}>
           {primaryTypeLabel}
         </span>
         <h2 className="text-lg font-bold text-white mb-2">{title}</h2>
@@ -360,16 +321,10 @@ function ResultCover({
   );
 }
 
-function DimensionBar({
-  scores,
-}: {
-  scores: Record<string, DimensionScore>;
-}) {
+function DimensionBar({ scores }: { scores: Record<string, DimensionScore> }) {
   return (
     <div className="px-4 py-4">
-      <h3 className="text-base font-bold text-gray-900 mb-4">
-        기질 한눈에 보기
-      </h3>
+      <h3 className="text-base font-bold text-gray-900 mb-4">기질 한눈에 보기</h3>
       <div className="space-y-3">
         {DIMENSION_ORDER.map((key) => {
           const dim = scores[key];
@@ -378,11 +333,9 @@ function DimensionBar({
             <div key={key}>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm text-gray-700">{dim.label}</span>
-                <span className="text-sm font-semibold text-primary-600">
-                  {dim.score}
-                </span>
+                <span className="text-sm font-semibold text-slate-600">{dim.score}</span>
               </div>
-              <div className="h-3 bg-primary-50 rounded-full overflow-hidden">
+              <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full ${LEVEL_BAR[dim.level]}`}
                   style={{ width: `${dim.score}%` }}
@@ -398,7 +351,7 @@ function DimensionBar({
 
 function LockedSection({ sections }: { sections: string[] }) {
   return (
-    <div className="mx-4 mt-6 rounded-3xl bg-primary-50/50 p-5 relative overflow-hidden border border-primary-100">
+    <div className="mx-4 mt-6 rounded-3xl bg-slate-50 p-5 relative overflow-hidden border border-slate-200">
       <div className="absolute inset-0 backdrop-blur-[2px]" />
       <div className="relative z-10">
         <div className="text-center mb-4">
@@ -409,22 +362,18 @@ function LockedSection({ sections }: { sections: string[] }) {
         </p>
         <ul className="space-y-2.5 mb-5">
           {sections.map((section) => (
-            <li
-              key={section}
-              className="flex items-center gap-2 text-sm text-gray-400"
-            >
-              <span className="w-4 h-4 rounded border border-primary-200 flex-shrink-0" />
+            <li key={section} className="flex items-center gap-2 text-sm text-gray-400">
+              <span className="w-4 h-4 rounded border border-slate-200 flex-shrink-0" />
               {section}
             </li>
           ))}
         </ul>
         <p className="text-xs text-gray-400 text-center mb-4">
-          전체 결과를 열면 아이의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지
-          자세히 볼 수 있어요.
+          전체 결과를 열면 아이의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지 자세히 볼 수 있어요.
         </p>
         <button
           type="button"
-          className="w-full py-3.5 gradient-btn text-white font-semibold rounded-xl shadow-lg shadow-primary-200"
+          className="w-full py-3.5 gradient-btn text-white font-semibold rounded-xl shadow-lg"
         >
           전체 결과 보기
         </button>
@@ -433,13 +382,7 @@ function LockedSection({ sections }: { sections: string[] }) {
   );
 }
 
-function Card({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function ResultCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mx-4 mt-5 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
       <h3 className="text-base font-bold text-gray-900 mb-3">{title}</h3>
@@ -451,13 +394,11 @@ function Card({
 function PaidResultSection({ content }: { content: PaidContent }) {
   return (
     <div className="pb-8">
-      <Card title="대표 유형 상세 설명">
-        <p className="text-sm text-gray-600 leading-relaxed">
-          {content.typeDetail}
-        </p>
-      </Card>
+      <ResultCard title="대표 유형 상세 설명">
+        <p className="text-sm text-gray-600 leading-relaxed">{content.typeDetail}</p>
+      </ResultCard>
 
-      <Card title="6개 기질 상세 분석">
+      <ResultCard title="6개 기질 상세 분석">
         <div className="space-y-5">
           {Object.entries(content.dimensionDetails).map(([key, detail]) => (
             <div key={key}>
@@ -465,27 +406,20 @@ function PaidResultSection({ content }: { content: PaidContent }) {
                 <span className="text-sm font-semibold text-gray-800">
                   {DIMENSION_LABELS[key] || key}
                 </span>
-                <span className="text-xs text-primary-500 font-medium">
-                  {detail.score}점
-                </span>
+                <span className="text-xs text-slate-500 font-medium">{detail.score}점</span>
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed mb-2">
-                {detail.description}
-              </p>
+              <p className="text-sm text-gray-600 leading-relaxed mb-2">{detail.description}</p>
               {detail.parentTips.map((tip, i) => (
-                <p
-                  key={i}
-                  className="text-xs text-primary-700 bg-primary-50 rounded-lg px-3 py-2 mb-1"
-                >
+                <p key={i} className="text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2 mb-1">
                   {tip}
                 </p>
               ))}
             </div>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title="우리 아이의 핵심 강점">
+      <ResultCard title="우리 아이의 핵심 강점">
         <div className="space-y-3">
           {content.strengths.map((s, i) => (
             <div key={i}>
@@ -494,9 +428,9 @@ function PaidResultSection({ content }: { content: PaidContent }) {
             </div>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title="부모가 놓치기 쉬운 주의 포인트">
+      <ResultCard title="부모가 놓치기 쉬운 주의 포인트">
         <div className="space-y-3">
           {content.cautions.map((c, i) => (
             <div key={i}>
@@ -505,34 +439,25 @@ function PaidResultSection({ content }: { content: PaidContent }) {
             </div>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title={content.emotionCoaching.title}>
+      <ResultCard title={content.emotionCoaching.title}>
         <div className="space-y-3">
           {content.emotionCoaching.tips.map((tip, i) => (
-            <div key={i} className="bg-primary-50/50 rounded-xl p-3">
-              <p className="text-sm font-medium text-gray-800 mb-1">
-                {tip.action}
-              </p>
-              <p className="text-xs text-gray-500 italic">
-                예: “{tip.example}”
-              </p>
+            <div key={i} className="bg-slate-50 rounded-xl p-3">
+              <p className="text-sm font-medium text-gray-800 mb-1">{tip.action}</p>
+              <p className="text-xs text-gray-500 italic">예: &quot;{tip.example}&quot;</p>
             </div>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title="학습 스타일 제안">
+      <ResultCard title="학습 스타일 제안">
         <div className="mb-3">
-          <p className="text-xs font-semibold text-emerald-600 mb-2">
-            잘 맞을 수 있는 방식
-          </p>
+          <p className="text-xs font-semibold text-emerald-600 mb-2">잘 맞을 수 있는 방식</p>
           <ul className="space-y-1">
             {content.learningStyle.recommended.map((r, i) => (
-              <li
-                key={i}
-                className="text-sm text-gray-600 flex items-start gap-1.5"
-              >
+              <li key={i} className="text-sm text-gray-600 flex items-start gap-1.5">
                 <span className="text-emerald-500 mt-0.5">✓</span>
                 {r}
               </li>
@@ -540,95 +465,75 @@ function PaidResultSection({ content }: { content: PaidContent }) {
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold text-red-400 mb-2">
-            힘들 수 있는 방식
-          </p>
+          <p className="text-xs font-semibold text-red-400 mb-2">힘들 수 있는 방식</p>
           <ul className="space-y-1">
             {content.learningStyle.difficult.map((d, i) => (
-              <li
-                key={i}
-                className="text-sm text-gray-500 flex items-start gap-1.5"
-              >
+              <li key={i} className="text-sm text-gray-500 flex items-start gap-1.5">
                 <span className="text-red-300 mt-0.5">✕</span>
                 {d}
               </li>
             ))}
           </ul>
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title="친구 관계 가이드">
+      <ResultCard title="친구 관계 가이드">
         <div className="mb-3">
-          <p className="text-xs font-semibold text-gray-500 mb-2">
-            관계에서 보일 수 있는 모습
-          </p>
+          <p className="text-xs font-semibold text-gray-500 mb-2">관계에서 보일 수 있는 모습</p>
           <ul className="space-y-1">
             {content.socialGuide.patterns.map((p, i) => (
-              <li key={i} className="text-sm text-gray-600">
-                • {p}
-              </li>
+              <li key={i} className="text-sm text-gray-600">• {p}</li>
             ))}
           </ul>
         </div>
         <div>
-          <p className="text-xs font-semibold text-primary-500 mb-2">
-            부모 도움 팁
-          </p>
+          <p className="text-xs font-semibold text-slate-500 mb-2">부모 도움 팁</p>
           {content.socialGuide.parentTips.map((t, i) => (
-            <p
-              key={i}
-              className="text-xs text-primary-700 bg-primary-50 rounded-lg px-3 py-2 mb-1"
-            >
+            <p key={i} className="text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2 mb-1">
               {t}
             </p>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
-      <Card title="생활 루틴 가이드">
+      <ResultCard title="생활 루틴 가이드">
         <ul className="space-y-1.5">
           {content.routineGuide.map((r, i) => (
-            <li
-              key={i}
-              className="text-sm text-gray-600 flex items-start gap-1.5"
-            >
-              <span className="text-primary-400 mt-0.5">✓</span>
+            <li key={i} className="text-sm text-gray-600 flex items-start gap-1.5">
+              <span className="text-slate-400 mt-0.5">✓</span>
               {r}
             </li>
           ))}
         </ul>
-      </Card>
+      </ResultCard>
 
       {content.combinationInsight && (
-        <Card title="기질 조합 해석">
-          <div className="bg-gradient-to-br from-primary-50 to-pink-50 rounded-xl p-4">
-            <p className="text-sm font-semibold text-primary-700 mb-2">
+        <ResultCard title="기질 조합 해석">
+          <div className="bg-gradient-to-br from-slate-50 to-pink-50 rounded-xl p-4">
+            <p className="text-sm font-semibold text-slate-700 mb-2">
               {content.combinationInsight.label}
             </p>
             <p className="text-sm text-gray-600 leading-relaxed">
               {content.combinationInsight.description}
             </p>
           </div>
-        </Card>
+        </ResultCard>
       )}
 
-      <Card title="부모를 위한 한 줄 제안">
+      <ResultCard title="부모를 위한 한 줄 제안">
         <div className="space-y-2">
           {content.parentAdvice.map((a, i) => (
-            <p
-              key={i}
-              className="text-sm text-gray-700 bg-amber-50 rounded-xl px-4 py-3"
-            >
+            <p key={i} className="text-sm text-gray-700 bg-amber-50 rounded-xl px-4 py-3">
               {a}
             </p>
           ))}
         </div>
-      </Card>
+      </ResultCard>
 
       <div className="mx-4 mt-8">
-        <div className="bg-gradient-to-br from-primary-50 to-amber-50 rounded-2xl p-6 text-center">
+        <div className="bg-gradient-to-br from-slate-50 to-amber-50 rounded-2xl p-6 text-center">
           <p className="text-base font-semibold text-gray-800 leading-relaxed">
-            “{content.closingMessage}”
+            &quot;{content.closingMessage}&quot;
           </p>
         </div>
       </div>

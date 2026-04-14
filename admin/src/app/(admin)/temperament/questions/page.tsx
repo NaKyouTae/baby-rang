@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { adminFetch } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type AgeGroupKey = "newborn" | "before_first" | "after_first";
 
@@ -37,10 +40,9 @@ export default async function TemperamentQuestionsPage({
   } catch {}
 
   if (!data) {
-    return <div className="text-gray-500">문항을 불러오지 못했습니다.</div>;
+    return <div className="text-muted-foreground">문항을 불러오지 못했습니다.</div>;
   }
 
-  // dimension별로 그룹화
   const grouped = new Map<string, Question[]>();
   for (const q of data.questions) {
     const arr = grouped.get(q.dimension) ?? [];
@@ -51,85 +53,79 @@ export default async function TemperamentQuestionsPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold text-gray-900">기질 검사 문항</h1>
-        <Link
-          href="/temperament/submissions"
-          className="text-sm px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-gray-700"
-        >
-          결과 목록 →
-        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">기질 검사 문항</h1>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/temperament/submissions">결과 목록 →</Link>
+        </Button>
       </div>
 
-      {/* 탭 */}
+      {/* Age group tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {data.ageGroups.map((g) => {
-          const active = g.key === data!.ageGroup;
-          return (
-            <Link
-              key={g.key}
-              href={`/temperament/questions?ageGroup=${g.key}`}
-              className={`px-4 py-2 rounded-xl text-sm font-medium ${
-                active
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 border border-gray-200"
-              }`}
-            >
-              {g.label}
-            </Link>
-          );
-        })}
+        {data.ageGroups.map((g) => (
+          <Button
+            key={g.key}
+            variant={g.key === data!.ageGroup ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link href={`/temperament/questions?ageGroup=${g.key}`}>{g.label}</Link>
+          </Button>
+        ))}
       </div>
 
-      {/* 메타 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 text-sm text-gray-700">
-        <div className="font-semibold mb-2">{data.ageGroupLabel}</div>
-        <div className="text-gray-500 text-xs mb-3">{data.notice}</div>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(data.scale.labels).map(([k, v]) => (
-            <span
-              key={k}
-              className="px-2 py-0.5 rounded-md bg-gray-100 text-xs text-gray-600"
-            >
-              {k}. {v}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Meta info */}
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{data.ageGroupLabel}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground mb-3">{data.notice}</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(data.scale.labels).map(([k, v]) => (
+              <Badge key={k} variant="secondary">
+                {k}. {v}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* 차원별 문항 */}
+      {/* Questions by dimension */}
       <div className="space-y-4">
         {data.dimensions.map((d) => {
           const items = grouped.get(d.key) ?? [];
           if (items.length === 0) return null;
           return (
-            <div key={d.key} className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-semibold text-gray-900">
-                  {d.label}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {d.key} · {items.length}문항
-                </span>
-              </div>
-              <ol className="space-y-2">
-                {items.map((q) => (
-                  <li
-                    key={q.id}
-                    className="flex gap-3 text-sm text-gray-800 border-t border-gray-100 pt-2 first:border-t-0 first:pt-0"
-                  >
-                    <span className="text-gray-400 w-8 shrink-0">
-                      Q{q.questionNo}
-                    </span>
-                    <span className="flex-1">{q.text}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <Card key={d.key}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm">{d.label}</CardTitle>
+                  <span className="text-xs text-muted-foreground">
+                    {d.key} · {items.length}문항
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ol className="space-y-2">
+                  {items.map((q) => (
+                    <li
+                      key={q.id}
+                      className="flex gap-3 text-sm border-t pt-2 first:border-t-0 first:pt-0"
+                    >
+                      <span className="text-muted-foreground w-8 shrink-0">
+                        Q{q.questionNo}
+                      </span>
+                      <span className="flex-1">{q.text}</span>
+                    </li>
+                  ))}
+                </ol>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
 
-      <div className="mt-4 text-xs text-gray-400">
+      <div className="mt-4 text-xs text-muted-foreground">
         총 {data.questions.length}문항
       </div>
     </div>

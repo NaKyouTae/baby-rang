@@ -2,7 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Modal from "@/components/Modal";
+import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 
 type Banner = {
   id: string;
@@ -43,7 +57,7 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
       if (!res.ok) throw new Error("upload failed");
       const data = await res.json();
       setForm((prev: any) => ({ ...prev, imageUrl: data.url }));
-    } catch (e) {
+    } catch {
       alert("이미지 업로드에 실패했습니다.");
     } finally {
       setUploading(false);
@@ -101,24 +115,21 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
     router.refresh();
   };
 
+  const dialogOpen = creating || !!editing;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">배너 관리</h1>
-        <button
-          onClick={startCreate}
-          className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold"
-        >
-          + 새 배너
-        </button>
+        <h1 className="text-2xl font-bold tracking-tight">배너 관리</h1>
+        <Button onClick={startCreate} size="sm">
+          <Plus className="h-4 w-4" />
+          새 배너
+        </Button>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="space-y-2">
         {initial.map((b) => (
-          <div
-            key={b.id}
-            className="bg-white rounded-xl shadow-sm overflow-hidden flex items-center"
-          >
+          <Card key={b.id} className="flex items-center overflow-hidden">
             <div
               className="relative w-28 h-16 shrink-0 flex items-center px-3 text-white overflow-hidden"
               style={{
@@ -138,100 +149,64 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
             </div>
             <div className="flex-1 min-w-0 px-4 py-2">
               <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm text-gray-900 truncate">
-                  {b.title}
-                </p>
-                <span
-                  className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] ${
-                    b.isActive
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}
-                >
+                <p className="font-medium text-sm truncate">{b.title}</p>
+                <Badge variant={b.isActive ? "success" : "secondary"} className="text-[10px]">
                   {b.isActive ? "활성" : "비활성"}
-                </span>
+                </Badge>
               </div>
-              <div className="text-xs text-gray-500 truncate mt-0.5">
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
                 → {b.linkUrl}
-              </div>
+              </p>
             </div>
-            <div className="shrink-0 text-xs text-gray-400 px-2 hidden sm:block">
+            <span className="shrink-0 text-xs text-muted-foreground px-2 hidden sm:block">
               #{b.sortOrder}
-            </div>
+            </span>
             <div className="flex gap-1 px-3">
-              <button
-                onClick={() => startEdit(b)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 hover:bg-gray-200"
-              >
+              <Button variant="outline" size="sm" onClick={() => startEdit(b)}>
+                <Pencil className="h-3 w-3" />
                 수정
-              </button>
-              <button
-                onClick={() => remove(b.id)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-              >
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => remove(b.id)}>
+                <Trash2 className="h-3 w-3" />
                 삭제
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         ))}
         {initial.length === 0 && (
-          <div className="text-center text-gray-400 py-10">
+          <div className="text-center text-muted-foreground py-10">
             등록된 배너가 없습니다
           </div>
         )}
       </div>
 
-      <Modal open={creating || !!editing} onClose={close}>
-            <h2 className="text-lg font-bold mb-4">
-              {editing ? "배너 수정" : "새 배너"}
-            </h2>
-            <div className="space-y-3">
-              <div className="block">
-                <span className="text-xs text-gray-500">이미지</span>
-                {form.imageUrl ? (
-                  <div className="mt-1 relative rounded-lg overflow-hidden border border-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={form.imageUrl}
-                      alt="배너 이미지 미리보기"
-                      className="w-full aspect-[16/7] object-cover"
-                    />
-                    <label className="absolute bottom-2 right-2 px-3 py-1.5 text-xs rounded-md bg-black/60 text-white cursor-pointer hover:bg-black/75">
-                      이미지 변경
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadImage(f);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, imageUrl: "" })}
-                      className="absolute top-2 right-2 px-2 py-1 text-xs rounded-md bg-black/60 text-white hover:bg-black/75"
-                    >
-                      제거
-                    </button>
-                  </div>
-                ) : (
-                  <label className="mt-1 flex flex-col items-center justify-center gap-1 w-full aspect-[16/7] rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400 cursor-pointer text-gray-500 text-sm">
-                    {uploading ? (
-                      <span>업로드 중...</span>
-                    ) : (
-                      <>
-                        <span className="text-2xl leading-none">+</span>
-                        <span>이미지 선택</span>
-                      </>
-                    )}
+      <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? "배너 수정" : "새 배너"}</DialogTitle>
+            <DialogDescription>
+              {editing ? "배너 정보를 수정합니다." : "새로운 배너를 등록합니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>이미지</Label>
+              {form.imageUrl ? (
+                <div className="mt-1.5 relative rounded-lg overflow-hidden border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.imageUrl}
+                    alt="배너 이미지 미리보기"
+                    className="w-full aspect-[16/7] object-cover"
+                  />
+                  <label className="absolute bottom-2 right-2 cursor-pointer">
+                    <Button variant="secondary" size="sm" asChild>
+                      <span>이미지 변경</span>
+                    </Button>
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      disabled={uploading}
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) uploadImage(f);
@@ -239,66 +214,78 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
                       }}
                     />
                   </label>
-                )}
-              </div>
-              <Field label="제목" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-              <Field label="부제목" value={form.subtitle} onChange={(v) => setForm({ ...form, subtitle: v })} />
-              <Field label="이동 링크" value={form.linkUrl} onChange={(v) => setForm({ ...form, linkUrl: v })} />
-              <Field
-                label="정렬 순서"
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => setForm({ ...form, imageUrl: "" })}
+                  >
+                    <X className="h-3 w-3" />
+                    제거
+                  </Button>
+                </div>
+              ) : (
+                <label className="mt-1.5 flex flex-col items-center justify-center gap-1 w-full aspect-[16/7] rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted hover:bg-accent cursor-pointer text-muted-foreground text-sm">
+                  {uploading ? (
+                    <span>업로드 중...</span>
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5" />
+                      <span>이미지 선택</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadImage(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>제목</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>부제목</Label>
+              <Input value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>이동 링크</Label>
+              <Input value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>정렬 순서</Label>
+              <Input
                 type="number"
                 value={String(form.sortOrder)}
-                onChange={(v) => setForm({ ...form, sortOrder: Number(v) || 0 })}
+                onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) || 0 })}
               />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-                />
-                활성화
-              </label>
             </div>
-            <div className="flex gap-2 pt-5">
-              <button
-                onClick={close}
-                className="flex-1 py-3 rounded-xl bg-gray-100 text-gray-700 font-semibold"
-              >
-                취소
-              </button>
-              <button
-                onClick={save}
-                disabled={busy}
-                className="flex-1 py-3 rounded-xl bg-gray-900 text-white font-semibold disabled:opacity-50"
-              >
-                {busy ? "저장 중..." : "저장"}
-              </button>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(v) => setForm({ ...form, isActive: v })}
+              />
+              <Label>활성화</Label>
             </div>
-      </Modal>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={close}>
+              취소
+            </Button>
+            <Button onClick={save} disabled={busy}>
+              {busy ? "저장 중..." : "저장"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="text-xs text-gray-500">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-gray-900"
-      />
-    </label>
   );
 }
