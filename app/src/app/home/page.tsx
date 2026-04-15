@@ -15,6 +15,7 @@ const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"));
 const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"), {
   loading: () => <div className="h-14 rounded-[4px]" />,
 });
+const HomeWeatherStrip = dynamic(() => import("@/components/HomeWeatherStrip"));
 const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"));
 
 export default function HomePage() {
@@ -53,6 +54,10 @@ export default function HomePage() {
               })}
             </div>
           </section>
+
+          <div className="mt-6">
+            <HomeWeatherStrip />
+          </div>
 
           <div className="mt-6">
             <BannerCarousel />

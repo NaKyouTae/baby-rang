@@ -85,6 +85,26 @@ export function SleepNavIcon({ active, colorOverride }: { active: boolean; color
   );
 }
 
+export function AirQualityNavIcon({ active, colorOverride }: { active: boolean; colorOverride?: string }) {
+  const color = c(active, colorOverride);
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 1.66669C10.3452 1.66669 10.625 1.94651 10.625 2.29169V3.12502C10.625 3.4702 10.3452 3.75002 10 3.75002C9.65484 3.75002 9.37502 3.4702 9.37502 3.12502V2.29169C9.37502 1.94651 9.65484 1.66669 10 1.66669Z" fill={color} />
+      <path d="M15.8926 4.10746C16.1365 4.35138 16.1365 4.74706 15.8926 4.99098L15.3033 5.58028C15.0594 5.82419 14.6637 5.82419 14.4198 5.58028C14.1759 5.33636 14.1759 4.94068 14.4198 4.69676L15.0091 4.10746C15.253 3.86355 15.6487 3.86355 15.8926 4.10746Z" fill={color} />
+      <path d="M4.10746 4.10746C4.35138 3.86355 4.74706 3.86355 4.99098 4.10746L5.58028 4.69676C5.82419 4.94068 5.82419 5.33636 5.58028 5.58028C5.33636 5.82419 4.94068 5.82419 4.69676 5.58028L4.10746 4.99098C3.86355 4.74706 3.86355 4.35138 4.10746 4.10746Z" fill={color} />
+      <path d="M10 5.62502C8.8397 5.62502 7.72688 6.08594 6.90644 6.90644C6.08594 7.72688 5.62502 8.8397 5.62502 10C5.62502 11.1603 6.08594 12.2732 6.90644 13.0936C7.72688 13.9141 8.8397 14.375 10 14.375C11.1603 14.375 12.2732 13.9141 13.0936 13.0936C13.9141 12.2732 14.375 11.1603 14.375 10C14.375 8.8397 13.9141 7.72688 13.0936 6.90644C12.2732 6.08594 11.1603 5.62502 10 5.62502Z" fill={color} />
+      <path d="M1.66669 10C1.66669 9.65484 1.94651 9.37502 2.29169 9.37502H3.12502C3.4702 9.37502 3.75002 9.65484 3.75002 10C3.75002 10.3452 3.4702 10.625 3.12502 10.625H2.29169C1.94651 10.625 1.66669 10.3452 1.66669 10Z" fill={color} />
+      <path d="M16.25 10C16.25 9.65484 16.5298 9.37502 16.875 9.37502H17.7084C18.0535 9.37502 18.3334 9.65484 18.3334 10C18.3334 10.3452 18.0535 10.625 17.7084 10.625H16.875C16.5298 10.625 16.25 10.3452 16.25 10Z" fill={color} />
+      <path d="M3.33335 15.4167H6.66669" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M1.66669 17.9167H8.33335" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M10 17.9167H11.6667" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M8.33335 15.4167H13.3334" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M15 15.4167H18.3334" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M13.3334 17.9167H18.3334" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function TemperamentNavIcon({ active, colorOverride }: { active: boolean; colorOverride?: string }) {
   const color = c(active, colorOverride);
   return (

@@ -6,6 +6,7 @@ import {
   SleepNavIcon,
   GrowthRecordNavIcon,
   GrowthPatternNavIcon,
+  AirQualityNavIcon,
 } from "./nav-icons";
 
 export type MenuId =
@@ -14,7 +15,8 @@ export type MenuId =
   | "wonder-weeks"
   | "sleep-golden-time"
   | "growth-record"
-  | "growth-pattern";
+  | "growth-pattern"
+  | "air-quality";
 
 export type MenuItem = {
   id: MenuId;
@@ -60,6 +62,12 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
     href: "/growth-pattern",
     icon: (active, activeColor) => <GrowthPatternNavIcon active={active} colorOverride={activeColor} />,
   },
+  "air-quality": {
+    id: "air-quality",
+    label: "미세먼지",
+    href: "/air-quality",
+    icon: (active, activeColor) => <AirQualityNavIcon active={active} colorOverride={activeColor} />,
+  },
 };
 
 export const ALL_MENU_IDS: MenuId[] = [
@@ -69,12 +77,14 @@ export const ALL_MENU_IDS: MenuId[] = [
   "sleep-golden-time",
   "growth-record",
   "growth-pattern",
+  "air-quality",
 ];
 
 export const HOME_QUICK_MENUS: MenuId[] = [
   "growth-record",
   "growth-pattern",
   "nursing-room",
+  "air-quality",
   "wonder-weeks",
   "sleep-golden-time",
 ];

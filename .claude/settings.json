@@ -7,7 +7,9 @@
       "Bash(pnpm --version)",
       "Bash(find /Users/nakyutae/personal/git/baby-rang -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/dist/*\" -exec grep -l \"lat\\\\|lng\\\\|latitude\\\\|longitude\\\\|geolocation\\\\|navigator.geolocation\" {} \\\\;)",
       "Bash(find /Users/nakyutae/personal/git/baby-rang/server -type f -name \"*.ts\" ! -path \"*/node_modules/*\" -exec grep -l \"lat\\\\|lng\\\\|latitude\\\\|longitude\" {} \\\\;)",
-      "Bash(grep -rn \"getCurrentPosition\\\\|watchPosition\\\\|geolocation\" /Users/nakyutae/personal/git/baby-rang --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/dist/*\")"
+      "Bash(grep -rn \"getCurrentPosition\\\\|watchPosition\\\\|geolocation\" /Users/nakyutae/personal/git/baby-rang --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" ! -path \"*/dist/*\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst?serviceKey=5a9b60ce2104003ecd42a833f0f2393d12f97d1cd0efd558a176a6f89782c683&numOfRows=10&pageNo=1&dataType=JSON&base_date=20260415&base_time=1200&nx=61&ny=127\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey=5a9b60ce2104003ecd42a833f0f2393d12f97d1cd0efd558a176a6f89782c683&returnType=json&sidoName=%EC%84%9C%EC%9A%B8&ver=1.3&numOfRows=5&pageNo=1\")"
     ],
     "additionalDirectories": [
       "/tmp"

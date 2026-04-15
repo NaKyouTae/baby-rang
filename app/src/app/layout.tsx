@@ -159,6 +159,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
+        {/* 첫 페인트 전에 standalone 모드 CSS 변수를 즉시 설정 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var d=document.documentElement.style;var s=window.matchMedia('(display-mode:standalone)').matches||navigator.standalone;if(s){d.setProperty('--bottom-nav-gap','24px');d.setProperty('--bottom-nav-space','88px')}var vh=window.innerHeight*0.01;d.setProperty('--vh',vh+'px')})()`,
+          }}
+        />
         <ViewportHeightSetter />
         <LoginPromptProvider>
           <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
