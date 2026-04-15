@@ -1,5 +1,3 @@
-import BottomNav from "@/components/BottomNavServer";
-
 export default function SleepGoldenTimeLayout({
   children,
 }: {
@@ -8,7 +6,6 @@ export default function SleepGoldenTimeLayout({
   return (
     <div className="flex flex-col min-h-dvh bg-white">
       <div className="flex-1 pb-24">{children}</div>
-      <BottomNav />
     </div>
   );
 }

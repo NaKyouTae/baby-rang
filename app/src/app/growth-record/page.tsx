@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import BottomNav from '@/components/BottomNavServer';
 import GrowthRecordClient from './GrowthRecordClient';
 
 export const metadata: Metadata = {
@@ -10,10 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function GrowthRecordPage() {
-  return (
-    <>
-      <GrowthRecordClient />
-      <BottomNav />
-    </>
-  );
+  return <GrowthRecordClient />;
 }

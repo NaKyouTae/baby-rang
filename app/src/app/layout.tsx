@@ -4,6 +4,7 @@ import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import SplashProvider from "@/components/SplashProvider";
+import BottomNavServer from "@/components/BottomNavServer";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
 const SITE_NAME = "아기랑";
@@ -159,18 +160,21 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
-        <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
-          {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
-          <div
-            aria-hidden
-            className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
-            style={{ height: 'var(--safe-area-top)' }}
-          />
-          <SplashProvider>
-            <LoginPromptProvider>{children}</LoginPromptProvider>
-          </SplashProvider>
-          <AdSenseScript />
-        </div>
+        <LoginPromptProvider>
+          <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
+            {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
+            <div
+              aria-hidden
+              className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
+              style={{ height: 'var(--safe-area-top)' }}
+            />
+            <SplashProvider>
+              {children}
+            </SplashProvider>
+            <AdSenseScript />
+          </div>
+          <BottomNavServer />
+        </LoginPromptProvider>
       </body>
     </html>
   );

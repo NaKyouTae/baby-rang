@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import BottomNav from "@/components/BottomNavServer";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 
@@ -64,8 +63,6 @@ export default function HomePage() {
           </div>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 }
