@@ -142,7 +142,7 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="ko" className="h-full">
+    <html lang="ko" className="h-full" suppressHydrationWarning>
       <body className="min-h-full flex justify-center bg-white">
         {/* JSON-LD: Organization */}
         <script
