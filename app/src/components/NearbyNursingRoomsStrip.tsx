@@ -58,12 +58,13 @@ export default function NearbyNursingRoomsStrip() {
       requestLocation();
       return;
     }
+    // WKWebView에서는 앱이 위치를 허용해도 permissions API가 "prompt"를 반환할 수 있으므로
+    // "prompt" 상태에서도 getCurrentPosition을 호출해야 네이티브 델리게이트가 작동함
     navigator.permissions.query({ name: "geolocation" }).then((status) => {
-      if (status.state === "granted") {
-        requestLocation();
-      } else {
-        // prompt 또는 denied → 위치 요청하지 않고 바로 허용 안내 표시
+      if (status.state === "denied") {
         setLocStatus("denied");
+      } else {
+        requestLocation(); // "granted" 또는 "prompt" → 직접 요청
       }
     });
   }, []);

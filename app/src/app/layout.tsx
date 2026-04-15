@@ -159,10 +159,10 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
-        {/* 첫 페인트 전에 standalone 모드 CSS 변수를 즉시 설정 */}
-        <script
+        {/* 첫 페인트 전에 standalone 모드 CSS 변수를 즉시 적용 (인라인 CSS는 외부 CSS보다 먼저 파싱됨) */}
+        <style
           dangerouslySetInnerHTML={{
-            __html: `(function(){var d=document.documentElement.style;var b=document.body.style;var s=window.matchMedia('(display-mode:standalone)').matches||navigator.standalone;if(s){d.setProperty('--bottom-nav-gap','24px');d.setProperty('--bottom-nav-space','88px')}var vh=window.innerHeight*0.01;b.setProperty('--vh',vh+'px')})()`,
+            __html: `@media(display-mode:standalone){:root{--bottom-nav-gap:24px!important;--bottom-nav-space:88px!important}}`,
           }}
         />
         <ViewportHeightSetter />

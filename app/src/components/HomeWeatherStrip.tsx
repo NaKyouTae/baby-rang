@@ -91,10 +91,12 @@ export default function HomeWeatherStrip() {
     };
 
     // 권한 상태 먼저 확인
+    // WKWebView에서는 앱이 위치를 허용해도 permissions API가 "prompt"를 반환할 수 있으므로
+    // "prompt" 상태에서도 getCurrentPosition을 호출해야 네이티브 델리게이트가 작동함
     if (navigator.permissions) {
       navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
-        if (result.state === "granted") tryFetch();
-        else setLoading(false);
+        if (result.state === "denied") setLoading(false);
+        else tryFetch(); // "granted" 또는 "prompt" → 직접 요청
       });
     } else {
       tryFetch();
