@@ -22,7 +22,7 @@ export default function ViewportHeightSetter() {
 
       if (isStandalone) {
         document.documentElement.style.setProperty("--bottom-nav-gap", "24px");
-        document.documentElement.style.setProperty("--bottom-nav-space", "88px");
+        document.documentElement.style.setProperty("--bottom-nav-space", "104px");
         if (isAndroid) {
           document.documentElement.style.setProperty("--safe-area-bottom", "0px");
         }

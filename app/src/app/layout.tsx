@@ -162,7 +162,7 @@ export default function RootLayout({
         {/* 첫 페인트 전에 standalone 모드 CSS 변수를 즉시 적용 (인라인 CSS는 외부 CSS보다 먼저 파싱됨) */}
         <style
           dangerouslySetInnerHTML={{
-            __html: `@media(display-mode:standalone){:root{--bottom-nav-gap:24px!important;--bottom-nav-space:88px!important}}`,
+            __html: `@media(display-mode:standalone){:root{--bottom-nav-gap:24px!important;--bottom-nav-space:104px!important}}`,
           }}
         />
         <ViewportHeightSetter />

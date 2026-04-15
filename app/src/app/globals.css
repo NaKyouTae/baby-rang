@@ -32,13 +32,13 @@
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --bottom-nav-gap: max(min(var(--safe-area-bottom), 24px), 8px);
-  --bottom-nav-space: calc(56px + var(--bottom-nav-gap) + 8px);
+  --bottom-nav-space: calc(56px + var(--bottom-nav-gap) + 24px);
 }
 
 @media (display-mode: standalone) {
   :root {
     --bottom-nav-gap: 24px;
-    --bottom-nav-space: 88px;
+    --bottom-nav-space: 104px;
   }
 }
 
