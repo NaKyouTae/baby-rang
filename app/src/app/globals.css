@@ -37,8 +37,8 @@
 
 @media (display-mode: standalone) {
   :root {
-    --bottom-nav-gap: 8px;
-    --bottom-nav-space: 72px;
+    --bottom-nav-gap: 24px;
+    --bottom-nav-space: 88px;
   }
 }
 
