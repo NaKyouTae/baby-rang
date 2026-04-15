@@ -20,9 +20,15 @@ export default function ViewportHeightSetter() {
         (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
       const isAndroid = /android/i.test(window.navigator.userAgent);
 
-      if (isStandalone && isAndroid) {
-        document.documentElement.style.setProperty("--safe-area-bottom", "0px");
+      if (isStandalone) {
+        document.documentElement.style.setProperty("--bottom-nav-gap", "24px");
+        document.documentElement.style.setProperty("--bottom-nav-space", "88px");
+        if (isAndroid) {
+          document.documentElement.style.setProperty("--safe-area-bottom", "0px");
+        }
       } else {
+        document.documentElement.style.removeProperty("--bottom-nav-gap");
+        document.documentElement.style.removeProperty("--bottom-nav-space");
         document.documentElement.style.removeProperty("--safe-area-bottom");
       }
     }
