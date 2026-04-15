@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cachedFetch } from "@/hooks/appCache";
 import { palette } from "@/lib/colors";
-import { openLocationSettings } from "@/lib/openLocationSettings";
+import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface NursingRoom {
   name: string;
@@ -32,6 +33,7 @@ export default function NearbyNursingRoomsStrip() {
   const [locStatus, setLocStatus] = useState<LocStatus>("idle");
   const [rooms, setRooms] = useState<NursingRoom[]>([]);
   const [roomsLoaded, setRoomsLoaded] = useState(false);
+  const [guideModal, setGuideModal] = useState(false);
 
   const requestLocation = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -125,6 +127,21 @@ export default function NearbyNursingRoomsStrip() {
 
   return (
     <section>
+      {(() => {
+        const guide = guideModal ? getLocationSettingsGuide() : null;
+        return guide && (
+          <ConfirmModal
+            open={guideModal}
+            emoji="📍"
+            title={guide.title}
+            description={guide.description}
+            confirmLabel="확인"
+            hideCancel
+            onConfirm={() => setGuideModal(false)}
+            onClose={() => setGuideModal(false)}
+          />
+        );
+      })()}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[16px] font-medium text-black leading-none tracking-normal">가까운 수유실</h2>
 
@@ -144,6 +161,7 @@ export default function NearbyNursingRoomsStrip() {
                 setLocStatus("granted");
               },
               onDenied: () => setLocStatus("denied"),
+              onBrowserDenied: () => setGuideModal(true),
             })}
             className="px-4 h-[20px] flex items-center rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
           >

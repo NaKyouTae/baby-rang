@@ -435,7 +435,7 @@ export default function GrowthRecordPage() {
   if (!selectedChild) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+    <div className="flex flex-col min-h-dvh bg-white px-6">
       <div ref={titleBarRef} className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
         <ChildSelector
           children={children}

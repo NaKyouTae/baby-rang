@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
-import { openLocationSettings } from "@/lib/openLocationSettings";
+import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
@@ -113,6 +113,7 @@ export default function SettingsPage() {
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
 
   const [locationPerm, setLocationPerm] = useState<'granted' | 'denied' | 'prompt' | null>(null);
+  const [locationGuideOpen, setLocationGuideOpen] = useState(false);
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -123,14 +124,37 @@ export default function SettingsPage() {
   }, []);
 
   const handleLocationClick = () => {
+    const w = window as any;
+    const isNativeApp = !!(w.webkit?.messageHandlers?.openSettings || w.Android?.openLocationSettings);
+
+    if (!isNativeApp) {
+      // 웹 브라우저에서는 권한 상태와 무관하게 모달로 안내
+      setLocationGuideOpen(true);
+      return;
+    }
+
     openLocationSettings({
       onGranted: () => setLocationPerm('granted'),
       onDenied: () => setLocationPerm('denied'),
     });
   };
 
+  const locationGuide = locationGuideOpen ? getLocationSettingsGuide() : null;
+
   return (
     <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+      {locationGuide && (
+        <ConfirmModal
+          open={locationGuideOpen}
+          emoji="📍"
+          title={locationGuide.title}
+          description={locationGuide.description}
+          confirmLabel="확인"
+          hideCancel
+          onConfirm={() => setLocationGuideOpen(false)}
+          onClose={() => setLocationGuideOpen(false)}
+        />
+      )}
       {/* 사용자 정보 섹션 */}
       <section className="rounded-2xl bg-white p-5 shadow-sm">
         {!isAuthLoaded ? (

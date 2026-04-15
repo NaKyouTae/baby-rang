@@ -17,6 +17,10 @@ struct WebView: UIViewRepresentable {
         preferences.allowsContentJavaScript = true
         configuration.defaultWebpagePreferences = preferences
 
+        // openSettings 메시지 핸들러 등록
+        let contentController = configuration.userContentController
+        contentController.add(context.coordinator, name: "openSettings")
+
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
@@ -33,13 +37,32 @@ struct WebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {}
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, CLLocationManagerDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate {
         private let locationManager = CLLocationManager()
         private var permissionCompletion: ((Bool) -> Void)?
 
         override init() {
             super.init()
             locationManager.delegate = self
+
+            // 앱 시작 시 위치 권한이 아직 결정되지 않았으면 요청
+            // → iOS 설정에 앱 항목이 생성되어 openSettingsURLString이 앱 설정으로 이동함
+            if locationManager.authorizationStatus == .notDetermined {
+                locationManager.requestWhenInUseAuthorization()
+            }
+        }
+
+        // MARK: - WKScriptMessageHandler
+
+        func userContentController(_ userContentController: WKUserContentController,
+                                   didReceive message: WKScriptMessage) {
+            if message.name == "openSettings" {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
         }
 
         // MARK: - WKNavigationDelegate
