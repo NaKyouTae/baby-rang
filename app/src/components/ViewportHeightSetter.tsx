@@ -11,7 +11,7 @@ export default function ViewportHeightSetter() {
   useEffect(() => {
     function setViewportVars() {
       const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
+      document.body.style.setProperty("--vh", `${vh}px`);
 
       // Android Chrome 홈화면 추가(standalone)에서는
       // 브라우저 하단 UI가 없는데도 inset이 남는 경우가 있어 0으로 보정.

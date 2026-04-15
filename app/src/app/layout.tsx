@@ -142,8 +142,8 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="ko" className="h-full" suppressHydrationWarning>
-      <body className="min-h-full flex justify-center bg-white">
+    <html lang="ko" className="h-full">
+      <body className="min-h-full flex justify-center bg-white" suppressHydrationWarning>
         {/* JSON-LD: Organization */}
         <script
           type="application/ld+json"
@@ -162,7 +162,7 @@ export default function RootLayout({
         {/* 첫 페인트 전에 standalone 모드 CSS 변수를 즉시 설정 */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var d=document.documentElement.style;var s=window.matchMedia('(display-mode:standalone)').matches||navigator.standalone;if(s){d.setProperty('--bottom-nav-gap','24px');d.setProperty('--bottom-nav-space','88px')}var vh=window.innerHeight*0.01;d.setProperty('--vh',vh+'px')})()`,
+            __html: `(function(){var d=document.documentElement.style;var b=document.body.style;var s=window.matchMedia('(display-mode:standalone)').matches||navigator.standalone;if(s){d.setProperty('--bottom-nav-gap','24px');d.setProperty('--bottom-nav-space','88px')}var vh=window.innerHeight*0.01;b.setProperty('--vh',vh+'px')})()`,
           }}
         />
         <ViewportHeightSetter />
