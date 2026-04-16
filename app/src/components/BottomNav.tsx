@@ -166,7 +166,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
 
   const currentMenus = slots.map((s) => s.menu);
   const availableForPicker = ALL_MENU_IDS.filter(
-    (id) => !currentMenus.includes(id) && id !== "temperament",
+    (id) => !currentMenus.includes(id),
   );
 
   // 슬롯에 등록된 메뉴의 경로를 미리 prefetch

@@ -200,8 +200,8 @@ export default function NearbyNursingRoomsStrip() {
           style={{ minHeight: 56 }}
         >
           <div className="flex flex-col gap-[6px]">
-              <div className="flex items-center gap-1.5">
-                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: 1 }}>{room.name}</div>
+              <div className="flex items-center gap-1.5" style={{ height: 16 }}>
+                <div className="text-[16px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: '16px' }}>{room.name}</div>
                 {idx === 0 && locStatus === "granted" && (
                   <span
                     className="shrink-0 text-[12px] font-medium leading-none px-1 rounded-[2px]"
@@ -211,7 +211,7 @@ export default function NearbyNursingRoomsStrip() {
                   </span>
                 )}
                 {locStatus === "granted" && (
-                  <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: 1 }}>
+                  <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: '16px' }}>
                     {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
                   </div>
                 )}
