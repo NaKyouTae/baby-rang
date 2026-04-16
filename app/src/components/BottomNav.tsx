@@ -193,11 +193,12 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
       >
         <div className="mx-6 mb-[var(--bottom-nav-gap)] pointer-events-auto">
           {editMode && (
-            <div className="mb-4 flex justify-center">
+            <div className="flex justify-center" style={{ marginBottom: 16 }}>
               <button
                 type="button"
                 onClick={() => setEditMode(false)}
-                className="px-4 py-1.5 rounded-full bg-gray-900 text-white text-xs font-semibold shadow"
+                className="px-4 rounded-[4px] bg-gray-900 text-black text-[12px] font-semibold"
+                style={{ height: 24 }}
               >
                 저장
               </button>
@@ -286,7 +287,8 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               <button
                 type="button"
                 onClick={() => setPickerOpen(null)}
-                className="mt-[10px] w-full py-2.5 rounded-[4px] bg-gray-400 text-[12px] font-semibold text-white"
+                className="mt-[10px] w-full rounded-[4px] bg-gray-400 text-[12px] font-semibold text-white"
+                style={{ height: 28 }}
               >
                 취소
               </button>
