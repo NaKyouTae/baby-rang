@@ -5,7 +5,7 @@ import { palette } from "@/lib/colors";
 
 export interface NursingRoomReport {
   name: string;
-  type: string; // 가족수유실 / 모유수유실 / 착유실 / 기저귀교환대 / 기타
+  type: string; // 가족수유실 / 모유수유실 / 기저귀교환대 / 기타
   sido: string;
   sigungu: string;
   roadAddress: string;
@@ -21,7 +21,7 @@ export interface NursingRoomReport {
   createdAt: string;
 }
 
-const ROOM_TYPES = ["가족수유실", "모유수유실", "착유실", "기저귀교환대", "기타"];
+const ROOM_TYPES = ["가족수유실", "모유수유실", "기저귀교환대", "기타"];
 const FACILITIES = [
   "기저귀교환대",
   "전자레인지",

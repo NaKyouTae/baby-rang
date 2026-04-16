@@ -15,7 +15,10 @@
       "Bash(npx --yes sharp@0.33.5 -- node -e \"require\\('sharp'\\)\")",
       "Bash(sips -g hasAlpha \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 로고.png\" \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 로고 1.png\" \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 로고 2.png\")",
       "Bash(mkdir -p /Users/nakyutae/personal/git/baby-rang/admin/src/app)",
-      "Bash(cp /Users/nakyutae/personal/git/baby-rang/app/src/app/icon.svg /Users/nakyutae/personal/git/baby-rang/admin/src/app/icon.svg)"
+      "Bash(cp /Users/nakyutae/personal/git/baby-rang/app/src/app/icon.svg /Users/nakyutae/personal/git/baby-rang/admin/src/app/icon.svg)",
+      "Bash(lsof -iTCP:5432 -sTCP:LISTEN)",
+      "Bash(lsof -iTCP:5433 -sTCP:LISTEN)",
+      "Read(//opt/homebrew/var/**)"
     ],
     "additionalDirectories": [
       "/tmp"

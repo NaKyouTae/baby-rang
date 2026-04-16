@@ -191,7 +191,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
         data-bottom-nav-root
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
       >
-        <div className="mx-6 mb-[var(--bottom-nav-gap)] pointer-events-auto">
+        <div className="mx-6 mb-6 pointer-events-auto">
           {editMode && (
             <div className="flex justify-center" style={{ marginBottom: 16 }}>
               <button
