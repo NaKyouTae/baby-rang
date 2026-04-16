@@ -264,13 +264,17 @@ function ChildHeroCard({
               <span className="text-[10px] font-medium text-primary-500 shrink-0 rounded-[2px] px-1 py-0" style={{ backgroundColor: 'rgba(48,176,199,0.15)' }}>
                 진행중
               </span>
+            ) : next ? (
+              <span className="text-[10px] font-medium text-primary-500 shrink-0 rounded-[2px] px-1 py-0" style={{ backgroundColor: 'rgba(48,176,199,0.15)' }}>
+                예정
+              </span>
             ) : (
               <span className="text-[10px] font-medium text-gray-500 bg-gray-100 shrink-0 rounded-[2px] px-1 py-0">
-                평온기
+                종료
               </span>
             )}
           </div>
-          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-gray-500 shrink-0">자세히 <img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></span>
+          <span className="inline-flex items-center gap-0 text-[12px] font-medium text-gray-500 shrink-0">자세히<img src="/arrow-right-linear.svg" alt="" width={12} height={12} /></span>
         </div>
         {current ? (
           <div className="text-[12px] text-black mt-1 truncate">
@@ -283,7 +287,12 @@ function ChildHeroCard({
           </div>
         ) : next ? (
           <div className="text-[12px] text-black mt-1 truncate">
-            다음: {next.leap}번째. {next.name}
+            <span className="font-semibold text-primary-500">
+              {next.leap}번째.
+            </span>
+            <span>
+              {' '}{next.name} | {WONDER_WEEKS_LEAPS[next.leap - 1].startWeek}-{WONDER_WEEKS_LEAPS[next.leap - 1].endWeek}주차 ({fmtMD(next.startDate)}-{fmtMD(next.endDate)})
+            </span>
             <span className="ml-1 font-bold text-primary-500">D-{next.dDay}</span>
           </div>
         ) : (
@@ -389,6 +398,40 @@ function getRoleLabel(parentRole: string | null | undefined): string {
   return '보호자님';
 }
 
+const TIME_GREETINGS: Record<string, string[]> = {
+  dawn: [
+    '밤새 고생 많으셨어요 🌙',
+    '잠깐이라도 쉴 수 있길 바랄게요 🙏🏻',
+    '늦은 시간에도 정말 고생 많으세요 💫',
+  ],
+  morning: [
+    '오늘 하루도 함께 힘내요 🙌🏻',
+    '오늘도 천천히 시작해요 🙂',
+    '오늘도 행복한 하루 보내세요 🤍',
+  ],
+  afternoon: [
+    '지칠 땐 잠깐 쉬어가도 괜찮아요 ✊🏻',
+    '아기와 행복한 추억 만들어봐요 ☺️',
+    '조금만 더 힘내세요 👍🏻',
+  ],
+  evening: [
+    '오늘 하루도 정말 수고 많으셨어요 🥹',
+    '오늘 하루 잘 마무리하고 계신가요?',
+    '오늘도 충분히 잘 해내셨어요 😉',
+  ],
+};
+
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  let period: string;
+  if (hour < 6) period = 'dawn';
+  else if (hour < 11) period = 'morning';
+  else if (hour < 18) period = 'afternoon';
+  else period = 'evening';
+  const messages = TIME_GREETINGS[period];
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
 function WelcomeHeader({
   parentRole,
   childName,
@@ -400,13 +443,14 @@ function WelcomeHeader({
   const displayName = childName
     ? `${childName} ${roleLabel}`
     : `아기랑 ${roleLabel}`;
+  const [greeting] = useState(() => getTimeGreeting());
   return (
     <div>
       <div className="text-[20px] font-medium text-black leading-[32px]">
         {displayName},
       </div>
       <div className="text-[20px] font-medium text-black leading-[32px]">
-        아기와 행복한 추억 만들어봐요 ☺️
+        {greeting}
       </div>
     </div>
   );
@@ -423,7 +467,37 @@ export default function HomeHeroCard() {
       ? children[activeChildIdx].name
       : null;
 
-  if (!authLoaded) return null;
+  if (!authLoaded) {
+    return (
+      <>
+        {/* 최상단 문구 스켈레톤 */}
+        <div>
+          <div className="h-[32px] flex items-center"><div className="w-48 h-5 rounded bg-gray-200 animate-pulse" /></div>
+          <div className="h-[32px] flex items-center"><div className="w-56 h-5 rounded bg-gray-200 animate-pulse" /></div>
+        </div>
+        {/* 프로필 카드 스켈레톤 */}
+        <div className="pt-4">
+          <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-200" />
+              <div className="flex-1 space-y-2">
+                <div className="w-20 h-4 rounded bg-gray-200" />
+                <div className="w-32 h-3 rounded bg-gray-200" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1 mt-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded bg-gray-100 h-[74px]" />
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-center pt-3">
+            <span className="h-1 w-3 rounded-full bg-gray-200" />
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // 비로그인 → 로그인 유도
   if (!isAuthenticated) {
@@ -450,8 +524,34 @@ export default function HomeHeroCard() {
     );
   }
 
-  // 로그인 + 아이 미등록
-  if (childrenLoaded && children.length === 0) {
+  if (!childrenLoaded) {
+    return (
+      <>
+        <WelcomeHeader parentRole={user?.parentRole} childName={null} />
+        <div className="pt-4">
+          <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-200" />
+              <div className="flex-1 space-y-2">
+                <div className="w-20 h-4 rounded bg-gray-200" />
+                <div className="w-32 h-3 rounded bg-gray-200" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1 mt-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded bg-gray-100 h-[74px]" />
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-center pt-3">
+            <span className="h-1 w-3 rounded-full bg-gray-200" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (children.length === 0) {
     return (
       <>
         <div>
@@ -467,10 +567,6 @@ export default function HomeHeroCard() {
         </div>
       </>
     );
-  }
-
-  if (!childrenLoaded || children.length === 0) {
-    return <WelcomeHeader parentRole={user?.parentRole} childName={null} />;
   }
 
   return (

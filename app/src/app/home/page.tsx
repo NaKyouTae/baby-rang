@@ -11,12 +11,36 @@ export const metadata: Metadata = {
   alternates: { canonical: "/home" },
 };
 
-const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"));
-const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"), {
-  loading: () => <div className="h-14 rounded-[4px]" />,
+const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"), {
+  loading: () => (
+    <div>
+      <div><div className="h-[32px] flex items-center"><div className="w-48 h-5 rounded bg-gray-200 animate-pulse" /></div><div className="h-[32px] flex items-center"><div className="w-56 h-5 rounded bg-gray-200 animate-pulse" /></div></div>
+      <div className="pt-4"><div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse" /></div>
+    </div>
+  ),
 });
-const HomeWeatherStrip = dynamic(() => import("@/components/HomeWeatherStrip"));
-const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"));
+const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"), {
+  loading: () => <div style={{ height: 56 }} className="rounded-[4px] bg-gray-200 animate-pulse" />,
+});
+const HomeWeatherStrip = dynamic(() => import("@/components/HomeWeatherStrip"), {
+  loading: () => (
+    <div className="bg-white rounded-2xl border border-gray-200 px-4 py-5">
+      <div className="flex items-center">
+        <div className="flex items-center gap-2.5"><div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" /><div className="space-y-1"><div className="w-10 h-4 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-2.5 rounded bg-gray-200 animate-pulse" /></div></div>
+        <div className="w-px h-12 bg-gray-200 mx-4" />
+        <div className="flex-1 flex gap-4"><div className="flex-1 flex flex-col items-center gap-1"><div className="w-12 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-14 h-2.5 rounded bg-gray-200 animate-pulse" /></div><div className="flex-1 flex flex-col items-center gap-1"><div className="w-14 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-14 h-2.5 rounded bg-gray-200 animate-pulse" /></div></div>
+      </div>
+    </div>
+  ),
+});
+const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"), {
+  loading: () => (
+    <section>
+      <div className="flex items-center justify-between mb-3"><div className="w-24 h-4 rounded bg-gray-200 animate-pulse" /><div className="w-12 h-3 rounded bg-gray-200 animate-pulse" /></div>
+      <div className="flex flex-col gap-2">{[0,1,2].map(i => <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{minHeight:56}}><div className="flex flex-col gap-[6px]"><div className="w-32 h-3 rounded bg-gray-200" /><div className="w-48 h-3 rounded bg-gray-200" /></div></div>)}</div>
+    </section>
+  ),
+});
 
 export default function HomePage() {
   return (
@@ -59,7 +83,7 @@ export default function HomePage() {
             <HomeWeatherStrip />
           </div>
 
-          <div className="mt-6">
+          <div className="mt-4">
             <BannerCarousel />
           </div>
 

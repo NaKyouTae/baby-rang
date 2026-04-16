@@ -48,22 +48,22 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-[320px] rounded-2xl bg-white p-6 shadow-xl"
+            className="w-full max-w-[320px] rounded-[8px] bg-white p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex justify-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              <div className="flex items-center justify-center rounded-[30px] bg-gray-100" style={{ width: 60, height: 60 }}>
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M25.6667 16C25.6667 13.4363 24.6479 10.9778 22.8351 9.16494C21.0222 7.35209 18.5638 6.33334 16 6.33334C15.4477 6.33334 15 5.88563 15 5.33334C15 4.78106 15.4477 4.33334 16 4.33334C19.0942 4.33334 22.0621 5.56209 24.25 7.75001C26.4379 9.93793 27.6667 12.9058 27.6667 16C27.6667 19.0942 26.4379 22.0621 24.25 24.25C22.0621 26.4379 19.0942 27.6667 16 27.6667C15.4477 27.6667 15 27.219 15 26.6667C15 26.1144 15.4477 25.6667 16 25.6667C18.5638 25.6667 21.0222 24.6479 22.8351 22.8351C24.6479 21.0222 25.6667 18.5638 25.6667 16Z" fill={palette.gray500} />
+                  <path d="M13.9591 11.2926C14.3496 10.902 14.9835 10.902 15.3741 11.2926L19.3741 15.2926C19.7646 15.6831 19.7646 16.317 19.3741 16.7075L15.3741 20.7075C14.9835 21.098 14.3496 21.098 13.9591 20.7075C13.5686 20.317 13.5686 19.6831 13.9591 19.2926L16.2517 17H5.33325C4.78097 17 4.33325 16.5523 4.33325 16C4.33325 15.4477 4.78097 15 5.33325 15H16.2517L13.9591 12.7075C13.5686 12.317 13.5686 11.6831 13.9591 11.2926Z" fill={palette.gray500} />
                 </svg>
               </div>
             </div>
-            <h3 className="text-center text-base font-bold text-gray-900">
-              로그인이 필요해요
+            <h3 className="text-center font-medium text-black" style={{ fontSize: 16 }}>
+              육아 동반자 아기랑과 함께해요 !
             </h3>
-            <p className="mt-2 text-center text-sm text-gray-500 leading-relaxed">
-              {message ?? '이 기능을 사용하려면\n로그인이 필요해요.'}
+            <p className="mt-2 text-center font-medium leading-relaxed" style={{ fontSize: 12, color: palette.gray500 }}>
+              {message ?? '로그인하고 편리한 맞춤 육아를 시작해 보세요.'}
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <button
@@ -72,7 +72,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                   setOpen(false);
                   window.location.href = `${API_URL}/auth/kakao`;
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold active:opacity-80"
+                className="flex w-full items-center justify-center gap-2 rounded-[4px] py-3 text-sm font-semibold active:opacity-80"
                 style={{ backgroundColor: '#FEE500', color: '#191919' }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
@@ -83,7 +83,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="w-full rounded-xl bg-gray-100 py-3 text-sm font-semibold text-gray-700 active:bg-gray-200"
+                className="w-full rounded-[4px] bg-gray-200 py-3 font-semibold active:bg-gray-300"
+                style={{ fontSize: 12, color: palette.gray500 }}
               >
                 나중에
               </button>

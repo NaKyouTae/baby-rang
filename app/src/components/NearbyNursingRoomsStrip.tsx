@@ -146,8 +146,21 @@ export default function NearbyNursingRoomsStrip() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[16px] font-medium text-black leading-none tracking-normal">가까운 수유실</h2>
 
-        <Link href="/nursing-room" className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-medium leading-[12px]">더보기<img src="/right-arrow-ico.svg" alt="" width={10} height={10} /></Link>
+        <Link href="/nursing-room" className="inline-flex items-center gap-0 text-[12px] font-medium leading-none" style={{ color: palette.gray500 }}>더보기<img src="/arrow-right-linear.svg" alt="" width={12} height={12} /></Link>
       </div>
+
+      {showLoading && (
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{ minHeight: 56 }}>
+              <div className="flex flex-col gap-[6px]">
+                <div className="w-32 h-3 rounded bg-gray-200" />
+                <div className="w-48 h-3 rounded bg-gray-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {showLocationPrompt && (
         <div className="w-full rounded-[8px] bg-white border border-gray-200 py-8 px-4 flex flex-col items-center gap-3">
@@ -164,7 +177,7 @@ export default function NearbyNursingRoomsStrip() {
               onDenied: () => setLocStatus("denied"),
               onBrowserDenied: () => setGuideModal(true),
             })}
-            className="px-4 h-[20px] flex items-center rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
+            className="px-4 h-[24px] flex items-center rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
           >
             설정 바로가기
           </button>
@@ -184,10 +197,11 @@ export default function NearbyNursingRoomsStrip() {
           key={room.name}
           href={`/nursing-room?room=${encodeURIComponent(room.name)}&lat=${room.lat}&lng=${room.lng}&addr=${encodeURIComponent(room.address)}`}
           className="block rounded-[8px] bg-white border border-gray-200 p-[10px] active:bg-gray-50"
+          style={{ minHeight: 56 }}
         >
-          <div className="flex flex-col gap-[4px]">
+          <div className="flex flex-col gap-[6px]">
               <div className="flex items-center gap-1.5">
-                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif' }}>{room.name}</div>
+                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: 1 }}>{room.name}</div>
                 {idx === 0 && locStatus === "granted" && (
                   <span
                     className="shrink-0 text-[12px] font-medium leading-none px-1 rounded-[2px]"
@@ -197,12 +211,12 @@ export default function NearbyNursingRoomsStrip() {
                   </span>
                 )}
                 {locStatus === "granted" && (
-                  <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif' }}>
+                  <div className="ml-auto shrink-0 text-[12px] font-normal text-black" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: 1 }}>
                     {room.dist < 1 ? `${Math.round(room.dist * 1000)}m` : `${room.dist.toFixed(1)}km`}
                   </div>
                 )}
               </div>
-              <div className="text-[12px] font-normal truncate" style={{ fontFamily: 'Pretendard, sans-serif', color: palette.gray500 }}>{room.address}</div>
+              <div className="text-[12px] font-normal truncate" style={{ fontFamily: 'Pretendard, sans-serif', color: palette.gray500, lineHeight: 1 }}>{room.address}</div>
           </div>
         </Link>
       ))}

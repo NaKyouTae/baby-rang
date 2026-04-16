@@ -14,7 +14,7 @@ export type Banner = {
 };
 
 export default function BannerCarousel() {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banners, setBanners] = useState<Banner[] | null>(null);
   const [index, setIndex] = useState(0);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +25,7 @@ export default function BannerCarousel() {
   }, []);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (!banners || banners.length <= 1) return;
     const el = scrollerRef.current;
     if (!el) return;
     const id = setInterval(() => {
@@ -33,9 +33,13 @@ export default function BannerCarousel() {
       el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
     }, 4000);
     return () => clearInterval(id);
-  }, [banners.length, index]);
+  }, [banners, index]);
 
-  if (banners.length === 0) return <div className="h-14 rounded-[4px]" />;
+  if (banners === null) {
+    return <div style={{ height: 56 }} className="rounded-[4px] bg-gray-200 animate-pulse" />;
+  }
+
+  if (banners.length === 0) return <div style={{ height: 56 }} className="rounded-[4px]" />;
 
   const onScroll = () => {
     const el = scrollerRef.current;
@@ -55,14 +59,16 @@ export default function BannerCarousel() {
           <Link
             key={b.id}
             href={b.linkUrl}
-            className="relative shrink-0 w-full snap-center h-14 overflow-hidden"
-            style={{ backgroundColor: "transparent" }}
+            className="relative shrink-0 w-full snap-center overflow-hidden"
+            style={{ height: 56 }}
           >
             {b.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={b.imageUrl}
                 alt={b.title}
+                width={800}
+                height={56}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}
