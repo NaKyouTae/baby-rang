@@ -197,7 +197,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               <button
                 type="button"
                 onClick={() => setEditMode(false)}
-                className="px-4 rounded-[4px] bg-gray-900 text-black text-[12px] font-semibold"
+                className="px-4 rounded-[4px] bg-gray-900 text-white text-[12px] font-semibold"
                 style={{ height: 24 }}
               >
                 저장
