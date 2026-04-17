@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { GrowthData, MetricType, Gender } from './growthStandards';
-import { getGrowthStandard, calcAgeMonths, estimatePercentile } from './growthStandards';
+import { getGrowthStandard, calcAgeMonths, calcPercentile } from './growthStandards';
 
 type DataPoint = {
   ageMonths: number;
@@ -145,7 +145,7 @@ export default function GrowthChart({
   // 마지막 포인트의 백분위수 추정
   const lastPoint = childPoints.length > 0 ? childPoints[childPoints.length - 1] : null;
   const lastPercentile = lastPoint
-    ? estimatePercentile(gender, metric, lastPoint.ageMonths, lastPoint.value)
+    ? calcPercentile(gender, metric, lastPoint.ageMonths, lastPoint.value)
     : null;
 
   return (

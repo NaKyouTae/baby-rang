@@ -90,12 +90,9 @@ function NursingRoomContent() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<NursingRoom | null>(
-    initialRoomName
-      ? SAMPLE_NURSING_ROOMS.find((r) => r.name === initialRoomName) ?? null
-      : null
-  );
+  const [selectedRoom, setSelectedRoom] = useState<NursingRoom | null>(null);
   const initialRoomResolved = useRef(false);
+  const [roomsReady, setRoomsReady] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [rooms, setRooms] = useState<NursingRoom[]>(SAMPLE_NURSING_ROOMS);
   const [showReport, setShowReport] = useState(false);
@@ -184,8 +181,10 @@ function NursingRoomContent() {
         }
       }
       setRooms(merged);
+      setRoomsReady(true);
     } catch (e) {
       console.error(e);
+      setRoomsReady(true);
     }
   };
 
@@ -193,35 +192,40 @@ function NursingRoomContent() {
     loadRooms();
   }, []);
 
-  // 홈에서 넘어온 경우: rooms 로드 후 해당 수유실 선택 + 포커스
+  // 홈에서 넘어온 경우: 지도 포커스는 즉시, 카드는 API 데이터 로드 후 표시
+  // 1) 지도 포커스 (좌표가 있으면 즉시 이동)
   useEffect(() => {
-    if (initialRoomResolved.current || !initialRoomName || rooms.length === 0) return;
+    if (initialRoomResolved.current || !initialRoomName) return;
+    const lat = initialLat ? parseFloat(initialLat) : undefined;
+    const lng = initialLng ? parseFloat(initialLng) : undefined;
+    if (lat == null || lng == null) return;
+    const map = mapInstanceRef.current;
+    if (map) {
+      initialRoomResolved.current = true;
+      map.setZoom(16, false);
+      map.panTo(new naver.maps.LatLng(lat, lng));
+    }
+  }, [mapLoaded, initialRoomName, initialLat, initialLng]);
+
+  // 2) 카드 표시 (API 데이터 로드 완료 후)
+  const initialCardShown = useRef(false);
+  useEffect(() => {
+    if (initialCardShown.current || !initialRoomName || !roomsReady) return;
+    initialCardShown.current = true;
+
     const found = rooms.find((r) => r.name === initialRoomName);
     if (found) {
-      initialRoomResolved.current = true;
       setSelectedRoom(found);
-      const map = mapInstanceRef.current;
-      if (map) {
-        map.setZoom(16, false);
-        map.panTo(new naver.maps.LatLng(found.lat, found.lng));
-      }
     } else if (initialLat && initialLng) {
-      // rooms에서 못 찾았지만 좌표가 있으면 임시 선택
-      initialRoomResolved.current = true;
-      const tempRoom: NursingRoom = {
+      // API에서 못 찾은 경우 최소 정보로 표시
+      setSelectedRoom({
         name: initialRoomName,
         address: initialAddr ?? "",
         lat: parseFloat(initialLat),
         lng: parseFloat(initialLng),
-      };
-      setSelectedRoom(tempRoom);
-      const map = mapInstanceRef.current;
-      if (map) {
-        map.setZoom(16, false);
-        map.panTo(new naver.maps.LatLng(tempRoom.lat, tempRoom.lng));
-      }
+      });
     }
-  }, [rooms, initialRoomName, initialLat, initialLng]);
+  }, [roomsReady, rooms, initialRoomName, initialLat, initialLng, initialAddr]);
 
   // 네이버 지도 스크립트 로드
   useEffect(() => {
@@ -569,7 +573,7 @@ function NursingRoomContent() {
         {selectedRoom && (
           <>
           <div
-            className="absolute left-6 right-6 bg-white rounded-lg shadow-lg z-10 flex flex-col overflow-hidden"
+            className="absolute left-6 right-6 bg-white rounded-lg shadow-lg z-10 flex flex-col overflow-hidden animate-slide-up"
             style={{
               bottom: "calc(var(--bottom-nav-gap) + 56px + 10px)",
               maxHeight: "60dvh",
@@ -582,7 +586,7 @@ function NursingRoomContent() {
                   {selectedRoom.type && <TypeBadge type={selectedRoom.type} />}
                   {selectedRoom.dadAvailable && (
                     <span className="inline-flex items-center h-4 px-1 py-0.5 rounded-[2px] text-xs font-medium leading-none bg-blue-50 text-blue-600">
-                      아빠 가능
+                      아빠가능
                     </span>
                   )}
                 </div>
