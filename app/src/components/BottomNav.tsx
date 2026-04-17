@@ -7,15 +7,14 @@ import { useRouter } from "next/navigation";
 import { Reorder, motion } from "framer-motion";
 import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
-import { HomeNavIcon, MyNavIcon, AddNavIcon } from "./nav-icons";
+import { HomeNavIcon, AddNavIcon } from "./nav-icons";
 import { palette } from "@/lib/colors";
 
-const DEFAULT_SLOTS: (MenuId | null)[] = ["nursing-room", "sleep-golden-time", null];
+const DEFAULT_SLOTS: (MenuId | null)[] = ["nursing-room", "sleep-golden-time", "growth-record", null];
 const LONG_PRESS_MS = 500;
-const SLOT_COUNT = 3;
+const SLOT_COUNT = 4;
 
 const HOME_HREF = "/home";
-const SETTINGS_HREF = "/settings";
 
 type Slot = { id: string; menu: MenuId | null };
 
@@ -31,8 +30,11 @@ function fromSlots(slots: Slot[]): (MenuId | null)[] {
 }
 
 function sanitize(arr: unknown): (MenuId | null)[] {
-  if (!Array.isArray(arr) || arr.length !== SLOT_COUNT) return [...DEFAULT_SLOTS];
-  return arr.map((v) => (typeof v === "string" && v in MENU_CATALOG ? (v as MenuId) : null));
+  if (!Array.isArray(arr)) return [...DEFAULT_SLOTS];
+  const mapped = arr.map((v) => (typeof v === "string" && v in MENU_CATALOG ? (v as MenuId) : null));
+  // 기존 3슬롯 → 4슬롯 마이그레이션: 부족한 슬롯은 null로 채움
+  while (mapped.length < SLOT_COUNT) mapped.push(null);
+  return mapped.slice(0, SLOT_COUNT);
 }
 
 export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | null)[] } = {}) {
@@ -179,11 +181,6 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   }, [slotHrefs, router]);
 
   const isHomeActive = pathname === HOME_HREF || pathname === "/";
-  const isSettingsActive = pathname?.startsWith("/settings");
-
-  // 마이페이지 하위 메뉴에서는 하단 네비게이션 숨김
-  const isSettingsSubPage = pathname !== "/settings" && pathname?.startsWith("/settings/");
-  if (isSettingsSubPage) return null;
 
   return (
     <>
@@ -216,13 +213,13 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               <span className={`text-[10px] ${isHomeActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>홈</span>
             </Link>
 
-            {/* MIDDLE 3 SLOTS — framer-motion Reorder */}
+            {/* CUSTOM SLOTS — framer-motion Reorder */}
             <Reorder.Group
               axis="x"
               values={slots}
               onReorder={handleReorder}
               as="div"
-              className="flex items-center flex-[3]"
+              className="flex items-center flex-[4]"
             >
               {slots.map((slot, index) => (
                 <ReorderSlot
@@ -240,15 +237,6 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
               ))}
             </Reorder.Group>
 
-            {/* SETTINGS */}
-            <Link
-              href={SETTINGS_HREF}
-              className="flex flex-col items-center justify-center gap-1 flex-1 h-[56px]"
-              onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
-            >
-              <MyNavIcon active={!!isSettingsActive} />
-              <span className={`text-[10px] ${isSettingsActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>마이</span>
-            </Link>
           </div>
         </div>
       </nav>

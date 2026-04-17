@@ -18,10 +18,12 @@
       "Bash(cp /Users/nakyutae/personal/git/baby-rang/app/src/app/icon.svg /Users/nakyutae/personal/git/baby-rang/admin/src/app/icon.svg)",
       "Bash(lsof -iTCP:5432 -sTCP:LISTEN)",
       "Bash(lsof -iTCP:5433 -sTCP:LISTEN)",
-      "Read(//opt/homebrew/var/**)"
+      "Read(//opt/homebrew/var/**)",
+      "Bash(npx dotenv *)"
     ],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/physical-growth"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-const SLOT_COUNT = 3;
+const SLOT_COUNT = 4;
 const ALLOWED_MENU_IDS = new Set([
   'nursing-room',
   'temperament',
@@ -9,8 +9,10 @@ const ALLOWED_MENU_IDS = new Set([
   'sleep-golden-time',
   'growth-record',
   'growth-pattern',
+  'air-quality',
+  'physical-growth',
 ]);
-const DEFAULT_SLOTS: (string | null)[] = [null, null, null];
+const DEFAULT_SLOTS: (string | null)[] = [null, null, null, null];
 
 type SlotsArray = (string | null)[];
 

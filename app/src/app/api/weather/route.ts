@@ -12,6 +12,42 @@ const KMA_BASE = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getU
 const KMA_FCST_BASE = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
 const AIR_SIDO = "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty";
 
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
+const STALE_TTL_MS = 30 * 60 * 1000; // 30분 (stale 캐시 최대 보관)
+
+interface CacheEntry {
+  data: unknown;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+
+// fresh 캐시 반환 (TTL 이내)
+function getFreshCache(key: string): unknown | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) return null;
+  return entry.data;
+}
+
+// stale 캐시 반환 (만료됐지만 아직 보관 중인 데이터)
+function getStaleCache(key: string): unknown | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > STALE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+// 백그라운드 갱신 중인 키 추적 (중복 갱신 방지)
+const refreshing = new Set<string>();
+
 // 위경도 → 기상청 격자 좌표 변환
 function latLngToGrid(lat: number, lng: number) {
   const RE = 6371.00877;
@@ -169,6 +205,100 @@ async function safeJson(res: Response, label: string) {
   }
 }
 
+interface WeatherResult {
+  weather: {
+    temperature: string | null;
+    humidity: string | null;
+    rainfall: string | null;
+    windSpeed: string | null;
+    sky: string;
+    pty: string;
+  };
+  air: {
+    pm10: string | null;
+    pm25: string | null;
+    pm10Grade: string | null;
+    pm25Grade: string | null;
+    khaiValue: string | null;
+    khaiGrade: string | null;
+    stationName: string;
+    dataTime: string | null;
+  };
+  sido: string;
+}
+
+async function fetchWeatherData(
+  nx: number, ny: number,
+  base_date: string, base_time: string,
+  fcst: { base_date: string; base_time: string },
+  sidoName: string,
+): Promise<WeatherResult | null> {
+  const [weatherRes, fcstRes, airRes] = await Promise.all([
+    fetch(
+      `${KMA_BASE}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`,
+    ),
+    fetch(
+      `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=60&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
+    ),
+    fetch(
+      `${AIR_SIDO}?serviceKey=${API_KEY}&returnType=json&sidoName=${encodeURIComponent(sidoName)}&ver=1.3&numOfRows=100&pageNo=1`,
+    ),
+  ]);
+
+  const weatherData = await safeJson(weatherRes, "기상청 초단기실황");
+  const weatherItems: WeatherItem[] = weatherData?.response?.body?.items?.item ?? [];
+  const weather: Record<string, string> = {};
+  for (const item of weatherItems) {
+    if (item.obsrValue !== undefined) {
+      weather[item.category] = item.obsrValue;
+    }
+  }
+
+  const fcstData = await safeJson(fcstRes, "기상청 초단기예보");
+  const fcstItems: WeatherItem[] = fcstData?.response?.body?.items?.item ?? [];
+  const fcstMap: Record<string, string> = {};
+  for (const item of fcstItems) {
+    if (item.fcstValue !== undefined && !fcstMap[item.category]) {
+      fcstMap[item.category] = item.fcstValue;
+    }
+  }
+
+  const airData = await safeJson(airRes, "에어코리아 시도별");
+  const airItems: AirItem[] = airData?.response?.body?.items ?? [];
+  let air: AirItem = {};
+  for (const item of airItems) {
+    if (item.pm10Value && item.pm10Value !== "-" && item.pm25Value && item.pm25Value !== "-") {
+      air = item;
+      break;
+    }
+  }
+
+  const sky = fcstMap["SKY"] ?? "";
+  const pty = weather["PTY"] ?? fcstMap["PTY"] ?? "0";
+
+  return {
+    weather: {
+      temperature: weather["T1H"] ?? null,
+      humidity: weather["REH"] ?? null,
+      rainfall: weather["RN1"] ?? null,
+      windSpeed: weather["WSD"] ?? null,
+      sky,
+      pty,
+    },
+    air: {
+      pm10: air.pm10Value ?? null,
+      pm25: air.pm25Value ?? null,
+      pm10Grade: air.pm10Grade ?? null,
+      pm25Grade: air.pm25Grade ?? null,
+      khaiValue: air.khaiValue ?? null,
+      khaiGrade: air.khaiGrade ?? null,
+      stationName: air.stationName ?? "",
+      dataTime: air.dataTime ?? null,
+    },
+    sido: sidoName,
+  };
+}
+
 export async function GET(req: Request) {
   if (!API_KEY) {
     return NextResponse.json({ error: "DATA_GO_KR_API_KEY is not set" }, { status: 500 });
@@ -182,91 +312,56 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "lat, lng required" }, { status: 400 });
   }
 
-  try {
-    const { nx, ny } = latLngToGrid(lat, lng);
-    const { base_date, base_time } = getBaseDateTime();
-    const fcst = getFcstBaseDateTime();
-    const sidoName = getSidoName(lat, lng);
+  const { nx, ny } = latLngToGrid(lat, lng);
+  const { base_date, base_time } = getBaseDateTime();
+  const fcst = getFcstBaseDateTime();
+  const sidoName = getSidoName(lat, lng);
 
-    // 기상청 초단기실황 + 초단기예보 + 에어코리아 시도별 실시간 동시 호출
-    const [weatherRes, fcstRes, airRes] = await Promise.all([
-      fetch(
-        `${KMA_BASE}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`,
-      ),
-      fetch(
-        `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=60&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
-      ),
-      fetch(
-        `${AIR_SIDO}?serviceKey=${API_KEY}&returnType=json&sidoName=${encodeURIComponent(sidoName)}&ver=1.3&numOfRows=100&pageNo=1`,
-      ),
-    ]);
+  // 격자 단위로 캐시 (같은 격자 = 같은 날씨)
+  const cacheKey = `${nx},${ny},${base_date},${base_time},${fcst.base_date},${fcst.base_time},${sidoName}`;
 
-    // 날씨 파싱
-    const weatherData = await safeJson(weatherRes, "기상청 초단기실황");
-    const weatherItems: WeatherItem[] =
-      weatherData?.response?.body?.items?.item ?? [];
-
-    const weather: Record<string, string> = {};
-    for (const item of weatherItems) {
-      if (item.obsrValue !== undefined) {
-        weather[item.category] = item.obsrValue;
-      }
-    }
-
-    // 초단기예보 파싱 (하늘상태, 강수형태)
-    const fcstData = await safeJson(fcstRes, "기상청 초단기예보");
-    const fcstItems: WeatherItem[] = fcstData?.response?.body?.items?.item ?? [];
-    const fcstMap: Record<string, string> = {};
-    for (const item of fcstItems) {
-      if (item.fcstValue !== undefined && !fcstMap[item.category]) {
-        fcstMap[item.category] = item.fcstValue;
-      }
-    }
-
-    // 시도별 대기오염 파싱 — 첫 번째 유효한 측정소 데이터 사용
-    const airData = await safeJson(airRes, "에어코리아 시도별");
-    const airItems: AirItem[] = airData?.response?.body?.items ?? [];
-    let air: AirItem = {};
-    for (const item of airItems) {
-      if (item.pm10Value && item.pm10Value !== "-" && item.pm25Value && item.pm25Value !== "-") {
-        air = item;
-        break;
-      }
-    }
-
-    // SKY: 1 맑음, 3 구름많음, 4 흐림
-    // PTY: 0 없음, 1 비, 2 비/눈, 3 눈, 5 빗방울, 6 빗방울눈날림, 7 눈날림
-    const sky = fcstMap["SKY"] ?? "";
-    const pty = weather["PTY"] ?? fcstMap["PTY"] ?? "0";
-
-    return NextResponse.json(
-      {
-        weather: {
-          temperature: weather["T1H"] ?? null,
-          humidity: weather["REH"] ?? null,
-          rainfall: weather["RN1"] ?? null,
-          windSpeed: weather["WSD"] ?? null,
-          sky,
-          pty,
-        },
-        air: {
-          pm10: air.pm10Value ?? null,
-          pm25: air.pm25Value ?? null,
-          pm10Grade: air.pm10Grade ?? null,
-          pm25Grade: air.pm25Grade ?? null,
-          khaiValue: air.khaiValue ?? null,
-          khaiGrade: air.khaiGrade ?? null,
-          stationName: air.stationName ?? "",
-          dataTime: air.dataTime ?? null,
-        },
-        sido: sidoName,
+  // 1) fresh 캐시가 있으면 즉시 반환
+  const fresh = getFreshCache(cacheKey);
+  if (fresh) {
+    return NextResponse.json(fresh, {
+      headers: {
+        "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1800",
+        "X-Cache": "HIT",
       },
-      {
+    });
+  }
+
+  // 2) stale 캐시가 있으면 즉시 반환 + 백그라운드 갱신
+  const stale = getStaleCache(cacheKey);
+  if (stale) {
+    if (!refreshing.has(cacheKey)) {
+      refreshing.add(cacheKey);
+      fetchWeatherData(nx, ny, base_date, base_time, fcst, sidoName)
+        .then((result) => { if (result) setCache(cacheKey, result); })
+        .catch(() => {})
+        .finally(() => refreshing.delete(cacheKey));
+    }
+    return NextResponse.json(stale, {
+      headers: {
+        "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1800",
+        "X-Cache": "STALE",
+      },
+    });
+  }
+
+  // 3) 캐시 없음 — 느리더라도 무조건 대기해서 데이터 반환
+  try {
+    const result = await fetchWeatherData(nx, ny, base_date, base_time, fcst, sidoName);
+    if (result) {
+      setCache(cacheKey, result);
+      return NextResponse.json(result, {
         headers: {
           "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1800",
+          "X-Cache": "MISS",
         },
-      },
-    );
+      });
+    }
+    return NextResponse.json({ error: "no data from upstream" }, { status: 502 });
   } catch (e) {
     console.error("[weather] fetch failed", e);
     return NextResponse.json({ error: "fetch failed" }, { status: 502 });

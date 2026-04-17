@@ -7,6 +7,7 @@ import {
   GrowthRecordNavIcon,
   GrowthPatternNavIcon,
   AirQualityNavIcon,
+  PhysicalGrowthNavIcon,
 } from "./nav-icons";
 
 export type MenuId =
@@ -16,7 +17,8 @@ export type MenuId =
   | "sleep-golden-time"
   | "growth-record"
   | "growth-pattern"
-  | "air-quality";
+  | "air-quality"
+  | "physical-growth";
 
 export type MenuItem = {
   id: MenuId;
@@ -68,6 +70,12 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
     href: "/air-quality",
     icon: (active, activeColor) => <AirQualityNavIcon active={active} colorOverride={activeColor} />,
   },
+  "physical-growth": {
+    id: "physical-growth",
+    label: "성장",
+    href: "/physical-growth",
+    icon: (active, activeColor) => <PhysicalGrowthNavIcon active={active} colorOverride={activeColor} />,
+  },
 };
 
 export const ALL_MENU_IDS: MenuId[] = [
@@ -78,6 +86,7 @@ export const ALL_MENU_IDS: MenuId[] = [
   "nursing-room",
   "temperament",
   "air-quality",
+  "physical-growth",
 ];
 
 export const HOME_QUICK_MENUS: MenuId[] = [

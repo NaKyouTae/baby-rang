@@ -96,6 +96,23 @@ export function AirQualityNavIcon({ active, colorOverride }: { active: boolean; 
   );
 }
 
+export function PhysicalGrowthNavIcon({ active, colorOverride }: { active: boolean; colorOverride?: string }) {
+  const color = c(active, colorOverride);
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Ruler / height measurement icon */}
+      <path d="M6.25 2.5C5.55964 2.5 5 3.05964 5 3.75V16.25C5 16.9404 5.55964 17.5 6.25 17.5H8.75C9.44036 17.5 10 16.9404 10 16.25V3.75C10 3.05964 9.44036 2.5 8.75 2.5H6.25ZM6.25 3.75H8.75V16.25H6.25V3.75Z" fill={color} />
+      <path d="M6.25 5.625H8.125" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M6.25 8.125H7.5" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M6.25 10.625H8.125" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M6.25 13.125H7.5" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+      {/* Person silhouette */}
+      <circle cx="14.375" cy="5.625" r="1.875" stroke={color} strokeWidth="1.25" />
+      <path d="M11.25 17.5V13.75C11.25 12.3693 12.3693 11.25 13.75 11.25H15C16.3807 11.25 17.5 12.3693 17.5 13.75V17.5" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function TemperamentNavIcon({ active, colorOverride }: { active: boolean; colorOverride?: string }) {
   const color = c(active, colorOverride);
   return (

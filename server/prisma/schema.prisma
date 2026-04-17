@@ -23,6 +23,7 @@ model User {
   navSlots      NavSlot[]
   growthRecords GrowthRecord[]
   growthQuickButtons GrowthQuickButton[]
+  physicalGrowths PhysicalGrowth[]
   ownedShares   ChildShare[]       @relation("ownedShares")
   sharedWith    ChildShareMember[] @relation("sharedWith")
 
@@ -234,6 +235,7 @@ model Child {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments      Payment[]
   growthRecords GrowthRecord[]
+  physicalGrowths PhysicalGrowth[]
   shares        ChildShare[]
 
   @@map("children")
@@ -354,4 +356,23 @@ model ChildShareMember {
 
   @@unique([shareId, userId])
   @@map("child_share_members")
+}
+
+model PhysicalGrowth {
+  id              String   @id @default(uuid())
+  userId          String
+  childId         String
+  measuredAt      DateTime @db.Date
+  heightCm        Float?
+  weightKg        Float?
+  headCircumCm    Float?
+  memo            String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, measuredAt])
+  @@map("physical_growths")
 }

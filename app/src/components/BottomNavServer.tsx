@@ -2,13 +2,15 @@ import { cookies } from "next/headers";
 import BottomNav from "./BottomNav";
 import { MENU_CATALOG, type MenuId } from "./menuCatalog";
 
-const SLOT_COUNT = 3;
-const DEFAULT_SLOTS: (MenuId | null)[] = ["growth-record", "growth-pattern", "wonder-weeks"];
+const SLOT_COUNT = 4;
+const DEFAULT_SLOTS: (MenuId | null)[] = ["growth-record", "growth-pattern", "wonder-weeks", null];
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:18080";
 
 function sanitize(arr: unknown): (MenuId | null)[] {
-  if (!Array.isArray(arr) || arr.length !== SLOT_COUNT) return [...DEFAULT_SLOTS];
-  return arr.map((v) => (typeof v === "string" && v in MENU_CATALOG ? (v as MenuId) : null));
+  if (!Array.isArray(arr)) return [...DEFAULT_SLOTS];
+  const mapped = arr.map((v) => (typeof v === "string" && v in MENU_CATALOG ? (v as MenuId) : null));
+  while (mapped.length < SLOT_COUNT) mapped.push(null);
+  return mapped.slice(0, SLOT_COUNT);
 }
 
 export default async function BottomNavServer() {
