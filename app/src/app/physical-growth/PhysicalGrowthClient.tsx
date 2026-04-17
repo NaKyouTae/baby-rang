@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
 import EmptyChildState from '@/components/EmptyChildState';
+import GrowthChart from './GrowthChart';
+import type { MetricType, Gender } from './growthStandards';
 
 interface PhysicalGrowthRecord {
   id: string;
@@ -15,6 +17,8 @@ interface PhysicalGrowthRecord {
   memo: string | null;
   createdAt: string;
 }
+
+type ViewTab = 'chart' | 'records';
 
 function todayString(): string {
   const d = new Date();
@@ -28,11 +32,27 @@ function formatDate(iso: string): string {
   return `${y}. ${m}. ${dd}`;
 }
 
+const METRIC_TABS: { key: MetricType; label: string }[] = [
+  { key: 'height', label: '키' },
+  { key: 'weight', label: '체중' },
+  { key: 'head', label: '머리둘레' },
+];
+
+function resolveGender(child: Child): Gender {
+  const g = child.gender?.toLowerCase();
+  if (g === 'female' || g === 'f' || g === '여' || g === '여아') return 'female';
+  return 'male';
+}
+
 export default function PhysicalGrowthClient() {
   const { children: childList, isLoaded } = useChildren();
   const [selected, setSelected] = useState<Child | null>(null);
   const [records, setRecords] = useState<PhysicalGrowthRecord[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // 탭 상태
+  const [viewTab, setViewTab] = useState<ViewTab>('chart');
+  const [activeMetric, setActiveMetric] = useState<MetricType>('height');
 
   // 입력 폼
   const [showForm, setShowForm] = useState(false);
@@ -134,6 +154,7 @@ export default function PhysicalGrowthClient() {
     );
     setMemo(record.memo ?? '');
     setShowForm(true);
+    setViewTab('records');
   };
 
   const handleDelete = async (id: string) => {
@@ -181,6 +202,87 @@ export default function PhysicalGrowthClient() {
           </div>
         )}
       </header>
+
+      {/* 성장도표 / 기록 탭 전환 */}
+      <div className="px-5 mt-3">
+        <div className="flex bg-gray-100 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => setViewTab('chart')}
+            className={`flex-1 h-[36px] rounded-lg text-[13px] font-semibold transition-colors ${
+              viewTab === 'chart'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            성장도표
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewTab('records')}
+            className={`flex-1 h-[36px] rounded-lg text-[13px] font-semibold transition-colors ${
+              viewTab === 'records'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500'
+            }`}
+          >
+            기록
+          </button>
+        </div>
+      </div>
+
+      {/* ── 성장도표 탭 ── */}
+      {viewTab === 'chart' && selected && (
+        <div className="px-5 mt-4">
+          {/* 지표 선택 탭 (키/체중/머리둘레) */}
+          <div className="flex gap-2 mb-4">
+            {METRIC_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveMetric(tab.key)}
+                className={`flex-1 h-[32px] rounded-lg text-[13px] font-medium transition-colors ${
+                  activeMetric === tab.key
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 성장 도표 차트 */}
+          <GrowthChart
+            gender={resolveGender(selected)}
+            metric={activeMetric}
+            birthDate={selected.birthDate}
+            records={records}
+          />
+
+          {/* 성장도표 안내 문구 */}
+          <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+            2017 소아청소년 성장도표 기준 (0-36개월: WHO Growth Standards)
+          </p>
+
+          {/* 기록 추가 버튼 */}
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              setShowForm(true);
+              setViewTab('records');
+            }}
+            className="w-full h-[44px] mt-4 rounded-xl bg-primary-500 text-white font-semibold text-[14px] active:opacity-80"
+          >
+            + 성장 기록 추가
+          </button>
+        </div>
+      )}
+
+      {/* ── 기록 탭 ── */}
+      {viewTab === 'records' && (
+        <>
 
       {/* 새 기록 추가 버튼 */}
       {!showForm && (
@@ -401,6 +503,9 @@ export default function PhysicalGrowthClient() {
           ))}
         </div>
       </div>
+
+      </>
+      )}
 
       {/* 삭제 확인 모달 */}
       {deletingId && (

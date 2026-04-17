@@ -21,7 +21,7 @@ export interface NursingRoomReport {
   createdAt: string;
 }
 
-const ROOM_TYPES = ["가족수유실", "모유수유실", "기저귀교환대", "기타"];
+const ROOM_TYPES = ["가족수유실", "모유수유실", "기저귀갈이대", "기타"];
 const FACILITIES = [
   "기저귀교환대",
   "전자레인지",
@@ -247,8 +247,8 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
     <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
       <div
-        className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl flex flex-col"
-        style={{ maxHeight: "90dvh" }}
+        className="relative w-full max-w-[430px] bg-white rounded-t-[24px] shadow-2xl flex flex-col"
+        style={{ maxHeight: "calc(100dvh - 172px)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 지도 피커 오버레이 */}
@@ -312,42 +312,42 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
         )}
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">수유실 제보하기</h2>
+        <div className="flex items-center justify-between px-4 h-[52px] min-h-[52px] shrink-0">
+          <h2 className="text-base font-medium text-black">수유실 제보하기</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center text-gray-400"
+            className="flex items-center justify-center"
             aria-label="닫기"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M18 6L6 18M6 6l12 12" />
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 5L5 15M5 5l10 10" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
 
         {/* 내용 (스크롤) */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
           <Field label="수유실 이름" required>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="예: ○○백화점 본점 수유실"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
+              className="w-full px-3 py-2.5 rounded-[4px] border border-gray-200 text-sm focus:outline-none focus:border-gray-900 placeholder:text-gray-400 placeholder:font-normal placeholder:text-sm"
             />
           </Field>
 
-          <Field label="종류">
+          <Field label="종류" required>
             <div className="flex flex-wrap gap-2">
               {ROOM_TYPES.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setForm({ ...form, type: t })}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                  className={`px-3 h-7 rounded-[20px] text-xs border ${
                     form.type === t
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "bg-white text-gray-600 border-gray-200"
+                      ? "bg-primary-500 text-white font-medium border-primary-500"
+                      : "bg-white text-gray-400 font-normal border-gray-200"
                   }`}
                 >
                   {t}
@@ -356,18 +356,18 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
             </div>
           </Field>
 
-          <Field label="주소 검색" required>
+          <Field label="주소" required>
             <button
               type="button"
               onClick={openPostcode}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-left flex items-center gap-2 hover:border-gray-900"
+              className="w-full px-3 py-2.5 rounded-[4px] border border-gray-200 text-sm text-left flex items-center gap-2 hover:border-gray-900"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.3-4.3" />
               </svg>
-              <span className={form.roadAddress ? "text-gray-900" : "text-gray-400"}>
-                {form.roadAddress || "클릭하여 주소 검색"}
+              <span className={form.roadAddress ? "text-gray-900 text-sm" : "text-gray-400 font-normal text-sm"}>
+                {form.roadAddress || "주소 검색"}
               </span>
             </button>
             {resolving && (
@@ -380,7 +380,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className="mt-2 w-full px-3 py-2.5 rounded-xl border border-gray-900 bg-gray-100 text-gray-900 text-sm font-medium flex items-center justify-center gap-1.5"
+                className="mt-2 w-full px-3 py-2.5 rounded-[4px] border border-gray-900 bg-gray-100 text-gray-900 text-sm font-medium flex items-center justify-center gap-1.5"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
@@ -396,34 +396,9 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               type="text"
               value={form.detailLocation}
               onChange={(e) => setForm({ ...form, detailLocation: e.target.value })}
-              placeholder="예: 103동 1층 로비 / 본관 3층 화장실 옆"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
+              placeholder="본점 4층 여자화장실 옆, 103동 1층 로비 등"
+              className="w-full px-3 py-2.5 rounded-[4px] border border-gray-200 text-sm focus:outline-none focus:border-gray-900 placeholder:text-gray-400 placeholder:font-normal placeholder:text-sm"
             />
-            <p className="mt-1 text-[11px] text-gray-400">
-              동·호수, 층, 건물 내 위치를 적어주세요. 지도의 좌표는 건물 기준으로 표시돼요.
-            </p>
-          </Field>
-
-          <Field label="연락처">
-            <input
-              type="tel"
-              value={form.tel}
-              onChange={(e) => setForm({ ...form, tel: e.target.value })}
-              placeholder="02-1234-5678"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
-            />
-          </Field>
-
-          <Field label="아빠 이용 가능">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.dadAvailable}
-                onChange={(e) => setForm({ ...form, dadAvailable: e.target.checked })}
-                className="w-5 h-5 rounded accent-gray-900"
-              />
-              <span className="text-sm text-gray-700">아빠도 함께 이용할 수 있어요</span>
-            </label>
           </Field>
 
           <Field label="편의시설">
@@ -435,13 +410,12 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
                     key={f}
                     type="button"
                     onClick={() => toggleFacility(f)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
+                    className={`px-3 h-7 rounded-[20px] text-xs border ${
                       on
-                        ? "bg-gray-100 text-gray-900 border-gray-400"
-                        : "bg-white text-gray-600 border-gray-200"
+                        ? "bg-primary-500 text-white font-medium border-primary-500"
+                        : "bg-white text-gray-400 font-normal border-gray-200"
                     }`}
                   >
-                    {on ? "✓ " : ""}
                     {f}
                   </button>
                 );
@@ -454,18 +428,18 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
               type="text"
               value={form.openHours}
               onChange={(e) => setForm({ ...form, openHours: e.target.value })}
-              placeholder="예: 평일 10:00 ~ 20:00"
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900"
+              placeholder="평일 10:00 ~ 20:00 등"
+              className="w-full px-3 py-2.5 rounded-[4px] border border-gray-200 text-sm focus:outline-none focus:border-gray-900 placeholder:text-gray-400 placeholder:font-normal placeholder:text-sm"
             />
           </Field>
 
-          <Field label="추가 설명">
-            <textarea
+          <Field label="기타">
+            <input
+              type="text"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="청결도, 분위기, 주의사항 등을 자유롭게 적어주세요"
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-gray-900 resize-none"
+              className="w-full px-3 py-2.5 rounded-[4px] border border-gray-200 text-sm focus:outline-none focus:border-gray-900 placeholder:text-gray-400 placeholder:font-normal placeholder:text-sm"
             />
           </Field>
 
@@ -473,13 +447,13 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
 
         {/* 푸터 */}
         <div
-          className="px-5 pt-3 border-t border-gray-100"
-          style={{ paddingBottom: "calc(var(--safe-area-bottom) + 12px)" }}
+          className="px-4 pt-0"
+          style={{ paddingBottom: "calc(var(--safe-area-bottom) + 16px)" }}
         >
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="w-full py-3.5 rounded-2xl bg-primary-500 text-white font-semibold text-sm disabled:bg-gray-200 disabled:text-gray-400"
+            className="w-full h-12 rounded-[4px] bg-primary-500 text-white font-semibold text-base disabled:bg-gray-200 disabled:text-gray-400"
           >
             제보하기
           </button>
@@ -500,9 +474,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1.5">
+      <label className="block text-xs font-medium text-gray-500 mb-2">
         {label}
-        {required && <span className="text-gray-900 ml-0.5">*</span>}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
     </div>
