@@ -62,16 +62,15 @@ function getSkyLabel(sky: string, pty: string) {
   return "맑음";
 }
 
-function getSkyEmoji(sky: string, pty: string) {
+function getSkyIcon(sky: string, pty: string): string {
   const p = Number(pty);
-  if (p === 1 || p === 5) return "🌧️";
-  if (p === 2 || p === 6) return "🌨️";
-  if (p === 3 || p === 7) return "❄️";
+  if (p === 1 || p === 5) return "/rain-cloud.svg";
+  if (p === 2 || p === 6) return "/rain-snow.svg";
+  if (p === 3 || p === 7) return "/snow.svg";
   const s = Number(sky);
-  if (s === 1) return "☀️";
-  if (s === 3) return "⛅";
-  if (s === 4) return "☁️";
-  return "☀️";
+  if (s === 3) return "/sun-cloud.svg";
+  if (s === 4) return "/cloud.svg";
+  return "/sun.svg";
 }
 
 function getOutdoorAdvice(pm10Grade: string | null, pm25Grade: string | null) {
@@ -183,9 +182,8 @@ export default function AirQualityClient() {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-[48px] leading-none">
-                  {getSkyEmoji(weather.sky, weather.pty)}
-                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={getSkyIcon(weather.sky, weather.pty)} alt="" width={48} height={48} />
                 <div>
                   <p className="text-[32px] font-bold text-app-black leading-tight">
                     {weather.temperature ?? "-"}°

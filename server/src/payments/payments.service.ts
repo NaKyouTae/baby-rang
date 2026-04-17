@@ -76,7 +76,9 @@ export class PaymentsService {
   ) {
     const payment = await this.findOwned(userId, orderId);
     if (payment.status !== PaymentStatus.PENDING) {
-      throw new ConflictException(`현재 상태(${payment.status})에서 승인할 수 없습니다.`);
+      throw new ConflictException(
+        `현재 상태(${payment.status})에서 승인할 수 없습니다.`,
+      );
     }
     if (payment.amount !== amount) {
       throw new BadRequestException('결제 금액이 일치하지 않습니다.');
@@ -84,19 +86,24 @@ export class PaymentsService {
 
     const secretKey = process.env.TOSS_SECRET_KEY;
     if (!secretKey) {
-      throw new BadRequestException('TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.');
+      throw new BadRequestException(
+        'TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.',
+      );
     }
 
     const auth = Buffer.from(`${secretKey}:`).toString('base64');
-    const tossRes = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': orderId,
+    const tossRes = await fetch(
+      'https://api.tosspayments.com/v1/payments/confirm',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': orderId,
+        },
+        body: JSON.stringify({ paymentKey, orderId, amount }),
       },
-      body: JSON.stringify({ paymentKey, orderId, amount }),
-    });
+    );
     const tossJson: any = await tossRes.json();
 
     if (!tossRes.ok) {
@@ -124,7 +131,9 @@ export class PaymentsService {
   async confirm(userId: string, orderId: string, dto: ConfirmPaymentDto) {
     const payment = await this.findOwned(userId, orderId);
     if (payment.status !== PaymentStatus.PENDING) {
-      throw new ConflictException(`현재 상태(${payment.status})에서 승인할 수 없습니다.`);
+      throw new ConflictException(
+        `현재 상태(${payment.status})에서 승인할 수 없습니다.`,
+      );
     }
 
     return this.prisma.payment.update({
@@ -183,7 +192,9 @@ export class PaymentsService {
     orderId: string,
     dto: { reason: string; amount?: number },
   ) {
-    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId },
+    });
     if (!payment) throw new NotFoundException('결제 내역을 찾을 수 없습니다.');
 
     if (
@@ -195,7 +206,9 @@ export class PaymentsService {
       );
     }
     if (!payment.paymentKey) {
-      throw new BadRequestException('Toss paymentKey가 없어 환불할 수 없습니다.');
+      throw new BadRequestException(
+        'Toss paymentKey가 없어 환불할 수 없습니다.',
+      );
     }
     if (!dto.reason || !dto.reason.trim()) {
       throw new BadRequestException('환불 사유가 필요합니다.');
@@ -208,7 +221,9 @@ export class PaymentsService {
 
     const secretKey = process.env.TOSS_SECRET_KEY;
     if (!secretKey) {
-      throw new BadRequestException('TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.');
+      throw new BadRequestException(
+        'TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.',
+      );
     }
 
     const auth = Buffer.from(`${secretKey}:`).toString('base64');
@@ -277,12 +292,16 @@ export class PaymentsService {
       payment.status !== PaymentStatus.PAID &&
       payment.status !== PaymentStatus.PARTIAL_REFUNDED
     ) {
-      throw new ConflictException(`현재 상태(${payment.status})에서 취소할 수 없습니다.`);
+      throw new ConflictException(
+        `현재 상태(${payment.status})에서 취소할 수 없습니다.`,
+      );
     }
 
     const cancelAmount = dto.amount ?? payment.amount;
     const isFull = cancelAmount >= payment.amount;
-    const nextStatus = isFull ? PaymentStatus.REFUNDED : PaymentStatus.PARTIAL_REFUNDED;
+    const nextStatus = isFull
+      ? PaymentStatus.REFUNDED
+      : PaymentStatus.PARTIAL_REFUNDED;
 
     return this.prisma.payment.update({
       where: { id: payment.id },
@@ -337,7 +356,9 @@ export class PaymentsService {
   }
 
   private async findOwned(userId: string, orderId: string) {
-    const payment = await this.prisma.payment.findUnique({ where: { orderId } });
+    const payment = await this.prisma.payment.findUnique({
+      where: { orderId },
+    });
     if (!payment || payment.userId !== userId) {
       throw new NotFoundException('결제 내역을 찾을 수 없습니다.');
     }

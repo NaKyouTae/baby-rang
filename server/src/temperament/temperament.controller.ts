@@ -11,11 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AgeGroup } from '@prisma/client';
-import {
-  CreateSubmissionDto,
-  SubmitAnswersDto,
-  UnlockResultDto,
-} from './dto';
+import { CreateSubmissionDto, SubmitAnswersDto, UnlockResultDto } from './dto';
 import { TemperamentService } from './temperament.service';
 
 const VALID_AGE_GROUPS: AgeGroup[] = ['newborn', 'before_first', 'after_first'];
@@ -79,7 +75,10 @@ export class TemperamentController {
     @Query('limit') limitStr?: string,
   ) {
     const page = Math.max(1, parseInt(pageStr ?? '1', 10) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(limitStr ?? '10', 10) || 10));
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(limitStr ?? '10', 10) || 10),
+    );
     return this.service.getHistory(req.user.id, page, limit);
   }
 }

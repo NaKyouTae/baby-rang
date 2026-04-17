@@ -155,8 +155,8 @@ export class AdminController {
   // ===== Users =====
   @Get('users')
   async users(@Query('page') page = '1', @Query('limit') limit = '20') {
-    const p = Math.max(1, parseInt(page as string, 10) || 1);
-    const l = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
         orderBy: { createdAt: 'desc' },
@@ -187,8 +187,8 @@ export class AdminController {
     @Query('limit') limit = '20',
     @Query('status') status?: string,
   ) {
-    const p = Math.max(1, parseInt(page as string, 10) || 1);
-    const l = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const where = status ? { status: status as any } : {};
     const [items, total] = await Promise.all([
       this.prisma.payment.findMany({
@@ -196,7 +196,9 @@ export class AdminController {
         orderBy: { createdAt: 'desc' },
         skip: (p - 1) * l,
         take: l,
-        include: { user: { select: { id: true, nickname: true, email: true } } },
+        include: {
+          user: { select: { id: true, nickname: true, email: true } },
+        },
       }),
       this.prisma.payment.count({ where }),
     ]);
@@ -298,9 +300,13 @@ export class AdminController {
         ...(body.title !== undefined && { title: body.title }),
         ...(body.content !== undefined && { content: body.content }),
         ...(body.isPinned !== undefined && { isPinned: body.isPinned }),
-        ...(body.isPublished !== undefined && { isPublished: body.isPublished }),
+        ...(body.isPublished !== undefined && {
+          isPublished: body.isPublished,
+        }),
         ...(body.publishedAt !== undefined && {
-          publishedAt: body.publishedAt ? new Date(body.publishedAt) : new Date(),
+          publishedAt: body.publishedAt
+            ? new Date(body.publishedAt)
+            : new Date(),
         }),
       },
     });
@@ -355,14 +361,22 @@ export class AdminController {
         ...(body.type !== undefined && { type: body.type }),
         ...(body.sido !== undefined && { sido: body.sido }),
         ...(body.sigungu !== undefined && { sigungu: body.sigungu }),
-        ...(body.roadAddress !== undefined && { roadAddress: body.roadAddress }),
-        ...(body.detailLocation !== undefined && { detailLocation: body.detailLocation }),
+        ...(body.roadAddress !== undefined && {
+          roadAddress: body.roadAddress,
+        }),
+        ...(body.detailLocation !== undefined && {
+          detailLocation: body.detailLocation,
+        }),
         ...(body.tel !== undefined && { tel: body.tel }),
-        ...(body.dadAvailable !== undefined && { dadAvailable: body.dadAvailable }),
+        ...(body.dadAvailable !== undefined && {
+          dadAvailable: body.dadAvailable,
+        }),
         ...(body.facilities !== undefined && { facilities: body.facilities }),
         ...(body.openHours !== undefined && { openHours: body.openHours }),
         ...(body.notes !== undefined && { notes: body.notes }),
-        ...(body.reporterName !== undefined && { reporterName: body.reporterName }),
+        ...(body.reporterName !== undefined && {
+          reporterName: body.reporterName,
+        }),
         ...(body.lat !== undefined && { lat: body.lat }),
         ...(body.lng !== undefined && { lng: body.lng }),
         ...(body.status !== undefined && { status: body.status }),

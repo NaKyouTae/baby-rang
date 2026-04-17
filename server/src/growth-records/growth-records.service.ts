@@ -96,12 +96,7 @@ export class GrowthRecordsService {
     return { date: `${y}-${m}-${d}` };
   }
 
-  async findByRange(
-    userId: string,
-    childId: string,
-    from: string,
-    to: string,
-  ) {
+  async findByRange(userId: string, childId: string, from: string, to: string) {
     await this.assertChildAccess(userId, childId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
       throw new BadRequestException('from/to must be YYYY-MM-DD');
@@ -137,9 +132,13 @@ export class GrowthRecordsService {
     });
   }
 
-  private mergedExistingUrls(existing: { imageUrl: string | null; imageUrls: string[] }): string[] {
+  private mergedExistingUrls(existing: {
+    imageUrl: string | null;
+    imageUrls: string[];
+  }): string[] {
     const urls = [...(existing.imageUrls ?? [])];
-    if (existing.imageUrl && !urls.includes(existing.imageUrl)) urls.unshift(existing.imageUrl);
+    if (existing.imageUrl && !urls.includes(existing.imageUrl))
+      urls.unshift(existing.imageUrl);
     return urls;
   }
 
@@ -188,16 +187,20 @@ export class GrowthRecordsService {
     await this.assertChildAccess(userId, existing.childId);
 
     let nextUrls: string[] | undefined = undefined;
-    const hasImagePayload = files !== undefined || keepImageUrlsRaw !== undefined;
+    const hasImagePayload =
+      files !== undefined || keepImageUrlsRaw !== undefined;
 
     if (hasImagePayload) {
       let keepUrls: string[] = [];
       if (keepImageUrlsRaw) {
         try {
           const parsed = JSON.parse(keepImageUrlsRaw);
-          if (Array.isArray(parsed)) keepUrls = parsed.filter((s) => typeof s === 'string');
+          if (Array.isArray(parsed))
+            keepUrls = parsed.filter((s) => typeof s === 'string');
         } catch {
-          throw new BadRequestException('keepImageUrls must be JSON array of strings');
+          throw new BadRequestException(
+            'keepImageUrls must be JSON array of strings',
+          );
         }
       }
 

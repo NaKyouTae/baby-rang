@@ -1,5 +1,8 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import { CreateNursingRoomReportDto, NursingRoomsService } from './nursing-rooms.service';
+import {
+  CreateNursingRoomReportDto,
+  NursingRoomsService,
+} from './nursing-rooms.service';
 
 @Controller('nursing-rooms')
 export class NursingRoomsController {

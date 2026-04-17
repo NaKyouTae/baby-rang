@@ -19,7 +19,14 @@
       "Bash(lsof -iTCP:5432 -sTCP:LISTEN)",
       "Bash(lsof -iTCP:5433 -sTCP:LISTEN)",
       "Read(//opt/homebrew/var/**)",
-      "Bash(npx dotenv *)"
+      "Bash(npx dotenv *)",
+      "Bash(git config *)",
+      "Bash(npx eslint *)",
+      "Bash(git reset *)",
+      "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/temperament/scoring.ts)",
+      "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/)",
+      "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/admin/admin.guard.ts)",
+      "Bash(grep -B1 \"The \\\\`Function\\\\` type\")"
     ],
     "additionalDirectories": [
       "/tmp",

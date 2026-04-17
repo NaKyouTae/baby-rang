@@ -82,16 +82,17 @@ export const ALL_MENU_IDS: MenuId[] = [
   "growth-record",
   "growth-pattern",
   "wonder-weeks",
+  "physical-growth",
   "sleep-golden-time",
   "nursing-room",
   "temperament",
   "air-quality",
-  "physical-growth",
 ];
 
 export const HOME_QUICK_MENUS: MenuId[] = [
   "growth-record",
   "growth-pattern",
+  "physical-growth",
   "nursing-room",
   "wonder-weeks",
   "sleep-golden-time",

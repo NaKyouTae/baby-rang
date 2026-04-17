@@ -1,0 +1,9 @@
+export NVM_DIR="$HOME/.nvm"
+. "$NVM_DIR/nvm.sh"
+nvm use
+
+# pnpm 경로 추가
+export PATH="$HOME/Library/pnpm:$PATH"
+
+# 변경 파일만 ESLint 검사
+pnpm lint-staged || exit 1

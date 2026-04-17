@@ -33,7 +33,13 @@ export class SharesService {
     // 이미 공유 코드가 있는지 확인
     const existing = await this.prisma.childShare.findUnique({
       where: { childId_ownerId: { childId, ownerId } },
-      include: { members: { include: { user: { select: { id: true, nickname: true, profileImage: true } } } } },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, nickname: true, profileImage: true } },
+          },
+        },
+      },
     });
     if (existing) return existing;
 
@@ -47,7 +53,13 @@ export class SharesService {
 
     return this.prisma.childShare.create({
       data: { childId, ownerId, code },
-      include: { members: { include: { user: { select: { id: true, nickname: true, profileImage: true } } } } },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, nickname: true, profileImage: true } },
+          },
+        },
+      },
     });
   }
 
@@ -56,8 +68,20 @@ export class SharesService {
     return this.prisma.childShare.findMany({
       where: { ownerId },
       include: {
-        child: { select: { id: true, name: true, gender: true, birthDate: true, profileImage: true } },
-        members: { include: { user: { select: { id: true, nickname: true, profileImage: true } } } },
+        child: {
+          select: {
+            id: true,
+            name: true,
+            gender: true,
+            birthDate: true,
+            profileImage: true,
+          },
+        },
+        members: {
+          include: {
+            user: { select: { id: true, nickname: true, profileImage: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -70,7 +94,15 @@ export class SharesService {
       include: {
         share: {
           include: {
-            child: { select: { id: true, name: true, gender: true, birthDate: true, profileImage: true } },
+            child: {
+              select: {
+                id: true,
+                name: true,
+                gender: true,
+                birthDate: true,
+                profileImage: true,
+              },
+            },
             owner: { select: { id: true, nickname: true, profileImage: true } },
           },
         },
@@ -84,7 +116,9 @@ export class SharesService {
   async join(userId: string, code: string) {
     const share = await this.prisma.childShare.findUnique({
       where: { code: code.toUpperCase() },
-      include: { child: { select: { id: true, name: true, profileImage: true } } },
+      include: {
+        child: { select: { id: true, name: true, profileImage: true } },
+      },
     });
     if (!share || !share.isActive) {
       throw new NotFoundException('유효하지 않은 공유 코드입니다.');

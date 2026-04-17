@@ -25,34 +25,21 @@ const GRADE_COLOR: Record<string, string> = {
   "3": "#F97316",
   "4": "#EF4444",
 };
-const SKY_ICON: Record<string, string> = {
-  clear: "/sun.svg",
-};
-
 function gradeLabel(grade: string | null) {
   return grade ? GRADE_LABEL[grade] ?? "-" : "-";
 }
 function gradeColor(grade: string | null) {
   return grade ? GRADE_COLOR[grade] ?? "#808991" : "#808991";
 }
-function getSkyIcon(sky: string, pty: string): string | null {
+function getSkyIcon(sky: string, pty: string): string {
   const p = Number(pty);
-  if (p >= 1) return null; // rain/snow → use emoji
+  if (p === 1 || p === 5) return "/rain-cloud.svg";
+  if (p === 2 || p === 6) return "/rain-snow.svg";
+  if (p === 3 || p === 7) return "/snow.svg";
   const s = Number(sky);
-  if (s === 1) return SKY_ICON.clear;
-  return null;
-}
-
-function getSkyEmoji(sky: string, pty: string) {
-  const p = Number(pty);
-  if (p === 1 || p === 5) return "🌧️";
-  if (p === 2 || p === 6) return "🌨️";
-  if (p === 3 || p === 7) return "❄️";
-  const s = Number(sky);
-  if (s === 1) return "☀️";
-  if (s === 3) return "⛅";
-  if (s === 4) return "☁️";
-  return "☀️";
+  if (s === 3) return "/sun-cloud.svg";
+  if (s === 4) return "/cloud.svg";
+  return "/sun.svg";
 }
 
 function getSkyLabel(sky: string, pty: string) {
@@ -124,13 +111,9 @@ export default function HomeWeatherStrip() {
           <div className="flex items-center gap-2.5 shrink-0">
             {loading ? (
               <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" />
-            ) : getSkyIcon(weather!.sky, weather!.pty) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={getSkyIcon(weather!.sky, weather!.pty)!} alt="" width={36} height={36} />
             ) : (
-              <span className="text-[36px] leading-none">
-                {getSkyEmoji(weather!.sky, weather!.pty)}
-              </span>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={getSkyIcon(weather!.sky, weather!.pty)} alt="" width={36} height={36} />
             )}
             <div>
               {loading ? (

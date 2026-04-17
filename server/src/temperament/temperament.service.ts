@@ -42,11 +42,7 @@ const PREVIEW_FOCUS: Record<PrimaryType, string | null> = {
   concentrator: 'persistence',
   balanced: null,
 };
-import {
-  CreateSubmissionDto,
-  SubmitAnswersDto,
-  UnlockResultDto,
-} from './dto';
+import { CreateSubmissionDto, SubmitAnswersDto, UnlockResultDto } from './dto';
 
 @Injectable()
 export class TemperamentService {
@@ -131,7 +127,8 @@ export class TemperamentService {
     const submission = await this.prisma.temperamentSubmission.findUnique({
       where: { id: submissionId },
     });
-    if (!submission) throw new NotFoundException('제출 정보를 찾을 수 없습니다.');
+    if (!submission)
+      throw new NotFoundException('제출 정보를 찾을 수 없습니다.');
     if (submission.userId !== userId) throw new ForbiddenException();
 
     const questionMap = getQuestionMap(submission.ageGroup);
@@ -287,11 +284,7 @@ export class TemperamentService {
     };
   }
 
-  async getHistory(
-    userId: string,
-    page: number,
-    limit: number,
-  ) {
+  async getHistory(userId: string, page: number, limit: number) {
     const where = {
       userId,
       status: SubmissionStatus.COMPLETED,

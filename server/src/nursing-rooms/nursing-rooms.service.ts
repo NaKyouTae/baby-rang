@@ -27,7 +27,9 @@ export class NursingRoomsService {
     const sido = dto.sido?.trim();
     const roadAddress = dto.roadAddress?.trim();
     if (!name || !sido || !roadAddress) {
-      throw new BadRequestException('이름, 광역시/도, 도로명 주소는 필수입니다.');
+      throw new BadRequestException(
+        '이름, 광역시/도, 도로명 주소는 필수입니다.',
+      );
     }
 
     return this.prisma.nursingRoomReport.create({
@@ -94,7 +96,8 @@ export class NursingRoomsService {
       const roadAddress = road?.address_name || '';
       const jibunAddress = jibun?.address_name || '';
       const sido = road?.region_1depth_name || jibun?.region_1depth_name || '';
-      const sigungu = road?.region_2depth_name || jibun?.region_2depth_name || '';
+      const sigungu =
+        road?.region_2depth_name || jibun?.region_2depth_name || '';
       return {
         roadAddress: roadAddress || jibunAddress,
         jibunAddress,

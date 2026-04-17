@@ -1,0 +1,16 @@
+export NVM_DIR="$HOME/.nvm"
+. "$NVM_DIR/nvm.sh"
+nvm use
+
+# pnpm 경로 추가
+export PATH="$HOME/Library/pnpm:$PATH"
+
+# TypeScript 타입 체크 (각 워크스페이스)
+for tsconfig in $(find . -name "tsconfig.json" -not -path "./node_modules/*" -not -path "./.next/*" -not -path "./dist/*" -maxdepth 3); do
+    echo "Type checking: $tsconfig"
+    npx tsc -p "$tsconfig" --noEmit || exit 1
+done
+
+# 전역 ESLint (app + server)
+pnpm --filter app lint || exit 1
+pnpm --filter server lint || exit 1

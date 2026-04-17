@@ -37,7 +37,9 @@ export class NavSlotsService {
 
   private validateSlots(slots: unknown): SlotsArray {
     if (!Array.isArray(slots) || slots.length !== SLOT_COUNT) {
-      throw new BadRequestException(`slots must be an array of length ${SLOT_COUNT}`);
+      throw new BadRequestException(
+        `slots must be an array of length ${SLOT_COUNT}`,
+      );
     }
     const seen = new Set<string>();
     return slots.map((v) => {
@@ -62,7 +64,10 @@ export class NavSlotsService {
           .map((menuId, position) =>
             menuId ? { userId, position, menuId } : null,
           )
-          .filter((x): x is { userId: string; position: number; menuId: string } => x !== null),
+          .filter(
+            (x): x is { userId: string; position: number; menuId: string } =>
+              x !== null,
+          ),
       }),
     ]);
     return slots;
@@ -77,7 +82,9 @@ export class NavSlotsService {
       to < 0 ||
       to >= SLOT_COUNT
     ) {
-      throw new BadRequestException('from/to must be integers within [0, slot_count)');
+      throw new BadRequestException(
+        'from/to must be integers within [0, slot_count)',
+      );
     }
     if (from === to) return this.findAll(userId);
 

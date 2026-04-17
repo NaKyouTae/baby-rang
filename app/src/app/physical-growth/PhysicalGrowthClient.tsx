@@ -29,7 +29,7 @@ function formatDate(iso: string): string {
 }
 
 export default function PhysicalGrowthClient() {
-  const { children, isLoaded } = useChildren();
+  const { children: childList, isLoaded } = useChildren();
   const [selected, setSelected] = useState<Child | null>(null);
   const [records, setRecords] = useState<PhysicalGrowthRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,10 +50,10 @@ export default function PhysicalGrowthClient() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoaded && children.length > 0 && !selected) {
-      setSelected(children[0]);
+    if (isLoaded && childList.length > 0 && !selected) {
+      setSelected(childList[0]);
     }
-  }, [isLoaded, children, selected]);
+  }, [isLoaded, childList, selected]);
 
   const fetchRecords = useCallback(async () => {
     if (!selected) return;
@@ -146,7 +146,7 @@ export default function PhysicalGrowthClient() {
     }
   };
 
-  if (isLoaded && children.length === 0) {
+  if (isLoaded && childList.length === 0) {
     return (
       <EmptyChildState
         emoji="📏"
@@ -171,10 +171,10 @@ export default function PhysicalGrowthClient() {
         <div className="flex items-center justify-between px-5 h-[56px]">
           <h1 className="text-[18px] font-bold text-gray-900">성장 측정</h1>
         </div>
-        {children.length > 0 && selected && (
+        {childList.length > 0 && selected && (
           <div className="px-5 pb-3">
             <ChildSelector
-              children={children}
+              children={childList}
               selected={selected}
               onSelect={setSelected}
             />

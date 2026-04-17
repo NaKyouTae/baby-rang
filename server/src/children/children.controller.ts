@@ -34,7 +34,13 @@ export class ChildrenController {
     @Body('birthDate') birthDate: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.childrenService.create(req.user.id, name, gender, birthDate, file);
+    return this.childrenService.create(
+      req.user.id,
+      name,
+      gender,
+      birthDate,
+      file,
+    );
   }
 
   @Put(':id')
@@ -47,7 +53,14 @@ export class ChildrenController {
     @Body('birthDate') birthDate: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.childrenService.update(req.user.id, id, name, gender, birthDate, file);
+    return this.childrenService.update(
+      req.user.id,
+      id,
+      name,
+      gender,
+      birthDate,
+      file,
+    );
   }
 
   @Delete(':id')

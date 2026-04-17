@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
@@ -96,7 +100,9 @@ export class AuthService {
 
     const adminKey = this.configService.get<string>('KAKAO_ADMIN_KEY');
     if (!adminKey) {
-      throw new InternalServerErrorException('KAKAO_ADMIN_KEY is not configured');
+      throw new InternalServerErrorException(
+        'KAKAO_ADMIN_KEY is not configured',
+      );
     }
 
     const body = new URLSearchParams({

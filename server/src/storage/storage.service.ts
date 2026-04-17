@@ -28,10 +28,7 @@ export class StorageService {
     });
   }
 
-  async upload(
-    file: Express.Multer.File,
-    folder: string,
-  ): Promise<string> {
+  async upload(file: Express.Multer.File, folder: string): Promise<string> {
     const ext = file.originalname.split('.').pop() || 'jpg';
     const key = `${folder}/${randomUUID()}.${ext}`;
 
