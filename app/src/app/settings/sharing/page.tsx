@@ -81,7 +81,7 @@ export default function SharingPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // 내 아이 중 아직 공유 코드가 없는 아이들
-  const ownChildren = children.filter((c) => !('isShared' in c && (c as any).isShared));
+  const ownChildren = children.filter((c) => !('isShared' in c && (c as unknown as Record<string, boolean>).isShared));
   const unsharedChildren = ownChildren.filter(
     (c) => !ownedShares.some((s) => s.childId === c.id)
   );

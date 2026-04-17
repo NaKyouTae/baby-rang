@@ -26,7 +26,13 @@
       "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/temperament/scoring.ts)",
       "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/)",
       "Bash(server/node_modules/.bin/eslint --no-error-on-unmatched-pattern --config server/eslint.config.mjs server/src/admin/admin.guard.ts)",
-      "Bash(grep -B1 \"The \\\\`Function\\\\` type\")"
+      "Bash(grep -B1 \"The \\\\`Function\\\\` type\")",
+      "WebFetch(domain:devtalk.kakao.com)",
+      "Bash(pnpm --filter app lint)",
+      "Bash(grep -v \"^--$\\\\|ERR_PNPM\\\\|Exit\\\\|problems\\\\|fixable\")",
+      "Bash(pnpm --filter server lint)",
+      "Bash(pnpm --filter app exec tsc --noEmit)",
+      "Bash(pnpm --filter server exec tsc --noEmit)"
     ],
     "additionalDirectories": [
       "/tmp",

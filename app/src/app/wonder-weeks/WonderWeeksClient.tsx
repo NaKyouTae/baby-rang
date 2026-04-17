@@ -31,7 +31,7 @@ function WonderWeeksContent() {
     if (childIdParam) {
       const matched = children.find((c) => c.id === childIdParam);
       if (matched) {
-        setSelectedChild(matched);
+        setSelectedChild(matched); // eslint-disable-line react-hooks/set-state-in-effect -- auto-select child on mount
         return;
       }
     }

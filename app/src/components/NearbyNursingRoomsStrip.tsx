@@ -7,6 +7,15 @@ import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
 
+interface NursingRoomRaw {
+  name: string;
+  address?: string;
+  roadAddress?: string;
+  detailLocation?: string;
+  lat: number;
+  lng: number;
+}
+
 interface NursingRoom {
   name: string;
   address: string;
@@ -55,7 +64,7 @@ export default function NearbyNursingRoomsStrip() {
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.permissions) {
-      requestLocation();
+      requestLocation(); // eslint-disable-line react-hooks/set-state-in-effect -- geolocation API read
       return;
     }
     // WKWebView에서는 앱이 위치를 허용해도 permissions API가 "prompt"를 반환할 수 있으므로
@@ -75,14 +84,14 @@ export default function NearbyNursingRoomsStrip() {
     (async () => {
       try {
         const [reportedData, publicData] = await Promise.all([
-          cachedFetch<{ rooms?: any[] }>("/api/nursing-rooms", TTL).catch(() => ({ rooms: [] })),
-          cachedFetch<{ rooms?: any[] }>("/api/nursing-rooms/public", TTL).catch(() => ({ rooms: [] })),
+          cachedFetch<{ rooms?: NursingRoomRaw[] }>("/api/nursing-rooms", TTL).catch(() => ({ rooms: [] })),
+          cachedFetch<{ rooms?: NursingRoomRaw[] }>("/api/nursing-rooms/public", TTL).catch(() => ({ rooms: [] })),
         ]);
 
-        const parse = (data: { rooms?: any[] }): NursingRoom[] =>
+        const parse = (data: { rooms?: NursingRoomRaw[] }): NursingRoom[] =>
           (data.rooms ?? [])
-            .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
-            .map((r: any) => ({
+            .filter((r) => typeof r.lat === "number" && typeof r.lng === "number")
+            .map((r) => ({
               name: r.name,
               address: r.address ?? [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
               lat: r.lat,

@@ -38,7 +38,7 @@ export function setChildrenCache(children: ChildData[]) {
 
 // --- Generic fetch cache ---
 // URL 기반의 단순 메모리 캐시. 같은 URL에 대해 TTL 내 재요청을 방지한다.
-const fetchCache = new Map<string, { data: any; ts: number }>();
+const fetchCache = new Map<string, { data: unknown; ts: number }>();
 const DEFAULT_TTL = 60_000; // 1분
 
 export async function cachedFetch<T>(url: string, ttl = DEFAULT_TTL): Promise<T> {

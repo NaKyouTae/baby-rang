@@ -11,6 +11,11 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 
+interface NativeBridgeWindow {
+  webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
+  Android?: { openLocationSettings?: () => void };
+}
+
 const MENU_ITEMS: Array<{ label: string; href: string; icon: React.ReactNode; requireAuth?: boolean }> = [
   {
     label: "기록 공유",
@@ -124,7 +129,7 @@ export default function SettingsPage() {
   }, []);
 
   const handleLocationClick = () => {
-    const w = window as any;
+    const w = window as unknown as NativeBridgeWindow;
     const isNativeApp = !!(w.webkit?.messageHandlers?.openSettings || w.Android?.openLocationSettings);
 
     if (!isNativeApp) {

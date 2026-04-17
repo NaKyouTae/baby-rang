@@ -39,7 +39,7 @@ export function usePlatform(): Platform {
     const ua = window.navigator.userAgent || "";
     const hasUaFlag = /BabyrangApp\//i.test(ua);
 
-    setPlatform(hasBridge || hasUaFlag ? "app" : "web");
+    setPlatform(hasBridge || hasUaFlag ? "app" : "web"); // eslint-disable-line react-hooks/set-state-in-effect -- reading browser APIs on mount
   }, []);
 
   return platform;

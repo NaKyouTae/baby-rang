@@ -21,13 +21,13 @@ export type AuthUser = {
 
 import { toKstYmd } from '@/lib/childAge';
 
-function normalizeChildren(data: any[]): ChildData[] {
+function normalizeChildren(data: (ChildData & { birthDate: string })[]): ChildData[] {
   return data
-    .map((c: any) => ({
+    .map((c) => ({
       ...c,
       birthDate: toKstYmd(c.birthDate),
     }))
-    .sort((a: ChildData, b: ChildData) => b.birthDate.localeCompare(a.birthDate));
+    .sort((a, b) => b.birthDate.localeCompare(a.birthDate));
 }
 
 export function useAuth() {

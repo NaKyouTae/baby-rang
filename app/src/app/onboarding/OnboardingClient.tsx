@@ -86,8 +86,8 @@ export default function OnboardingClient() {
       }
       await refresh();
       router.replace('/home');
-    } catch (e: any) {
-      setError(e?.message || '오류가 발생했어요.');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '오류가 발생했어요.');
       setSubmitting(false);
     }
   };

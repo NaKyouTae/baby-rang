@@ -63,16 +63,19 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
   const postcodeRef = useRef<HTMLDivElement>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerMapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps marker ref
   const pickerMarkerRef = useRef<any>(null);
   const pickedRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [scriptReady, setScriptReady] = useState(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- daum postcode SDK global
     typeof window !== "undefined" && !!(window as any).daum?.Postcode,
   );
 
   // 시트가 열리자마자 Postcode 스크립트 프리로드
   useEffect(() => {
     if (scriptReady) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- daum postcode SDK global
     if ((window as any).daum?.Postcode) {
       setScriptReady(true);
       return;
@@ -94,7 +97,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
     document.head.appendChild(script);
   }, [scriptReady]);
 
-  const handleComplete = async (data: any) => {
+  const handleComplete = async (data: Record<string, string>) => {
     setPostcodeOpen(false);
     const roadAddress: string = data.roadAddress || data.address || "";
     const sido: string = data.sido || "";
@@ -146,6 +149,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
     if (!scriptReady) return;
     if (!postcodeRef.current) return;
     postcodeRef.current.innerHTML = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- daum postcode SDK global
     new (window as any).daum.Postcode({
       width: "100%",
       height: "100%",
@@ -163,8 +167,10 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
   useEffect(() => {
     if (!pickerOpen) return;
     if (!pickerMapRef.current) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps SDK global
     if (typeof window === "undefined" || !(window as any).naver?.maps) return;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps SDK global
     const naverNs = (window as any).naver;
     const initLat = form.lat ?? 37.5666;
     const initLng = form.lng ?? 126.9784;
@@ -194,7 +200,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
       pickedRef.current = { lat: pos.y, lng: pos.x };
     });
 
-    naverNs.maps.Event.addListener(map, "click", (e: any) => {
+    naverNs.maps.Event.addListener(map, "click", (e: { coord: { y: number; x: number } }) => {
       marker.setPosition(e.coord);
       pickedRef.current = { lat: e.coord.y, lng: e.coord.x };
     });

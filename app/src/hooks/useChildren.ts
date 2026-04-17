@@ -28,13 +28,13 @@ export interface Child {
   ownerNickname?: string | null;
 }
 
-function normalizeChildren(data: any[]): Child[] {
+function normalizeChildren(data: (Child & { birthDate: string })[]): Child[] {
   return data
-    .map((c: any) => ({
+    .map((c) => ({
       ...c,
       birthDate: toKstYmd(c.birthDate),
     }))
-    .sort((a: Child, b: Child) => b.birthDate.localeCompare(a.birthDate));
+    .sort((a, b) => b.birthDate.localeCompare(a.birthDate));
 }
 
 export function useChildren() {

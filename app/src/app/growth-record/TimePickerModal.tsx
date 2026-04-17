@@ -169,7 +169,7 @@ export default function TimePickerModal({
 
   useEffect(() => {
     if (open) {
-      setMo(month);
+      setMo(month); // eslint-disable-line react-hooks/set-state-in-effect -- sync props to local state on open
       setD(day);
       setH(hour);
       setM(minute);
@@ -179,7 +179,7 @@ export default function TimePickerModal({
   // 월이 바뀌면 일 클램프
   const dayCount = daysInMonth(year, mo);
   useEffect(() => {
-    if (d > dayCount) setD(dayCount);
+    if (d > dayCount) setD(dayCount); // eslint-disable-line react-hooks/set-state-in-effect -- clamp day to valid range
   }, [dayCount, d]);
 
   if (!open) return null;

@@ -1,3 +1,8 @@
+interface NativeBridgeWindow {
+  webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
+  Android?: { openLocationSettings?: () => void };
+}
+
 /**
  * 위치 권한 설정 화면으로 이동을 시도합니다.
  *
@@ -13,7 +18,7 @@ export function openLocationSettings(callbacks?: {
   onBrowserDenied?: () => void;
 }) {
   // 1) 네이티브 WebView 브릿지 (추후 네이티브 래핑 시 자동 연결)
-  const w = window as any;
+  const w = window as unknown as NativeBridgeWindow;
   if (w.webkit?.messageHandlers?.openSettings) {
     w.webkit.messageHandlers.openSettings.postMessage("location");
     return;

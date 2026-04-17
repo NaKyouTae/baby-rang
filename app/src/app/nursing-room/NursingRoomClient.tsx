@@ -69,9 +69,11 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps SDK global
 declare const naver: any;
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps SDK global
     naver: any;
   }
 }
@@ -83,6 +85,7 @@ function NursingRoomContent() {
   const initialLng = searchParams.get("lng");
   const initialAddr = searchParams.get("addr");
   const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps instance
   const mapInstanceRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,8 +141,8 @@ function NursingRoomContent() {
       if (reportedRes && reportedRes.ok) {
         const data = await reportedRes.json();
         reported = (data.rooms ?? [])
-          .filter((r: any) => typeof r.lat === "number" && typeof r.lng === "number")
-          .map((r: any) => ({
+          .filter((r: Record<string, unknown>) => typeof r.lat === "number" && typeof r.lng === "number")
+          .map((r: Record<string, unknown>) => ({
             name: r.name,
             address: r.address ?? [r.roadAddress, r.detailLocation].filter(Boolean).join(" "),
             lat: r.lat,
@@ -158,7 +161,7 @@ function NursingRoomContent() {
       let publicList: NursingRoom[] = [];
       if (publicRes && publicRes.ok) {
         const data = await publicRes.json();
-        publicList = (data.rooms ?? []).map((r: any) => ({
+        publicList = (data.rooms ?? []).map((r: Record<string, unknown>) => ({
           name: r.name,
           address: [r.address, r.detailLocation].filter(Boolean).join(" "),
           lat: r.lat,
@@ -325,6 +328,7 @@ function NursingRoomContent() {
 
     // 줌 레벨에 따른 수유실 마커 클러스터링
     // 낮은 줌: 격자 단위로 묶어 개수 배지, 높은 줌: 개별 📌 마커
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- naver maps marker instances
     let activeMarkers: any[] = [];
     // 스케일바 500m 이하(줌 ≥ 15)면 개별, 1km 이상(줌 ≤ 14)부터 1000m 격자 병합
     const CLUSTER_ZOOM_THRESHOLD = 15;
@@ -359,8 +363,8 @@ function NursingRoomContent() {
             position: new naver.maps.LatLng(room.lat, room.lng),
             map,
             icon: {
-              content: `<div style="font-size:32px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">📌</div>`,
-              anchor: new naver.maps.Point(16, 16),
+              content: `<svg width="28" height="28" viewBox="0 0 19 23" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));"><path d="M10.1419 21.9989C11.3566 20.7149 13.5563 18.4066 15.5051 16.4478C19.2197 12.7142 19.4732 6.34324 15.7132 2.65511C13.907 0.884195 11.5571 -0.00125999 9.20724 1.34566e-06C6.85738 1.34566e-06 4.50752 0.884195 2.70255 2.65511C-1.05874 6.34324 -0.805214 12.7155 2.91067 16.449C4.85943 18.4079 7.06172 20.7161 8.2789 21.9989C8.78596 22.5337 9.6361 22.5337 10.1419 21.9989Z" fill="#F03D30"/><path d="M9.20854 12.0508C10.732 12.0508 11.9671 10.8157 11.9671 9.29223C11.9671 7.76873 10.732 6.53369 9.20854 6.53369C7.68505 6.53369 6.45001 7.76873 6.45001 9.29223C6.45001 10.8157 7.68505 12.0508 9.20854 12.0508Z" fill="#FDFDFE"/></svg>`,
+              anchor: new naver.maps.Point(14, 28),
             },
             zIndex: 50,
           });
@@ -401,8 +405,8 @@ function NursingRoomContent() {
             position: new naver.maps.LatLng(room.lat, room.lng),
             map,
             icon: {
-              content: `<div style="font-size:26px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));">📌</div>`,
-              anchor: new naver.maps.Point(13, 13),
+              content: `<svg width="28" height="28" viewBox="0 0 19 23" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));"><path d="M10.1419 21.9989C11.3566 20.7149 13.5563 18.4066 15.5051 16.4478C19.2197 12.7142 19.4732 6.34324 15.7132 2.65511C13.907 0.884195 11.5571 -0.00125999 9.20724 1.34566e-06C6.85738 1.34566e-06 4.50752 0.884195 2.70255 2.65511C-1.05874 6.34324 -0.805214 12.7155 2.91067 16.449C4.85943 18.4079 7.06172 20.7161 8.2789 21.9989C8.78596 22.5337 9.6361 22.5337 10.1419 21.9989Z" fill="#F03D30"/><path d="M9.20854 12.0508C10.732 12.0508 11.9671 10.8157 11.9671 9.29223C11.9671 7.76873 10.732 6.53369 9.20854 6.53369C7.68505 6.53369 6.45001 7.76873 6.45001 9.29223C6.45001 10.8157 7.68505 12.0508 9.20854 12.0508Z" fill="#FDFDFE"/></svg>`,
+              anchor: new naver.maps.Point(14, 28),
             },
             zIndex: 50,
           });
