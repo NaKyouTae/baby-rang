@@ -469,7 +469,7 @@ function NursingRoomContent() {
           style={{ top: "calc(var(--safe-area-top) + 24px)" }}
         >
           <div className="relative">
-            <div className="flex items-center gap-2 bg-white rounded-lg shadow-lg px-3 h-10">
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 h-10" style={{ boxShadow: "0 0 20px 0 rgba(0,0,0,0.04)" }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
                 <path d="M3.33333 8.45246C3.33333 4.70496 6.31833 1.66663 9.99999 1.66663C13.6817 1.66663 16.6667 4.70496 16.6667 8.45246C16.6667 12.1708 14.5392 16.5108 11.2192 18.0616C10.8376 18.2403 10.4214 18.3329 9.99999 18.3329C9.57864 18.3329 9.16243 18.2403 8.78083 18.0616C5.46083 16.51 3.33333 12.1716 3.33333 8.45329V8.45246Z" stroke="#121212" strokeWidth="1.25"/>
                 <path d="M3.33333 8.45246C3.33333 4.70496 6.31833 1.66663 9.99999 1.66663C13.6817 1.66663 16.6667 4.70496 16.6667 8.45246C16.6667 12.1708 14.5392 16.5108 11.2192 18.0616C10.8376 18.2403 10.4214 18.3329 9.99999 18.3329C9.57864 18.3329 9.16243 18.2403 8.78083 18.0616C5.46083 16.51 3.33333 12.1716 3.33333 8.45329V8.45246Z" stroke="black" strokeOpacity="0.2" strokeWidth="1.25"/>
@@ -501,14 +501,16 @@ function NursingRoomContent() {
 
             {searchFocused && searchQuery.trim().length > 0 && (() => {
               const q = searchQuery.trim().toLowerCase();
-              const results = rooms
+              const filtered = rooms
                 .filter(
                   (r) =>
                     r.name.toLowerCase().includes(q) ||
                     r.address.toLowerCase().includes(q) ||
                     (r.type?.toLowerCase().includes(q) ?? false)
-                )
-                .slice(0, 30);
+                );
+              const results = userLocation
+                ? filtered.sort((a, b) => distanceKm(userLocation, a) - distanceKm(userLocation, b)).slice(0, 30)
+                : filtered.slice(0, 30);
               return (
                 <div
                   className="absolute left-0 right-0"
@@ -700,7 +702,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute left-6 flex items-center gap-1.5 bg-primary-500 text-white text-[12px] font-medium h-8 px-3 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute left-6 flex items-center gap-1 bg-primary-500 text-white text-[12px] font-medium h-8 px-3 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(var(--bottom-nav-gap) + 72px)" }}
           aria-label="수유실 제보하기"
         >
