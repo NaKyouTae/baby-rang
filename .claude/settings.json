@@ -35,7 +35,9 @@
       "Bash(pnpm --filter server exec tsc --noEmit)",
       "Bash(grep -l \"export const metadata\" /Users/nakyutae/personal/git/baby-rang/app/src/app/**/*.tsx)",
       "WebFetch(domain:adsensefarm.kr)",
-      "WebFetch(domain:baby-rang.spectrify.kr)"
+      "WebFetch(domain:baby-rang.spectrify.kr)",
+      "Bash(find /Users/nakyutae/personal/git/baby-rang/ios -name \"*.plist\" -exec cat {} \\\\;)",
+      "Bash(sips -g hasAlpha \"ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 집 아이콘.png\")"
     ],
     "additionalDirectories": [
       "/tmp",

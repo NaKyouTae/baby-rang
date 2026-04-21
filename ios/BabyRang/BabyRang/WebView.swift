@@ -70,13 +70,22 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            if let url = navigationAction.request.url,
-               let host = url.host,
-               !host.contains("spectrify.kr") {
-                if navigationAction.navigationType == .linkActivated {
+            if let url = navigationAction.request.url {
+                // 카카오톡 등 커스텀 URL 스킴은 외부 앱으로 열기
+                if let scheme = url.scheme,
+                   !scheme.hasPrefix("http") && scheme != "about" && scheme != "blob" {
                     UIApplication.shared.open(url)
                     decisionHandler(.cancel)
                     return
+                }
+
+                if let host = url.host,
+                   !host.contains("spectrify.kr") {
+                    if navigationAction.navigationType == .linkActivated {
+                        UIApplication.shared.open(url)
+                        decisionHandler(.cancel)
+                        return
+                    }
                 }
             }
             decisionHandler(.allow)
