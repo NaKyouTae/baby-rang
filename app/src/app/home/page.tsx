@@ -87,7 +87,7 @@ export default function HomePage() {
                     className="flex flex-col items-center gap-2 active:opacity-70"
                     style={{ width: '56px' }}
                   >
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-gray-200">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white border border-gray-200">
                       {item.icon(true, palette.black)}
                     </div>
                     <span className="text-[12px] text-black font-medium text-center leading-tight">
