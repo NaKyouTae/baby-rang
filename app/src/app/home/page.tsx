@@ -103,7 +103,7 @@ export default function HomePage() {
             <HomeWeatherStrip />
           </div>
 
-          <div className="mt-4">
+          <div className="mt-6">
             <BannerCarousel />
           </div>
 

@@ -210,7 +210,7 @@ export default function NearbyNursingRoomsStrip() {
         >
           <div className="flex flex-col gap-[6px]">
               <div className="flex items-center gap-1.5" style={{ height: 16 }}>
-                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: '16px' }}>{room.name}</div>
+                <div className="text-[12px] font-medium text-black truncate" style={{ fontFamily: 'Pretendard, sans-serif', lineHeight: '12px' }}>{room.name}</div>
                 {idx === 0 && locStatus === "granted" && (
                   <span
                     className="shrink-0 text-[12px] font-medium leading-none px-1 rounded-[2px]"
