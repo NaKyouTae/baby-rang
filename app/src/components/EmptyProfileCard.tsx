@@ -25,7 +25,7 @@ export default function EmptyProfileCard({
         <br />
         맞춤형 케어를 시작하세요.
       </div>
-      <span className="mt-[10px] inline-flex items-center justify-center h-[32px] px-4 rounded-[4px] bg-primary-500 text-white text-[12px] font-semibold leading-none">
+      <span className="mt-[10px] inline-flex items-center justify-center h-6 px-3 rounded-[4px] bg-primary-500 text-white text-[12px] font-semibold leading-none">
         {ctaLabel}
       </span>
     </>

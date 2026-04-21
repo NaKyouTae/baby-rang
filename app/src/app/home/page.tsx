@@ -55,7 +55,7 @@ export default function HomePage() {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-header.svg" alt="아기랑" width={86} height={24} />
+        <img src="/logo-header.svg" alt="아기랑" width={72} height={20} />
         <Link href="/settings" aria-label="마이페이지">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M10 10C11.3807 10 12.5 8.88071 12.5 7.5C12.5 6.11929 11.3807 5 10 5C8.61929 5 7.5 6.11929 7.5 7.5C7.5 8.88071 8.61929 10 10 10Z" stroke="black" strokeWidth="1.25"/>
