@@ -37,7 +37,9 @@
       "WebFetch(domain:adsensefarm.kr)",
       "WebFetch(domain:baby-rang.spectrify.kr)",
       "Bash(find /Users/nakyutae/personal/git/baby-rang/ios -name \"*.plist\" -exec cat {} \\\\;)",
-      "Bash(sips -g hasAlpha \"ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 집 아이콘.png\")"
+      "Bash(sips -g hasAlpha \"ios/BabyRang/BabyRang/Assets.xcassets/AppIcon.appiconset/아기랑 집 아이콘.png\")",
+      "Bash(qlmanage -t -s 180 -o /tmp /Users/nakyutae/personal/git/baby-rang/app/src/app/icon.svg)",
+      "Bash(sips -g pixelWidth -g pixelHeight /tmp/icon.svg.png)"
     ],
     "additionalDirectories": [
       "/tmp",
