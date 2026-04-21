@@ -33,7 +33,9 @@
       "Bash(pnpm --filter server lint)",
       "Bash(pnpm --filter app exec tsc --noEmit)",
       "Bash(pnpm --filter server exec tsc --noEmit)",
-      "Bash(grep -l \"export const metadata\" /Users/nakyutae/personal/git/baby-rang/app/src/app/**/*.tsx)"
+      "Bash(grep -l \"export const metadata\" /Users/nakyutae/personal/git/baby-rang/app/src/app/**/*.tsx)",
+      "WebFetch(domain:adsensefarm.kr)",
+      "WebFetch(domain:baby-rang.spectrify.kr)"
     ],
     "additionalDirectories": [
       "/tmp",

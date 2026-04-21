@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
+// ── 애드센스 승인용 임시 Footer ── 제거 시 아래 <AdSenseFooter /> 도 함께 삭제
+import AdSenseFooter from "@/components/ads/AdSenseFooter";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
@@ -247,6 +249,8 @@ export default function RootLayout({
               {children}
             </SplashProvider>
             <AdSenseScript />
+            {/* ── 애드센스 승인용 임시 Footer ── 제거 시 import 도 함께 삭제 */}
+            <AdSenseFooter />
           </div>
           <BottomNavServer />
         </LoginPromptProvider>

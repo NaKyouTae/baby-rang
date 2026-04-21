@@ -1,4 +1,9 @@
 import type { MetadataRoute } from "next";
+// ── 애드센스 승인용 임시 import ── 제거 시 아래 ADSENSE_CONTENT 블록도 함께 삭제
+import {
+  ADSENSE_CONTENT_ENABLED,
+  ADSENSE_CONTENT_ROUTES,
+} from "@/lib/adsenseContent";
 
 const BASE_URL = "https://baby-rang.spectrify.kr";
 
@@ -35,6 +40,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
     { path: "/refund", changeFrequency: "yearly", priority: 0.3 },
   ];
+
+  // ── 애드센스 승인용 임시 라우트 ── ADSENSE_CONTENT_ENABLED = false 시 자동 제외
+  if (ADSENSE_CONTENT_ENABLED) {
+    routes.push(...ADSENSE_CONTENT_ROUTES);
+  }
 
   return routes.map(({ path, changeFrequency, priority }) => ({
     url: `${BASE_URL}${path}`,
