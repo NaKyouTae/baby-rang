@@ -105,7 +105,7 @@ export default function HomeWeatherStrip() {
 
   return (
     <Link href="/air-quality" className="block active:opacity-80">
-      <div className="bg-white rounded-2xl border border-gray-200 px-4 py-5">
+      <div className="bg-white rounded-[8px] border border-gray-200 px-4 py-5">
         <div className="flex items-center">
           {/* 날씨 아이콘 + 온도 */}
           <div className="flex items-center gap-2.5 shrink-0">
@@ -123,10 +123,10 @@ export default function HomeWeatherStrip() {
                 </>
               ) : (
                 <>
-                  <p className="text-[16px] font-semibold text-black leading-tight">
+                  <p className="text-[16px] font-semibold text-black" style={{ lineHeight: 1 }}>
                     {weather!.temperature ?? "-"}°
                   </p>
-                  <p className="text-[10px] font-normal text-gray-500 mt-1">
+                  <p className="text-[10px] font-normal text-gray-500 mt-1" style={{ lineHeight: 1 }}>
                     {getSkyLabel(weather!.sky, weather!.pty)}
                   </p>
                 </>
@@ -148,14 +148,14 @@ export default function HomeWeatherStrip() {
                 </div>
               ) : (
                 <>
-                  <p className="text-[12px] font-medium text-black">미세먼지</p>
+                  <p className="text-[12px] font-medium text-black" style={{ lineHeight: 1 }}>미세먼지</p>
                   <p
                     className="text-[12px] font-semibold mt-1"
-                    style={{ color: gradeColor(air!.pm10Grade) }}
+                    style={{ color: gradeColor(air!.pm10Grade), lineHeight: 1 }}
                   >
                     {gradeLabel(air!.pm10Grade)}
                   </p>
-                  <p className="text-[10px] font-normal text-gray-500 mt-1">{air!.pm10 ?? "-"}㎍/㎥</p>
+                  <p className="text-[10px] font-normal text-gray-500 mt-1" style={{ lineHeight: 1 }}>{air!.pm10 ?? "-"}㎍/㎥</p>
                 </>
               )}
             </div>
@@ -168,14 +168,14 @@ export default function HomeWeatherStrip() {
                 </div>
               ) : (
                 <>
-                  <p className="text-[12px] font-medium text-black">초미세먼지</p>
+                  <p className="text-[12px] font-medium text-black" style={{ lineHeight: 1 }}>초미세먼지</p>
                   <p
                     className="text-[12px] font-semibold mt-1"
-                    style={{ color: gradeColor(air!.pm25Grade) }}
+                    style={{ color: gradeColor(air!.pm25Grade), lineHeight: 1 }}
                   >
                     {gradeLabel(air!.pm25Grade)}
                   </p>
-                  <p className="text-[10px] font-normal text-gray-500 mt-1">{air!.pm25 ?? "-"}㎍/㎥</p>
+                  <p className="text-[10px] font-normal text-gray-500 mt-1" style={{ lineHeight: 1 }}>{air!.pm25 ?? "-"}㎍/㎥</p>
                 </>
               )}
             </div>
