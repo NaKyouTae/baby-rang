@@ -50,6 +50,12 @@ export default function robots(): MetadataRoute.Robots {
       // Meta — Llama
       { userAgent: "Meta-ExternalAgent", allow: "/", disallow },
       { userAgent: "FacebookBot", allow: "/", disallow },
+      // Naver — 네이버 검색 & AI
+      { userAgent: "Yeti", allow: "/", disallow },
+      // Microsoft — Bing & Copilot AI
+      { userAgent: "bingbot", allow: "/", disallow },
+      // Cohere
+      { userAgent: "cohere-ai", allow: "/", disallow },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
     host: BASE_URL,

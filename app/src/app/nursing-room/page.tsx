@@ -8,6 +8,26 @@ export const metadata: Metadata = {
   alternates: { canonical: '/nursing-room' },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "아기랑 수유실 찾기",
+  description:
+    "현재 위치 기반으로 주변 수유실과 기저귀 교환대를 지도에서 찾아줍니다. 각 수유실의 위치, 편의시설, 운영시간 정보를 제공하며, 새로운 수유실을 직접 제보할 수도 있습니다.",
+  provider: { "@type": "Organization", name: "Spectrify" },
+  serviceType: "수유실 위치 탐색",
+  areaServed: { "@type": "Country", name: "KR" },
+  url: "https://baby-rang.spectrify.kr/nursing-room",
+};
+
 export default function NursingRoomPage() {
-  return <NursingRoomClient />;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <NursingRoomClient />
+    </>
+  );
 }

@@ -29,6 +29,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/wonder-weeks", changeFrequency: "monthly", priority: 0.8 },
     { path: "/sleep-golden-time", changeFrequency: "monthly", priority: 0.8 },
     { path: "/nursing-room", changeFrequency: "weekly", priority: 0.7 },
+    { path: "/air-quality", changeFrequency: "daily", priority: 0.6 },
+    { path: "/physical-growth", changeFrequency: "monthly", priority: 0.6 },
     { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
     { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
     { path: "/refund", changeFrequency: "yearly", priority: 0.3 },

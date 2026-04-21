@@ -51,11 +51,20 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "아기랑 - 우리 아기의 모든 순간",
     description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: `${SITE_URL}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: "아기랑 - 우리 아기의 모든 순간",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "아기랑 - 우리 아기의 모든 순간",
     description: SITE_DESCRIPTION,
+    images: [`${SITE_URL}/opengraph-image`],
   },
   robots: {
     index: true,
@@ -70,6 +79,12 @@ export const metadata: Metadata = {
   },
   verification: {
     google: "7Z5qXHvXmaZVGUrCaUMCuRR5uMGbTCBwG8-fSJMouLE",
+    // Naver Search Advisor 등록 후 발급받은 인증 코드를 여기에 입력하세요
+    // https://searchadvisor.naver.com → 사이트 추가 → HTML 태그 인증
+    other: {
+      "naver-site-verification": "e195fb3c87061effb7d804eac319ede8bb92c95f",
+      "msvalidate.01": "86D1577698DC11E106738B976A2F460E",
+    },
   },
   alternates: {
     canonical: SITE_URL,
@@ -93,6 +108,61 @@ export default function RootLayout({
   // AEO (Answer Engine Optimization) 를 위해 여러 스키마를 동시에 제공합니다.
   // AI 검색 엔진(ChatGPT, Claude, Perplexity, Gemini 등)과 Google 이
   // "아기랑" 서비스를 정확히 이해할 수 있도록 합니다.
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "아기랑은 어떤 서비스인가요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "아기랑은 0~36개월 아이를 키우는 부모를 위한 통합 육아 웹 서비스입니다. 아이 기질 검사, 성장 기록, 원더윅스 안내, 수면추천, 주변 수유실 찾기 등 일상 육아에 필요한 도구를 한 곳에서 제공합니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "아기랑은 무료인가요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "기본 기능은 무료로 사용할 수 있고, 기질 검사 전체 결과 등 일부 프리미엄 기능은 결제 또는 광고 시청을 통해 이용할 수 있습니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "아기랑의 기질 검사는 어떤 방식인가요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "아이의 행동·반응 패턴에 대한 질문에 답하면 9가지 차원(활동성, 규칙성, 접근/회피, 적응성, 반응 강도, 반응 역치, 기분, 주의 산만성, 지속성)으로 분석하여 맞춤 양육 가이드를 제공합니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "아기랑은 어디서 사용할 수 있나요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용할 수 있습니다. 홈 화면에 추가하면 앱처럼 사용 가능하며, 추후 iOS/Android 네이티브 앱으로도 출시 예정입니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "원더윅스(Wonder Weeks)란 무엇인가요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "원더윅스는 아기의 정신 발달 도약기를 말합니다. 아기랑에서는 아이의 생년월일을 기반으로 도약기 시기를 자동 계산하고, 각 시기의 특징과 부모가 어떻게 대처하면 좋은지 안내합니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "아기 수면추천이란 무엇인가요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "아기의 월령에 맞는 최적의 낮잠 횟수, 활동 시간(깨어있는 시간), 밤잠 권장 시간을 계산해 줍니다. 수면 골든타임을 지키면 아이의 건강한 수면 습관 형성에 도움이 됩니다.",
+        },
+      },
+    ],
+  };
+
   const organizationLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -144,6 +214,11 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full">
       <body className="min-h-full flex justify-center bg-white" suppressHydrationWarning>
+        {/* JSON-LD: FAQPage */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+        />
         {/* JSON-LD: Organization */}
         <script
           type="application/ld+json"
