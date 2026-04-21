@@ -392,12 +392,6 @@ function ChildrenCarousel({
   );
 }
 
-function getRoleLabel(parentRole: string | null | undefined): string {
-  if (parentRole === 'mom') return '엄마';
-  if (parentRole === 'dad') return '아빠';
-  return '보호자님';
-}
-
 const TIME_GREETINGS: Record<string, string[]> = {
   dawn: [
     '밤새 고생 많으셨어요 🌙',
@@ -433,16 +427,11 @@ function getTimeGreeting(): string {
 }
 
 function WelcomeHeader({
-  parentRole,
-  childName,
+  nickname,
 }: {
-  parentRole: string | null | undefined;
-  childName: string | null;
+  nickname: string | null | undefined;
 }) {
-  const roleLabel = getRoleLabel(parentRole);
-  const displayName = childName
-    ? `${childName} ${roleLabel}`
-    : `아기랑 ${roleLabel}`;
+  const displayName = nickname ? `${nickname}님` : '보호자님';
   const [greeting] = useState(() => getTimeGreeting());
   return (
     <div>
@@ -460,12 +449,7 @@ export default function HomeHeroCard() {
   const { isAuthenticated, isLoaded: authLoaded, user } = useAuth();
   const { children, isLoaded: childrenLoaded } = useChildren();
   const { openLoginPrompt } = useLoginPrompt();
-  const [activeChildIdx, setActiveChildIdx] = useState(0);
-
-  const activeChildName =
-    children.length > 0 && activeChildIdx < children.length
-      ? children[activeChildIdx].name
-      : null;
+  const [, setActiveChildIdx] = useState(0);
 
   if (!authLoaded) {
     return (
@@ -527,7 +511,7 @@ export default function HomeHeroCard() {
   if (!childrenLoaded) {
     return (
       <>
-        <WelcomeHeader parentRole={user?.parentRole} childName={null} />
+        <WelcomeHeader nickname={user?.nickname} />
         <div className="pt-4">
           <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
             <div className="flex items-center gap-3">
@@ -571,7 +555,7 @@ export default function HomeHeroCard() {
 
   return (
     <>
-      <WelcomeHeader parentRole={user?.parentRole} childName={activeChildName} />
+      <WelcomeHeader nickname={user?.nickname} />
       <div className="pt-4">
         <ChildrenCarousel children={children} onActiveChange={setActiveChildIdx} />
       </div>
