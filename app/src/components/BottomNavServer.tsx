@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import BottomNav from "./BottomNav";
-import { MENU_CATALOG, type MenuId } from "./menuCatalog";
+import { DEFAULT_NAV_SLOTS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 
 const SLOT_COUNT = 4;
-const DEFAULT_SLOTS: (MenuId | null)[] = ["growth-record", "growth-pattern", "wonder-weeks", null];
+const DEFAULT_SLOTS = DEFAULT_NAV_SLOTS;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:18080";
 
 function sanitize(arr: unknown): (MenuId | null)[] {

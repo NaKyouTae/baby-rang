@@ -12,7 +12,12 @@ const ALLOWED_MENU_IDS = new Set([
   'air-quality',
   'physical-growth',
 ]);
-const DEFAULT_SLOTS: (string | null)[] = [null, null, null, null];
+const DEFAULT_SLOTS: (string | null)[] = [
+  'nursing-room',
+  'sleep-golden-time',
+  'growth-record',
+  null,
+];
 
 type SlotsArray = (string | null)[];
 

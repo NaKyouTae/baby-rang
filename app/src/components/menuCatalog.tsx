@@ -89,6 +89,13 @@ export const ALL_MENU_IDS: MenuId[] = [
   "air-quality",
 ];
 
+export const DEFAULT_NAV_SLOTS: (MenuId | null)[] = [
+  "nursing-room",
+  "sleep-golden-time",
+  "growth-record",
+  null,
+];
+
 export const HOME_QUICK_MENUS: MenuId[] = [
   "growth-record",
   "growth-pattern",

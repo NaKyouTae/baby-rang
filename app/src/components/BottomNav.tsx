@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Reorder, motion } from "framer-motion";
-import { ALL_MENU_IDS, MENU_CATALOG, type MenuId } from "./menuCatalog";
+import { ALL_MENU_IDS, DEFAULT_NAV_SLOTS, MENU_CATALOG, type MenuId } from "./menuCatalog";
 import { useLoginPrompt } from "./LoginPromptProvider";
 import { HomeNavIcon, AddNavIcon } from "./nav-icons";
 import { palette } from "@/lib/colors";
 
-const DEFAULT_SLOTS: (MenuId | null)[] = ["nursing-room", "sleep-golden-time", "growth-record", null];
+const DEFAULT_SLOTS = DEFAULT_NAV_SLOTS;
 const LONG_PRESS_MS = 500;
 const SLOT_COUNT = 4;
 
@@ -76,15 +76,20 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     return () => { cancelled = true; };
   }, [initialSlots]);
 
-  const persist = async (next: (MenuId | null)[]) => {
+  const persist = async (next: (MenuId | null)[], prev: (MenuId | null)[]) => {
     try {
-      await fetch("/api/nav-slots", {
+      const res = await fetch("/api/nav-slots", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slots: next }),
       });
+      if (!res.ok) {
+        // 서버 저장 실패 → 이전 상태로 롤백
+        setSlots(toSlots(prev));
+      }
     } catch {
-      /* noop — UI already optimistic */
+      // 네트워크 에러 → 이전 상태로 롤백
+      setSlots(toSlots(prev));
     }
   };
 
@@ -124,8 +129,9 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   };
 
   const handleReorder = (next: Slot[]) => {
+    const prev = fromSlots(slots);
     setSlots(next);
-    persist(fromSlots(next));
+    persist(fromSlots(next), prev);
   };
 
   const handleSlotClick = (index: number) => (e: React.MouseEvent) => {
@@ -153,16 +159,18 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   };
 
   const removeSlot = (index: number) => {
+    const prev = fromSlots(slots);
     const next = slots.map((s, i) => (i === index ? { ...s, menu: null } : s));
     setSlots(next);
-    persist(fromSlots(next));
+    persist(fromSlots(next), prev);
   };
 
   const addToSlot = (index: number, id: MenuId) => {
+    const prev = fromSlots(slots);
     const next = slots.map((s) => (s.menu === id ? { ...s, menu: null } : s));
     next[index] = { ...next[index], menu: id };
     setSlots(next);
-    persist(fromSlots(next));
+    persist(fromSlots(next), prev);
     setPickerOpen(null);
   };
 
