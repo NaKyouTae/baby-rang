@@ -32,26 +32,6 @@ jobs:
               dockerfile: Dockerfile.render
               rootdir: /server
               ports: 18080
-            env:
-              PORT: "18080"
-              DATABASE_URL: "${{ secrets.DATABASE_URL }}"
-              JWT_SECRET: "${{ secrets.JWT_SECRET }}"
-              JWT_EXPIRES_IN: "7d"
-              KAKAO_CLIENT_ID: "${{ secrets.KAKAO_CLIENT_ID }}"
-              KAKAO_CLIENT_SECRET: "${{ secrets.KAKAO_CLIENT_SECRET }}"
-              KAKAO_ADMIN_KEY: "${{ secrets.KAKAO_ADMIN_KEY }}"
-              KAKAO_CALLBACK_URL: "${{ secrets.KAKAO_CALLBACK_URL }}"
-              CLIENT_URL: "${{ secrets.CLIENT_URL }}"
-              SUPABASE_ACCESS_KEY: "${{ secrets.SUPABASE_ACCESS_KEY }}"
-              SUPABASE_SECRET_KEY: "${{ secrets.SUPABASE_SECRET_KEY }}"
-              SUPABASE_S3_ENDPOINT: "${{ secrets.SUPABASE_S3_ENDPOINT }}"
-              SUPABASE_S3_BUCKET: "baby-rang"
-              SUPABASE_PUBLIC_URL: "${{ secrets.SUPABASE_PUBLIC_URL }}"
-              ADMIN_TOKEN: "${{ secrets.ADMIN_TOKEN }}"
-              ADMIN_USERNAME: "${{ secrets.ADMIN_USERNAME }}"
-              ADMIN_PASSWORD: "${{ secrets.ADMIN_PASSWORD }}"
-              DATA_GO_KR_API_KEY: "${{ secrets.DATA_GO_KR_API_KEY }}"
-              TOSS_SECRET_KEY: "${{ secrets.TOSS_SECRET_KEY }}"
             context:
               git:
                 ref: ${{ github.ref }}

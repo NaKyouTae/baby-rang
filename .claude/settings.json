@@ -45,7 +45,11 @@
       "Bash(npx --yes sharp-cli --help)",
       "Bash(npx --yes sharp-cli -i app/src/app/icon.svg -o app/src/app/icon.png resize 180 180)",
       "Bash(npx --yes sharp-cli -i admin/src/app/icon.svg -o admin/src/app/icon.png resize 180 180)",
-      "Bash(qlmanage -t -s 160 -o /tmp app/src/app/icon.svg)"
+      "Bash(qlmanage -t -s 160 -o /tmp app/src/app/icon.svg)",
+      "Bash(gh api *)",
+      "Bash(gh auth *)",
+      "Bash(git remote *)",
+      "Bash(gh secret *)"
     ],
     "additionalDirectories": [
       "/tmp",
