@@ -276,7 +276,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
                 type="button"
                 onClick={() => setPickerOpen(null)}
                 className="mt-[10px] w-full rounded-[4px] bg-gray-400 text-[12px] font-semibold text-white"
-                style={{ height: 28 }}
+                style={{ height: 32 }}
               >
                 취소
               </button>

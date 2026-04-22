@@ -81,8 +81,8 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
 export const ALL_MENU_IDS: MenuId[] = [
   "growth-record",
   "growth-pattern",
-  "wonder-weeks",
   "physical-growth",
+  "wonder-weeks",
   "sleep-golden-time",
   "nursing-room",
   "temperament",
