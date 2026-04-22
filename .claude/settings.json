@@ -44,7 +44,8 @@
       "Bash(npx --yes sharp-cli -i app/src/app/icon.svg -o app/src/app/icon.png --width 180 --height 180)",
       "Bash(npx --yes sharp-cli --help)",
       "Bash(npx --yes sharp-cli -i app/src/app/icon.svg -o app/src/app/icon.png resize 180 180)",
-      "Bash(npx --yes sharp-cli -i admin/src/app/icon.svg -o admin/src/app/icon.png resize 180 180)"
+      "Bash(npx --yes sharp-cli -i admin/src/app/icon.svg -o admin/src/app/icon.png resize 180 180)",
+      "Bash(qlmanage -t -s 160 -o /tmp app/src/app/icon.svg)"
     ],
     "additionalDirectories": [
       "/tmp",
