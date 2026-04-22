@@ -25,7 +25,7 @@ jobs:
           project: ${{ secrets.CLOUDTYPE_SCOPE }}/${{ secrets.CLOUDTYPE_PROJECT }}
           stage: main
           yaml: |-
-            name: 아기랑
+            name: baby-rang-1
             app: dockerfile
             options:
               dockerfile: Dockerfile.render
