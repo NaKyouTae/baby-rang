@@ -1,5 +1,6 @@
 name: Deploy server to cloudtype
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
