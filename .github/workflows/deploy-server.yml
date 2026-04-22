@@ -24,6 +24,7 @@ jobs:
           token: ${{ secrets.CLOUDTYPE_TOKEN }}
           project: ${{ secrets.CLOUDTYPE_SCOPE }}/${{ secrets.CLOUDTYPE_PROJECT }}
           stage: main
+          message: ${{ github.event.head_commit.message || github.sha }}
           yaml: |-
             name: baby-rang-1
             app: dockerfile
