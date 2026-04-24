@@ -194,7 +194,7 @@ export default function ChildrenSettingsPage() {
                 {child.profileImage ? (
                   <Image src={child.profileImage} alt={child.name} fill className="object-cover" />
                 ) : (
-                  <span className="text-xl">{child.gender === 'male' ? '👦🏻' : '👧🏻'}</span>
+                  <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={24} height={24} />
                 )}
               </div>
               <div className="flex-1 min-w-0">

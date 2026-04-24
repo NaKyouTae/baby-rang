@@ -427,7 +427,7 @@ function NursingRoomContent() {
           position: new naver.maps.LatLng(centerLat, centerLng),
           map,
           icon: {
-            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(48,176,199,0.72);color:#fff;font-weight:700;font-size:12px;border:1px solid #30B0C7;border-radius:9999px;">${count}</div>`,
+            content: `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:rgba(48,120,201,0.72);color:#fff;font-weight:700;font-size:12px;border:1px solid #3078C9;border-radius:9999px;">${count}</div>`,
             anchor: new naver.maps.Point(size / 2, size / 2),
           },
           zIndex: 40,

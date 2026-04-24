@@ -32,9 +32,9 @@ function Avatar({ child, size = 48 }: { child: Child; size?: number }) {
   return (
     <div
       className="rounded-full bg-gray-100 shrink-0 flex items-center justify-center leading-[1]"
-      style={{ ...style, fontSize: size * 0.55 }}
+      style={style}
     >
-      {child.gender === 'female' ? '👧🏻' : '👦🏻'}
+      <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={size * 0.55} height={size * 0.55} />
     </div>
   );
 }

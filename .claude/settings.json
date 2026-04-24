@@ -49,7 +49,16 @@
       "Bash(gh api *)",
       "Bash(gh auth *)",
       "Bash(git remote *)",
-      "Bash(gh secret *)"
+      "Bash(gh secret *)",
+      "Bash(find /Users/nakyutae/personal/git/workfolio-frontend/apps/app/src -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"위치.*허용\\\\|위치.*권한\\\\|가까운\\\\|nursing\" {} \\\\;)",
+      "Bash(find . -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -exec grep -l \"permission\\\\|PERMISSION\" {} \\\\;)",
+      "Bash(grep -r \"가까운 수유실\\\\|nearby.*nursing\\\\|위치.*권한\\\\|위치.*허용\\\\|위치 접근\" . --include=\"*.tsx\" --include=\"*.ts\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\")",
+      "WebFetch(domain:support.google.com)",
+      "WebFetch(domain:www.google.com)",
+      "WebFetch(domain:brunch.co.kr)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:blog.naver.com)",
+      "WebFetch(domain:spectrify.kr)"
     ],
     "additionalDirectories": [
       "/tmp",

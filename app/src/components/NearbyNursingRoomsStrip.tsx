@@ -23,7 +23,7 @@ interface NursingRoom {
   lng: number;
 }
 
-type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported";
+type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported" | "unavailable";
 
 
 function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -55,8 +55,13 @@ export default function NearbyNursingRoomsStrip() {
         setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocStatus("granted");
       },
-      () => {
-        setLocStatus("denied");
+      (err) => {
+        if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+          setLocStatus("denied");
+        } else {
+          // TIMEOUT or POSITION_UNAVAILABLE — 권한은 있지만 위치를 못 잡은 경우
+          setLocStatus("unavailable");
+        }
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
@@ -130,10 +135,11 @@ export default function NearbyNursingRoomsStrip() {
         .slice(0, 3)
     : [];
 
-  const isLocationResolved = locStatus === "granted" || locStatus === "denied" || locStatus === "unsupported";
+  const isLocationResolved = locStatus === "granted" || locStatus === "denied" || locStatus === "unsupported" || locStatus === "unavailable";
   const showLoading = !roomsLoaded || !isLocationResolved;
   const showLocationPrompt = roomsLoaded && (locStatus === "denied" || locStatus === "unsupported");
-  const showEmpty = roomsLoaded && isLocationResolved && !showLocationPrompt && nearest.length === 0;
+  const showUnavailable = roomsLoaded && locStatus === "unavailable";
+  const showEmpty = roomsLoaded && isLocationResolved && !showLocationPrompt && !showUnavailable && nearest.length === 0;
 
   return (
     <section>
@@ -189,6 +195,22 @@ export default function NearbyNursingRoomsStrip() {
             className="px-4 h-[24px] flex items-center rounded-[4px] bg-gray-400 active:bg-gray-500 text-[12px] font-semibold text-white"
           >
             설정 바로가기
+          </button>
+        </div>
+      )}
+
+      {showUnavailable && (
+        <div className="w-full rounded-[8px] bg-white border border-gray-200 py-8 px-4 flex flex-col items-center gap-3">
+          <span className="text-[12px] font-normal text-gray-500 text-center leading-snug">
+            위치를 확인할 수 없어요. 다시 시도해 주세요.
+          </span>
+          <button
+            type="button"
+            onClick={() => requestLocation()}
+            className="px-4 h-[24px] flex items-center rounded-[4px] text-[12px] font-semibold text-white"
+            style={{ backgroundColor: palette.teal }}
+          >
+            다시 시도
           </button>
         </div>
       )}

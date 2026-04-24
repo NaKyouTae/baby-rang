@@ -6,7 +6,7 @@
 export const palette = {
   black: '#121212',
   white: '#FDFDFE',
-  teal: '#30B0C7',
+  teal: '#3078C9',
   gray100: '#F7F8F9',
   gray200: '#EEF0F1',
   gray300: '#DFE0E1',

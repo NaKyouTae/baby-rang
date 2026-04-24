@@ -43,7 +43,7 @@ export default function ChildPickScreen({
                 {child.profileImage ? (
                   <Image src={child.profileImage} alt={child.name} fill className="object-cover" />
                 ) : (
-                  <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
+                  <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={28} height={28} />
                 )}
               </div>
               <div className="flex-1 min-w-0">

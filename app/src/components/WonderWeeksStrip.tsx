@@ -100,7 +100,7 @@ function ChildWonderCard({ child }: { child: Child }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span>{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
+                <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={20} height={20} />
               )}
             </div>
             <span className="text-sm font-bold text-gray-900 truncate">{child.name}</span>

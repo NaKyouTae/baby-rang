@@ -212,7 +212,7 @@ function ChildHeroCard({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="flex items-center justify-center w-full h-full leading-[1]">{child.gender === 'female' ? '👧🏻' : '👦🏻'}</span>
+                <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} className="w-3/5 h-3/5" />
               )}
             </div>
             <div className="min-w-0 flex-1">

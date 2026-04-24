@@ -40,7 +40,7 @@ const BAND_COLORS = {
 const CURVE_STYLES: Record<string, { color: string; width: number; dash?: string }> = {
   p3:  { color: '#94a3b8', width: 0.8, dash: '3,2' },
   p15: { color: '#94a3b8', width: 0.8 },
-  p50: { color: '#30B0C7', width: 1.5 },
+  p50: { color: '#3078C9', width: 1.5 },
   p85: { color: '#94a3b8', width: 0.8 },
   p97: { color: '#94a3b8', width: 0.8, dash: '3,2' },
 };
@@ -272,7 +272,7 @@ export default function GrowthChart({
           <path
             d={childPath}
             fill="none"
-            stroke="#30B0C7"
+            stroke="#3078C9"
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -287,14 +287,14 @@ export default function GrowthChart({
               cy={toY(p.value)}
               r={4}
               fill="white"
-              stroke="#30B0C7"
+              stroke="#3078C9"
               strokeWidth={2}
             />
             <circle
               cx={toX(p.ageMonths)}
               cy={toY(p.value)}
               r={1.5}
-              fill="#30B0C7"
+              fill="#3078C9"
             />
           </g>
         ))}
