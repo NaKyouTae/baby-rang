@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { palette } from '@/lib/colors';
+import { useAuth } from '@/hooks/useAuth';
 
 type Notice = {
   id: string;
@@ -22,10 +23,12 @@ function formatDate(iso: string) {
 
 export default function NoticesPage() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [items, setItems] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +48,18 @@ export default function NoticesPage() {
       cancelled = true;
     };
   }, []);
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      const isOpening = openId !== id;
+      setOpenId(isOpening ? id : null);
+      if (isOpening && isAuthenticated && !readIds.has(id)) {
+        setReadIds((prev) => new Set(prev).add(id));
+        fetch(`/api/notices/${id}/read`, { method: 'POST' }).catch(() => {});
+      }
+    },
+    [openId, isAuthenticated, readIds],
+  );
 
   return (
     <div className="flex flex-col min-h-dvh bg-white px-6">
@@ -84,7 +99,7 @@ export default function NoticesPage() {
                 <li key={n.id}>
                   <button
                     type="button"
-                    onClick={() => setOpenId(open ? null : n.id)}
+                    onClick={() => handleToggle(n.id)}
                     className="w-full text-left px-5 py-4 active:bg-gray-50"
                   >
                     <div className="flex items-center gap-2">

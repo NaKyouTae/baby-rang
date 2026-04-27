@@ -26,6 +26,7 @@ model User {
   physicalGrowths PhysicalGrowth[]
   ownedShares   ChildShare[]       @relation("ownedShares")
   sharedWith    ChildShareMember[] @relation("sharedWith")
+  noticeReads   NoticeRead[]
 
   @@map("users")
 }
@@ -57,9 +58,24 @@ model Notice {
   publishedAt DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  reads       NoticeRead[]
 
   @@index([isPublished, isPinned, publishedAt])
   @@map("notices")
+}
+
+model NoticeRead {
+  id        String   @id @default(uuid())
+  userId    String
+  noticeId  String
+  readAt    DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noticeId])
+  @@index([userId])
+  @@map("notice_reads")
 }
 
 model NavSlot {

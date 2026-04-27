@@ -21,6 +21,7 @@ interface MenuItem {
   href: string;
   icon: React.ReactNode;
   requireAuth?: boolean;
+  showDot?: boolean;
 }
 
 interface MenuSection {
@@ -164,6 +165,7 @@ export default function SettingsPage() {
 
   const [locationPerm, setLocationPerm] = useState<'granted' | 'denied' | 'prompt' | null>(null);
   const [locationGuideOpen, setLocationGuideOpen] = useState(false);
+  const [hasUnreadNotice, setHasUnreadNotice] = useState(false);
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -172,6 +174,14 @@ export default function SettingsPage() {
       status.addEventListener('change', () => setLocationPerm(status.state));
     });
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch('/api/notices/has-unread')
+      .then((r) => r.json())
+      .then((d) => setHasUnreadNotice(d.hasUnread === true))
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   const handleLocationToggle = () => {
     const w = window as unknown as NativeBridgeWindow;
@@ -199,7 +209,12 @@ export default function SettingsPage() {
           {item.icon}
         </span>
         <span className="flex-1 text-left text-[16px] font-medium text-black">
-          {item.label}
+          <span className="relative">
+            {item.label}
+            {item.showDot && (
+              <img src="/dot.svg" alt="" width={4} height={4} className="absolute -top-0.5 -right-[-6px] pointer-events-none" />
+            )}
+          </span>
         </span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
@@ -307,21 +322,18 @@ export default function SettingsPage() {
               onClick={() => openLoginPrompt('아기랑 서비스를 이용하려면\n로그인이 필요해요.')}
               className="flex w-full items-center gap-4 text-left"
             >
-              <div className="flex shrink-0 items-center justify-center rounded-[30px] bg-gray-100" style={{ width: 60, height: 60 }}>
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <path d="M12 21.3333C13.1333 22.1733 14.5133 22.6667 16 22.6667C17.4867 22.6667 18.8667 22.1733 20 21.3333" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M20.0001 16C20.7365 16 21.3334 15.1046 21.3334 14C21.3334 12.8954 20.7365 12 20.0001 12C19.2637 12 18.6667 12.8954 18.6667 14C18.6667 15.1046 19.2637 16 20.0001 16Z" fill="black"/>
-                  <path d="M12.0001 16C12.7365 16 13.3334 15.1046 13.3334 14C13.3334 12.8954 12.7365 12 12.0001 12C11.2637 12 10.6667 12.8954 10.6667 14C10.6667 15.1046 11.2637 16 12.0001 16Z" fill="black"/>
-                  <path d="M2.93335 13.3333C3.45755 10.7717 4.72264 8.42042 6.57154 6.57152C8.42044 4.72262 10.7717 3.45753 13.3334 2.93333M2.93335 18.6667C3.45755 21.2283 4.72264 23.5796 6.57154 25.4285C8.42044 27.2774 10.7717 28.5425 13.3334 29.0667M29.0667 13.3333C28.5425 10.7717 27.2774 8.42042 25.4285 6.57152C23.5796 4.72262 21.2283 3.45753 18.6667 2.93333M29.0667 18.6667C28.5425 21.2283 27.2774 23.5796 25.4285 25.4285C23.5796 27.2774 21.2283 28.5425 18.6667 29.0667" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+              <div className="flex shrink-0 items-center justify-center rounded-[30px] bg-gray-100 overflow-hidden" style={{ width: 60, height: 60 }}>
+                <img src="/icon-male.svg" alt="아기" width={32} height={32} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-gray-900 truncate">로그인이 필요해요</p>
-                <p className="text-xs text-gray-400 mt-0.5">로그인하고 아기랑을 시작해 보세요</p>
+                <div className="flex items-center" style={{ gap: 8 }}>
+                  <p className="text-[16px] font-medium text-black truncate">로그인이 필요해요</p>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </div>
+                <p className="text-[12px] font-normal mt-0.5 truncate" style={{ color: palette.gray500 }}>로그인하고 육아 동반자 아기랑과 함께해요.</p>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
             </button>
           )}
         </section>
@@ -386,8 +398,8 @@ export default function SettingsPage() {
               {/* 스와이프 인디케이터 공간 */}
             </div>
           ) : (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed border-gray-300 py-8 px-4">
-              <p className="text-sm text-gray-500 text-center leading-relaxed">
+            <div className="flex flex-col items-center justify-center border border-dashed border-gray-300 px-4" style={{ height: 112, borderRadius: 8, paddingTop: 21, paddingBottom: 21 }}>
+              <p className="text-center font-normal text-black" style={{ fontSize: 12, lineHeight: '18px' }}>
                 아기 정보를 입력하고
                 <br />
                 맞춤형 케어를 시작하세요.
@@ -398,8 +410,8 @@ export default function SettingsPage() {
                   if (!requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) return;
                   router.push("/settings/children");
                 }}
-                className="mt-4 rounded-full px-6 py-2.5 text-sm font-semibold text-white"
-                style={{ backgroundColor: palette.teal }}
+                className="font-semibold text-white"
+                style={{ padding: '4px 8px', borderRadius: 4, fontSize: 12, backgroundColor: palette.teal, marginTop: 10 }}
               >
                 아기 추가하기
               </button>
@@ -447,7 +459,13 @@ export default function SettingsPage() {
               {section.title}
             </h3>
             <div className="flex flex-col gap-[16px]">
-              {section.items.map((item) => renderMenuItem(item))}
+              {section.items.map((item) =>
+                renderMenuItem(
+                  item.href === '/settings/notices' && hasUnreadNotice
+                    ? { ...item, showDot: true }
+                    : item,
+                ),
+              )}
             </div>
           </section>
         ))}
