@@ -276,6 +276,8 @@ export default function SettingsPage() {
                     className="rounded-[30px] object-cover"
                     style={{ width: 60, height: 60 }}
                   />
+                ) : user?.parentRole === 'mom' ? (
+                  <img src="/icon-mom.svg" alt="엄마" width={32} height={32} />
                 ) : (
                   <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                     <path d="M12 21.3333C13.1333 22.1733 14.5133 22.6667 16 22.6667C17.4867 22.6667 18.8667 22.1733 20 21.3333" stroke="black" strokeWidth="2" strokeLinecap="round"/>
