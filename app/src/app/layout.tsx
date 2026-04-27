@@ -217,6 +217,8 @@ export default function RootLayout({
     <html lang="ko" className="h-full">
       <head>
         {/* Google Analytics (gtag.js) — <head> 에 배치해야 Google 태그 검증 크롤러가 감지 */}
+        {/* Google AdSense */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6008464533427245" crossOrigin="anonymous" />
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-WEH6C2JJB9" />
         <script
           dangerouslySetInnerHTML={{
