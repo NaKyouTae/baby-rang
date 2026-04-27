@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import AdSenseScript from "@/components/ads/AdSenseScript";
@@ -216,11 +217,15 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full">
       <head>
-        {/* Google Analytics (gtag.js) — <head> 에 배치해야 Google 태그 검증 크롤러가 감지 */}
-        {/* Google AdSense */}
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6008464533427245" crossOrigin="anonymous" />
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-WEH6C2JJB9" />
-        <script
+        {/* Google AdSense — AdSenseScript 컴포넌트가 클라이언트에서 동적 로드하므로 여기서는 제거 */}
+        {/* Google Analytics (gtag.js) — next/script afterInteractive로 hydration mismatch 방지 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-WEH6C2JJB9"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="gtag-init"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-WEH6C2JJB9');`,
           }}

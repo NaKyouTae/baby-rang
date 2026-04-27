@@ -60,7 +60,8 @@
       "WebFetch(domain:blog.naver.com)",
       "WebFetch(domain:spectrify.kr)",
       "Bash(npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
-      "Bash(firebase --version)"
+      "Bash(firebase --version)",
+      "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src -name \"*.tsx\" -exec grep -l \"inline.*svg\\\\|<svg.*gender\\\\|gender.*svg\" {} \\\\;)"
     ],
     "additionalDirectories": [
       "/tmp",

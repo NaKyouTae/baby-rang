@@ -17,8 +17,8 @@ export default function EmptyProfileCard({
 }: EmptyProfileCardProps) {
   const content = (
     <>
-      <div className="w-10 h-10 rounded-full border border-primary-500 bg-white flex items-center justify-center text-[22px] leading-none">
-        <span aria-hidden>👶🏻</span>
+      <div className="w-10 h-10 rounded-full border border-primary-500 bg-white flex items-center justify-center overflow-hidden">
+        <img src="/icon-male.svg" alt="아기" width={24} height={24} />
       </div>
       <div className="mt-[10px] text-[12px] leading-[18px] font-normal text-[#222]">
         아기 정보를 입력하고
