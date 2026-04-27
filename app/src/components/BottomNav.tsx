@@ -210,11 +210,11 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
             </div>
           )}
 
-          <div className="flex items-center justify-center h-[56px] bg-white/90 backdrop-blur-xl rounded-[20px] shadow-[0_0_20px_rgba(0,0,0,0.04)] overflow-visible">
+          <div className="flex items-center justify-center h-[64px] bg-white/90 backdrop-blur-xl rounded-[40px] shadow-[0_0_20px_rgba(0,0,0,0.04)] overflow-visible">
             {/* HOME */}
             <Link
               href={HOME_HREF}
-              className="flex flex-col items-center justify-center gap-1 flex-1 h-[56px]"
+              className="flex flex-col items-center justify-center gap-1 flex-1 h-[64px]"
               onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
             >
               <HomeNavIcon active={isHomeActive} />
@@ -338,7 +338,7 @@ function ReorderSlot({
       onClick={onClickSlot}
     >
       <motion.div
-        className={`flex flex-col items-center justify-center gap-1 h-[56px] cursor-pointer`}
+        className={`flex flex-col items-center justify-center gap-1 h-[64px] cursor-pointer`}
         animate={
           editMode && menuId !== null
             ? { rotate: [0, -2, 2, -2, 0], transition: { duration: 0.4, repeat: Infinity, repeatDelay: 0.1 } }

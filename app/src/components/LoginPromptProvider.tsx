@@ -72,8 +72,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                   setOpen(false);
                   window.location.href = `${API_URL}/auth/kakao`;
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-[4px] py-3 text-sm font-semibold active:opacity-80"
-                style={{ backgroundColor: '#FEE500', color: '#191919' }}
+                className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
+                style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
                   <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.7-.8 3.1-.1.5.2.5.4.4.2-.1 2.7-1.8 3.7-2.5.6.1 1.2.1 1.9.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z" />
@@ -83,8 +83,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="w-full rounded-[4px] bg-gray-200 py-3 font-semibold active:bg-gray-300"
-                style={{ fontSize: 12, color: palette.gray500 }}
+                className="w-full rounded-[4px] bg-gray-200 font-semibold active:bg-gray-300"
+                style={{ height: 40, fontSize: 14, color: palette.gray500 }}
               >
                 나중에
               </button>

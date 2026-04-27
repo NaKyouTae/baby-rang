@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../../../workfolio-frontend"
+		},
+		{
+			"path": "../../../k-dream"
 		}
 	]
 }

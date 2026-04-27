@@ -58,7 +58,9 @@
       "WebFetch(domain:brunch.co.kr)",
       "WebFetch(domain:www.reddit.com)",
       "WebFetch(domain:blog.naver.com)",
-      "WebFetch(domain:spectrify.kr)"
+      "WebFetch(domain:spectrify.kr)",
+      "Bash(npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(firebase --version)"
     ],
     "additionalDirectories": [
       "/tmp",
