@@ -45,7 +45,7 @@ const MENU_SECTIONS: MenuSection[] = [
         ),
       },
       {
-        label: "테스트 이력",
+        label: "테스트 내역",
         href: "/settings/history",
         requireAuth: true,
         icon: (
@@ -64,7 +64,7 @@ const MENU_SECTIONS: MenuSection[] = [
         ),
       },
       {
-        label: "데이터 불러오기",
+        label: "데이터 가져오기",
         href: "/settings/import-data",
         requireAuth: true,
         icon: (
@@ -192,7 +192,7 @@ export default function SettingsPage() {
 
   const renderMenuItem = (item: MenuItem) => {
     const className =
-      "flex items-center gap-2 px-6 py-[8px] active:bg-gray-50 transition-colors";
+      "flex items-center gap-2 px-6 active:bg-gray-50 transition-colors";
     const inner = (
       <>
         <span className="flex shrink-0 items-center justify-center">
@@ -444,7 +444,9 @@ export default function SettingsPage() {
             <h3 className="text-[12px] font-medium px-6 mb-[16px]" style={{ color: palette.gray500 }}>
               {section.title}
             </h3>
-            {section.items.map((item) => renderMenuItem(item))}
+            <div className="flex flex-col gap-[16px]">
+              {section.items.map((item) => renderMenuItem(item))}
+            </div>
           </section>
         ))}
 
