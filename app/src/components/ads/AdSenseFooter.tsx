@@ -11,7 +11,7 @@ export default function AdSenseFooter() {
   if (!ADSENSE_CONTENT_ENABLED) return null;
 
   return (
-    <footer className="w-full border-t border-gray-100 bg-gray-50 py-6 px-4 text-center text-xs text-gray-400 space-y-3">
+    <footer className="w-full border-t border-gray-100 bg-gray-50 py-6 px-4 text-center text-xs text-gray-400 space-y-3" style={{ paddingBottom: 'calc(var(--bottom-nav-space) + 24px)' }}>
       <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1">
         <Link href="/about" className="hover:text-gray-600">서비스 소개</Link>
         <Link href="/privacy" className="hover:text-gray-600">개인정보처리방침</Link>
