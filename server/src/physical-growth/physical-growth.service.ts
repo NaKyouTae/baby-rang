@@ -16,13 +16,10 @@ export class PhysicalGrowthService {
     });
     if (isOwner) return;
 
-    const isMember = await this.prisma.childShareMember.findFirst({
-      where: {
-        userId,
-        share: { childId, isActive: true },
-      },
+    const hasAccess = await this.prisma.sharedAccess.findUnique({
+      where: { childId_grantedToId: { childId, grantedToId: userId } },
     });
-    if (!isMember) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!hasAccess) throw new NotFoundException('아이를 찾을 수 없습니다.');
   }
 
   async findAll(userId: string, childId: string) {

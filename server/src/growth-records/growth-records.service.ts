@@ -70,20 +70,17 @@ export class GrowthRecordsService {
     });
     if (isOwner) return;
 
-    // 2. 공유 멤버인지
-    const isMember = await this.prisma.childShareMember.findFirst({
-      where: {
-        userId,
-        share: { childId, isActive: true },
-      },
+    // 2. SharedAccess로 공유받았는지
+    const hasAccess = await this.prisma.sharedAccess.findUnique({
+      where: { childId_grantedToId: { childId, grantedToId: userId } },
     });
-    if (!isMember) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!hasAccess) throw new NotFoundException('아이를 찾을 수 없습니다.');
   }
 
   async earliestDate(userId: string, childId: string) {
     await this.assertChildAccess(userId, childId);
     const rec = await this.prisma.growthRecord.findFirst({
-      where: { userId, childId },
+      where: { childId },
       orderBy: { startAt: 'asc' },
       select: { startAt: true },
     });
@@ -107,7 +104,6 @@ export class GrowthRecordsService {
     end.setUTCDate(end.getUTCDate() + 1);
     return this.prisma.growthRecord.findMany({
       where: {
-        userId,
         childId,
         startAt: { gte: start, lt: end },
       },
@@ -124,7 +120,6 @@ export class GrowthRecordsService {
     const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
     return this.prisma.growthRecord.findMany({
       where: {
-        userId,
         childId,
         startAt: { gte: start, lt: end },
       },

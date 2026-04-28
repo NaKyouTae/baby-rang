@@ -24,8 +24,9 @@ model User {
   growthRecords GrowthRecord[]
   growthQuickButtons GrowthQuickButton[]
   physicalGrowths PhysicalGrowth[]
-  ownedShares   ChildShare[]       @relation("ownedShares")
-  sharedWith    ChildShareMember[] @relation("sharedWith")
+  shareCode     ShareCode?
+  sharedAccess  SharedAccess[]     @relation("grantedAccess")
+  sharedBy      SharedAccess[]     @relation("sharedByUser")
   noticeReads   NoticeRead[]
 
   @@map("users")
@@ -253,7 +254,7 @@ model Child {
   payments      Payment[]
   growthRecords GrowthRecord[]
   physicalGrowths PhysicalGrowth[]
-  shares        ChildShare[]
+  sharedAccess  SharedAccess[]
 
   @@map("children")
 }
@@ -346,33 +347,32 @@ model GrowthQuickButton {
   @@map("growth_quick_buttons")
 }
 
-model ChildShare {
+model ShareCode {
   id        String   @id @default(uuid())
-  childId   String
-  ownerId   String
+  userId    String   @unique
   code      String   @unique
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  child   Child              @relation(fields: [childId], references: [id], onDelete: Cascade)
-  owner   User               @relation("ownedShares", fields: [ownerId], references: [id], onDelete: Cascade)
-  members ChildShareMember[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([childId, ownerId])
-  @@map("child_shares")
+  @@map("share_codes")
 }
 
-model ChildShareMember {
-  id       String   @id @default(uuid())
-  shareId  String
-  userId   String
-  joinedAt DateTime @default(now())
+model SharedAccess {
+  id           String   @id @default(uuid())
+  childId      String
+  grantedToId  String
+  sharedById   String
+  role         String   @default("editor")  // 'editor' | 'viewer'
+  createdAt    DateTime @default(now())
 
-  share ChildShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
-  user  User       @relation("sharedWith", fields: [userId], references: [id], onDelete: Cascade)
+  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  grantedTo User  @relation("grantedAccess", fields: [grantedToId], references: [id], onDelete: Cascade)
+  sharedBy  User  @relation("sharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
 
-  @@unique([shareId, userId])
-  @@map("child_share_members")
+  @@unique([childId, grantedToId])
+  @@index([grantedToId])
+  @@map("shared_access")
 }
 
 model PhysicalGrowth {

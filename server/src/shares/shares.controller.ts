@@ -17,42 +17,39 @@ import { SharesService } from './shares.service';
 export class SharesController {
   constructor(private service: SharesService) {}
 
-  @Post()
-  create(@Req() req, @Body('childId') childId: string) {
-    return this.service.create(req.user.id, childId);
-  }
-
+  /** 내 공유 정보 (코드 + 멤버 목록) */
   @Get()
-  findOwned(@Req() req) {
-    return this.service.findOwned(req.user.id);
+  findMyShare(@Req() req) {
+    return this.service.findMyShare(req.user.id);
   }
 
-  @Get('joined')
-  findJoined(@Req() req) {
-    return this.service.findJoined(req.user.id);
+  /** 내가 공유받은 아이 목록 */
+  @Get('shared-with-me')
+  findSharedWithMe(@Req() req) {
+    return this.service.findSharedWithMe(req.user.id);
   }
 
+  /** 코드 입력하여 참여 */
   @Post('join')
   join(@Req() req, @Body('code') code: string) {
     return this.service.join(req.user.id, code);
   }
 
-  @Delete(':id/members/:memberId')
-  removeMember(
-    @Req() req,
-    @Param('id') id: string,
-    @Param('memberId') memberId: string,
-  ) {
-    return this.service.removeMember(req.user.id, id, memberId);
+  /** 공유 멤버 제거 (내가 공유한 특정 사용자의 모든 접근 삭제) */
+  @Delete('members/:userId')
+  removeMember(@Req() req, @Param('userId') targetUserId: string) {
+    return this.service.removeMember(req.user.id, targetUserId);
   }
 
-  @Delete(':id')
-  remove(@Req() req, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
+  /** 공유 나가기 (내가 받은 특정 접근 삭제) */
+  @Delete('access/:id')
+  leaveAccess(@Req() req, @Param('id') accessId: string) {
+    return this.service.leaveAccess(req.user.id, accessId);
   }
 
-  @Patch(':id/regenerate')
-  regenerate(@Req() req, @Param('id') id: string) {
-    return this.service.regenerate(req.user.id, id);
+  /** 코드 재발급 */
+  @Patch('regenerate')
+  regenerate(@Req() req) {
+    return this.service.regenerate(req.user.id);
   }
 }

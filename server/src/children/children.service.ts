@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { SharesService } from '../shares/shares.service';
 
 /**
  * 'YYYY-MM-DD' 또는 ISO 문자열을 받아 해당 날짜의 UTC 정오 Date로 변환.
@@ -16,6 +17,7 @@ export class ChildrenService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private sharesService: SharesService,
   ) {}
 
   async findAll(userId: string) {
@@ -25,26 +27,20 @@ export class ChildrenService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // 공유받은 아이 목록
-    const sharedMemberships = await this.prisma.childShareMember.findMany({
-      where: { userId },
+    // 공유받은 아이 목록 (SharedAccess 기반)
+    const sharedAccess = await this.prisma.sharedAccess.findMany({
+      where: { grantedToId: userId },
       include: {
-        share: {
-          include: {
-            child: true,
-            owner: { select: { nickname: true } },
-          },
-        },
+        child: true,
+        sharedBy: { select: { nickname: true } },
       },
     });
 
-    const sharedChildren = sharedMemberships
-      .filter((m) => m.share.isActive)
-      .map((m) => ({
-        ...m.share.child,
-        isShared: true,
-        ownerNickname: m.share.owner.nickname,
-      }));
+    const sharedChildren = sharedAccess.map((a) => ({
+      ...a.child,
+      isShared: true,
+      ownerNickname: a.sharedBy.nickname,
+    }));
 
     return [
       ...ownChildren.map((c) => ({ ...c, isShared: false })),
@@ -65,7 +61,7 @@ export class ChildrenService {
       profileImage = await this.storage.upload(file, 'children');
     }
 
-    return this.prisma.child.create({
+    const child = await this.prisma.child.create({
       data: {
         userId,
         name,
@@ -75,6 +71,11 @@ export class ChildrenService {
         profileImage,
       },
     });
+
+    // 기존 공유 멤버에게 자동으로 새 아이 접근 권한 추가
+    await this.sharesService.autoShareNewChild(userId, child.id);
+
+    return child;
   }
 
   async update(

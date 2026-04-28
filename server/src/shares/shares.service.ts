@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,51 +21,85 @@ function generateCode(): string {
 export class SharesService {
   constructor(private prisma: PrismaService) {}
 
-  /** 공유 코드 생성 (아이당 1개) */
-  async create(ownerId: string, childId: string) {
-    // 본인 소유 아이인지 확인
-    const child = await this.prisma.child.findFirst({
-      where: { id: childId, userId: ownerId },
-    });
-    if (!child) throw new NotFoundException('아이를 찾을 수 없습니다.');
-
-    // 이미 공유 코드가 있는지 확인
-    const existing = await this.prisma.childShare.findUnique({
-      where: { childId_ownerId: { childId, ownerId } },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, nickname: true, profileImage: true } },
-          },
-        },
-      },
+  /** 내 공유 코드 조회 (없으면 자동 생성) */
+  async getOrCreateCode(userId: string) {
+    const existing = await this.prisma.shareCode.findUnique({
+      where: { userId },
     });
     if (existing) return existing;
 
-    // 유니크한 코드 생성
     let code = generateCode();
     for (let i = 0; i < 10; i++) {
-      const dup = await this.prisma.childShare.findUnique({ where: { code } });
+      const dup = await this.prisma.shareCode.findUnique({ where: { code } });
       if (!dup) break;
       code = generateCode();
     }
 
-    return this.prisma.childShare.create({
-      data: { childId, ownerId, code },
-      include: {
-        members: {
-          include: {
-            user: { select: { id: true, nickname: true, profileImage: true } },
-          },
-        },
-      },
+    return this.prisma.shareCode.create({
+      data: { userId, code },
     });
   }
 
-  /** 내가 만든 공유 목록 */
-  async findOwned(ownerId: string) {
-    return this.prisma.childShare.findMany({
-      where: { ownerId },
+  /** 내 공유 정보 (코드 + 공유받은 사람들 목록) */
+  async findMyShare(userId: string) {
+    const shareCode = await this.getOrCreateCode(userId);
+
+    // 내가 공유한 접근 권한 목록 (내가 sharedBy인 것)
+    const accessList = await this.prisma.sharedAccess.findMany({
+      where: { sharedById: userId },
+      include: {
+        grantedTo: { select: { id: true, nickname: true, profileImage: true } },
+        child: {
+          select: {
+            id: true,
+            name: true,
+            gender: true,
+            birthDate: true,
+            profileImage: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // 멤버별로 그룹핑
+    const memberMap = new Map<
+      string,
+      {
+        user: {
+          id: string;
+          nickname: string | null;
+          profileImage: string | null;
+        };
+        children: { id: string; name: string }[];
+        accessIds: string[];
+      }
+    >();
+
+    for (const access of accessList) {
+      const uid = access.grantedToId;
+      if (!memberMap.has(uid)) {
+        memberMap.set(uid, {
+          user: access.grantedTo,
+          children: [],
+          accessIds: [],
+        });
+      }
+      const entry = memberMap.get(uid)!;
+      entry.children.push({ id: access.child.id, name: access.child.name });
+      entry.accessIds.push(access.id);
+    }
+
+    return {
+      code: shareCode.code,
+      members: Array.from(memberMap.values()),
+    };
+  }
+
+  /** 내가 공유받은 아이 목록 */
+  async findSharedWithMe(userId: string) {
+    const accessList = await this.prisma.sharedAccess.findMany({
+      where: { grantedToId: userId },
       include: {
         child: {
           select: {
@@ -77,122 +110,163 @@ export class SharesService {
             profileImage: true,
           },
         },
-        members: {
-          include: {
-            user: { select: { id: true, nickname: true, profileImage: true } },
-          },
-        },
+        sharedBy: { select: { id: true, nickname: true, profileImage: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    return accessList.map((a) => ({
+      id: a.id,
+      role: a.role,
+      child: a.child,
+      sharedBy: a.sharedBy,
+    }));
   }
 
-  /** 내가 참여 중인 공유 목록 */
-  async findJoined(userId: string) {
-    const memberships = await this.prisma.childShareMember.findMany({
-      where: { userId },
-      include: {
-        share: {
-          include: {
-            child: {
-              select: {
-                id: true,
-                name: true,
-                gender: true,
-                birthDate: true,
-                profileImage: true,
-              },
-            },
-            owner: { select: { id: true, nickname: true, profileImage: true } },
-          },
-        },
-      },
-      orderBy: { joinedAt: 'asc' },
-    });
-    return memberships;
-  }
-
-  /** 코드 입력하여 공유 참여 */
+  /** 코드 입력하여 공유 참여 → 코드 주인이 접근 가능한 모든 아이에 대해 SharedAccess 생성 */
   async join(userId: string, code: string) {
-    const share = await this.prisma.childShare.findUnique({
+    const shareCode = await this.prisma.shareCode.findUnique({
       where: { code: code.toUpperCase() },
-      include: {
-        child: { select: { id: true, name: true, profileImage: true } },
-      },
+      include: { user: { select: { id: true, nickname: true } } },
     });
-    if (!share || !share.isActive) {
+    if (!shareCode) {
       throw new NotFoundException('유효하지 않은 공유 코드입니다.');
     }
 
-    // 본인이 소유자면 참여 불가
-    if (share.ownerId === userId) {
-      throw new BadRequestException('본인이 만든 공유에는 참여할 수 없습니다.');
+    const codeOwnerId = shareCode.userId;
+
+    // 본인 코드면 참여 불가
+    if (codeOwnerId === userId) {
+      throw new BadRequestException('본인의 공유 코드에는 참여할 수 없습니다.');
     }
 
-    // 이미 참여 중인지 확인
-    const existing = await this.prisma.childShareMember.findUnique({
-      where: { shareId_userId: { shareId: share.id, userId } },
-    });
-    if (existing) throw new ConflictException('이미 참여 중인 공유입니다.');
-
-    await this.prisma.childShareMember.create({
-      data: { shareId: share.id, userId },
+    // 코드 주인이 접근 가능한 모든 아이 = 직접 등록한 아이 + 공유받은 아이
+    const ownChildren = await this.prisma.child.findMany({
+      where: { userId: codeOwnerId },
+      select: { id: true, name: true },
     });
 
-    return { childName: share.child.name };
+    const sharedChildren = await this.prisma.sharedAccess.findMany({
+      where: { grantedToId: codeOwnerId },
+      select: { childId: true, child: { select: { name: true } } },
+    });
+
+    const allChildIds = [
+      ...ownChildren.map((c) => c.id),
+      ...sharedChildren.map((s) => s.childId),
+    ];
+
+    if (allChildIds.length === 0) {
+      throw new BadRequestException('공유할 아이가 없습니다.');
+    }
+
+    // 이미 접근 권한이 있는 아이 제외
+    const existingAccess = await this.prisma.sharedAccess.findMany({
+      where: { grantedToId: userId, childId: { in: allChildIds } },
+      select: { childId: true },
+    });
+    const existingChildIds = new Set(existingAccess.map((a) => a.childId));
+    const newChildIds = allChildIds.filter((id) => !existingChildIds.has(id));
+
+    if (newChildIds.length === 0) {
+      throw new ConflictException('이미 모든 아이의 기록을 공유받고 있습니다.');
+    }
+
+    // SharedAccess 일괄 생성
+    await this.prisma.sharedAccess.createMany({
+      data: newChildIds.map((childId) => ({
+        childId,
+        grantedToId: userId,
+        sharedById: codeOwnerId,
+        role: 'editor',
+      })),
+    });
+
+    const childNames = [
+      ...ownChildren
+        .filter((c) => newChildIds.includes(c.id))
+        .map((c) => c.name),
+      ...sharedChildren
+        .filter((s) => newChildIds.includes(s.childId))
+        .map((s) => s.child.name),
+    ];
+
+    return { childNames, count: newChildIds.length };
   }
 
-  /** 멤버 내보내기 (소유자) 또는 나가기 (본인) */
-  async removeMember(userId: string, shareId: string, memberId: string) {
-    const share = await this.prisma.childShare.findUnique({
-      where: { id: shareId },
+  /** 공유 멤버 제거 (특정 사용자의 모든 접근 권한 삭제) */
+  async removeMember(userId: string, targetUserId: string) {
+    // 내가 공유한 접근 권한 중 targetUserId의 것만 삭제
+    const accessList = await this.prisma.sharedAccess.findMany({
+      where: { sharedById: userId, grantedToId: targetUserId },
     });
-    if (!share) throw new NotFoundException('공유를 찾을 수 없습니다.');
 
-    const member = await this.prisma.childShareMember.findUnique({
-      where: { id: memberId },
-    });
-    if (!member || member.shareId !== shareId) {
-      throw new NotFoundException('멤버를 찾을 수 없습니다.');
+    if (accessList.length === 0) {
+      throw new NotFoundException('해당 멤버를 찾을 수 없습니다.');
     }
 
-    // 소유자이거나 본인만 삭제 가능
-    if (share.ownerId !== userId && member.userId !== userId) {
-      throw new ForbiddenException('권한이 없습니다.');
-    }
+    await this.prisma.sharedAccess.deleteMany({
+      where: { sharedById: userId, grantedToId: targetUserId },
+    });
 
-    await this.prisma.childShareMember.delete({ where: { id: memberId } });
     return { ok: true };
   }
 
-  /** 공유 삭제 (소유자만) */
-  async remove(userId: string, shareId: string) {
-    const share = await this.prisma.childShare.findFirst({
-      where: { id: shareId, ownerId: userId },
+  /** 공유 나가기 (내가 받은 특정 공유 삭제) */
+  async leaveAccess(userId: string, accessId: string) {
+    const access = await this.prisma.sharedAccess.findUnique({
+      where: { id: accessId },
     });
-    if (!share) throw new NotFoundException('공유를 찾을 수 없습니다.');
+    if (!access || access.grantedToId !== userId) {
+      throw new NotFoundException('공유를 찾을 수 없습니다.');
+    }
 
-    await this.prisma.childShare.delete({ where: { id: shareId } });
+    await this.prisma.sharedAccess.delete({ where: { id: accessId } });
     return { ok: true };
   }
 
-  /** 코드 재발급 (소유자만) */
-  async regenerate(userId: string, shareId: string) {
-    const share = await this.prisma.childShare.findFirst({
-      where: { id: shareId, ownerId: userId },
+  /** 코드 재발급 */
+  async regenerate(userId: string) {
+    const existing = await this.prisma.shareCode.findUnique({
+      where: { userId },
     });
-    if (!share) throw new NotFoundException('공유를 찾을 수 없습니다.');
+    if (!existing) throw new NotFoundException('공유 코드를 찾을 수 없습니다.');
 
     let code = generateCode();
     for (let i = 0; i < 10; i++) {
-      const dup = await this.prisma.childShare.findUnique({ where: { code } });
+      const dup = await this.prisma.shareCode.findUnique({ where: { code } });
       if (!dup) break;
       code = generateCode();
     }
 
-    return this.prisma.childShare.update({
-      where: { id: shareId },
+    return this.prisma.shareCode.update({
+      where: { userId },
       data: { code },
+    });
+  }
+
+  /** 아이 등록 시 기존 공유 멤버에게 자동으로 접근 권한 추가 */
+  async autoShareNewChild(ownerId: string, childId: string) {
+    // 내가 직접 공유한(sharedBy) 사람들 조회
+    const existingAccess = await this.prisma.sharedAccess.findMany({
+      where: { sharedById: ownerId },
+      select: { grantedToId: true },
+    });
+
+    const uniqueGrantedIds = [
+      ...new Set(existingAccess.map((a) => a.grantedToId)),
+    ];
+
+    if (uniqueGrantedIds.length === 0) return;
+
+    await this.prisma.sharedAccess.createMany({
+      data: uniqueGrantedIds.map((grantedToId) => ({
+        childId,
+        grantedToId,
+        sharedById: ownerId,
+        role: 'editor',
+      })),
+      skipDuplicates: true,
     });
   }
 }

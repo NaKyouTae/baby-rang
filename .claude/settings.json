@@ -67,12 +67,32 @@
       "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/auth.service.ts)",
       "Bash(git ls-tree *)",
       "Bash(cat prisma.config.ts)",
-      "Bash(cat prisma/prisma.config.ts)"
+      "Bash(cat prisma/prisma.config.ts)",
+      "Bash(grep -r \"마이페이지\\\\|mypage\\\\|settings\" /Users/nakyutae/personal/git/baby-rang/app/src/components/*.tsx)",
+      "WebFetch(domain:www.wanted.co.kr)",
+      "WebFetch(domain:www.linkedin.com)",
+      "WebFetch(domain:kr.linkedin.com)",
+      "Bash(export DATABASE_URL=\"postgresql://postgres:Skrbxo123%21%40%23@localhost:5432/baby-rang\")",
+      "WebFetch(domain:about.daangn.com)",
+      "WebFetch(domain:www.bucketplace.com)",
+      "WebFetch(domain:www.musinsacareers.com)",
+      "WebFetch(domain:kakaopay.career.greetinghr.com)",
+      "WebFetch(domain:bucketplace.career.greetinghr.com)",
+      "WebFetch(domain:businessdaangn.gitbook.io)",
+      "WebFetch(domain:zdnet.co.kr)",
+      "WebFetch(domain:www.economytalk.kr)",
+      "WebFetch(domain:www.sedaily.com)",
+      "WebFetch(domain:www.meconomynews.com)",
+      "WebFetch(domain:www.unicornfactory.co.kr)",
+      "WebFetch(domain:www.catch.co.kr)",
+      "WebFetch(domain:jasoseol.com)",
+      "WebFetch(domain:www.jobkorea.co.kr)"
     ],
     "additionalDirectories": [
       "/tmp",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/physical-growth",
-      "/Users/nakyutae/personal/git/baby-rang/app/src/app/settings/children/[id]"
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/settings/children/[id]",
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/shares/[id]"
     ]
   }
 }
