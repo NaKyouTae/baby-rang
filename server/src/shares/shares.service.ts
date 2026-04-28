@@ -48,7 +48,15 @@ export class SharesService {
     const accessList = await this.prisma.sharedAccess.findMany({
       where: { sharedById: userId },
       include: {
-        grantedTo: { select: { id: true, nickname: true, profileImage: true } },
+        grantedTo: {
+          select: {
+            id: true,
+            nickname: true,
+            email: true,
+            profileImage: true,
+            parentRole: true,
+          },
+        },
         child: {
           select: {
             id: true,
@@ -69,7 +77,9 @@ export class SharesService {
         user: {
           id: string;
           nickname: string | null;
+          email: string | null;
           profileImage: string | null;
+          parentRole: string | null;
         };
         children: { id: string; name: string }[];
         accessIds: string[];
@@ -96,30 +106,61 @@ export class SharesService {
     };
   }
 
-  /** 내가 공유받은 아이 목록 */
+  /** 내가 공유받은 목록 (사용자별 그룹핑) */
   async findSharedWithMe(userId: string) {
     const accessList = await this.prisma.sharedAccess.findMany({
       where: { grantedToId: userId },
       include: {
         child: {
+          select: { id: true, name: true },
+        },
+        sharedBy: {
           select: {
             id: true,
-            name: true,
-            gender: true,
-            birthDate: true,
+            nickname: true,
+            email: true,
             profileImage: true,
+            parentRole: true,
           },
         },
-        sharedBy: { select: { id: true, nickname: true, profileImage: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
 
-    return accessList.map((a) => ({
-      id: a.id,
-      role: a.role,
-      child: a.child,
-      sharedBy: a.sharedBy,
+    // 사용자별 그룹핑
+    const userMap = new Map<
+      string,
+      {
+        user: {
+          id: string;
+          nickname: string | null;
+          email: string | null;
+          profileImage: string | null;
+          parentRole: string | null;
+        };
+        children: { id: string; name: string }[];
+        accessIds: string[];
+      }
+    >();
+
+    for (const a of accessList) {
+      const uid = a.sharedById;
+      if (!userMap.has(uid)) {
+        userMap.set(uid, {
+          user: a.sharedBy,
+          children: [],
+          accessIds: [],
+        });
+      }
+      const entry = userMap.get(uid)!;
+      entry.children.push({ id: a.child.id, name: a.child.name });
+      entry.accessIds.push(a.id);
+    }
+
+    return Array.from(userMap.values()).map((e) => ({
+      user: e.user,
+      children: e.children,
+      accessIds: e.accessIds,
     }));
   }
 

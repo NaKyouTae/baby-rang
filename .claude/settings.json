@@ -86,7 +86,8 @@
       "WebFetch(domain:www.unicornfactory.co.kr)",
       "WebFetch(domain:www.catch.co.kr)",
       "WebFetch(domain:jasoseol.com)",
-      "WebFetch(domain:www.jobkorea.co.kr)"
+      "WebFetch(domain:www.jobkorea.co.kr)",
+      "WebFetch(domain:blog.mstacc.com)"
     ],
     "additionalDirectories": [
       "/tmp",
