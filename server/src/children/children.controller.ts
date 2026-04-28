@@ -32,6 +32,7 @@ export class ChildrenController {
     @Body('name') name: string,
     @Body('gender') gender: string,
     @Body('birthDate') birthDate: string,
+    @Body('dueDate') dueDate?: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.childrenService.create(
@@ -40,6 +41,7 @@ export class ChildrenController {
       gender,
       birthDate,
       file,
+      dueDate,
     );
   }
 
@@ -51,6 +53,7 @@ export class ChildrenController {
     @Body('name') name: string,
     @Body('gender') gender: string,
     @Body('birthDate') birthDate: string,
+    @Body('dueDate') dueDate?: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.childrenService.update(
@@ -60,6 +63,7 @@ export class ChildrenController {
       gender,
       birthDate,
       file,
+      dueDate,
     );
   }
 

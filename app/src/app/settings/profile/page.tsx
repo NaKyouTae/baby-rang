@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
+import FormInput from '@/components/FormInput';
 
 type ParentRole = 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other' | '';
 
@@ -82,52 +83,51 @@ export default function ProfileSettingsPage() {
         onAction={() => router.push('/settings')}
       />
 
-      <main className="flex-1 px-6 pt-4 space-y-6">
+      <main className="flex-1 px-6 pt-4 space-y-[24px]">
         {/* 이메일 */}
         <section>
-          <p className="text-sm font-medium text-gray-700 mb-2">이메일</p>
-          <div className="w-full rounded-xl bg-gray-100 px-4 py-3.5">
-            <p className="text-sm text-gray-400">{user?.email || '-'}</p>
-          </div>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">이메일</p>
+          <FormInput
+            value={user?.email || '-'}
+            disabled
+          />
         </section>
 
         {/* 닉네임 */}
         <section>
-          <p className="text-sm font-medium text-gray-700 mb-2">
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">
             닉네임 <span className="text-red-500">*</span>
           </p>
-          <div className="w-full rounded-xl bg-gray-100 px-4 py-3.5">
-            <input
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="앱에서 사용할 닉네임"
-              maxLength={20}
-              className="w-full text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent"
-            />
-          </div>
+          <FormInput
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="앱에서 사용할 닉네임"
+            maxLength={20}
+          />
         </section>
 
         {/* 관계 */}
         <section>
-          <p className="text-sm font-medium text-gray-700 mb-3">
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">
             관계 <span className="text-red-500">*</span>
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-[8px]">
             {ROLE_OPTIONS.map(({ value, label }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => setParentRole(value)}
-                className={`px-4 h-[28px] rounded-[20px] text-sm font-medium border transition-colors ${
+                className={`min-w-[45px] h-[28px] rounded-[20px] text-xs border transition-colors ${
                   parentRole === value
-                    ? 'text-white border-transparent'
-                    : 'bg-white border-gray-200 text-gray-500'
+                    ? 'font-medium text-white border-transparent'
+                    : 'font-normal bg-white border-gray-200 text-gray-400'
                 }`}
-                style={
-                  parentRole === value
+                style={{
+                  paddingLeft: 12, paddingRight: 12,
+                  ...(parentRole === value
                     ? { backgroundColor: palette.teal, borderColor: palette.teal }
-                    : undefined
-                }
+                    : {}),
+                }}
               >
                 {label}
               </button>
@@ -143,7 +143,7 @@ export default function ProfileSettingsPage() {
         <button
           onClick={handleSave}
           disabled={!canSubmit}
-          className="w-full py-3.5 rounded-2xl text-white text-sm font-bold disabled:opacity-40"
+          className="w-full py-3.5 rounded-[4px] text-white text-sm font-bold disabled:opacity-40"
           style={{ backgroundColor: palette.teal }}
         >
           {submitting ? '저장 중...' : '저장'}

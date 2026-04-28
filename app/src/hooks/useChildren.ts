@@ -14,8 +14,8 @@ import {
 export type Gender = 'male' | 'female';
 
 export const GENDER_LABEL: Record<Gender, string> = {
-  male: '남자',
-  female: '여자',
+  male: '남아',
+  female: '여아',
 };
 
 export interface Child {
@@ -23,6 +23,7 @@ export interface Child {
   name: string;
   gender: string;
   birthDate: string; // YYYY-MM-DD
+  dueDate?: string | null; // YYYY-MM-DD
   profileImage?: string | null;
   isShared?: boolean;
   ownerNickname?: string | null;
@@ -33,6 +34,7 @@ function normalizeChildren(data: (Child & { birthDate: string })[]): Child[] {
     .map((c) => ({
       ...c,
       birthDate: toKstYmd(c.birthDate),
+      dueDate: c.dueDate ? toKstYmd(c.dueDate) : null,
     }))
     .sort((a, b) => b.birthDate.localeCompare(a.birthDate));
 }
@@ -86,12 +88,13 @@ export function useChildren() {
   }, [fetchChildren, authLoaded]);
 
   const addChild = useCallback(
-    async (name: string, gender: string, birthDate: string, profileImage?: File) => {
+    async (name: string, gender: string, birthDate: string, profileImage?: File, dueDate?: string) => {
       if (!requireLogin()) return;
       const formData = new FormData();
       formData.append('name', name);
       formData.append('gender', gender);
       formData.append('birthDate', birthDate);
+      if (dueDate) formData.append('dueDate', dueDate);
       if (profileImage) formData.append('profileImage', profileImage);
 
       const res = await fetch('/api/children', {
@@ -104,12 +107,13 @@ export function useChildren() {
   );
 
   const updateChild = useCallback(
-    async (id: string, name: string, gender: string, birthDate: string, profileImage?: File) => {
+    async (id: string, name: string, gender: string, birthDate: string, profileImage?: File, dueDate?: string) => {
       if (!requireLogin()) return;
       const formData = new FormData();
       formData.append('name', name);
       formData.append('gender', gender);
       formData.append('birthDate', birthDate);
+      if (dueDate) formData.append('dueDate', dueDate);
       if (profileImage) formData.append('profileImage', profileImage);
 
       const res = await fetch(`/api/children/${id}`, {

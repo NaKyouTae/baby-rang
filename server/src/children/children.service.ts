@@ -58,6 +58,7 @@ export class ChildrenService {
     gender: string,
     birthDate: string,
     file?: Express.Multer.File,
+    dueDate?: string,
   ) {
     let profileImage: string | undefined;
     if (file) {
@@ -70,6 +71,7 @@ export class ChildrenService {
         name,
         gender,
         birthDate: toBirthDate(birthDate),
+        dueDate: dueDate ? toBirthDate(dueDate) : null,
         profileImage,
       },
     });
@@ -82,6 +84,7 @@ export class ChildrenService {
     gender: string,
     birthDate: string,
     file?: Express.Multer.File,
+    dueDate?: string,
   ) {
     const child = await this.prisma.child.findFirst({
       where: { id: childId, userId },
@@ -98,7 +101,18 @@ export class ChildrenService {
 
     return this.prisma.child.update({
       where: { id: childId },
-      data: { name, gender, birthDate: toBirthDate(birthDate), profileImage },
+      data: {
+        name,
+        gender,
+        birthDate: toBirthDate(birthDate),
+        dueDate:
+          dueDate !== undefined
+            ? dueDate
+              ? toBirthDate(dueDate)
+              : null
+            : undefined,
+        profileImage,
+      },
     });
   }
 

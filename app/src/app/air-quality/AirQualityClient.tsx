@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
+import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
 
 interface WeatherData {
@@ -279,8 +279,16 @@ export default function AirQualityClient() {
 
       <ConfirmModal
         open={guideModal}
-        title="위치 권한 설정"
-        description={typeof window !== "undefined" ? getLocationSettingsGuide().description : "설정에서 위치 권한을 허용해주세요."}
+        icon={
+          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
+              <path d="M2.66675 6.76201C2.66675 3.76401 5.05475 1.33334 8.00008 1.33334C10.9454 1.33334 13.3334 3.76401 13.3334 6.76201C13.3334 9.73668 11.6314 13.2087 8.97542 14.4493C8.67014 14.5923 8.33717 14.6664 8.00008 14.6664C7.66299 14.6664 7.33003 14.5923 7.02475 14.4493C4.36875 13.208 2.66675 9.73734 2.66675 6.76268V6.76201Z" stroke="black"/>
+              <path d="M8 8.66669C9.10457 8.66669 10 7.77126 10 6.66669C10 5.56212 9.10457 4.66669 8 4.66669C6.89543 4.66669 6 5.56212 6 6.66669C6 7.77126 6.89543 8.66669 8 8.66669Z" stroke="black"/>
+            </svg>
+          </div>
+        }
+        title="위치 권한 변경"
+        description={"위치 권한을 변경해주세요.\n설정에서 위치 권한을 변경할 수 있어요."}
         confirmLabel="설정으로 이동"
         onConfirm={() => {
           openLocationSettings();

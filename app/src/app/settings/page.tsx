@@ -213,7 +213,7 @@ export default function SettingsPage() {
           <span className="relative">
             {item.label}
             {item.showDot && (
-              <img src="/dot.svg" alt="" width={4} height={4} className="absolute -top-0.5 -right-[-6px] pointer-events-none" />
+              <img src="/dot.svg" alt="" width={4} height={4} className="absolute top-0 -right-2 pointer-events-none" />
             )}
           </span>
         </span>
@@ -249,11 +249,17 @@ export default function SettingsPage() {
       {locationGuide && (
         <ConfirmModal
           open={locationGuideOpen}
-          emoji="📍"
-          title={locationGuide.title}
-          description={locationGuide.description}
-          confirmLabel="확인"
-          hideCancel
+          icon={
+            <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 16 16" fill="none">
+                <path d="M2.66675 6.76201C2.66675 3.76401 5.05475 1.33334 8.00008 1.33334C10.9454 1.33334 13.3334 3.76401 13.3334 6.76201C13.3334 9.73668 11.6314 13.2087 8.97542 14.4493C8.67014 14.5923 8.33717 14.6664 8.00008 14.6664C7.66299 14.6664 7.33003 14.5923 7.02475 14.4493C4.36875 13.208 2.66675 9.73734 2.66675 6.76268V6.76201Z" stroke="black"/>
+                <path d="M8 8.66669C9.10457 8.66669 10 7.77126 10 6.66669C10 5.56212 9.10457 4.66669 8 4.66669C6.89543 4.66669 6 5.56212 6 6.66669C6 7.77126 6.89543 8.66669 8 8.66669Z" stroke="black"/>
+              </svg>
+            </div>
+          }
+          title="위치 권한 변경"
+          description={"위치 권한을 변경해주세요.\n설정에서 위치 권한을 변경할 수 있어요."}
+          confirmLabel="설정으로 이동"
           onConfirm={() => setLocationGuideOpen(false)}
           onClose={() => setLocationGuideOpen(false)}
         />
@@ -312,7 +318,7 @@ export default function SettingsPage() {
               className="flex w-full items-center gap-4 text-left"
             >
               <div className="flex shrink-0 items-center justify-center rounded-[30px] bg-gray-100 overflow-hidden" style={{ width: 60, height: 60 }}>
-                <img src="/icon-male.svg" alt="아기" width={32} height={32} />
+                <img src="/icon-boy.svg" alt="아기" width={32} height={32} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center" style={{ gap: 8 }}>
@@ -467,7 +473,7 @@ function ChildProfileCard({ child }: { child: Child }) {
             style={{ width: 40, height: 40, borderRadius: '50%' }}
           />
         ) : (
-          <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={24} height={24} />
+          <img src={child.gender === 'female' ? '/icon-girl.svg' : '/icon-boy.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={24} height={24} />
         )}
       </div>
       <p className="text-[16px] font-medium text-black truncate max-w-full text-center px-2" style={{ marginTop: '10px' }}>
@@ -538,45 +544,46 @@ function ChildProfileSection({
     );
   }
 
-  // 1~2명: 화면 꽉 차게 나란히 표시 + 인디케이터
-  if (children.length <= 2) {
+  // 1명: 2열 그리드 (아이 + 빈 프로필)
+  if (children.length === 1) {
     return (
       <section className="px-6 mb-[24px]">
-        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${children.length}, 1fr)` }}>
-          {children.map((child) => (
-            <ChildProfileCard key={child.id} child={child} />
-          ))}
+        <div className="grid grid-cols-2 gap-3">
+          <ChildProfileCard child={children[0]} />
+          <Link
+            href="/settings/children/add"
+            className="flex flex-col items-center justify-center border border-dashed border-gray-300"
+            style={{ borderRadius: '8px', minHeight: 100 }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </Link>
         </div>
-        {/* 인디케이터 */}
         <div className="flex justify-center gap-1.5 mt-3">
-          {children.map((child, i) => (
-            <span
-              key={child.id}
-              className={`rounded-full ${i === 0 ? 'w-3 h-1 bg-gray-600' : 'w-1 h-1 bg-gray-300'}`}
-            />
-          ))}
-          {/* 추가 카드 인디케이터 */}
-          <span className="rounded-full w-1 h-1 bg-gray-300" />
+          <span className="rounded-full w-[12px] h-[4px] bg-gray-600" />
+          <span className="rounded-full w-[4px] h-[4px] bg-gray-300" />
         </div>
       </section>
     );
   }
 
-  // 3명 이상: 캐러셀 — 2개 꽉 차게 보이고 3번째가 우측에 살짝 보임
+  // 2명 이상: 캐러셀 — 2개 꽉 차게 보이고 빈 프로필이 우측에 살짝 보임
   const totalPages = Math.ceil((children.length + 1) / 2); // +1 for add card
   return (
-    <section className="mb-[24px]">
+    <section className="px-6 mb-[24px]">
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar px-6"
-        style={{ scrollbarWidth: 'none' }}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar -mx-6 px-6"
+        style={{ scrollbarWidth: 'none', scrollPaddingLeft: 24 }}
       >
         {children.map((child) => (
           <div
             key={child.id}
             className="snap-start shrink-0"
-            style={{ width: 'calc((100% - 12px) / 2 - 8px)' }}
+            style={{ width: 'calc((100% - 12px) / 2)' }}
           >
             <ChildProfileCard child={child} />
           </div>
@@ -584,10 +591,10 @@ function ChildProfileSection({
         {/* 추가 카드 */}
         <div
           className="snap-start shrink-0"
-          style={{ width: 'calc((100% - 12px) / 2 - 8px)' }}
+          style={{ width: 'calc((100% - 12px) / 2)' }}
         >
           <Link
-            href="/settings/children"
+            href="/settings/children/add"
             className="flex flex-col items-center justify-center border border-dashed border-gray-300 h-full"
             style={{ borderRadius: '8px', minHeight: 100 }}
           >
@@ -604,7 +611,7 @@ function ChildProfileSection({
           <span
             key={i}
             className={`rounded-full transition-all ${
-              i === activeIdx ? 'w-3 h-1 bg-gray-600' : 'w-1 h-1 bg-gray-300'
+              i === activeIdx ? 'w-[12px] h-[4px] bg-gray-600' : 'w-[4px] h-[4px] bg-gray-300'
             }`}
           />
         ))}

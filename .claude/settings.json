@@ -64,11 +64,15 @@
       "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src -name \"*.tsx\" -exec grep -l \"inline.*svg\\\\|<svg.*gender\\\\|gender.*svg\" {} \\\\;)",
       "Bash(cat .lintstagedrc*)",
       "Bash(cat lint-staged.config.*)",
-      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/auth.service.ts)"
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/auth.service.ts)",
+      "Bash(git ls-tree *)",
+      "Bash(cat prisma.config.ts)",
+      "Bash(cat prisma/prisma.config.ts)"
     ],
     "additionalDirectories": [
       "/tmp",
-      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/physical-growth"
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/physical-growth",
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/settings/children/[id]"
     ]
   }
 }
