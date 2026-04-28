@@ -87,7 +87,8 @@
       "WebFetch(domain:www.catch.co.kr)",
       "WebFetch(domain:jasoseol.com)",
       "WebFetch(domain:www.jobkorea.co.kr)",
-      "WebFetch(domain:blog.mstacc.com)"
+      "WebFetch(domain:blog.mstacc.com)",
+      "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src/app/payment* -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\))"
     ],
     "additionalDirectories": [
       "/tmp",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useChildren } from "@/hooks/useChildren";
 import { TYPE_CONFIG, GrowthType } from "@/app/growth-record/types";
 import { palette } from "@/lib/colors";
+import PageHeader from "@/components/PageHeader";
 
 /* ── 한글 라벨 → GrowthType 매핑 ── */
 const LABEL_TO_TYPE: Record<string, GrowthType> = {
@@ -249,6 +250,26 @@ function formatDate(iso: string) {
   return `${mm}/${dd} ${hh}:${mi}`;
 }
 
+const RECORD_ICONS: Record<string, string> = {
+  FORMULA: "/icon-record-formula.svg",
+  BREASTFEEDING: "/icon-record-breastfeeding.svg",
+  PUMPED_FEEDING: "/icon-record-pumped-feeding.svg",
+  PUMPING: "/icon-record-pumping.svg",
+  SLEEP: "/icon-record-sleep.svg",
+  BATH: "/icon-record-bath.svg",
+  MEDICATION: "/icon-record-medication.svg",
+  DIAPER: "/icon-record-diaper.svg",
+  BABY_FOOD: "/icon-record-baby-food.svg",
+  MILK: "/icon-record-milk.svg",
+  WATER: "/icon-record-water.svg",
+  ETC: "/icon-record-etc.svg",
+  SNACK: "/icon-record-etc.svg",
+  HOSPITAL: "/icon-record-etc.svg",
+  TEMPERATURE: "/icon-record-etc.svg",
+  PLAY: "/icon-record-etc.svg",
+  TUMMY_TIME: "/icon-record-etc.svg",
+};
+
 export default function ImportDataPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -257,6 +278,7 @@ export default function ImportDataPage() {
   const [records, setRecords] = useState<ParsedRecord[]>([]);
   const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [checkedTypes, setCheckedTypes] = useState<Set<GrowthType>>(new Set());
   const [result, setResult] = useState<{
     success: number;
     failed: number;
@@ -276,14 +298,29 @@ export default function ImportDataPage() {
     const text = await file.text();
     const parsed = parseFile(text);
     setRecords(parsed);
+    // 모든 타입 기본 체크
+    const allTypes = new Set(parsed.map((r) => r.type));
+    setCheckedTypes(allTypes);
   };
 
+  const toggleType = (type: GrowthType) => {
+    setCheckedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  // 체크된 타입의 레코드만 필터
+  const selectedRecords = records.filter((r) => checkedTypes.has(r.type));
+
   const handleImport = async () => {
-    if (!selectedChildId || records.length === 0) return;
+    if (!selectedChildId || selectedRecords.length === 0) return;
     setUploading(true);
     setResult(null);
     try {
-      const payload = records.map((r) => ({
+      const payload = selectedRecords.map((r) => ({
         childId: selectedChildId,
         type: r.type,
         startAt: r.startAt,
@@ -309,50 +346,27 @@ export default function ImportDataPage() {
   };
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 px-6">
-      {/* 헤더 */}
-      <header className="sticky top-0 z-10 flex items-center h-12 px-6 bg-white border-b border-gray-100 -mx-6"
-        style={{ paddingTop: "var(--safe-area-top)" }}>
-        <button onClick={() => router.back()} className="p-2 -ml-2">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={palette.gray600} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <h1 className="flex-1 text-center text-[15px] font-semibold text-gray-900">
-          데이터 가져오기
-        </h1>
-        <div className="w-9" />
-      </header>
+    <div className="flex flex-col min-h-dvh bg-white">
+      <PageHeader title="데이터 가져오기" variant="back" />
 
-      <div className="flex-1 overflow-y-auto py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-5 space-y-4">
         {/* 아이 선택 */}
         {isLoaded && children.length > 1 && (
-          <div className="rounded-xl bg-white p-4 shadow-sm">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              아이 선택
-            </label>
-            <select
-              value={selectedChildId}
-              onChange={(e) => setSelectedChildId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 bg-white"
-            >
-              {children.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedChildId}
+            onChange={(e) => setSelectedChildId(e.target.value)}
+            className="w-full h-[44px] rounded-lg border border-gray-200 bg-gray-100 px-4 text-sm font-medium text-black"
+          >
+            {children.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         )}
 
-        {/* 파일 첨부 */}
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            파일 첨부
-          </label>
-          <p className="text-xs text-gray-400 mb-3">
-            txt 형식의 기록 파일을 선택해주세요.
-          </p>
+        {/* 파일 선택 */}
+        <div>
           <input
             ref={fileRef}
             type="file"
@@ -361,44 +375,70 @@ export default function ImportDataPage() {
             className="hidden"
           />
           <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-4 text-sm text-gray-500 active:bg-gray-50 transition-colors"
+            className={`w-full h-[44px] rounded-lg border border-gray-200 bg-white px-4 text-sm text-center ${fileName ? 'font-medium text-black' : 'font-normal text-gray-400'}`}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            {fileName || "파일 선택"}
+            {fileName || ".txt 형식의 기록 파일을 선택해 주세요."}
+          </button>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="mt-2.5 w-full h-8 rounded bg-gray-400 text-xs font-semibold text-white active:bg-gray-500"
+          >
+            파일 선택
           </button>
         </div>
 
         {/* 미리보기 - 카테고리별 요약 */}
         {records.length > 0 && (
-          <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-sm font-medium text-gray-700">
-                총 <span className="text-primary-600 font-bold">{records.length}</span>건의 기록
-              </p>
-            </div>
-            <div className="px-4 py-3 space-y-2">
+          <div className="mt-6">
+            <p className="text-xs font-normal text-gray-500 mb-2.5">
+              총 <span className="font-semibold" style={{ color: palette.teal }}>{records.length}</span>건의 기록
+            </p>
+            <ul className="space-y-2.5">
               {Object.entries(
                 records.reduce<Record<GrowthType, number>>((acc, r) => {
                   acc[r.type] = (acc[r.type] || 0) + 1;
                   return acc;
                 }, {} as Record<GrowthType, number>)
               ).map(([type, count]) => {
-                const cfg = TYPE_CONFIG[type as GrowthType];
+                const t = type as GrowthType;
+                const cfg = TYPE_CONFIG[t];
+                const checked = checkedTypes.has(t);
+                const iconSrc = RECORD_ICONS[t] ?? RECORD_ICONS.ETC;
                 return (
-                  <div key={type} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      {cfg.emoji} {cfg.label}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">{count}건</span>
-                  </div>
+                  <li
+                    key={type}
+                    onClick={() => toggleType(t)}
+                    className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 cursor-pointer"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white overflow-hidden" style={{ border: `1px solid ${palette.teal}` }}>
+                      <img src={iconSrc} alt={cfg.label} width={24} height={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[16px] font-medium text-black">{cfg.label}</p>
+                      <p className="text-xs mt-1.5">
+                        <span className="font-semibold" style={{ color: palette.teal }}>{count}</span>
+                        <span className="font-normal text-gray-500">건</span>
+                      </p>
+                    </div>
+                    {checked ? (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                        <rect width="16" height="16" rx="8" fill="#3078C9"/>
+                        <path d="M4 7.36957L7.48559 10.5L12 5.5" stroke="#FDFDFE" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 17 17" fill="none" className="shrink-0">
+                        <rect x="0.5" y="0.5" width="16" height="16" rx="8" fill="#FDFDFE"/>
+                        <rect x="0.5" y="0.5" width="16" height="16" rx="8" stroke="#EEF0F1" strokeLinejoin="bevel"/>
+                        <path d="M4.5 7.86957L7.98559 11L12.5 6" stroke="#808991" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         )}
 
@@ -417,24 +457,28 @@ export default function ImportDataPage() {
       </div>
 
       {/* 하단 CTA 버튼 */}
-      <div className="shrink-0 pb-[calc(var(--safe-area-bottom)+16px)] pt-3 bg-gray-50 border-t border-gray-100 -mx-6 px-6">
-        {result ? (
-          <button
-            onClick={() => router.push("/growth-record")}
-            className="w-full rounded-xl bg-primary-500 py-3.5 text-[15px] font-semibold text-white active:bg-primary-600 transition-colors"
-          >
-            기록 확인하기
-          </button>
-        ) : (
-          <button
-            onClick={handleImport}
-            disabled={uploading || records.length === 0 || !selectedChildId}
-            className="w-full rounded-xl bg-primary-500 py-3.5 text-[15px] font-semibold text-white disabled:opacity-40 active:bg-primary-600 transition-colors"
-          >
-            {uploading ? "가져오는 중..." : `${records.length}건 가져오기`}
-          </button>
-        )}
-      </div>
+      {(result || records.length > 0) && (
+        <div className="shrink-0 mb-24 pt-3 px-5">
+          {result ? (
+            <button
+              onClick={() => router.push("/growth-record")}
+              className="w-full h-[44px] rounded-lg font-semibold text-sm text-white active:opacity-80 transition-colors"
+              style={{ backgroundColor: palette.teal }}
+            >
+              기록 확인하기
+            </button>
+          ) : (
+            <button
+              onClick={handleImport}
+              disabled={uploading || selectedRecords.length === 0 || !selectedChildId}
+              className="w-full h-[44px] rounded-lg font-semibold text-sm text-white disabled:opacity-40 active:opacity-80 transition-colors"
+              style={{ backgroundColor: palette.teal }}
+            >
+              {uploading ? "가져오는 중..." : `${selectedRecords.length}건 가져오기`}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

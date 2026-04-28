@@ -37,11 +37,7 @@ export default function OnboardingClient() {
   // 카카오 닉네임 자동 기입
   useEffect(() => {
     if (!isLoaded) return;
-    if (!isAuthenticated) {
-      router.replace('/');
-      return;
-    }
-    if (user?.nickname && !nickname) {
+    if (isAuthenticated && user?.nickname && !nickname) {
       setNickname(user.nickname);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,6 +55,10 @@ export default function OnboardingClient() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    if (!isAuthenticated) {
+      router.push('/');
+      return;
+    }
     setSubmitting(true);
     setError(null);
 

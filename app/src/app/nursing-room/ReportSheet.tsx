@@ -376,19 +376,34 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
             {searchError && (
               <p className="mt-1.5 text-xs text-red-500">{searchError}</p>
             )}
-            {form.lat != null && form.lng != null && (
-              <button
-                type="button"
-                onClick={() => setPickerOpen(true)}
-                className="mt-2 w-full px-3 py-2.5 rounded-[4px] border border-gray-900 bg-gray-100 text-gray-900 text-sm font-medium flex items-center justify-center gap-1.5"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                  <circle cx="12" cy="9" r="2.5" />
-                </svg>
-                지도에서 정확한 위치 찾기
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (form.lat == null || form.lng == null) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      setForm((s) => ({ ...s, lat: pos.coords.latitude, lng: pos.coords.longitude }));
+                      setPickerOpen(true);
+                    },
+                    () => {
+                      // 위치 권한 거부 시 기본 좌표(서울)로 열기
+                      setForm((s) => ({ ...s, lat: s.lat ?? 37.5666, lng: s.lng ?? 126.9784 }));
+                      setPickerOpen(true);
+                    },
+                    { enableHighAccuracy: true, timeout: 5000 },
+                  );
+                } else {
+                  setPickerOpen(true);
+                }
+              }}
+              className="mt-2 w-full px-3 py-2.5 rounded-[4px] border border-gray-900 bg-gray-100 text-gray-900 text-sm font-medium flex items-center justify-center gap-1.5"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+              지도에서 정확한 위치 찾기
+            </button>
           </Field>
 
           <Field label="상세 위치">

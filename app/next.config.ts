@@ -10,15 +10,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async redirects() {
-    return [
-      {
-        source: "/events/temperament",
-        destination: "/temperament",
-        permanent: true,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

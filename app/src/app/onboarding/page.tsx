@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description:
     '아기랑 회원가입 - 닉네임, 역할, 아이 정보를 등록하고 맞춤 육아 서비스를 시작하세요.',
   alternates: { canonical: '/onboarding' },
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export default function OnboardingPage() {
