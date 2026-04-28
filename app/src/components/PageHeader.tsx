@@ -19,7 +19,7 @@ export default function PageHeader({
   const handleAction = onAction ?? (() => router.back());
 
   return (
-    <header className="flex items-center justify-center relative px-5 py-4">
+    <header className="flex items-center justify-center relative px-5 py-4" style={{ paddingTop: 'calc(var(--safe-area-top) + 16px)' }}>
       {variant === 'back' && (
         <button
           type="button"
