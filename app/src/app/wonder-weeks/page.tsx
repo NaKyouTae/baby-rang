@@ -2,10 +2,16 @@ import type { Metadata } from 'next';
 import WonderWeeksClient from './WonderWeeksClient';
 
 export const metadata: Metadata = {
-  title: '원더윅스',
+  title: '원더윅스 캘린더 - 아기 정신 발달 도약기 계산',
   description:
-    '아이의 정신 발달 도약기(원더윅스)를 캘린더로 한눈에 확인하세요. 생년월일 기반 자동 계산.',
+    '아기의 원더윅스(Wonder Weeks) 정신 발달 도약기를 생년월일 기반으로 자동 계산합니다. 총 10번의 도약기 시기와 특징, 까다로운 행동 변화, 부모 대처법을 캘린더에서 한눈에 확인하세요.',
   alternates: { canonical: '/wonder-weeks' },
+  openGraph: {
+    title: '원더윅스 캘린더 - 아기 정신 발달 도약기 계산 | 아기랑',
+    description:
+      '아기의 원더윅스(Wonder Weeks) 정신 발달 도약기를 생년월일 기반으로 자동 계산합니다. 총 10번의 도약기 시기와 특징을 캘린더에서 확인하세요.',
+    url: 'https://baby-rang.spectrify.kr/wonder-weeks',
+  },
 };
 
 const jsonLd = {

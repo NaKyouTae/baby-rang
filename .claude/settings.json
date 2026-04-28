@@ -61,7 +61,10 @@
       "WebFetch(domain:spectrify.kr)",
       "Bash(npx create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
       "Bash(firebase --version)",
-      "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src -name \"*.tsx\" -exec grep -l \"inline.*svg\\\\|<svg.*gender\\\\|gender.*svg\" {} \\\\;)"
+      "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src -name \"*.tsx\" -exec grep -l \"inline.*svg\\\\|<svg.*gender\\\\|gender.*svg\" {} \\\\;)",
+      "Bash(cat .lintstagedrc*)",
+      "Bash(cat lint-staged.config.*)",
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/auth.service.ts)"
     ],
     "additionalDirectories": [
       "/tmp",

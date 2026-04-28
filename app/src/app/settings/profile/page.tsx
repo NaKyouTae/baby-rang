@@ -4,8 +4,18 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
+import PageHeader from '@/components/PageHeader';
 
-type ParentRole = 'mom' | 'dad' | '';
+type ParentRole = 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other' | '';
+
+const ROLE_OPTIONS: { value: ParentRole; label: string }[] = [
+  { value: 'mom', label: '엄마' },
+  { value: 'dad', label: '아빠' },
+  { value: 'grandmother', label: '할머니' },
+  { value: 'grandfather', label: '할아버지' },
+  { value: 'caregiver', label: '아이돌보미' },
+  { value: 'other', label: '기타' },
+];
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
@@ -27,8 +37,7 @@ export default function ProfileSettingsPage() {
     setParentRole(((user?.parentRole as ParentRole) ?? '') || '');
   }, [isLoaded, isAuthenticated, user, router]);
 
-  const canSubmit =
-    nickname.trim().length > 0 && (parentRole === 'mom' || parentRole === 'dad') && !submitting;
+  const canSubmit = nickname.trim().length > 0 && parentRole !== '' && !submitting;
 
   const handleSave = async () => {
     if (!canSubmit) return;
@@ -66,102 +75,76 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
-        <button
-          type="button"
-          onClick={() => router.push('/settings')}
-          aria-label="뒤로가기"
-          className="p-2"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
-          내 정보
-        </h1>
-      </header>
+    <div className="flex flex-col min-h-dvh bg-white">
+      <PageHeader
+        title="내 정보"
+        variant="back"
+        onAction={() => router.push('/settings')}
+      />
 
-      <main className="flex-1 mt-4 space-y-4">
-        {/* 프로필 사진 / 이메일 */}
-        <section className="rounded-2xl bg-white p-5 shadow-sm flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gray-100 overflow-hidden">
-            {user?.profileImage ? (
-              <img
-                src={user.profileImage}
-                alt={user.nickname ?? '프로필'}
-                className="h-16 w-16 rounded-full object-cover"
-              />
-            ) : (
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={palette.gray500} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-gray-400">이메일</p>
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {user?.email || '-'}
-            </p>
+      <main className="flex-1 px-6 pt-4 space-y-6">
+        {/* 이메일 */}
+        <section>
+          <p className="text-sm font-medium text-gray-700 mb-2">이메일</p>
+          <div className="w-full rounded-xl bg-gray-100 px-4 py-3.5">
+            <p className="text-sm text-gray-400">{user?.email || '-'}</p>
           </div>
         </section>
 
         {/* 닉네임 */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <label className="text-xs font-semibold text-gray-500">
-            닉네임 <span className="text-primary-600">*</span>
-          </label>
-          <input
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="앱에서 사용할 닉네임"
-            maxLength={20}
-            className="mt-2 w-full text-base font-bold text-gray-900 placeholder-gray-300 border-b border-gray-200 pb-1.5 outline-none focus:border-gray-400 bg-transparent"
-          />
+        <section>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            닉네임 <span className="text-red-500">*</span>
+          </p>
+          <div className="w-full rounded-xl bg-gray-100 px-4 py-3.5">
+            <input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="앱에서 사용할 닉네임"
+              maxLength={20}
+              className="w-full text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent"
+            />
+          </div>
         </section>
 
-        {/* 역할 */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500">
-            역할 <span className="text-primary-600">*</span>
+        {/* 관계 */}
+        <section>
+          <p className="text-sm font-medium text-gray-700 mb-3">
+            관계 <span className="text-red-500">*</span>
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setParentRole('mom')}
-              className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
-                parentRole === 'mom'
-                  ? 'bg-pink-50 border-pink-300 text-pink-600'
-                  : 'bg-gray-50 border-gray-100 text-gray-400'
-              }`}
-            >
-              🤱 엄마
-            </button>
-            <button
-              type="button"
-              onClick={() => setParentRole('dad')}
-              className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
-                parentRole === 'dad'
-                  ? 'bg-blue-50 border-blue-300 text-blue-600'
-                  : 'bg-gray-50 border-gray-100 text-gray-400'
-              }`}
-            >
-              👨 아빠
-            </button>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setParentRole(value)}
+                className={`px-4 h-[28px] rounded-[20px] text-sm font-medium border transition-colors ${
+                  parentRole === value
+                    ? 'text-white border-transparent'
+                    : 'bg-white border-gray-200 text-gray-500'
+                }`}
+                style={
+                  parentRole === value
+                    ? { backgroundColor: palette.teal, borderColor: palette.teal }
+                    : undefined
+                }
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </section>
 
         {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       </main>
 
-      {/* 하단 고정 저장 버튼 (BottomNav 위) */}
-      <div className="fixed bottom-[calc(var(--safe-area-bottom)+84px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
+      {/* 하단 고정 저장 버튼 — BottomNav 위 24px 간격 */}
+      <div className="fixed bottom-[calc(var(--safe-area-bottom)+112px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
         <button
           onClick={handleSave}
           disabled={!canSubmit}
-          className="w-full py-3.5 rounded-2xl bg-gray-900 text-white text-sm font-bold disabled:opacity-40"
+          className="w-full py-3.5 rounded-2xl text-white text-sm font-bold disabled:opacity-40"
+          style={{ backgroundColor: palette.teal }}
         >
           {submitting ? '저장 중...' : '저장'}
         </button>

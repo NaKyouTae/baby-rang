@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useChildren } from "@/hooks/useChildren";
+import { useChildren, type Child } from "@/hooks/useChildren";
 import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
+import PageHeader from "@/components/PageHeader";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -259,19 +260,7 @@ export default function SettingsPage() {
       )}
 
       {/* 헤더 */}
-      <header className="flex items-center justify-center relative px-5 py-4">
-        <h1 className="text-[16px] font-medium text-black">마이페이지</h1>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="absolute right-4 flex h-9 w-9 items-center justify-center"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-      </header>
+      <PageHeader title="마이페이지" variant="close" />
 
       <div className="flex-1 overflow-y-auto pb-36">
         {/* 사용자 프로필 */}
@@ -339,85 +328,12 @@ export default function SettingsPage() {
         </section>
 
         {/* 아기 정보 */}
-        <section className="px-6 mb-[24px]">
-          {isLoaded && children.length > 0 ? (
-            <div className="flex items-start gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-              {children.map((child) => (
-                <Link
-                  key={child.id}
-                  href="/settings/children"
-                  className="flex flex-col items-center shrink-0 snap-start px-6"
-                  style={{ width: '160px', minWidth: '160px', borderRadius: '8px', backgroundColor: palette.gray100, border: `1px solid ${palette.gray200}`, paddingTop: '12px', paddingBottom: '12px' }}
-                >
-                  <div
-                    className="flex shrink-0 items-center justify-center overflow-hidden bg-white"
-                    style={{ width: 40, height: 40, borderRadius: '50%', border: `1px solid ${palette.teal}` }}
-                  >
-                    {child.profileImage ? (
-                      <img
-                        src={child.profileImage}
-                        alt={child.name}
-                        className="object-cover"
-                        style={{ width: 40, height: 40, borderRadius: '50%' }}
-                      />
-                    ) : (
-                      <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={24} height={24} />
-                    )}
-                  </div>
-                  <p className="text-[16px] font-medium text-black truncate max-w-[120px] text-center" style={{ marginTop: '10px' }}>
-                    {child.name}
-                  </p>
-                  {(() => {
-                    const { days, months, extraDays } = calcChildAge(child.birthDate);
-                    return (
-                      <div className="flex items-center" style={{ marginTop: '6px', gap: '4px' }}>
-                        <span
-                          className="text-[12px] font-medium text-white leading-none"
-                          style={{ backgroundColor: palette.teal, borderRadius: '2px', padding: '2px 4px', height: '16px', display: 'inline-flex', alignItems: 'center' }}
-                        >
-                          D+{days}
-                        </span>
-                        <span className="text-[12px] font-normal text-black">
-                          {months}개월 {extraDays}일
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </Link>
-              ))}
-              <Link
-                href="/settings/children"
-                className="flex flex-col items-center justify-center shrink-0 snap-start border border-dashed border-gray-300 px-6 self-stretch"
-                style={{ minWidth: '140px', borderRadius: '8px' }}
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </Link>
-              {/* 스와이프 인디케이터 공간 */}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center border border-dashed border-gray-300 px-4" style={{ height: 112, borderRadius: 8, paddingTop: 21, paddingBottom: 21 }}>
-              <p className="text-center font-normal text-black" style={{ fontSize: 12, lineHeight: '18px' }}>
-                아기 정보를 입력하고
-                <br />
-                맞춤형 케어를 시작하세요.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) return;
-                  router.push("/settings/children");
-                }}
-                className="font-semibold text-white"
-                style={{ padding: '4px 8px', borderRadius: 4, fontSize: 12, backgroundColor: palette.teal, marginTop: 10 }}
-              >
-                아기 추가하기
-              </button>
-            </div>
-          )}
-        </section>
+        <ChildProfileSection
+          children={children}
+          isLoaded={isLoaded}
+          requireLogin={requireLogin}
+          router={router}
+        />
 
         {/* 권한 설정 */}
         {locationPerm !== null && (
@@ -528,5 +444,171 @@ export default function SettingsPage() {
         }}
       />
     </div>
+  );
+}
+
+function ChildProfileCard({ child }: { child: Child }) {
+  const { days, months, extraDays } = calcChildAge(child.birthDate);
+  return (
+    <Link
+      href="/settings/children"
+      className="flex flex-col items-center shrink-0"
+      style={{ borderRadius: '8px', backgroundColor: palette.gray100, border: `1px solid ${palette.gray200}`, paddingTop: '12px', paddingBottom: '12px' }}
+    >
+      <div
+        className="flex shrink-0 items-center justify-center overflow-hidden bg-white"
+        style={{ width: 40, height: 40, borderRadius: '50%', border: `1px solid ${palette.teal}` }}
+      >
+        {child.profileImage ? (
+          <img
+            src={child.profileImage}
+            alt={child.name}
+            className="object-cover"
+            style={{ width: 40, height: 40, borderRadius: '50%' }}
+          />
+        ) : (
+          <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={24} height={24} />
+        )}
+      </div>
+      <p className="text-[16px] font-medium text-black truncate max-w-full text-center px-2" style={{ marginTop: '10px' }}>
+        {child.name}
+      </p>
+      <div className="flex items-center" style={{ marginTop: '6px', gap: '4px' }}>
+        <span
+          className="text-[12px] font-medium text-white leading-none"
+          style={{ backgroundColor: palette.teal, borderRadius: '2px', padding: '2px 4px', height: '16px', display: 'inline-flex', alignItems: 'center' }}
+        >
+          D+{days}
+        </span>
+        <span className="text-[12px] font-normal text-black">
+          {months}개월 {extraDays}일
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function ChildProfileSection({
+  children,
+  isLoaded,
+  requireLogin,
+  router,
+}: {
+  children: Child[];
+  isLoaded: boolean;
+  requireLogin: (msg: string) => boolean;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const firstSlide = el.firstElementChild as HTMLElement | null;
+    if (!firstSlide) return;
+    // Each "page" shows 2 cards; calculate page width based on scroll position
+    const pageW = el.clientWidth;
+    const idx = Math.round(el.scrollLeft / (pageW * 0.85));
+    if (idx !== activeIdx) setActiveIdx(idx);
+  };
+
+  if (!isLoaded || children.length === 0) {
+    return (
+      <section className="px-6 mb-[24px]">
+        <div className="flex flex-col items-center justify-center border border-dashed border-gray-300 px-4" style={{ height: 112, borderRadius: 8, paddingTop: 21, paddingBottom: 21 }}>
+          <p className="text-center font-normal text-black" style={{ fontSize: 12, lineHeight: '18px' }}>
+            아기 정보를 입력하고
+            <br />
+            맞춤형 케어를 시작하세요.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (!requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) return;
+              router.push("/settings/children");
+            }}
+            className="font-semibold text-white"
+            style={{ padding: '4px 8px', borderRadius: 4, fontSize: 12, backgroundColor: palette.teal, marginTop: 10 }}
+          >
+            아기 추가하기
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  // 1~2명: 화면 꽉 차게 나란히 표시 + 인디케이터
+  if (children.length <= 2) {
+    return (
+      <section className="px-6 mb-[24px]">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${children.length}, 1fr)` }}>
+          {children.map((child) => (
+            <ChildProfileCard key={child.id} child={child} />
+          ))}
+        </div>
+        {/* 인디케이터 */}
+        <div className="flex justify-center gap-1.5 mt-3">
+          {children.map((child, i) => (
+            <span
+              key={child.id}
+              className={`rounded-full ${i === 0 ? 'w-3 h-1 bg-gray-600' : 'w-1 h-1 bg-gray-300'}`}
+            />
+          ))}
+          {/* 추가 카드 인디케이터 */}
+          <span className="rounded-full w-1 h-1 bg-gray-300" />
+        </div>
+      </section>
+    );
+  }
+
+  // 3명 이상: 캐러셀 — 2개 꽉 차게 보이고 3번째가 우측에 살짝 보임
+  const totalPages = Math.ceil((children.length + 1) / 2); // +1 for add card
+  return (
+    <section className="mb-[24px]">
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar px-6"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {children.map((child) => (
+          <div
+            key={child.id}
+            className="snap-start shrink-0"
+            style={{ width: 'calc((100% - 12px) / 2 - 8px)' }}
+          >
+            <ChildProfileCard child={child} />
+          </div>
+        ))}
+        {/* 추가 카드 */}
+        <div
+          className="snap-start shrink-0"
+          style={{ width: 'calc((100% - 12px) / 2 - 8px)' }}
+        >
+          <Link
+            href="/settings/children"
+            className="flex flex-col items-center justify-center border border-dashed border-gray-300 h-full"
+            style={{ borderRadius: '8px', minHeight: 100 }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </Link>
+        </div>
+      </div>
+      {/* 인디케이터 */}
+      <div className="flex justify-center gap-1.5 mt-3">
+        {Array.from({ length: totalPages }).map((_, i) => (
+          <span
+            key={i}
+            className={`rounded-full transition-all ${
+              i === activeIdx ? 'w-3 h-1 bg-gray-600' : 'w-1 h-1 bg-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+    </section>
   );
 }

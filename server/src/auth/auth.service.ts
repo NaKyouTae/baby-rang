@@ -60,7 +60,15 @@ export class AuthService {
     if (!nickname) {
       throw new InternalServerErrorException('nickname is required');
     }
-    if (dto.parentRole !== 'mom' && dto.parentRole !== 'dad') {
+    const validRoles = [
+      'mom',
+      'dad',
+      'grandmother',
+      'grandfather',
+      'caregiver',
+      'other',
+    ];
+    if (!validRoles.includes(dto.parentRole)) {
       throw new InternalServerErrorException('invalid parentRole');
     }
 

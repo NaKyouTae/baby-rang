@@ -17,6 +17,8 @@ export default function robots(): MetadataRoute.Robots {
     "/temperament/test/",
     "/temperament/result/",
     "/api/",
+    "/onboarding",
+    "/events/",
   ];
 
   return {
