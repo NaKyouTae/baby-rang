@@ -89,13 +89,27 @@
       "WebFetch(domain:www.jobkorea.co.kr)",
       "WebFetch(domain:blog.mstacc.com)",
       "Bash(find /Users/nakyutae/personal/git/baby-rang/app/src/app/payment* -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\))",
-      "Bash(grep -r \"TOSS_\\\\|NEXT_PUBLIC\" /Users/nakyutae/personal/git/baby-rang -name \".env*\" -o -name \"*.env\")"
+      "Bash(grep -r \"TOSS_\\\\|NEXT_PUBLIC\" /Users/nakyutae/personal/git/baby-rang -name \".env*\" -o -name \"*.env\")",
+      "Bash(pnpm --filter server start:dev)",
+      "Bash(curl -s http://localhost:14080)",
+      "Bash(kill %1)",
+      "Bash(pnpm --filter app dev)",
+      "Bash(curl -s http://localhost:14000)",
+      "Bash(lsof -ti:14000)",
+      "Bash(grep -o \"Hello World.*</h1>\" kill %1 lsof -ti:14000)",
+      "Bash(lsof -ti:18090)",
+      "Bash(kill 39114)",
+      "Bash(cat /Users/nakyutae/personal/git/baby-rang/.lintstagedrc*)",
+      "Bash(chmod +x /Users/nakyutae/personal/git/export-used-car/.husky/pre-commit /Users/nakyutae/personal/git/export-used-car/.husky/pre-push)",
+      "Bash(pnpm --filter admin lint)"
     ],
     "additionalDirectories": [
       "/tmp",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/physical-growth",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/settings/children/[id]",
-      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/shares/[id]"
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/shares/[id]",
+      "/Users/nakyutae/personal/git/export-used-car/.husky",
+      "/Users/nakyutae/personal/git/export-used-car/.claude"
     ]
   }
 }

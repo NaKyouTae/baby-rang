@@ -203,7 +203,7 @@ export default function SettingsPage() {
 
   const renderMenuItem = (item: MenuItem) => {
     const className =
-      "flex items-center gap-2 px-6 active:bg-gray-50 transition-colors";
+      "flex items-center gap-2 px-6 h-[32px] active:bg-gray-50 transition-colors";
     const inner = (
       <>
         <span className="flex shrink-0 items-center justify-center">
@@ -350,7 +350,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleLocationToggle}
-              className="flex w-full items-center gap-2 px-6 active:bg-gray-50 transition-colors"
+              className="flex w-full items-center gap-2 px-6 h-[32px] active:bg-gray-50 transition-colors"
             >
               <span className="flex shrink-0 items-center justify-center">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -380,7 +380,7 @@ export default function SettingsPage() {
             <h3 className="text-[12px] font-medium px-6 mb-[16px]" style={{ color: palette.gray500 }}>
               {section.title}
             </h3>
-            <div className="flex flex-col gap-[16px]">
+            <div className="flex flex-col">
               {section.items.map((item) =>
                 renderMenuItem(
                   item.href === '/settings/notices' && hasUnreadNotice

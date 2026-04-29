@@ -10,7 +10,7 @@ const ROLE_LABELS: Record<string, string> = {
   dad: '아빠',
   grandmother: '할머니',
   grandfather: '할아버지',
-  caregiver: '아기돌보미',
+  caregiver: '돌보미',
   other: '기타',
 };
 
