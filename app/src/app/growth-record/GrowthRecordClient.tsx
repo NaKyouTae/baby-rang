@@ -424,7 +424,7 @@ export default function GrowthRecordPage() {
         title="기록"
         description={
           <>
-            아이를 등록하면<br />
+            아기를 등록하면<br />
             매일의 기록을 남길 수 있어요.
           </>
         }

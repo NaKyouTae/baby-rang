@@ -94,11 +94,11 @@ export default function TemperamentGuidePage() {
       <h2 className="text-lg font-bold text-gray-900 pt-2">3가지 기질 유형</h2>
       <p>
         토마스와 체스는 이 9가지 차원의 조합에 따라 아기를 크게 세 유형으로 분류했습니다.
-        &ldquo;순한 아이(Easy Child)&rdquo;는 규칙적이고 적응이 빠르며 긍정적입니다.
-        &ldquo;까다로운 아이(Difficult Child)&rdquo;는 불규칙하고 반응이 강하며 적응이
-        느립니다. &ldquo;느린 아이(Slow-to-Warm-Up Child)&rdquo;는 처음에는 소극적이지만
+        &ldquo;순한 아기(Easy Child)&rdquo;는 규칙적이고 적응이 빠르며 긍정적입니다.
+        &ldquo;까다로운 아기(Difficult Child)&rdquo;는 불규칙하고 반응이 강하며 적응이
+        느립니다. &ldquo;느린 아기(Slow-to-Warm-Up Child)&rdquo;는 처음에는 소극적이지만
         시간이 지나면 적응합니다. 중요한 것은 어떤 유형이 더 좋고 나쁜 것이 아니라,
-        아이의 기질을 이해하고 그에 맞는 양육 방식을 찾는 것입니다.
+        아기의 기질을 이해하고 그에 맞는 양육 방식을 찾는 것입니다.
       </p>
 
       <h2 className="text-lg font-bold text-gray-900 pt-2">아기랑에서 기질 검사하기</h2>
@@ -107,7 +107,7 @@ export default function TemperamentGuidePage() {
           아기랑 기질 검사
         </Link>
         에서는 간단한 질문에 답하면 우리 아기의 9가지 기질 차원을 분석하고, 유형별 맞춤
-        양육 가이드를 제공합니다. 아이의 타고난 특성을 이해하면 육아가 더 수월해집니다.
+        양육 가이드를 제공합니다. 아기의 타고난 특성을 이해하면 육아가 더 수월해집니다.
       </p>
     </>
   );

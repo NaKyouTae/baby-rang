@@ -1,6 +1,6 @@
 /**
  * 성장 패턴 화면 확인용 시드 스크립트
- * - 등록된 모든 아이에 대해 최근 4주(28일)치 GrowthRecord 생성
+ * - 등록된 모든 아기에 대해 최근 4주(28일)치 GrowthRecord 생성
  * - 매일 17개 모든 타입이 한 번 이상 등장하도록 배치
  *
  * 실행: pnpm --filter server exec ts-node prisma/seed-growth-pattern.ts
@@ -248,7 +248,7 @@ async function main() {
     select: { id: true, userId: true, name: true },
   });
   if (children.length === 0) {
-    console.log('등록된 아이가 없습니다. 먼저 아이를 등록해 주세요.');
+    console.log('등록된 아기가 없습니다. 먼저 아기를 등록해 주세요.');
     return;
   }
   for (const c of children) {

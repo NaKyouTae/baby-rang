@@ -11,7 +11,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "아기랑 소개 - 서비스 안내 및 운영자 정보",
   description:
-    "아기랑은 0~36개월 아이를 키우는 부모를 위한 통합 육아 서비스입니다. 서비스 소개, 주요 기능, 운영자 정보, 연락처를 안내합니다.",
+    "아기랑은 0~36개월 아기를 키우는 부모를 위한 통합 육아 서비스입니다. 서비스 소개, 주요 기능, 운영자 정보, 연락처를 안내합니다.",
   alternates: { canonical: "/about" },
 };
 
@@ -31,7 +31,7 @@ export default function AboutPage() {
         <h2 className="text-lg font-bold text-gray-900">아기랑이란?</h2>
         <p>
           아기랑은 0~36개월 영유아를 키우는 부모님을 위한 통합 육아 서비스입니다.
-          아이의 성장과 발달을 기록하고, 과학적인 정보를 바탕으로 더 나은 육아를
+          아기의 성장과 발달을 기록하고, 과학적인 정보를 바탕으로 더 나은 육아를
           할 수 있도록 돕는 것을 목표로 합니다. 복잡하고 흩어져 있는 육아 정보를
           한 곳에서 쉽고 빠르게 확인할 수 있습니다.
         </p>
@@ -40,14 +40,14 @@ export default function AboutPage() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             <strong>아기 기질 검사</strong> — 토마스와 체스의 9가지 기질 차원 이론을
-            기반으로 아이의 타고난 성향을 분석하고 맞춤 양육 가이드를 제공합니다.
+            기반으로 아기의 타고난 성향을 분석하고 맞춤 양육 가이드를 제공합니다.
           </li>
           <li>
             <strong>성장 기록 및 성장 패턴</strong> — 키, 몸무게, 머리둘레를 기록하면
-            WHO 성장 도표 위에 아이의 위치를 표시하고 성장 추세를 분석합니다.
+            WHO 성장 도표 위에 아기의 위치를 표시하고 성장 추세를 분석합니다.
           </li>
           <li>
-            <strong>원더윅스(Wonder Weeks)</strong> — 아이의 생년월일을 기반으로
+            <strong>원더윅스(Wonder Weeks)</strong> — 아기의 생년월일을 기반으로
             정신 발달 도약기를 자동 계산하고, 각 시기의 특징과 대처법을 안내합니다.
           </li>
           <li>
@@ -60,7 +60,7 @@ export default function AboutPage() {
             제공합니다.
           </li>
           <li>
-            <strong>대기질 정보</strong> — 아이와 외출 전 실시간 대기질(미세먼지,
+            <strong>대기질 정보</strong> — 아기와 외출 전 실시간 대기질(미세먼지,
             초미세먼지)을 확인할 수 있습니다.
           </li>
         </ul>

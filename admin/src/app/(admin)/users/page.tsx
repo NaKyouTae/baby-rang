@@ -52,7 +52,7 @@ export default async function UsersPage({
               </div>
             </div>
             <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-              <span>아이 {u._count.children}</span>
+              <span>아기 {u._count.children}</span>
               <span>결제 {u._count.payments}</span>
               <span>{new Date(u.createdAt).toLocaleDateString()}</span>
             </div>
@@ -67,7 +67,7 @@ export default async function UsersPage({
             <TableRow>
               <TableHead>사용자</TableHead>
               <TableHead>이메일</TableHead>
-              <TableHead className="text-right">아이</TableHead>
+              <TableHead className="text-right">아기</TableHead>
               <TableHead className="text-right">결제</TableHead>
               <TableHead className="text-right">가입일</TableHead>
             </TableRow>

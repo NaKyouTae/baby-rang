@@ -25,7 +25,7 @@ const STATUS_META: Record<
   PaymentItem['status'],
   { label: string; bg: string; text: string }
 > = {
-  PENDING: { label: '대기중', bg: '#FF2D5514', text: '#FF2D55' },
+  PENDING: { label: '처리중', bg: '#515C6614', text: '#515C66' },
   PAID: { label: '결제완료', bg: '#FF2D5514', text: '#FF2D55' },
   FAILED: { label: '실패', bg: '#515C6614', text: '#515C66' },
   CANCELLED: { label: '취소', bg: '#515C6614', text: '#515C66' },
@@ -44,7 +44,8 @@ export default function PaymentsPage() {
     (async () => {
       try {
         const res = await getPayments(50, 0);
-        if (!cancelled) setItems(res.items ?? []);
+        // PENDING 제외, 나머지(결제완료/실패/취소/환불) 표시
+        if (!cancelled) setItems((res.items ?? []).filter((i: PaymentItem) => i.status !== 'PENDING'));
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : '불러오기 실패');
       } finally {

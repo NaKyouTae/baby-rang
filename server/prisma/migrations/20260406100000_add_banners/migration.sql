@@ -23,7 +23,7 @@ CREATE INDEX "banners_isActive_sortOrder_idx" ON "banners"("isActive", "sortOrde
 INSERT INTO "banners" ("id", "title", "subtitle", "bgColor", "linkUrl", "sortOrder", "isActive", "updatedAt")
 VALUES (
   gen_random_uuid(),
-  '우리 아이 기질 검사',
+  '우리 아기 기질 검사',
   '맞춤 양육 가이드를 받아보세요',
   '#FFB347',
   '/events/temperament',

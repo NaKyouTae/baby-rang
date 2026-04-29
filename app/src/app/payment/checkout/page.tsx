@@ -70,34 +70,21 @@ function CheckoutContent() {
     setError(null);
 
     try {
-      const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-      const createRes = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId,
-          productType,
-          productName,
-          amount,
-          provider: 'TOSS',
-          childId,
-          productMeta: productMetaRaw ? safeJson(productMetaRaw) : undefined,
-        }),
-      });
-
-      if (!createRes.ok) {
-        const err = await createRes.json().catch(() => ({}));
-        throw new Error(err?.message ?? '주문 생성 실패');
-      }
+      // Payment 생성 없이 providerId만 생성하여 PG에 전달
+      const providerId = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
       const successUrl = new URL('/payment/success', window.location.origin);
       successUrl.searchParams.set('redirectTo', redirectTo);
+      successUrl.searchParams.set('productType', productType);
+      successUrl.searchParams.set('productName', productName);
+      if (childId) successUrl.searchParams.set('childId', childId);
+      if (productMetaRaw) successUrl.searchParams.set('productMeta', productMetaRaw);
+
       const failUrl = new URL('/payment/fail', window.location.origin);
       failUrl.searchParams.set('redirectTo', redirectTo);
 
       await widgetsRef.current.requestPayment({
-        orderId,
+        orderId: providerId,
         orderName: productName,
         successUrl: successUrl.toString(),
         failUrl: failUrl.toString(),

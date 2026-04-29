@@ -23,7 +23,7 @@ export class SharesController {
     return this.service.findMyShare(req.user.id);
   }
 
-  /** 내가 공유받은 아이 목록 */
+  /** 내가 공유받은 아기 목록 */
   @Get('shared-with-me')
   findSharedWithMe(@Req() req) {
     return this.service.findSharedWithMe(req.user.id);

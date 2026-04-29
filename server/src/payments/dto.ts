@@ -44,6 +44,16 @@ export interface CancelPaymentDto {
   rawResponse?: Record<string, unknown>;
 }
 
+export interface ConfirmAndCreateDto {
+  paymentKey: string;
+  providerId: string;
+  amount: number;
+  productType: PaymentProductType;
+  productName: string;
+  childId?: string;
+  productMeta?: Record<string, unknown>;
+}
+
 export interface ListPaymentsQuery {
   status?: PaymentStatus;
   productType?: PaymentProductType;

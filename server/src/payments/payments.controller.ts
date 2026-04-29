@@ -11,6 +11,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import {
   CancelPaymentDto,
+  ConfirmAndCreateDto,
   ConfirmPaymentDto,
   CreatePaymentDto,
   FailPaymentDto,
@@ -36,6 +37,16 @@ export class PaymentsController {
   @Post()
   create(@Req() req, @Body() dto: CreatePaymentDto) {
     return this.payments.create(req.user.id, dto, {
+      ipAddress:
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
+  }
+
+  @Post('confirm-and-create')
+  confirmAndCreate(@Req() req, @Body() dto: ConfirmAndCreateDto) {
+    return this.payments.confirmAndCreate(req.user.id, dto, {
       ipAddress:
         (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
         req.ip,

@@ -76,7 +76,7 @@ function getSkyIcon(sky: string, pty: string): string {
 function getOutdoorAdvice(pm10Grade: string | null, pm25Grade: string | null) {
   const worst = Math.max(Number(pm10Grade ?? 1), Number(pm25Grade ?? 1));
   if (worst <= 1) return { text: "외출하기 좋은 날이에요!", color: "#339AF0" };
-  if (worst === 2) return { text: "외출 가능하지만 민감한 아이는 주의하세요.", color: "#3078C9" };
+  if (worst === 2) return { text: "외출 가능하지만 민감한 아기는 주의하세요.", color: "#3078C9" };
   if (worst === 3) return { text: "외출을 자제하고, 외출 시 마스크를 착용하세요.", color: "#FF922B" };
   return { text: "외출을 삼가고 실내 활동을 권장합니다.", color: "#FF3B30" };
 }

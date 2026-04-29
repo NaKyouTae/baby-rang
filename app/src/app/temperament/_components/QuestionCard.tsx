@@ -29,7 +29,7 @@ export default function QuestionCard({
       </p>
       <div className="mb-6 bg-primary-50 rounded-2xl text-center">
         <p className="text-xs text-primary-700 leading-relaxed">
-          최근 2~3개월간 아이의 일반적인 모습을 떠올리며 답해 주세요.
+          최근 2~3개월간 아기의 일반적인 모습을 떠올리며 답해 주세요.
         </p>
       </div>
 

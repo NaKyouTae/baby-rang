@@ -58,7 +58,7 @@ const MONTH_TIPS: Record<number, string> = {
   19: '1회 낮잠 안정기예요. 너무 늦은 낮잠(15시 이후)은 밤잠을 방해할 수 있어요.',
   24: '24개월(2세) 수면 퇴행기예요. 악몽·분리불안·상상력 발달로 잠자리 거부가 있을 수 있어요. 야간등을 준비해주세요.',
   30: '낮잠을 거부하기 시작할 수 있어요. 아직 1회 낮잠이 필요한 시기이니 \'조용한 시간(quiet time)\'으로 유도해보세요.',
-  36: '낮잠을 졸업하는 아이들이 늘어나는 시기예요. 낮잠을 안 자는 날은 밤잠을 30분 일찍 시작하세요.',
+  36: '낮잠을 졸업하는 아기들이 늘어나는 시기예요. 낮잠을 안 자는 날은 밤잠을 30분 일찍 시작하세요.',
 };
 
 function getMonthTip(months: number, fallback: string): string {
@@ -106,7 +106,7 @@ export default function SleepGoldenTimeClient() {
   const [hour12, setHour12] = useState<number>(7);
   const [minute, setMinute] = useState<number>(0);
 
-  // 아이가 1명이면 자동 선택 (선택 화면 없이)
+  // 아기가 1명이면 자동 선택 (선택 화면 없이)
   const effectiveChild =
     selectedChild ?? (children.length === 1 ? children[0] : null);
 

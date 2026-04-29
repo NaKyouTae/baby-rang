@@ -285,7 +285,7 @@ export default function ImportDataPage() {
     total: number;
   } | null>(null);
 
-  // 첫 아이 자동 선택
+  // 첫 아기 자동 선택
   if (isLoaded && children.length > 0 && !selectedChildId) {
     setSelectedChildId(children[0].id);
   }
@@ -350,7 +350,7 @@ export default function ImportDataPage() {
       <PageHeader title="데이터 가져오기" variant="back" />
 
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-5 space-y-4">
-        {/* 아이 선택 */}
+        {/* 아기 선택 */}
         {isLoaded && children.length > 1 && (
           <select
             value={selectedChildId}

@@ -18,40 +18,58 @@ function PaymentSuccessContent() {
   const [error, setError] = useState<string | null>(null);
 
   const paymentKey = search.get('paymentKey');
-  const orderId = search.get('orderId');
+  const providerId = search.get('orderId'); // PG의 orderId = 우리의 providerId
   const amount = Number(search.get('amount') ?? '0');
   const redirectTo = search.get('redirectTo') ?? '/home';
+  const productType = search.get('productType') ?? 'TEMPERAMENT_REPORT';
+  const productName = search.get('productName') ?? '';
+  const childId = search.get('childId') ?? undefined;
+  const productMeta = search.get('productMeta') ?? undefined;
 
   useEffect(() => {
     if (calledRef.current) return;
     calledRef.current = true;
 
-    if (!paymentKey || !orderId || !amount) {
+    if (!paymentKey || !providerId || !amount) {
       setError('잘못된 접근입니다.');
       return;
     }
 
     (async () => {
       try {
-        const res = await fetch(`/api/payments/${orderId}/toss/confirm`, {
+        // PG 결제 완료 후 Payment + Order 생성
+        const res = await fetch('/api/payments/confirm-and-create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paymentKey, amount }),
+          body: JSON.stringify({
+            paymentKey,
+            providerId,
+            amount,
+            productType,
+            productName,
+            childId,
+            productMeta: productMeta ? safeJson(productMeta) : undefined,
+          }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err?.message ?? '결제 승인 실패');
         }
 
+        const data = await res.json();
         const url = new URL(redirectTo, window.location.origin);
         url.searchParams.set('paymentStatus', 'success');
-        url.searchParams.set('orderId', orderId);
+        url.searchParams.set('orderId', data.orderId);
         router.replace(url.pathname + url.search);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : '결제 승인 처리 중 오류');
       }
     })();
-  }, [paymentKey, orderId, amount, redirectTo, router]);
+  }, [paymentKey, providerId, amount, redirectTo, productType, productName, childId, productMeta, router]);
+
+  function safeJson(raw: string) {
+    try { return JSON.parse(raw); } catch { return undefined; }
+  }
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6 text-center">

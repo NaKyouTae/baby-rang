@@ -28,7 +28,7 @@ export default function LockedSection({ sections, onUnlock }: LockedSectionProps
           ))}
         </ul>
         <p className="text-xs text-gray-400 text-center mb-4">
-          전체 결과를 열면 아이의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지
+          전체 결과를 열면 아기의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지
           자세히 볼 수 있어요.
         </p>
         <button

@@ -65,7 +65,7 @@ export default function GrowthChart({
   const standard = getGrowthStandard(gender, metric);
   const chartData = standard.data;
 
-  // 아이 측정 데이터 포인트
+  // 아기 측정 데이터 포인트
   const childPoints: DataPoint[] = useMemo(() => {
     return records
       .map((r) => {
@@ -79,7 +79,7 @@ export default function GrowthChart({
       .sort((a, b) => a.ageMonths - b.ageMonths);
   }, [records, metric, birthDate]);
 
-  // 표시 범위 결정: 아이 데이터 기반 또는 기본 0-12개월
+  // 표시 범위 결정: 아기 데이터 기반 또는 기본 0-12개월
   const { minMonth, maxMonth, minVal, maxVal } = useMemo(() => {
     let mxMonth = 12;
     if (childPoints.length > 0) {
@@ -126,7 +126,7 @@ export default function GrowthChart({
     return `M${upper.join(' L')} L${lower.join(' L')} Z`;
   };
 
-  // 아이 데이터 경로
+  // 아기 데이터 경로
   const childPath = childPoints.length >= 2
     ? childPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.ageMonths).toFixed(1)},${toY(p.value).toFixed(1)}`).join(' ')
     : null;
@@ -267,7 +267,7 @@ export default function GrowthChart({
           </text>
         ))}
 
-        {/* 아이 데이터 라인 */}
+        {/* 아기 데이터 라인 */}
         {childPath && (
           <path
             d={childPath}
@@ -279,7 +279,7 @@ export default function GrowthChart({
           />
         )}
 
-        {/* 아이 데이터 포인트 */}
+        {/* 아기 데이터 포인트 */}
         {childPoints.map((p, i) => (
           <g key={i}>
             <circle
@@ -308,7 +308,7 @@ export default function GrowthChart({
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full border-2 border-primary-500 bg-white" />
-          <span className="text-[10px] text-gray-500">우리 아이</span>
+          <span className="text-[10px] text-gray-500">우리 아기</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-2 rounded-sm" style={{ background: BAND_COLORS.inner }} />

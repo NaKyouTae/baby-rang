@@ -8,6 +8,7 @@ import { PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CancelPaymentDto,
+  ConfirmAndCreateDto,
   ConfirmPaymentDto,
   CreatePaymentDto,
   FailPaymentDto,
@@ -125,6 +126,105 @@ export class PaymentsService {
       cardInstallment: tossJson?.card?.installmentPlanMonths,
       approvedAt: tossJson?.approvedAt,
       rawResponse: tossJson,
+    });
+  }
+
+  /**
+   * PG 결제 완료 후 승인 + Payment 생성을 한 번에 처리.
+   * PENDING 상태 없이 바로 PAID로 생성된다.
+   */
+  async confirmAndCreate(
+    userId: string,
+    dto: ConfirmAndCreateDto,
+    context: { ipAddress?: string; userAgent?: string },
+  ) {
+    const {
+      paymentKey,
+      providerId,
+      amount,
+      productType,
+      productName,
+      childId,
+      productMeta,
+    } = dto;
+
+    if (!paymentKey || !providerId || !amount || amount <= 0) {
+      throw new BadRequestException('필수 파라미터가 누락되었습니다.');
+    }
+
+    // 중복 방지: 같은 providerId로 이미 생성된 Payment가 있는지 확인
+    const existing = await this.prisma.payment.findUnique({
+      where: { orderId: providerId },
+    });
+    if (existing) {
+      if (existing.status === PaymentStatus.PAID) return existing;
+      throw new ConflictException('이미 처리된 결제입니다.');
+    }
+
+    // 토스 승인 API 호출
+    const secretKey = process.env.TOSS_SECRET_KEY;
+    if (!secretKey) {
+      throw new BadRequestException(
+        'TOSS_SECRET_KEY 환경변수가 설정되지 않았습니다.',
+      );
+    }
+
+    const auth = Buffer.from(`${secretKey}:`).toString('base64');
+    const tossRes = await fetch(
+      'https://api.tosspayments.com/v1/payments/confirm',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': providerId,
+        },
+        body: JSON.stringify({ paymentKey, orderId: providerId, amount }),
+      },
+    );
+
+    const tossJson: any = await tossRes.json();
+
+    if (!tossRes.ok) {
+      throw new BadRequestException(tossJson?.message ?? 'Toss 승인 실패');
+    }
+
+    // 승인 성공 → Payment를 PAID 상태로 바로 생성
+    return this.prisma.payment.create({
+      data: {
+        userId,
+        childId: childId ?? null,
+        orderId: providerId,
+        productType,
+        productName,
+        productMeta: productMeta as Prisma.InputJsonValue | undefined,
+        amount,
+        currency: 'KRW',
+        provider: 'TOSS',
+        status: PaymentStatus.PAID,
+        paymentKey,
+        transactionId: tossJson?.lastTransactionKey,
+        method: tossJson?.method,
+        receiptUrl: tossJson?.receipt?.url,
+        cardCompany: tossJson?.card?.issuerCode ?? tossJson?.card?.company,
+        cardNumberMask: tossJson?.card?.number,
+        cardInstallment: tossJson?.card?.installmentPlanMonths,
+        approvedAt: tossJson?.approvedAt
+          ? new Date(tossJson.approvedAt)
+          : new Date(),
+        rawResponse: tossJson as Prisma.InputJsonValue,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        events: {
+          create: {
+            type: 'CONFIRMED',
+            status: PaymentStatus.PAID,
+            amount,
+            payload: tossJson as Prisma.InputJsonValue,
+          },
+        },
+      },
+      include: { events: true },
     });
   }
 
@@ -363,5 +463,10 @@ export class PaymentsService {
       throw new NotFoundException('결제 내역을 찾을 수 없습니다.');
     }
     return payment;
+  }
+
+  /** 웹훅용: orderId로 조회 (없으면 null) */
+  async findByOrderIdOrNull(orderId: string) {
+    return this.prisma.payment.findUnique({ where: { orderId } });
   }
 }

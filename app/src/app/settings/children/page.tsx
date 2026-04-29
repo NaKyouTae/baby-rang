@@ -24,7 +24,7 @@ export default function ChildrenSettingsPage() {
         onAction={() => router.push('/settings')}
       />
 
-      {/* 등록된 아이 목록 */}
+      {/* 등록된 아기 목록 */}
       <section className="mt-6 space-y-[10px] px-6">
         {children.length === 0 && (
           <div className="rounded-[8px] border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center">
@@ -115,7 +115,7 @@ export default function ChildrenSettingsPage() {
             <img src="/icon-trash.svg" alt="" width={32} height={32} />
           </div>
         }
-        title="아이 정보 삭제하기"
+        title="아기 정보 삭제하기"
         description={
           deleteTarget
             ? <><span className="font-medium text-black">{deleteTarget.name}</span> 의 정보를 삭제할까요?{'\n'}삭제하면 다시 되돌릴 수 없어요.</>

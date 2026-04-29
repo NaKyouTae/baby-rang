@@ -45,7 +45,7 @@ export default function BabyClothesSizeGuidePage() {
       <h3 className="text-[15px] font-semibold text-gray-800">12~24개월 (80~90호)</h3>
       <p>
         키 80~90cm, 몸무게 10~13kg. 걷기와 뛰기가 활발해지므로 활동성 있는 옷을
-        선택합니다. 이 시기부터 아이가 스스로 옷을 벗으려 하므로, 간단한 구조의 옷이
+        선택합니다. 이 시기부터 아기가 스스로 옷을 벗으려 하므로, 간단한 구조의 옷이
         자립심 발달에 도움이 됩니다.
       </p>
 

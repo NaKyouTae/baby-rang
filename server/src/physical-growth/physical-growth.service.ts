@@ -19,7 +19,7 @@ export class PhysicalGrowthService {
     const hasAccess = await this.prisma.sharedAccess.findUnique({
       where: { childId_grantedToId: { childId, grantedToId: userId } },
     });
-    if (!hasAccess) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!hasAccess) throw new NotFoundException('아기를 찾을 수 없습니다.');
   }
 
   async findAll(userId: string, childId: string) {

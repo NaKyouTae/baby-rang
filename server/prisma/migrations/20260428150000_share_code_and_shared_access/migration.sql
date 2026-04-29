@@ -8,7 +8,7 @@ CREATE TABLE "share_codes" (
     CONSTRAINT "share_codes_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable: shared_access (아이별 공유 접근 권한)
+-- CreateTable: shared_access (아기별 공유 접근 권한)
 CREATE TABLE "shared_access" (
     "id" TEXT NOT NULL,
     "childId" TEXT NOT NULL,

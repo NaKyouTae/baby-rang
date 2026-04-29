@@ -66,9 +66,9 @@ const TYPES = [
 ];
 
 const LOCKED_SECTIONS = [
-  "우리 아이의 숨은 강점 3가지",
+  "우리 아기의 숨은 강점 3가지",
   "감정이 흔들릴 때 필요한 부모 대응법",
-  "아이에게 잘 맞는 학습 방식",
+  "아기에게 잘 맞는 학습 방식",
   "기질별 주의 포인트",
   "부모가 놓치기 쉬운 신호",
 ];
@@ -288,7 +288,7 @@ function ResultView({ result, paid }: { result: TypeResult; paid: boolean }) {
       )}
       <div className="px-4 mt-6">
         <p className="text-[11px] text-gray-300 text-center leading-relaxed">
-          이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나 전문 심리 평가를 대신하지 않습니다.
+          이 검사는 아기의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나 전문 심리 평가를 대신하지 않습니다.
         </p>
       </div>
     </main>
@@ -369,7 +369,7 @@ function LockedSection({ sections }: { sections: string[] }) {
           ))}
         </ul>
         <p className="text-xs text-gray-400 text-center mb-4">
-          전체 결과를 열면 아이의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지 자세히 볼 수 있어요.
+          전체 결과를 열면 아기의 강점, 예민 포인트, 감정 코칭법, 학습 스타일까지 자세히 볼 수 있어요.
         </p>
         <button
           type="button"
@@ -419,7 +419,7 @@ function PaidResultSection({ content }: { content: PaidContent }) {
         </div>
       </ResultCard>
 
-      <ResultCard title="우리 아이의 핵심 강점">
+      <ResultCard title="우리 아기의 핵심 강점">
         <div className="space-y-3">
           {content.strengths.map((s, i) => (
             <div key={i}>

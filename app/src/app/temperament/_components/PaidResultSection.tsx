@@ -64,7 +64,7 @@ export default function PaidResultSection({ content }: PaidResultSectionProps) {
         </div>
       </Card>
 
-      <Card title="우리 아이의 핵심 강점">
+      <Card title="우리 아기의 핵심 강점">
         <div className="space-y-3">
           {content.strengths.map((s, i) => (
             <div key={i}>

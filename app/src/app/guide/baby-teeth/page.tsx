@@ -74,7 +74,7 @@ export default function BabyTeethGuidePage() {
       </p>
       <h3 className="text-[15px] font-semibold text-gray-800">12개월 이후</h3>
       <p>
-        식후와 자기 전 양치를 습관화합니다. 완두콩 크기의 불소 치약을 사용하며, 아이가
+        식후와 자기 전 양치를 습관화합니다. 완두콩 크기의 불소 치약을 사용하며, 아기가
         뱉는 것을 배울 때까지는 삼키지 않도록 주의합니다. 젖병을 물고 자는 습관은
         젖병 충치(우유병 충치)의 원인이므로 반드시 교정합니다.
       </p>

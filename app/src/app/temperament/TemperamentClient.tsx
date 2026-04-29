@@ -37,16 +37,16 @@ export default function TemperamentClient() {
     <main className="flex flex-col items-center justify-center text-center h-[calc(100dvh-4rem)] gradient-page">
       <span className="text-7xl mb-4">🧒</span>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">
-        우리 아이 기질 검사
+        우리 아기 기질 검사
       </h1>
       <p className="text-sm text-gray-400 leading-relaxed mb-6">
-        아이의 타고난 반응 방식을 이해하고,
+        아기의 타고난 반응 방식을 이해하고,
         <br />
         양육 힌트를 얻어보세요.
       </p>
 
       <div className="w-full max-w-xs mb-5">
-        <p className="text-xs font-semibold text-gray-400 mb-3">아이의 나이대를 선택해 주세요</p>
+        <p className="text-xs font-semibold text-gray-400 mb-3">아기의 나이대를 선택해 주세요</p>
         <div className="flex gap-2">
           {AGE_GROUPS.map((ag) => (
             <button

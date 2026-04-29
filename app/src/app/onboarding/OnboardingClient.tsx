@@ -180,10 +180,10 @@ export default function OnboardingClient() {
           </div>
         </section>
 
-        {/* 아이 등록 (선택, 여러 명) */}
+        {/* 아기 등록 (선택, 여러 명) */}
         <section className="rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500">우리 아이 (선택)</p>
+            <p className="text-xs font-semibold text-gray-500">우리 아기 (선택)</p>
             <span className="text-[10px] text-gray-300">지금 등록하지 않아도 돼요</span>
           </div>
 
@@ -194,14 +194,14 @@ export default function OnboardingClient() {
                   <input
                     value={c.name}
                     onChange={(e) => updateChild(c.key, { name: e.target.value })}
-                    placeholder="아이 이름"
+                    placeholder="아기 이름"
                     className="flex-1 min-w-0 text-sm font-bold text-gray-900 placeholder-gray-300 border-b border-gray-200 pb-0.5 outline-none focus:border-gray-400 bg-transparent"
                   />
                   <button
                     type="button"
                     onClick={() => removeChildRow(c.key)}
                     className="p-1.5 text-gray-300"
-                    aria-label="아이 삭제"
+                    aria-label="아기 삭제"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18" />
@@ -219,7 +219,7 @@ export default function OnboardingClient() {
                         : 'bg-white text-gray-400 border border-gray-100'
                     }`}
                   >
-                    남자아이
+                    남자아기
                   </button>
                   <button
                     type="button"
@@ -230,7 +230,7 @@ export default function OnboardingClient() {
                         : 'bg-white text-gray-400 border border-gray-100'
                     }`}
                   >
-                    여자아이
+                    여자아기
                   </button>
                 </div>
                 <button
@@ -254,7 +254,7 @@ export default function OnboardingClient() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              아이 추가하기
+              아기 추가하기
             </button>
           </div>
         </section>

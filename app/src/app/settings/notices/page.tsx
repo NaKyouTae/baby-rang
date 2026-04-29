@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { palette } from '@/lib/colors';
 import { useAuth } from '@/hooks/useAuth';
+import { palette } from '@/lib/colors';
+import PageHeader from '@/components/PageHeader';
 
 type Notice = {
   id: string;
@@ -18,11 +18,12 @@ function formatDate(iso: string) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  return `${y}.${m}.${day}`;
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${y}.${m}.${day}. ${hh}:${mm}`;
 }
 
 export default function NoticesPage() {
-  const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [items, setItems] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,55 +63,72 @@ export default function NoticesPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
-        <button
-          type="button"
-          onClick={() => router.push('/settings')}
-          aria-label="뒤로가기"
-          className="p-2"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
-          공지사항
-        </h1>
-      </header>
+    <div className="flex flex-col min-h-dvh bg-white">
+      <PageHeader title="공지사항" variant="back" />
 
-      <div className="mt-3">
-        {loading && (
-          <div className="py-20 text-center text-sm text-gray-400">불러오는 중...</div>
-        )}
-        {error && !loading && (
-          <div className="py-20 text-center text-sm text-red-500">{error}</div>
-        )}
-        {!loading && !error && items.length === 0 && (
-          <div className="py-20 text-center text-sm text-gray-400">
-            등록된 공지사항이 없어요
+      <div className="mt-3 px-6">
+        {loading ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 rounded-lg bg-gray-100 animate-pulse" />
+            ))}
           </div>
-        )}
-        {!loading && !error && items.length > 0 && (
-          <ul className="rounded-2xl bg-white shadow-sm overflow-hidden divide-y divide-gray-100">
+        ) : error ? (
+          <div className="mt-20 text-center text-sm text-gray-500">
+            공지사항을 불러오지 못했어요.
+          </div>
+        ) : items.length === 0 ? (
+          <div className="mt-6 rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-2.5">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M14.6666 6.99998V7.99998C14.6666 11.1426 14.6666 12.714 13.6899 13.69C12.7146 14.6666 11.1426 14.6666 7.99992 14.6666C4.85725 14.6666 3.28592 14.6666 2.30925 13.69C1.33325 12.7146 1.33325 11.1426 1.33325 7.99998C1.33325 4.85731 1.33325 3.28598 2.30925 2.30931C3.28659 1.33331 4.85725 1.33331 7.99992 1.33331H8.99992"
+                  stroke="black"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M4.6665 9.33331H10.6665M4.6665 11.6666H8.6665"
+                  stroke="black"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-black">등록된 공지사항이 없어요.</p>
+            <p className="text-xs font-normal text-gray-500 mt-1">
+              새로운 소식이 생기면 이곳에서 알려드릴게요.
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
             {items.map((n) => {
               const open = openId === n.id;
               return (
-                <li key={n.id}>
+                <li
+                  key={n.id}
+                  className="rounded-lg border border-gray-200 bg-gray-100 overflow-hidden"
+                >
                   <button
                     type="button"
                     onClick={() => handleToggle(n.id)}
-                    className="w-full text-left px-5 py-4 active:bg-gray-50"
+                    className="w-full text-left px-4 py-3.5 active:bg-gray-200 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      {n.isPinned && (
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700">
-                          고정
-                        </span>
-                      )}
-                      <p className="flex-1 text-[15px] text-gray-900 font-medium truncate">
-                        {n.title}
-                      </p>
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="shrink-0 rounded-sm px-1.5 h-[18px] inline-flex items-center text-[11px] font-semibold"
+                            style={{ backgroundColor: '#FF2D5514', color: '#FF2D55' }}
+                          >
+                            공지
+                          </span>
+                          <p className="text-[15px] font-medium text-black truncate">
+                            {n.title}
+                          </p>
+                        </div>
+                        <p className="mt-1 text-xs font-normal text-gray-500">
+                          {formatDate(n.publishedAt)}
+                        </p>
+                      </div>
                       <svg
                         width="16"
                         height="16"
@@ -120,17 +138,14 @@ export default function NoticesPage() {
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className={`transition-transform ${open ? 'rotate-180' : ''}`}
+                        className={`shrink-0 mt-1 transition-transform ${open ? 'rotate-180' : ''}`}
                       >
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {formatDate(n.publishedAt)}
-                    </p>
                   </button>
                   {open && (
-                    <div className="px-5 pb-5 -mt-1 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    <div className="px-4 pb-4 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border-t border-gray-200 pt-3">
                       {n.content}
                     </div>
                   )}

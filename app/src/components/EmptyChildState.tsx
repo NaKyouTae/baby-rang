@@ -28,13 +28,13 @@ export default function EmptyChildState({
       <button
         type="button"
         onClick={() => {
-          if (requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) {
+          if (requireLogin('우리 아기를 등록하려면\n로그인이 필요해요.')) {
             window.location.href = '/settings/children';
           }
         }}
         className="bg-gray-900 text-white font-semibold py-3 px-8 rounded-xl active:opacity-80"
       >
-        우리아이 등록하러 가기
+        우리아기 등록하러 가기
       </button>
     </main>
   );

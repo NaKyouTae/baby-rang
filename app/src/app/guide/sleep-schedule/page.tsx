@@ -94,7 +94,7 @@ export default function SleepScheduleGuidePage() {
         <Link href="/sleep-golden-time" className="text-teal-600 font-medium hover:underline">
           아기랑 수면추천 기능
         </Link>
-        에서는 아이의 월령에 맞는 최적의 낮잠 횟수, 활동 시간, 밤잠 권장 시간을
+        에서는 아기의 월령에 맞는 최적의 낮잠 횟수, 활동 시간, 밤잠 권장 시간을
         자동으로 계산해 줍니다. 수면 골든타임을 놓치지 않도록 알림을 설정해 보세요.
       </p>
     </>

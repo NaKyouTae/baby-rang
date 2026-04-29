@@ -60,7 +60,7 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
 
   return (
     <div className="relative" ref={ref}>
-      {/* 선택된 아이 프로필 카드 — 풀 width */}
+      {/* 선택된 아기 프로필 카드 — 풀 width */}
       <button
         type="button"
         onClick={() => children.length > 1 && setOpen((v) => !v)}

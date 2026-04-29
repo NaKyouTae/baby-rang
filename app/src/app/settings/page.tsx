@@ -245,7 +245,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white" style={{ paddingTop: 'var(--safe-area-top)' }}>
+    <div className="flex flex-col min-h-dvh bg-white">
       {locationGuide && (
         <ConfirmModal
           open={locationGuideOpen}
@@ -425,7 +425,7 @@ export default function SettingsPage() {
         variant="danger"
         title={"정말 탈퇴하시겠어요?"}
         description={
-          "탈퇴 시 우리 아이 정보, 검사 이력,\n결제 내역 등 모든 데이터가 삭제됩니다.\n삭제된 데이터는 복구할 수 없습니다."
+          "탈퇴 시 우리 아기 정보, 검사 이력,\n결제 내역 등 모든 데이터가 삭제됩니다.\n삭제된 데이터는 복구할 수 없습니다."
         }
         confirmLabel={withdrawing ? "처리 중..." : "탈퇴하기"}
         cancelLabel="취소"
@@ -531,7 +531,7 @@ function ChildProfileSection({
           <button
             type="button"
             onClick={() => {
-              if (!requireLogin('우리 아이를 등록하려면\n로그인이 필요해요.')) return;
+              if (!requireLogin('우리 아기를 등록하려면\n로그인이 필요해요.')) return;
               router.push("/settings/children");
             }}
             className="font-semibold text-white"
@@ -544,7 +544,7 @@ function ChildProfileSection({
     );
   }
 
-  // 1명: 2열 그리드 (아이 + 빈 프로필)
+  // 1명: 2열 그리드 (아기 + 빈 프로필)
   if (children.length === 1) {
     return (
       <section className="px-6 mb-[24px]">

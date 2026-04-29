@@ -91,7 +91,7 @@ export default function WonderWeeksGuidePage() {
         <Link href="/wonder-weeks" className="text-teal-600 font-medium hover:underline">
           아기랑 원더윅스 기능
         </Link>
-        에서는 아이의 생년월일을 입력하면 현재 몇 번째 도약기인지, 언제 시작되고 끝나는지를
+        에서는 아기의 생년월일을 입력하면 현재 몇 번째 도약기인지, 언제 시작되고 끝나는지를
         자동으로 계산해 줍니다. 도약기마다 어떤 변화가 나타나는지, 어떻게 대응하면 좋을지
         맞춤 안내를 받아보세요.
       </p>

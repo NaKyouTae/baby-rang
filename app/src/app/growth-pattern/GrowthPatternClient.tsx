@@ -427,7 +427,7 @@ export default function GrowthPatternClient() {
         title="패턴"
         description={
           <>
-            아이를 등록하면<br />
+            아기를 등록하면<br />
             하루 리듬을 한눈에 볼 수 있어요.
           </>
         }

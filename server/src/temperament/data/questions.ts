@@ -34,7 +34,7 @@ export const SCALE = {
 };
 
 export const NOTICE =
-  '정답은 없습니다. 평소 우리 아이의 모습에 가장 가까운 응답을 선택해 주세요.';
+  '정답은 없습니다. 평소 우리 아기의 모습에 가장 가까운 응답을 선택해 주세요.';
 
 type RawQ = { dimension: DimensionKey; text: string };
 
@@ -194,7 +194,7 @@ const BEFORE_FIRST: RawQ[] = [
   },
   {
     dimension: 'sociability',
-    text: '다른 아기나 아이들을 보면 관심을 보이는 편이다.',
+    text: '다른 아기나 아기들을 보면 관심을 보이는 편이다.',
   },
   {
     dimension: 'sociability',
@@ -254,7 +254,7 @@ const BEFORE_FIRST: RawQ[] = [
 const AFTER_FIRST: RawQ[] = [
   {
     dimension: 'activity',
-    text: '우리 아이는 가만히 있기보다 몸을 움직이며 노는 것을 좋아한다.',
+    text: '우리 아기는 가만히 있기보다 몸을 움직이며 노는 것을 좋아한다.',
   },
   {
     dimension: 'activity',
@@ -309,7 +309,7 @@ const AFTER_FIRST: RawQ[] = [
     dimension: 'emotional_intensity',
     text: '작은 일에도 감정 반응이 또렷하게 보인다.',
   },
-  { dimension: 'sociability', text: '다른 아이들과 함께 노는 것을 좋아한다.' },
+  { dimension: 'sociability', text: '다른 아기들과 함께 노는 것을 좋아한다.' },
   {
     dimension: 'sociability',
     text: '혼자 놀기보다 누군가와 함께하는 활동을 선호하는 편이다.',

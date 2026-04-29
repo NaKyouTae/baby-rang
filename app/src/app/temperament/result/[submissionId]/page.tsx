@@ -61,7 +61,7 @@ export default function ResultPage() {
     return (
       <main className="flex flex-col items-center justify-center min-h-dvh gap-4 gradient-page">
         <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-        <p className="text-sm text-gray-500">아이의 기질을 분석하고 있어요...</p>
+        <p className="text-sm text-gray-500">아기의 기질을 분석하고 있어요...</p>
         <p className="text-xs text-gray-300">잠시만 기다려 주세요.</p>
       </main>
     );
@@ -139,7 +139,7 @@ export default function ResultPage() {
 
       <div className="mt-4">
         <p className="text-[11px] text-gray-300 text-center leading-relaxed">
-          이 검사는 아이의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나
+          이 검사는 아기의 기질 경향을 이해하기 위한 참고 자료이며, 의학적 진단이나
           전문 심리 평가를 대신하지 않습니다.
         </p>
       </div>

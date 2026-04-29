@@ -24,8 +24,8 @@ function WonderWeeksContent() {
   const calendarRef = useRef<WonderWeeksCalendarHandle | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
 
-  // 첫 진입 시 ?childId= 가 있으면 해당 아이 자동 선택, 아이가 1명이면 자동 선택,
-  // 그 외에는 아이 선택 화면을 먼저 보여준다.
+  // 첫 진입 시 ?childId= 가 있으면 해당 아기 자동 선택, 아기가 1명이면 자동 선택,
+  // 그 외에는 아기 선택 화면을 먼저 보여준다.
   useEffect(() => {
     if (!isLoaded || children.length === 0 || selectedChild) return;
     if (childIdParam) {
@@ -42,15 +42,15 @@ function WonderWeeksContent() {
 
   if (!isLoaded) return null;
 
-  // 등록된 아이가 없으면 등록 유도
+  // 등록된 아기가 없으면 등록 유도
   if (children.length === 0) {
     return (
       <EmptyChildState
         emoji="👶"
-        title="우리 아이 원더 윅스"
+        title="우리 아기 원더 윅스"
         description={
           <>
-            아이를 등록하면<br />
+            아기를 등록하면<br />
             원더윅스를 확인할 수 있어요.
           </>
         }
@@ -62,8 +62,8 @@ function WonderWeeksContent() {
     return (
       <ChildPickScreen
         emoji="👶"
-        title="우리 아이 원더 윅스"
-        description={<>원더윅스를 확인할 아이를 선택해주세요.</>}
+        title="우리 아기 원더 윅스"
+        description={<>원더윅스를 확인할 아기를 선택해주세요.</>}
         children={children}
         onSelect={setSelectedChild}
       />

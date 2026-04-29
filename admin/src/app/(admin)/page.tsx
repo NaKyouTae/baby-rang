@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   const cards = [
     { label: "전체 사용자", value: stats?.users ?? "-", icon: Users },
-    { label: "등록된 아이", value: stats?.children ?? "-", icon: Baby },
+    { label: "등록된 아기", value: stats?.children ?? "-", icon: Baby },
     { label: "활성 배너", value: stats?.banners ?? "-", icon: Image },
     {
       label: "결제 완료",

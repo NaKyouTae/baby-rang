@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
-/** 내가 공유받은 아이 목록 */
+/** 내가 공유받은 아기 목록 */
 export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;

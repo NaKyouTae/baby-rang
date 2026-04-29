@@ -498,7 +498,7 @@ export default function HomeHeroCard() {
         <div className="pt-4">
           <EmptyProfileCard
             ctaLabel="로그인하고 시작하기"
-            onClick={() => openLoginPrompt('로그인하고 우리 아이 맞춤 정보를 확인하세요.')}
+            onClick={() => openLoginPrompt('로그인하고 우리 아기 맞춤 정보를 확인하세요.')}
           />
           <div className="flex justify-center pt-3">
             <span className="h-1 w-3 rounded-full bg-gray-600" />

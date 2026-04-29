@@ -43,7 +43,7 @@ export default function PrivacyPage() {
             <li>
               <b>서비스 이용 시</b>
               <ul className="list-disc pl-5 mt-1 space-y-1">
-                <li>아이 정보: 이름(또는 태명), 생년월일, 성별, 출생 시 신체 정보(키·몸무게 등)</li>
+                <li>아기 정보: 이름(또는 태명), 생년월일, 성별, 출생 시 신체 정보(키·몸무게 등)</li>
                 <li>성장 기록, 수유·수면 기록, 기질 검사 응답 결과</li>
               </ul>
             </li>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
           <h2 className="text-[15px] font-semibold text-gray-900 mb-2">2. 개인정보의 수집·이용 목적</h2>
           <ol className="list-decimal pl-5 space-y-1">
             <li>회원 식별, 회원가입 의사 확인, 본인 인증 및 계정 관리</li>
-            <li>아이 성장·발달 기록 및 맞춤형 콘텐츠 제공</li>
+            <li>아기 성장·발달 기록 및 맞춤형 콘텐츠 제공</li>
             <li>유료 서비스 결제, 환불, 청구 및 분쟁 처리</li>
             <li>공지사항 전달, 고객 문의 응대</li>
             <li>서비스 품질 개선, 부정 이용 방지, 통계 분석</li>
@@ -144,7 +144,7 @@ export default function PrivacyPage() {
           <ol className="list-decimal pl-5 space-y-1">
             <li>회원은 언제든지 자신의 개인정보를 조회·수정할 수 있으며, 회원 탈퇴를 통해 개인정보 처리 정지를 요청할 수 있습니다.</li>
             <li>설정 메뉴 또는 고객센터를 통해 권리 행사를 요청할 수 있으며, 회사는 지체 없이 조치합니다.</li>
-            <li>만 14세 미만 아동의 개인정보는 법정대리인의 동의를 받아 수집·처리합니다. 본 서비스에서 등록되는 아이의 정보는 회원(보호자)이 직접 관리하는 정보로 간주합니다.</li>
+            <li>만 14세 미만 아동의 개인정보는 법정대리인의 동의를 받아 수집·처리합니다. 본 서비스에서 등록되는 아기의 정보는 회원(보호자)이 직접 관리하는 정보로 간주합니다.</li>
           </ol>
         </section>
 

@@ -28,8 +28,8 @@ function EmptyCard() {
           👶
         </div>
         <div className="flex-1">
-          <div className="text-sm font-bold text-gray-900">우리 아이를 등록해주세요</div>
-          <div className="text-xs text-gray-500 mt-0.5">탭하여 아이 정보 추가하기</div>
+          <div className="text-sm font-bold text-gray-900">우리 아기를 등록해주세요</div>
+          <div className="text-xs text-gray-500 mt-0.5">탭하여 아기 정보 추가하기</div>
         </div>
       </div>
     </Link>

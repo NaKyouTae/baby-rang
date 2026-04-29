@@ -174,7 +174,7 @@ export default function PhysicalGrowthClient() {
         title="성장 측정을 시작해보세요"
         description={
           <>
-            우리 아이를 등록하면
+            우리 아기를 등록하면
             <br />
             키, 몸무게, 머리둘레를 기록할 수 있어요.
           </>

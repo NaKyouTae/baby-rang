@@ -14,7 +14,7 @@ const ROLE_OPTIONS: { value: ParentRole; label: string }[] = [
   { value: 'dad', label: '아빠' },
   { value: 'grandmother', label: '할머니' },
   { value: 'grandfather', label: '할아버지' },
-  { value: 'caregiver', label: '아이돌보미' },
+  { value: 'caregiver', label: '아기돌보미' },
   { value: 'other', label: '기타' },
 ];
 

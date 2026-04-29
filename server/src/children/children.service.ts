@@ -21,13 +21,13 @@ export class ChildrenService {
   ) {}
 
   async findAll(userId: string) {
-    // 내 아이 목록
+    // 내 아기 목록
     const ownChildren = await this.prisma.child.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
     });
 
-    // 공유받은 아이 목록 (SharedAccess 기반)
+    // 공유받은 아기 목록 (SharedAccess 기반)
     const sharedAccess = await this.prisma.sharedAccess.findMany({
       where: { grantedToId: userId },
       include: {
@@ -72,7 +72,7 @@ export class ChildrenService {
       },
     });
 
-    // 기존 공유 멤버에게 자동으로 새 아이 접근 권한 추가
+    // 기존 공유 멤버에게 자동으로 새 아기 접근 권한 추가
     await this.sharesService.autoShareNewChild(userId, child.id);
 
     return child;
@@ -90,7 +90,7 @@ export class ChildrenService {
     const child = await this.prisma.child.findFirst({
       where: { id: childId, userId },
     });
-    if (!child) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!child) throw new NotFoundException('아기를 찾을 수 없습니다.');
 
     let profileImage = child.profileImage;
     if (file) {
@@ -121,7 +121,7 @@ export class ChildrenService {
     const child = await this.prisma.child.findFirst({
       where: { id: childId, userId },
     });
-    if (!child) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!child) throw new NotFoundException('아기를 찾을 수 없습니다.');
 
     if (child.profileImage) {
       await this.storage.delete(child.profileImage);
@@ -134,7 +134,7 @@ export class ChildrenService {
     const child = await this.prisma.child.findFirst({
       where: { id: childId, userId },
     });
-    if (!child) throw new NotFoundException('아이를 찾을 수 없습니다.');
+    if (!child) throw new NotFoundException('아기를 찾을 수 없습니다.');
 
     if (child.profileImage) {
       await this.storage.delete(child.profileImage);

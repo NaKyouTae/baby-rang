@@ -164,7 +164,7 @@ export class SharesService {
     }));
   }
 
-  /** 코드 입력하여 공유 참여 → 코드 주인이 접근 가능한 모든 아이에 대해 SharedAccess 생성 */
+  /** 코드 입력하여 공유 참여 → 코드 주인이 접근 가능한 모든 아기에 대해 SharedAccess 생성 */
   async join(userId: string, code: string) {
     const shareCode = await this.prisma.shareCode.findUnique({
       where: { code: code.toUpperCase() },
@@ -181,7 +181,7 @@ export class SharesService {
       throw new BadRequestException('본인의 공유 코드에는 참여할 수 없습니다.');
     }
 
-    // 코드 주인이 접근 가능한 모든 아이 = 직접 등록한 아이 + 공유받은 아이
+    // 코드 주인이 접근 가능한 모든 아기 = 직접 등록한 아기 + 공유받은 아기
     const ownChildren = await this.prisma.child.findMany({
       where: { userId: codeOwnerId },
       select: { id: true, name: true },
@@ -198,10 +198,10 @@ export class SharesService {
     ];
 
     if (allChildIds.length === 0) {
-      throw new BadRequestException('공유할 아이가 없습니다.');
+      throw new BadRequestException('공유할 아기가 없습니다.');
     }
 
-    // 이미 접근 권한이 있는 아이 제외
+    // 이미 접근 권한이 있는 아기 제외
     const existingAccess = await this.prisma.sharedAccess.findMany({
       where: { grantedToId: userId, childId: { in: allChildIds } },
       select: { childId: true },
@@ -210,7 +210,7 @@ export class SharesService {
     const newChildIds = allChildIds.filter((id) => !existingChildIds.has(id));
 
     if (newChildIds.length === 0) {
-      throw new ConflictException('이미 모든 아이의 기록을 공유받고 있습니다.');
+      throw new ConflictException('이미 모든 아기의 기록을 공유받고 있습니다.');
     }
 
     // SharedAccess 일괄 생성
@@ -286,7 +286,7 @@ export class SharesService {
     });
   }
 
-  /** 아이 등록 시 기존 공유 멤버에게 자동으로 접근 권한 추가 */
+  /** 아기 등록 시 기존 공유 멤버에게 자동으로 접근 권한 추가 */
   async autoShareNewChild(ownerId: string, childId: string) {
     // 내가 직접 공유한(sharedBy) 사람들 조회
     const existingAccess = await this.prisma.sharedAccess.findMany({
