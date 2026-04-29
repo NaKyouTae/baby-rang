@@ -121,7 +121,9 @@
       "Bash(pnpm --filter server add -D dotenv)",
       "Bash(pnpm dev:server)",
       "Bash(curl -s http://localhost:18090)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(node dist/main.js)",
+      "Bash(pnpm --filter server add -D @swc/cli @swc/core)"
     ],
     "additionalDirectories": [
       "/tmp",
