@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   description:
     "원더윅스란 무엇인지, 10번의 도약기 시기와 특징, 보채는 이유, 부모 대처법까지 상세히 안내합니다. 아기랑에서 우리 아기의 원더윅스를 자동으로 확인하세요.",
   alternates: { canonical: "/guide/wonder-weeks" },
+  openGraph: {
+    title: "원더윅스(Wonder Weeks) 완벽 가이드 - 아기 정신 발달 도약기 총정리 | 아기랑",
+    description:
+      "원더윅스란 무엇인지, 10번의 도약기 시기와 특징, 보채는 이유, 부모 대처법까지 상세히 안내합니다.",
+    url: "https://baby-rang.spectrify.kr/guide/wonder-weeks",
+  },
 };
 
 export default function WonderWeeksGuidePage() {

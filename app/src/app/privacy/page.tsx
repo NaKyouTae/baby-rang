@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description:
     '아기랑 개인정보처리방침 - 수집 항목, 이용 목적, 보유 기간, 파기 절차 등 개인정보 보호 정책을 안내합니다.',
   alternates: { canonical: '/privacy' },
+  openGraph: {
+    title: '개인정보처리방침 | 아기랑',
+    description:
+      '아기랑 개인정보처리방침 - 수집 항목, 이용 목적, 보유 기간, 파기 절차 등 개인정보 보호 정책을 안내합니다.',
+    url: 'https://baby-rang.spectrify.kr/privacy',
+  },
 };
 
 export default function PrivacyPage() {

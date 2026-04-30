@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description:
     '우리 아기의 타고난 기질을 파악하고 맞춤 양육 힌트를 받아보세요. 신생아·돌 전·돌 후 연령별 30문항 검사.',
   alternates: { canonical: '/temperament' },
+  openGraph: {
+    title: '아기 기질 검사 - 맞춤 양육 가이드 | 아기랑',
+    description:
+      '우리 아기의 타고난 기질을 파악하고 맞춤 양육 힌트를 받아보세요. 신생아·돌 전·돌 후 연령별 30문항 검사.',
+    url: 'https://baby-rang.spectrify.kr/temperament',
+  },
 };
 
 const jsonLd = {
@@ -27,6 +33,21 @@ export default function TemperamentPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <section className="sr-only" aria-label="기질 검사 안내">
+        <h1>아기 기질 검사 - 맞춤 양육 가이드</h1>
+        <p>
+          우리 아기의 타고난 기질을 파악하고 맞춤 양육 힌트를 받아보세요.
+          신생아·돌 전·돌 후 연령별 30문항 검사로 활동성, 규칙성, 적응성 등
+          9가지 기질 차원을 분석합니다.
+        </p>
+        <h2>검사 방법</h2>
+        <ul>
+          <li>신생아(0~3개월), 돌 전(4~11개월), 돌 후(12개월~) 연령대 선택</li>
+          <li>아기의 행동·반응 패턴에 대한 30문항 응답</li>
+          <li>9가지 기질 차원 분석 결과 제공</li>
+          <li>기질에 맞는 양육 가이드 안내</li>
+        </ul>
+      </section>
       <TemperamentClient />
     </>
   );

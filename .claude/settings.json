@@ -123,7 +123,10 @@
       "Bash(curl -s http://localhost:18090)",
       "Bash(git commit -m ' *)",
       "Bash(node dist/main.js)",
-      "Bash(pnpm --filter server add -D @swc/cli @swc/core)"
+      "Bash(pnpm --filter server add -D @swc/cli @swc/core)",
+      "Bash(grep -v \"^$\")",
+      "Bash(./admin/node_modules/.bin/eslint admin/src/app/\\\\\\(admin\\\\\\)/cars/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/categories/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/makes/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/options/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/sellers/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/tags/page.tsx)",
+      "Bash(./node_modules/.bin/eslint src/app/\\\\\\(admin\\\\\\)/cars/page.tsx src/app/\\\\\\(admin\\\\\\)/categories/page.tsx src/app/\\\\\\(admin\\\\\\)/makes/page.tsx src/app/\\\\\\(admin\\\\\\)/options/page.tsx src/app/\\\\\\(admin\\\\\\)/sellers/page.tsx src/app/\\\\\\(admin\\\\\\)/tags/page.tsx)"
     ],
     "additionalDirectories": [
       "/tmp",
