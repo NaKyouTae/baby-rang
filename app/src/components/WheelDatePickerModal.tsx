@@ -155,8 +155,8 @@ export function WheelColumn({
 
   return (
     <div
-      className="relative flex-1 overflow-hidden select-none cursor-grab active:cursor-grabbing"
-      style={{ height: SLOT * VISIBLE_COUNT - ITEM_GAP }}
+      className="relative overflow-hidden select-none cursor-grab active:cursor-grabbing"
+      style={{ width: 68, height: SLOT * VISIBLE_COUNT - ITEM_GAP }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -289,7 +289,7 @@ export default function WheelDatePickerModal({
       <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/40" />
 
       <div className="relative w-full max-w-[360px] bg-white rounded-[8px] shadow-xl overflow-hidden p-[16px]">
-        <div className="flex">
+        <div className="flex justify-center">
           <WheelColumn
             items={years}
             selectedIndex={yearIndex >= 0 ? yearIndex : 0}
