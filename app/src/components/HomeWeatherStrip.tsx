@@ -20,8 +20,8 @@ interface WeatherAirData {
 
 const GRADE_LABEL: Record<string, string> = { "1": "좋음", "2": "보통", "3": "나쁨", "4": "매우나쁨" };
 const GRADE_COLOR: Record<string, string> = {
-  "1": "#22C55E",
-  "2": "#3B82F6",
+  "1": "#3B82F6",
+  "2": "#22C55E",
   "3": "#F97316",
   "4": "#EF4444",
 };

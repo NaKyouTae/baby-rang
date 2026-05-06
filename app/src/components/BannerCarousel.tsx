@@ -36,10 +36,10 @@ export default function BannerCarousel() {
   }, [banners, index]);
 
   if (banners === null) {
-    return <div style={{ height: 56 }} className="rounded-[4px] bg-gray-200 animate-pulse" />;
+    return <div style={{ height: 80 }} className="rounded-[8px] bg-gray-200 animate-pulse" />;
   }
 
-  if (banners.length === 0) return <div style={{ height: 56 }} className="rounded-[4px]" />;
+  if (banners.length === 0) return <div style={{ height: 80 }} className="rounded-[8px]" />;
 
   const onScroll = () => {
     const el = scrollerRef.current;
@@ -53,14 +53,14 @@ export default function BannerCarousel() {
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide rounded-[4px]"
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-hide rounded-[8px]"
       >
         {banners.map((b) => (
           <Link
             key={b.id}
             href={b.linkUrl}
             className="relative shrink-0 w-full snap-center overflow-hidden"
-            style={{ height: 56 }}
+            style={{ height: 80 }}
           >
             {b.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -68,7 +68,7 @@ export default function BannerCarousel() {
                 src={b.imageUrl}
                 alt={b.title}
                 width={800}
-                height={56}
+                height={80}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}
@@ -77,15 +77,18 @@ export default function BannerCarousel() {
       </div>
 
       {banners.length > 1 && (
-        <div className="absolute bottom-1.5 right-2 flex gap-1">
-          {banners.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1 rounded-full transition-all ${
-                i === index ? "w-3 bg-white" : "w-1 bg-white/50"
-              }`}
-            />
-          ))}
+        <div
+          className="absolute bottom-1.5 right-2 flex items-center justify-center px-1.5"
+          style={{
+            height: 14,
+            borderRadius: 50,
+            backgroundColor: "#FDFDFE",
+            fontSize: 10,
+            lineHeight: "14px",
+          }}
+        >
+          <span style={{ color: "#000" }}>{index + 1}</span>
+          <span style={{ color: "#6b7280" }}>&nbsp;/&nbsp;{banners.length}</span>
         </div>
       )}
     </div>
