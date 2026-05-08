@@ -131,6 +131,41 @@ export class NursingRoomsService {
     return { items };
   }
 
+  async reverseGeocode(lat: number, lng: number) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new BadRequestException('lat, lng 값이 올바르지 않습니다.');
+    }
+    const apiKey = process.env.KAKAO_CLIENT_ID;
+    if (!apiKey) {
+      throw new BadRequestException('Kakao REST API 키가 설정되지 않았습니다.');
+    }
+
+    const res = await fetch(
+      `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
+      { headers: { Authorization: `KakaoAK ${apiKey}` } },
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('[kakao coord2address]', res.status, text);
+      throw new BadRequestException('Kakao 좌표→주소 변환에 실패했습니다.');
+    }
+    const data: any = await res.json();
+    const doc = (data.documents ?? [])[0];
+    if (!doc) return { item: null };
+
+    const road = doc.road_address;
+    const jibun = doc.address;
+    return {
+      item: {
+        roadAddress: road?.address_name || jibun?.address_name || '',
+        jibunAddress: jibun?.address_name || '',
+        sido: road?.region_1depth_name || jibun?.region_1depth_name || '',
+        sigungu: road?.region_2depth_name || jibun?.region_2depth_name || '',
+        buildingName: road?.building_name || '',
+      },
+    };
+  }
+
   async findApproved() {
     return this.prisma.nursingRoomReport.findMany({
       where: { status: 'APPROVED' },

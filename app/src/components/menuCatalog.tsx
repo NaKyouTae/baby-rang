@@ -37,7 +37,7 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
   temperament: {
     id: "temperament",
     label: "테스트",
-    href: "/temperament",
+    href: "/tests",
     icon: (active, activeColor) => <TemperamentNavIcon active={active} colorOverride={activeColor} />,
   },
   "wonder-weeks": {

@@ -7,6 +7,7 @@ import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_componen
 import ChildSelector from '@/components/ChildSelector';
 import ChildPickScreen from '@/components/ChildPickScreen';
 import EmptyChildState from '@/components/EmptyChildState';
+import PageHeader from '@/components/PageHeader';
 
 export default function WonderWeeksClient() {
   return (
@@ -71,29 +72,31 @@ function WonderWeeksContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
-      <div ref={topRef} />
-      {/* 스티키 타이틀 바 */}
-      <div className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
-        <ChildSelector
-          children={children}
-          selected={selectedChild}
-          onSelect={setSelectedChild}
-        />
-      </div>
+    <div className="flex flex-col min-h-dvh bg-white">
+      <PageHeader title="원더윅스" variant="back" />
+      <div className="flex flex-col px-6 pb-[68px]">
+        <div ref={topRef} />
+        <div className="pt-6 pb-6">
+          <ChildSelector
+            children={children}
+            selected={selectedChild}
+            onSelect={setSelectedChild}
+          />
+        </div>
 
-      <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />
+        <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />
+      </div>
 
       {/* 하단 버튼들 — 오늘(왼쪽) + 상단 이동(오른쪽) */}
       <div
         className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
-        style={{ bottom: 'calc(var(--safe-area-bottom) + 76px)' }}
+        style={{ bottom: '104px' }}
       >
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <button
             type="button"
             onClick={() => calendarRef.current?.scrollToToday()}
-            className="pointer-events-auto px-4 py-2.5 rounded-full bg-primary-500 text-white text-sm font-semibold shadow-lg active:scale-95 transition-transform"
+            className="pointer-events-auto w-[45px] h-8 flex items-center justify-center rounded-full bg-primary-500 text-white text-[12px] font-medium shadow-[0_0_20px_rgba(0,0,0,0.1)] active:scale-95 transition-transform"
             aria-label="오늘로 이동"
           >
             오늘
@@ -101,7 +104,7 @@ function WonderWeeksContent() {
           <button
             type="button"
             onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="pointer-events-auto w-10 h-10 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            className="pointer-events-auto w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.1)] active:scale-95 transition-transform"
             aria-label="맨 위로 이동"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

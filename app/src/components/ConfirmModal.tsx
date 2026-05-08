@@ -51,7 +51,7 @@ export default function ConfirmModal({
             {title}
           </h2>
           {description && (
-            <p className="mt-[8px] text-[12px] text-gray-500 text-center leading-relaxed whitespace-pre-line">
+            <p className="mt-[8px] text-[12px] font-medium text-gray-500 text-center leading-relaxed whitespace-pre-line">
               {description}
             </p>
           )}
@@ -59,7 +59,7 @@ export default function ConfirmModal({
             {!hideCancel && (
               <button
                 onClick={onClose}
-                className="flex-1 py-3 rounded-[4px] bg-gray-200 text-gray-700 font-semibold text-sm active:bg-gray-300 transition-colors"
+                className="flex-1 py-3 rounded-[4px] bg-gray-200 text-gray-600 font-semibold text-[14px] active:bg-gray-300 transition-colors"
               >
                 {cancelLabel}
               </button>

@@ -17,6 +17,7 @@ import { GrowthQuickButtonsModule } from './growth-quick-buttons/growth-quick-bu
 import { NursingRoomsModule } from './nursing-rooms/nursing-rooms.module';
 import { SharesModule } from './shares/shares.module';
 import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
+import { TestsModule } from './tests/tests.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
     NursingRoomsModule,
     SharesModule,
     PhysicalGrowthModule,
+    TestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

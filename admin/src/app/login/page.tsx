@@ -31,13 +31,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-muted">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-[hsl(212_25%_97%)]">
+      <Card className="w-full max-w-sm p-8">
+        <CardHeader className="p-0 mb-6 items-center text-center">
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-xl shadow-md">
+            아
+          </div>
           <CardTitle className="text-xl">아기랑 어드민</CardTitle>
           <CardDescription>관리자 로그인</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">아이디</Label>

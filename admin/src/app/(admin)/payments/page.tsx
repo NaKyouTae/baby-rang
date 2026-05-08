@@ -3,6 +3,7 @@ import { RefundButton } from "./RefundButton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Table,
   TableBody,
@@ -55,7 +56,10 @@ export default async function PaymentsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-6">결제 내역</h1>
+      <PageHeader
+        title="결제 내역"
+        description="결제·환불 내역을 확인하고 환불 처리를 진행합니다."
+      />
 
       <div className="flex flex-wrap gap-2 mb-4">
         {filters.map((f) => (

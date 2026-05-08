@@ -23,14 +23,13 @@ export interface NursingRoomReport {
 
 const ROOM_TYPES = ["가족수유실", "모유수유실", "기저귀갈이대", "기타"];
 const FACILITIES = [
-  "기저귀교환대",
+  "기저귀갈이대",
   "전자레인지",
   "정수기",
   "세면대",
-  "잠금장치",
-  "모유 수유 쿠션",
-  "기저귀",
+  "모유수유쿠션",
   "물티슈",
+  "엉덩이클렌저",
 ];
 
 interface Props {
@@ -212,15 +211,36 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerOpen]);
 
-  const confirmPickedLocation = () => {
-    if (pickedRef.current) {
-      setForm((s) => ({
-        ...s,
-        lat: pickedRef.current!.lat,
-        lng: pickedRef.current!.lng,
-      }));
-    }
+  const confirmPickedLocation = async () => {
+    const picked = pickedRef.current;
     setPickerOpen(false);
+    if (!picked) return;
+
+    setForm((s) => ({ ...s, lat: picked.lat, lng: picked.lng }));
+    setResolving(true);
+    setSearchError(null);
+    try {
+      const res = await fetch(
+        `/api/nursing-rooms/reverse-geocode?lat=${picked.lat}&lng=${picked.lng}`,
+      );
+      const json = await res.json();
+      const item = json?.item;
+      if (item?.roadAddress) {
+        setForm((s) => ({
+          ...s,
+          roadAddress: item.roadAddress,
+          sido: item.sido || s.sido,
+          sigungu: item.sigungu || s.sigungu,
+          name: s.name || item.buildingName || "",
+        }));
+      } else {
+        setSearchError("이 위치의 주소를 찾을 수 없어요.");
+      }
+    } catch {
+      setSearchError("주소 변환에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setResolving(false);
+    }
   };
 
   const toggleFacility = (f: string) => {

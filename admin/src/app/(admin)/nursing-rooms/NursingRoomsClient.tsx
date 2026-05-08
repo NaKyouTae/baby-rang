@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Dialog,
   DialogContent,
@@ -190,15 +191,18 @@ export default function NursingRoomsClient({ initial }: { initial: NursingRoom[]
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">수유실 관리</h1>
-        <Button onClick={startCreate} size="sm">
-          <Plus className="h-4 w-4" />
-          새 수유실
-        </Button>
-      </div>
+      <PageHeader
+        title="수유실 관리"
+        description="제보된 수유실을 검수하고 위치/편의시설 정보를 관리합니다."
+        actions={
+          <Button onClick={startCreate} size="sm">
+            <Plus className="h-4 w-4" />
+            새 수유실
+          </Button>
+        }
+      />
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         {([
           ["", "전체"],
           ["PENDING", "검수 대기"],
@@ -225,32 +229,35 @@ export default function NursingRoomsClient({ initial }: { initial: NursingRoom[]
         </Button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {filtered.map((r) => (
-          <Card key={r.id} className="flex items-center gap-3 px-4 py-3">
+          <Card
+            key={r.id}
+            className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4 transition-shadow hover:shadow-md"
+          >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant={STATUS_VARIANT[r.status]} className="text-[10px]">
                   {STATUS_LABEL[r.status]}
                 </Badge>
                 <Badge variant="pink" className="text-[10px]">{r.type}</Badge>
-                <p className="font-medium text-sm truncate">{r.name}</p>
+                <p className="font-semibold text-sm text-foreground truncate">{r.name}</p>
                 {r.dadAvailable && (
                   <Badge variant="info" className="text-[10px]">아빠 가능</Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-1.5">
                 {r.sido} {r.sigungu ?? ""} {r.roadAddress}
                 {r.detailLocation ? ` · ${r.detailLocation}` : ""}
               </p>
               {r.facilities.length > 0 && (
-                <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                <p className="text-[11px] text-muted-foreground/70 line-clamp-1 mt-1">
                   편의시설: {r.facilities.join(", ")}
                 </p>
               )}
             </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="flex gap-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:flex-col sm:items-end">
+              <div className="flex gap-1.5">
                 {r.status !== "APPROVED" && (
                   <Button
                     variant="outline"
@@ -273,7 +280,7 @@ export default function NursingRoomsClient({ initial }: { initial: NursingRoom[]
                   </Button>
                 )}
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 <Button variant="outline" size="sm" onClick={() => startEdit(r)}>
                   <Pencil className="h-3 w-3" />
                   수정
@@ -287,19 +294,21 @@ export default function NursingRoomsClient({ initial }: { initial: NursingRoom[]
           </Card>
         ))}
         {filtered.length === 0 && (
-          <div className="text-center text-muted-foreground py-10">등록된 수유실이 없습니다</div>
+          <Card className="py-12 text-center text-muted-foreground text-sm">
+            등록된 수유실이 없습니다
+          </Card>
         )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle>{editing ? "수유실 수정" : "새 수유실"}</DialogTitle>
             <DialogDescription>
               {editing ? "수유실 정보를 수정합니다." : "새로운 수유실을 등록합니다."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <Label>수유실 이름 *</Label>
               <Input

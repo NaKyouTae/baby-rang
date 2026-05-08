@@ -16,7 +16,7 @@ function formatBirth(date: string): string {
   return `${y}. ${m}. ${d}`;
 }
 
-function Avatar({ child, size = 48 }: { child: Child; size?: number }) {
+function Avatar({ child, size = 40, iconSize = 24 }: { child: Child; size?: number; iconSize?: number }) {
   const style = { width: size, height: size };
   if (child.profileImage) {
     // eslint-disable-next-line @next/next/no-img-element
@@ -24,17 +24,17 @@ function Avatar({ child, size = 48 }: { child: Child; size?: number }) {
       <img
         src={child.profileImage}
         alt={child.name}
-        className="rounded-full object-cover bg-gray-100 shrink-0"
+        className="rounded-full object-cover bg-white border border-[#3078C9] shrink-0"
         style={style}
       />
     );
   }
   return (
     <div
-      className="rounded-full bg-gray-100 shrink-0 flex items-center justify-center leading-[1]"
+      className="rounded-full bg-white border border-[#3078C9] shrink-0 flex items-center justify-center leading-[1]"
       style={style}
     >
-      <img src={child.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={size * 0.55} height={size * 0.55} />
+      <img src={child.gender === 'female' ? '/icon-girl.svg' : '/icon-boy.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={iconSize} height={iconSize} />
     </div>
   );
 }
@@ -64,24 +64,16 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
       <button
         type="button"
         onClick={() => children.length > 1 && setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 active:bg-gray-50 transition-colors"
+        className="w-full flex items-center gap-[10px] bg-gray-100 rounded-lg px-4 py-3 border border-gray-200 active:bg-gray-200 transition-colors"
       >
-        <Avatar child={selected} size={48} />
+        <Avatar child={selected} size={40} iconSize={24} />
         <div className="flex-1 min-w-0 text-left">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[17px] font-extrabold text-gray-900 truncate leading-tight">{selected.name}</span>
-            <img
-              src={selected.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
-              alt={selected.gender === 'female' ? '여아' : '남아'}
-              className="w-[16px] h-[16px]"
-            />
-            <span className="text-[11px] text-gray-400 font-medium">{formatBirth(selected.birthDate)}</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded-full">
+          <p className="text-[16px] font-medium text-black truncate">{selected.name}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-[12px] font-medium text-white bg-[#3078C9] px-1 py-0.5 rounded-[2px] leading-none">
               D+{days}
             </span>
-            <span className="text-[11px] text-gray-600 font-medium">{months}개월 {extraDays}일</span>
+            <span className="text-[12px] font-normal text-black">{months}개월 {extraDays}일</span>
           </div>
         </div>
         {children.length > 1 && (

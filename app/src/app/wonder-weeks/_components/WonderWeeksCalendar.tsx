@@ -183,7 +183,7 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
   return (
     <div>
       {/* 모든 달 연속 표시 */}
-      <div className="space-y-10">
+      <div className="space-y-6">
         {months.map(({ year, month, leapMap, activeLeaps }) => {
           const daysInMonth = getDaysInMonth(year, month);
           const firstDay = getFirstDayOfMonth(year, month);
@@ -191,17 +191,17 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
           return (
             <div key={`${year}-${month}`}>
               {/* 월 헤더 */}
-              <h3 className="text-base font-bold text-gray-900 mb-2">
+              <h3 className="text-[14px] font-semibold text-black mb-[10px]">
                 {year}년 {month + 1}월
               </h3>
 
               {/* 요일 헤더 */}
-              <div className="grid grid-cols-7 border-t border-l border-gray-300">
+              <div className="grid grid-cols-7 border-t border-l border-gray-200">
                 {DAY_LABELS.map((label, i) => (
                   <div
                     key={label}
-                    className={`text-center text-[10px] font-medium py-1 border-r border-b border-gray-300 bg-gray-50 ${
-                      i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400'
+                    className={`flex items-center justify-center h-5 text-[12px] font-normal border-r border-b border-gray-200 bg-gray-100 ${
+                      i === 0 ? 'text-red-500' : i === 6 ? 'text-[#3078C9]' : 'text-black'
                     }`}
                   >
                     {label}
@@ -210,9 +210,9 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
               </div>
 
               {/* 달력 그리드 */}
-              <div className="grid grid-cols-7 border-l border-gray-300">
+              <div className="grid grid-cols-7 border-l border-gray-200">
                 {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={`empty-${i}`} className="h-8 border-r border-b border-gray-300" />
+                  <div key={`empty-${i}`} className="h-8 border-r border-b border-gray-200" />
                 ))}
 
                 {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -227,16 +227,20 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                     <div
                       key={day}
                       ref={isToday ? todayRef : undefined}
-                      className={`h-8 flex flex-col items-center justify-center border-r border-b border-gray-300 ${
-                        leapInfo ? 'bg-primary-50' : ''
+                      className={`h-8 flex items-center justify-center border-r border-b border-gray-200 ${
+                        isToday
+                          ? 'bg-[#3078C9]'
+                          : isBirthDay
+                          ? 'bg-[#FF3B30]/10'
+                          : leapInfo
+                          ? 'bg-[#3078C9]/10'
+                          : ''
                       }`}
                     >
                       <span
                         className={`text-[10px] leading-none ${
                           isToday
-                            ? 'bg-primary-600 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold'
-                            : isBirthDay
-                            ? 'bg-pink-500 text-white rounded-full w-4 h-4 flex items-center justify-center font-bold'
+                            ? 'text-white font-bold'
                             : dayOfWeek === 0
                             ? 'text-red-400'
                             : dayOfWeek === 6
@@ -246,10 +250,6 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                       >
                         {day}
                       </span>
-
-                      {isBirthDay && (
-                        <span className="text-base leading-none">🎂</span>
-                      )}
                     </div>
                   );
                 })}
@@ -260,7 +260,7 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                   const remainder = totalCells % 7;
                   if (remainder === 0) return null;
                   return Array.from({ length: 7 - remainder }).map((_, i) => (
-                    <div key={`trail-${i}`} className="h-8 border-r border-b border-gray-300" />
+                    <div key={`trail-${i}`} className="h-8 border-r border-b border-gray-200" />
                   ));
                 })()}
               </div>
@@ -271,30 +271,30 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
                   {activeLeaps.map((info) => (
                     <div
                       key={info.leap}
-                      className="bg-white border-2 border-primary-200 rounded-2xl p-4 shadow-sm"
+                      className="bg-white border border-gray-200 rounded-lg p-4"
                     >
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-500 text-white text-xs font-bold shrink-0">
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-500 text-white text-[11px] font-bold shrink-0">
                           {info.leap}
                         </span>
-                        <p className="text-base font-bold text-primary-700 flex-1">
+                        <p className="text-[14px] font-medium text-black flex-1 leading-5">
                           {info.name}
                         </p>
-                        <span className="text-xs text-primary-400 shrink-0">
-                          {info.startWeek}~{info.endWeek}주차
+                        <span className="text-[12px] font-normal text-[#3078C9] shrink-0">
+                          {info.startWeek}-{info.endWeek}주차
                         </span>
                       </div>
 
-                      <div className="bg-primary-50 rounded-xl p-3 mb-2">
-                        <p className="text-xs font-bold text-primary-500 mb-1">증상</p>
-                        <p className="text-sm text-gray-700 leading-relaxed">
+                      <div className="bg-[#515C66]/5 rounded-[4px] p-3 mb-[10px]">
+                        <p className="text-[12px] font-semibold text-black mb-2">증상</p>
+                        <p className="text-[12px] font-normal text-black">
                           {info.symptom}
                         </p>
                       </div>
 
-                      <div className="bg-amber-50 rounded-xl p-3">
-                        <p className="text-xs font-bold text-amber-700 mb-1">대책</p>
-                        <p className="text-sm text-gray-700 leading-relaxed">
+                      <div className="bg-[#FFCC00]/5 rounded-[4px] p-3">
+                        <p className="text-[12px] font-semibold text-black mb-2">대책</p>
+                        <p className="text-[12px] font-normal text-black">
                           {info.tip}
                         </p>
                       </div>
@@ -305,44 +305,6 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
             </div>
           );
         })}
-      </div>
-
-      {/* 전체 원더윅스 일정 */}
-      <div className="mt-8 bg-white border-2 border-gray-200 rounded-2xl p-5 shadow-sm">
-        <h3 className="text-base font-bold text-gray-800 mb-4">전체 원더윅스 일정</h3>
-        <div className="space-y-3">
-          {WONDER_WEEKS_LEAPS.map((leap) => {
-            const startLeapDate = addDays(birth, Math.round(leap.startWeek * 7));
-            const endLeapDate = addDays(birth, Math.round(leap.endWeek * 7));
-            if (startLeapDate > endDate) return null;
-
-            const isPast = endLeapDate < today;
-            const isCurrent = startLeapDate <= today && endLeapDate >= today;
-
-            return (
-              <div
-                key={leap.leap}
-                className={`flex items-center gap-3 p-3 rounded-xl text-sm ${
-                  isCurrent
-                    ? 'bg-primary-50 border-2 border-primary-200'
-                    : isPast
-                    ? 'bg-gray-50 opacity-60'
-                    : 'bg-gray-50'
-                }`}
-              >
-                <span className="text-xl">{isCurrent ? '😢' : isPast ? '✅' : '⏳'}</span>
-                <div className="flex-1">
-                  <p className={`text-sm font-bold ${isCurrent ? 'text-primary-700' : 'text-gray-700'}`}>
-                    Leap {leap.leap}: {leap.name}
-                  </p>
-                  <p className={`text-xs mt-0.5 ${isCurrent ? 'text-primary-400' : 'text-gray-400'}`}>
-                    [{leap.startWeek}~{leap.endWeek}주차] {startLeapDate.getMonth() + 1}/{startLeapDate.getDate()} ~ {endLeapDate.getMonth() + 1}/{endLeapDate.getDate()}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

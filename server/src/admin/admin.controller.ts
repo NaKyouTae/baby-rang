@@ -14,7 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AgeGroup } from '@prisma/client';
+import { AgeGroup, TestType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { StorageService } from '../storage/storage.service';
@@ -79,6 +79,10 @@ function buildPreviewScores(
   return out;
 }
 
+const VALID_TEST_TYPES: TestType[] = ['TEMPERAMENT', 'DEVELOPMENT', 'UNICORN'];
+const isValidTestType = (v: unknown): v is TestType =>
+  typeof v === 'string' && (VALID_TEST_TYPES as string[]).includes(v);
+
 const VALID_AGE_GROUPS: AgeGroup[] = ['newborn', 'before_first', 'after_first'];
 const AGE_GROUP_LABELS: Record<AgeGroup, string> = {
   newborn: '신생아 (0~3개월)',
@@ -120,6 +124,14 @@ export class AdminController {
   async uploadBannerImage(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('파일이 필요합니다.');
     const url = await this.storage.upload(file, 'banners');
+    return { url };
+  }
+
+  @Post('tests/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadTestThumbnail(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('파일이 필요합니다.');
+    const url = await this.storage.upload(file, 'tests');
     return { url };
   }
 
@@ -267,6 +279,83 @@ export class AdminController {
   @Delete('banners/:id')
   async deleteBanner(@Param('id') id: string) {
     await this.prisma.banner.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ===== Tests =====
+  @Get('tests')
+  async listTests() {
+    const items = await this.prisma.test.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+    });
+    return { items };
+  }
+
+  @Post('tests')
+  async createTest(@Body() body: any) {
+    const type = isValidTestType(body.type)
+      ? (body.type as TestType)
+      : 'TEMPERAMENT';
+    return this.prisma.test.create({
+      data: {
+        type,
+        title: body.title,
+        description: body.description ?? null,
+        thumbnailUrl: body.thumbnailUrl ?? null,
+        linkUrl: body.linkUrl,
+        labels: Array.isArray(body.labels) ? body.labels : [],
+        durationMinMinutes:
+          typeof body.durationMinMinutes === 'number'
+            ? body.durationMinMinutes
+            : null,
+        durationMaxMinutes:
+          typeof body.durationMaxMinutes === 'number'
+            ? body.durationMaxMinutes
+            : null,
+        questionCount:
+          typeof body.questionCount === 'number' ? body.questionCount : null,
+        sortOrder: body.sortOrder ?? 0,
+        isActive: body.isActive ?? true,
+      },
+    });
+  }
+
+  @Patch('tests/:id')
+  async updateTest(@Param('id') id: string, @Body() body: any) {
+    return this.prisma.test.update({
+      where: { id },
+      data: {
+        ...(body.type !== undefined &&
+          isValidTestType(body.type) && {
+            type: body.type as TestType,
+          }),
+        ...(body.title !== undefined && { title: body.title }),
+        ...(body.description !== undefined && {
+          description: body.description,
+        }),
+        ...(body.thumbnailUrl !== undefined && {
+          thumbnailUrl: body.thumbnailUrl,
+        }),
+        ...(body.linkUrl !== undefined && { linkUrl: body.linkUrl }),
+        ...(body.labels !== undefined && { labels: body.labels }),
+        ...(body.durationMinMinutes !== undefined && {
+          durationMinMinutes: body.durationMinMinutes,
+        }),
+        ...(body.durationMaxMinutes !== undefined && {
+          durationMaxMinutes: body.durationMaxMinutes,
+        }),
+        ...(body.questionCount !== undefined && {
+          questionCount: body.questionCount,
+        }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
+      },
+    });
+  }
+
+  @Delete('tests/:id')
+  async deleteTest(@Param('id') id: string) {
+    await this.prisma.test.delete({ where: { id } });
     return { ok: true };
   }
 

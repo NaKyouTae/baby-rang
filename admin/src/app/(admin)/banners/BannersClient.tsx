@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 
 type Banner = {
   id: string;
@@ -119,23 +120,29 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">배너 관리</h1>
-        <Button onClick={startCreate} size="sm">
-          <Plus className="h-4 w-4" />
-          새 배너
-        </Button>
-      </div>
+      <PageHeader
+        title="배너 관리"
+        description="홈 상단 슬라이드 배너를 등록·정렬합니다."
+        actions={
+          <Button onClick={startCreate} size="sm">
+            <Plus className="h-4 w-4" />
+            새 배너
+          </Button>
+        }
+      />
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {initial.map((b) => (
-          <Card key={b.id} className="flex items-center overflow-hidden">
+          <Card
+            key={b.id}
+            className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4 transition-shadow hover:shadow-md"
+          >
             <div
-              className="relative w-28 h-16 shrink-0 flex items-center px-3 text-white overflow-hidden"
+              className="relative w-full sm:w-28 h-16 shrink-0 rounded-lg overflow-hidden ring-1 ring-border"
               style={{
                 background: b.bgColor
                   ? `linear-gradient(135deg, ${b.bgColor}, #FF7E5F)`
-                  : "#888",
+                  : "linear-gradient(135deg, hsl(212 35% 90%), hsl(212 35% 80%))",
               }}
             >
               {b.imageUrl && (
@@ -147,48 +154,50 @@ export default function BannersClient({ initial }: { initial: Banner[] }) {
                 />
               )}
             </div>
-            <div className="flex-1 min-w-0 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-sm truncate">{b.title}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-sm text-foreground truncate">{b.title}</p>
                 <Badge variant={b.isActive ? "success" : "secondary"} className="text-[10px]">
                   {b.isActive ? "활성" : "비활성"}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground/80 truncate mt-1 font-mono">
                 → {b.linkUrl}
               </p>
             </div>
-            <span className="shrink-0 text-xs text-muted-foreground px-2 hidden sm:block">
-              #{b.sortOrder}
-            </span>
-            <div className="flex gap-1 px-3">
-              <Button variant="outline" size="sm" onClick={() => startEdit(b)}>
-                <Pencil className="h-3 w-3" />
-                수정
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => remove(b.id)}>
-                <Trash2 className="h-3 w-3" />
-                삭제
-              </Button>
+            <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-center">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                #{b.sortOrder}
+              </span>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" onClick={() => startEdit(b)}>
+                  <Pencil className="h-3 w-3" />
+                  수정
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => remove(b.id)}>
+                  <Trash2 className="h-3 w-3" />
+                  삭제
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
         {initial.length === 0 && (
-          <div className="text-center text-muted-foreground py-10">
+          <Card className="py-12 text-center text-muted-foreground text-sm">
             등록된 배너가 없습니다
-          </div>
+          </Card>
         )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle>{editing ? "배너 수정" : "새 배너"}</DialogTitle>
             <DialogDescription>
               {editing ? "배너 정보를 수정합니다." : "새로운 배너를 등록합니다."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto">
             <div>
               <Label>이미지</Label>
               {form.imageUrl ? (

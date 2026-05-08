@@ -21,6 +21,7 @@ export default function HistoryPage() {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [defaultTestId, setDefaultTestId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,6 +33,16 @@ export default function HistoryPage() {
         if (!cancelled) setError(e instanceof Error ? e.message : '불러오기 실패');
       } finally {
         if (!cancelled) setLoading(false);
+      }
+    })();
+    (async () => {
+      try {
+        const r = await fetch('/api/tests', { cache: 'no-store' });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setDefaultTestId(data?.tests?.[0]?.id ?? null);
+      } catch {
+        /* noop */
       }
     })();
     return () => {
@@ -79,7 +90,7 @@ export default function HistoryPage() {
             <p className="text-sm font-medium text-black">아직 진행한 테스트가 없어요.</p>
             <p className="text-xs font-normal text-gray-500 mt-1">다양한 테스트로 우리 아기를 이해해 보세요</p>
             <Link
-              href="/temperament"
+              href="/tests"
               className="mt-3 inline-flex items-center justify-center rounded py-1.5 px-2 text-xs font-semibold text-white active:opacity-80"
               style={{ backgroundColor: palette.teal }}
             >
@@ -92,7 +103,11 @@ export default function HistoryPage() {
             {items.map((item) => (
               <li key={item.submissionId}>
                 <Link
-                  href={`/temperament/result/${item.submissionId}`}
+                  href={
+                    defaultTestId
+                      ? `/tests/${defaultTestId}/result/${item.submissionId}`
+                      : '/tests'
+                  }
                   className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 active:bg-gray-200 transition-colors"
                 >
                   <div className="flex-1 min-w-0">

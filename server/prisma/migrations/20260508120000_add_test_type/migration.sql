@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "TestType" AS ENUM ('TEMPERAMENT', 'DEVELOPMENT', 'UNICORN');
+
+-- AlterTable
+ALTER TABLE "tests" ADD COLUMN "type" "TestType" NOT NULL DEFAULT 'TEMPERAMENT';

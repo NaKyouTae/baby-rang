@@ -3,6 +3,7 @@ import { adminFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 
 type AgeGroupKey = "newborn" | "before_first" | "after_first";
 
@@ -52,12 +53,15 @@ export default async function TemperamentQuestionsPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">기질 검사 문항</h1>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/temperament/submissions">결과 목록 →</Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="기질 검사 문항"
+        description="연령 그룹별 기질 검사 문항을 확인합니다."
+        actions={
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/temperament/submissions">결과 목록 →</Link>
+          </Button>
+        }
+      />
 
       {/* Age group tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">

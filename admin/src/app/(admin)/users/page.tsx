@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 
 type UserRow = {
   id: string;
@@ -35,7 +36,10 @@ export default async function UsersPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight mb-6">사용자</h1>
+      <PageHeader
+        title="사용자"
+        description="가입한 사용자 목록과 등록된 아기·결제 수를 확인합니다."
+      />
 
       {/* Mobile cards */}
       <div className="space-y-3 md:hidden">

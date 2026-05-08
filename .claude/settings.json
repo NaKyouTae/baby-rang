@@ -126,7 +126,40 @@
       "Bash(pnpm --filter server add -D @swc/cli @swc/core)",
       "Bash(grep -v \"^$\")",
       "Bash(./admin/node_modules/.bin/eslint admin/src/app/\\\\\\(admin\\\\\\)/cars/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/categories/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/makes/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/options/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/sellers/page.tsx admin/src/app/\\\\\\(admin\\\\\\)/tags/page.tsx)",
-      "Bash(./node_modules/.bin/eslint src/app/\\\\\\(admin\\\\\\)/cars/page.tsx src/app/\\\\\\(admin\\\\\\)/categories/page.tsx src/app/\\\\\\(admin\\\\\\)/makes/page.tsx src/app/\\\\\\(admin\\\\\\)/options/page.tsx src/app/\\\\\\(admin\\\\\\)/sellers/page.tsx src/app/\\\\\\(admin\\\\\\)/tags/page.tsx)"
+      "Bash(./node_modules/.bin/eslint src/app/\\\\\\(admin\\\\\\)/cars/page.tsx src/app/\\\\\\(admin\\\\\\)/categories/page.tsx src/app/\\\\\\(admin\\\\\\)/makes/page.tsx src/app/\\\\\\(admin\\\\\\)/options/page.tsx src/app/\\\\\\(admin\\\\\\)/sellers/page.tsx src/app/\\\\\\(admin\\\\\\)/tags/page.tsx)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(lsof -ti:17000)",
+      "Bash(lsof -ti:3000)",
+      "Bash(kill -9 91418)",
+      "Bash(lsof -ti:13333)",
+      "Bash(echo \"---exit: $?---\")",
+      "Bash(echo \"exit:$?\")",
+      "Bash(mkdir -p /Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests/upload /Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests/\\\\[id\\\\] /Users/nakyutae/personal/git/baby-rang/admin/src/app/\\\\\\(admin\\\\\\)/tests)",
+      "Bash(echo \"---exit:$?---\")",
+      "Bash(xargs -I{} sh -c 'echo \"==={}===\"; head -2 \"{}\" 2>/dev/null')",
+      "Bash(mkdir -p /Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests/\\\\[id\\\\])",
+      "Bash(echo \"---server-exit:$?---\")",
+      "Bash(echo \"---app-exit:$?---\")",
+      "Bash(git mv *)",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang mv app/src/app/tests/temperament 'app/src/app/tests/[testId]')",
+      "Bash(lsof -i:18000)",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(echo \"---admin-exit:$?---\")",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang rm 'app/src/app/tests/[testId]/TemperamentClient.tsx')",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang rm -f 'app/src/app/tests/[testId]/TemperamentClient.tsx')",
+      "Bash(git status *)",
+      "Bash(grep -nA 8 \"combinationInsight\" /Users/nakyutae/personal/git/baby-rang/app/src/lib/api.ts)",
+      "Bash(grep -nA 5 \"routineGuide\\\\|learningStyle\\\\|socialGuide\" /Users/nakyutae/personal/git/baby-rang/app/src/lib/api.ts)",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang log --oneline -3 -- \"app/src/app/tests/[testId]/result/[submissionId]/page.tsx\")",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang log --all --oneline -3 -- \"app/src/app/tests/\\\\[testId\\\\]/result/\\\\[submissionId\\\\]/page.tsx\")",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang status --short)",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang diff HEAD --stat -- \"app/src/app/tests/\\\\[testId\\\\]/result/\\\\[submissionId\\\\]/page.tsx\")",
+      "Bash(git -C /Users/nakyutae/personal/git/baby-rang show HEAD:app/src/app/temperament/result/\\\\[submissionId\\\\]/page.tsx)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"lint EXIT=$?\")",
+      "Bash(echo \"tsc EXIT=$?\")",
+      "Bash(echo \"server tsc EXIT=$?\")",
+      "Bash(echo \"server lint EXIT=$?\")"
     ],
     "additionalDirectories": [
       "/tmp",
@@ -134,7 +167,9 @@
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/settings/children/[id]",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/shares/[id]",
       "/Users/nakyutae/personal/git/export-used-car/.husky",
-      "/Users/nakyutae/personal/git/export-used-car/.claude"
+      "/Users/nakyutae/personal/git/export-used-car/.claude",
+      "/Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests",
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests"
     ]
   }
 }

@@ -19,6 +19,11 @@ export class NursingRoomsController {
     return this.service.geocode(query);
   }
 
+  @Get('reverse-geocode')
+  async reverseGeocode(@Query('lat') lat: string, @Query('lng') lng: string) {
+    return this.service.reverseGeocode(parseFloat(lat), parseFloat(lng));
+  }
+
   @Post('reports')
   async createReport(@Body() dto: CreateNursingRoomReportDto, @Req() req: any) {
     const userId = req.user?.id;

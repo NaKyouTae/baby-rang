@@ -50,6 +50,32 @@ model Banner {
   @@map("banners")
 }
 
+enum TestType {
+  TEMPERAMENT
+  DEVELOPMENT
+  UNICORN
+}
+
+model Test {
+  id                 String   @id @default(uuid())
+  type               TestType @default(TEMPERAMENT)
+  title              String
+  description        String?
+  thumbnailUrl       String?
+  linkUrl            String
+  labels             String[] @default([])
+  durationMinMinutes Int?
+  durationMaxMinutes Int?
+  questionCount      Int?
+  sortOrder          Int      @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("tests")
+}
+
 model Notice {
   id          String   @id @default(uuid())
   title       String

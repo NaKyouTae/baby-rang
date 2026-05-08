@@ -115,7 +115,7 @@ function NursingRoomContent() {
       }
       setShowReport(false);
       loadRooms();
-      setToast("제보해주셔서 감사해요! 검토 후 반영됩니다.");
+      setToast("제보해주셔서 감사해요\n제보해 주신 정보는 검토 후 반영돼요");
       setTimeout(() => setToast(null), 2500);
     } catch (e) {
       console.error(e);
@@ -702,7 +702,7 @@ function NursingRoomContent() {
         {!selectedRoom && (
         <button
           onClick={() => setShowReport(true)}
-          className="absolute left-6 flex items-center gap-1 bg-primary-500 text-white text-[12px] font-medium h-8 px-3 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform z-10"
+          className="absolute left-6 flex items-center gap-1.5 bg-primary-500 text-white text-[12px] font-medium h-8 px-3 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform z-10"
           style={{ bottom: "calc(var(--bottom-nav-gap) + 72px)" }}
           aria-label="수유실 제보하기"
         >
@@ -715,8 +715,8 @@ function NursingRoomContent() {
 
         {toast && (
           <div
-            className="absolute left-1/2 -translate-x-1/2 bg-gray-900/90 text-white text-sm px-4 py-2.5 rounded-full shadow-lg z-20"
-            style={{ bottom: "calc(max(var(--safe-area-bottom), 16px) + 136px)" }}
+            className="absolute left-1/2 -translate-x-1/2 w-[195px] bg-[#121212]/80 text-white text-[12px] font-normal leading-[1.5] text-center whitespace-pre px-3 py-2 rounded-lg z-20"
+            style={{ top: "calc(var(--safe-area-top) + 88px)" }}
           >
             {toast}
           </div>

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/PageHeader";
 import {
   Dialog,
   DialogContent,
@@ -101,23 +102,31 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">공지사항 관리</h1>
-        <Button onClick={startCreate} size="sm">
-          <Plus className="h-4 w-4" />
-          새 공지
-        </Button>
-      </div>
+      <PageHeader
+        title="공지사항 관리"
+        description="앱 내 공지사항을 작성하고 노출 여부를 관리합니다."
+        actions={
+          <Button onClick={startCreate} size="sm">
+            <Plus className="h-4 w-4" />
+            새 공지
+          </Button>
+        }
+      />
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {initial.map((n) => (
-          <Card key={n.id} className="flex items-center gap-3 px-4 py-3">
+          <Card
+            key={n.id}
+            className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 transition-shadow hover:shadow-md"
+          >
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {n.isPinned && (
                   <Badge variant="warning" className="text-[10px]">고정</Badge>
                 )}
-                <p className="font-medium text-sm truncate">{n.title}</p>
+                <p className="font-semibold text-sm text-foreground truncate">
+                  {n.title}
+                </p>
                 <Badge
                   variant={n.isPublished ? "success" : "secondary"}
                   className="text-[10px]"
@@ -125,11 +134,11 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
                   {n.isPublished ? "공개" : "비공개"}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-xs text-muted-foreground truncate mt-1 tabular-nums">
                 {new Date(n.publishedAt).toLocaleString("ko-KR")}
               </p>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5 self-end sm:self-auto">
               <Button variant="outline" size="sm" onClick={() => startEdit(n)}>
                 <Pencil className="h-3 w-3" />
                 수정
@@ -142,21 +151,21 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
           </Card>
         ))}
         {initial.length === 0 && (
-          <div className="text-center text-muted-foreground py-10">
+          <Card className="py-12 text-center text-muted-foreground text-sm">
             등록된 공지사항이 없습니다
-          </div>
+          </Card>
         )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle>{editing ? "공지 수정" : "새 공지"}</DialogTitle>
             <DialogDescription>
               {editing ? "공지사항을 수정합니다." : "새로운 공지사항을 등록합니다."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto">
             <div className="space-y-2">
               <Label>제목</Label>
               <Input
