@@ -5,7 +5,7 @@ import { Reorder } from 'framer-motion';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import EmptyChildState from '@/components/EmptyChildState';
 import {
-  ALL_TYPES,
+  MENU_TYPES,
   GrowthRecord,
   GrowthType,
   TYPE_CONFIG,
@@ -760,7 +760,7 @@ export default function GrowthRecordPage() {
               </button>
             </div>
             <div className="overflow-y-auto px-5 py-4 grid grid-cols-3 gap-2">
-              {(Object.keys(TYPE_CONFIG) as GrowthType[]).map((t) => {
+              {MENU_TYPES.map((t) => {
                 const cfg = TYPE_CONFIG[t];
                 return (
                   <button
@@ -819,7 +819,7 @@ export default function GrowthRecordPage() {
               </button>
             </div>
             <div className="overflow-y-auto px-5 py-4 grid grid-cols-3 gap-2">
-              {ALL_TYPES.map((t) => {
+              {MENU_TYPES.map((t) => {
                 const cfg = TYPE_CONFIG[t];
                 const selected = quickTypes.includes(t);
                 return (

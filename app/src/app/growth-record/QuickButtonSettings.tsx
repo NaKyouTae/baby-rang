@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ALL_TYPES, GrowthType, TYPE_CONFIG } from './types';
+import { MENU_TYPES, GrowthType, TYPE_CONFIG } from './types';
 
 interface Props {
   current: GrowthType[];
@@ -62,7 +62,7 @@ export default function QuickButtonSettings({ current, onClose, onSaved }: Props
           타임라인 하단에 노출할 항목을 선택하세요.
         </p>
         <div className="overflow-y-auto px-5 py-3 flex flex-col gap-2">
-          {ALL_TYPES.map((t) => {
+          {MENU_TYPES.map((t) => {
             const cfg = TYPE_CONFIG[t];
             const on = selected.includes(t);
             return (

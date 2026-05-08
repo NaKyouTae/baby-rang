@@ -10,12 +10,6 @@ interface Props {
   onSelect: (child: Child) => void;
 }
 
-function formatBirth(date: string): string {
-  if (!date) return '';
-  const [y, m, d] = date.slice(0, 10).split('-');
-  return `${y}. ${m}. ${d}`;
-}
-
 function Avatar({ child, size = 40, iconSize = 24 }: { child: Child; size?: number; iconSize?: number }) {
   const style = { width: size, height: size };
   if (child.profileImage) {
@@ -90,7 +84,7 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
 
       {/* 드롭다운 */}
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50">
+        <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden">
           {children.map((c) => {
             const isSelected = c.id === selected.id;
             const age = calcChildAge(c.birthDate);
@@ -102,39 +96,20 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                   onSelect(c);
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-gray-50"
+                className={`w-full flex items-center gap-[10px] px-4 py-3 transition-colors ${
+                  isSelected ? 'bg-gray-200' : 'bg-white active:bg-gray-100'
+                }`}
               >
-                <Avatar child={c} size={38} />
+                <Avatar child={c} size={40} iconSize={24} />
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center gap-1.5">
-                    <p
-                      className={`text-sm truncate ${
-                        isSelected ? 'font-bold text-gray-900' : 'font-medium text-gray-700'
-                      }`}
-                    >
-                      {c.name}
-                    </p>
-                    <img
-                      src={c.gender === 'female' ? '/icon-female.svg' : '/icon-male.svg'}
-                      alt={c.gender === 'female' ? '여아' : '남아'}
-                      className="w-[16px] h-[16px]"
-                    />
-                    <span className="text-[11px] text-gray-400">{formatBirth(c.birthDate)}</span>
+                  <p className="text-[16px] font-medium text-black truncate">{c.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[12px] font-medium text-white bg-[#3078C9] px-1 py-0.5 rounded-[2px] leading-none">
+                      D+{age.days}
+                    </span>
+                    <span className="text-[12px] font-normal text-black">{age.months}개월 {age.extraDays}일</span>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    D+{age.days} · {age.months}개월 {age.extraDays}일
-                  </p>
                 </div>
-                {isSelected && (
-                  <svg
-                    className="w-5 h-5 text-gray-900 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
               </button>
             );
           })}

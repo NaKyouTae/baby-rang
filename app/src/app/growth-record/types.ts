@@ -215,6 +215,23 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
 
 export const ALL_TYPES: GrowthType[] = Object.keys(TYPE_CONFIG) as GrowthType[];
 
+export const MENU_TYPES: GrowthType[] = [
+  'FORMULA',
+  'BREASTFEEDING',
+  'PUMPED_FEEDING',
+  'PUMPING',
+  'BABY_FOOD',
+  'SLEEP',
+  'BATH',
+  'MEDICATION',
+  'DIAPER',
+  'HOSPITAL',
+  'SNACK',
+  'PLAY',
+  'TUMMY_TIME',
+  'TEMPERATURE',
+];
+
 export function summarizeRecord(r: GrowthRecord): string {
   const cfg = TYPE_CONFIG[r.type];
   const data = (r.data ?? {}) as Record<string, unknown>;

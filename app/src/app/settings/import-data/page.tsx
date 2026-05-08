@@ -6,6 +6,7 @@ import { useChildren } from "@/hooks/useChildren";
 import { TYPE_CONFIG, GrowthType } from "@/app/growth-record/types";
 import { palette } from "@/lib/colors";
 import PageHeader from "@/components/PageHeader";
+import ChildSelector from "@/components/ChildSelector";
 
 /* ── 한글 라벨 → GrowthType 매핑 ── */
 const LABEL_TO_TYPE: Record<string, GrowthType> = {
@@ -21,14 +22,11 @@ const LABEL_TO_TYPE: Record<string, GrowthType> = {
   투약: "MEDICATION",
   기저귀: "DIAPER",
   이유식: "BABY_FOOD",
-  우유: "MILK",
-  물: "WATER",
   병원: "HOSPITAL",
   체온: "TEMPERATURE",
   간식: "SNACK",
   놀이: "PLAY",
   터미타임: "TUMMY_TIME",
-  기타: "ETC",
 };
 
 /* ── 배변 형태 매핑 ── */
@@ -137,26 +135,6 @@ function parseFile(text: string): ParsedRecord[] {
       }
     }
 
-    // 우유 양
-    const milkAmount = kv["우유 총 양(ml)"] ?? kv["우유양(ml)"];
-    if (milkAmount) {
-      const ml = parseInt(milkAmount.replace(/[^\d]/g, ""), 10);
-      if (!isNaN(ml)) {
-        data.amountMl = ml;
-        summaryParts.push(`${ml}ml`);
-      }
-    }
-
-    // 물 양
-    const waterAmount = kv["물 총 양(ml)"] ?? kv["물양(ml)"];
-    if (waterAmount) {
-      const ml = parseInt(waterAmount.replace(/[^\d]/g, ""), 10);
-      if (!isNaN(ml)) {
-        data.amountMl = ml;
-        summaryParts.push(`${ml}ml`);
-      }
-    }
-
     // 이유식
     if (kv["메뉴"]) {
       data.menu = kv["메뉴"];
@@ -240,16 +218,6 @@ function parseFile(text: string): ParsedRecord[] {
   return records;
 }
 
-/* ── 날짜 포맷 ── */
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${mm}/${dd} ${hh}:${mi}`;
-}
-
 const RECORD_ICONS: Record<string, string> = {
   FORMULA: "/icon-record-formula.svg",
   BREASTFEEDING: "/icon-record-breastfeeding.svg",
@@ -265,7 +233,7 @@ const RECORD_ICONS: Record<string, string> = {
   ETC: "/icon-record-etc.svg",
   SNACK: "/icon-record-etc.svg",
   HOSPITAL: "/icon-record-etc.svg",
-  TEMPERATURE: "/icon-record-etc.svg",
+  TEMPERATURE: "/icon-record-temperature.svg",
   PLAY: "/icon-record-etc.svg",
   TUMMY_TIME: "/icon-record-etc.svg",
 };
@@ -289,6 +257,8 @@ export default function ImportDataPage() {
   if (isLoaded && children.length > 0 && !selectedChildId) {
     setSelectedChildId(children[0].id);
   }
+
+  const selectedChild = children.find((c) => c.id === selectedChildId) ?? null;
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -349,22 +319,19 @@ export default function ImportDataPage() {
     <div className="flex flex-col min-h-dvh bg-white">
       <PageHeader title="데이터 가져오기" variant="back" />
 
-      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-5 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-5">
         {/* 아기 선택 */}
-        {isLoaded && children.length > 1 && (
-          <select
-            value={selectedChildId}
-            onChange={(e) => setSelectedChildId(e.target.value)}
-            className="w-full h-[44px] rounded-lg border border-gray-200 bg-gray-100 px-4 text-sm font-medium text-black"
-          >
-            {children.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+        {isLoaded && selectedChild && (
+          <div className="mb-6">
+            <ChildSelector
+              children={children}
+              selected={selectedChild}
+              onSelect={(c) => setSelectedChildId(c.id)}
+            />
+          </div>
         )}
 
+        <div className="space-y-4">
         {/* 파일 선택 */}
         <div>
           <input
@@ -390,8 +357,23 @@ export default function ImportDataPage() {
           </button>
         </div>
 
-        {/* 미리보기 - 카테고리별 요약 */}
-        {records.length > 0 && (
+        {/* 결과 또는 미리보기 */}
+        {result ? (
+          <div className="mt-6 rounded-xl border border-dashed border-gray-300 px-5 py-10 flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <img src="/icon-import-complete.svg" alt="" width={20} height={20} />
+            </div>
+            <p className="text-[14px] font-medium text-black">데이터 가져오기 완료</p>
+            <p className="text-[12px] font-normal text-gray-500 mt-1.5">선택한 아기의 기록을 성공적으로 가져왔어요</p>
+            <button
+              onClick={() => router.push("/growth-record")}
+              className="mt-4 px-3 h-6 rounded-[4px] text-xs font-semibold text-white active:opacity-80 transition-colors"
+              style={{ backgroundColor: palette.teal }}
+            >
+              기록 확인하기
+            </button>
+          </div>
+        ) : records.length > 0 && (
           <div className="mt-6">
             <p className="text-xs font-normal text-gray-500 mb-2.5">
               총 <span className="font-semibold" style={{ color: palette.teal }}>{records.length}</span>건의 기록
@@ -441,42 +423,20 @@ export default function ImportDataPage() {
             </ul>
           </div>
         )}
-
-        {/* 결과 */}
-        {result && (
-          <div className="rounded-xl bg-green-50 p-4">
-            <p className="text-sm font-medium text-green-800">
-              가져오기 완료
-            </p>
-            <p className="text-xs text-green-600 mt-1">
-              총 {result.total}건 중 {result.success}건 성공
-              {result.failed > 0 && `, ${result.failed}건 실패`}
-            </p>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* 하단 CTA 버튼 */}
-      {(result || records.length > 0) && (
-        <div className="shrink-0 mb-24 pt-3 px-5">
-          {result ? (
-            <button
-              onClick={() => router.push("/growth-record")}
-              className="w-full h-[44px] rounded-lg font-semibold text-sm text-white active:opacity-80 transition-colors"
-              style={{ backgroundColor: palette.teal }}
-            >
-              기록 확인하기
-            </button>
-          ) : (
-            <button
-              onClick={handleImport}
-              disabled={uploading || selectedRecords.length === 0 || !selectedChildId}
-              className="w-full h-[44px] rounded-lg font-semibold text-sm text-white disabled:opacity-40 active:opacity-80 transition-colors"
-              style={{ backgroundColor: palette.teal }}
-            >
-              {uploading ? "가져오는 중..." : `${selectedRecords.length}건 가져오기`}
-            </button>
-          )}
+      {!result && records.length > 0 && (
+        <div className="shrink-0 mb-28 pt-3 px-5">
+          <button
+            onClick={handleImport}
+            disabled={uploading || selectedRecords.length === 0 || !selectedChildId}
+            className="w-full h-[44px] rounded-[4px] font-semibold text-sm text-white disabled:opacity-40 active:opacity-80 transition-colors"
+            style={{ backgroundColor: palette.teal }}
+          >
+            {selectedRecords.length}건 가져오기
+          </button>
         </div>
       )}
     </div>

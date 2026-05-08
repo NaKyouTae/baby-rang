@@ -5,7 +5,7 @@ import { useChildren, type Child } from '@/hooks/useChildren';
 import EmptyChildState from '@/components/EmptyChildState';
 import ChildSelector from '@/components/ChildSelector';
 import {
-  ALL_TYPES,
+  MENU_TYPES,
   GrowthRecord,
   GrowthType,
   TYPE_CONFIG,
@@ -156,7 +156,7 @@ export default function GrowthPatternClient() {
         const arr = JSON.parse(raw) as GrowthType[];
         if (Array.isArray(arr)) {
           setSelectedTypes(
-            new Set(arr.filter((t) => (ALL_TYPES as string[]).includes(t))),
+            new Set(arr.filter((t) => (MENU_TYPES as string[]).includes(t))),
           );
         }
       }
@@ -448,7 +448,7 @@ export default function GrowthPatternClient() {
       {/* 타입 필터 */}
       <div className="mt-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {ALL_TYPES.map((t) => {
+          {MENU_TYPES.map((t) => {
             const cfg = TYPE_CONFIG[t];
             const active = selectedTypes.has(t);
             return (
@@ -468,7 +468,7 @@ export default function GrowthPatternClient() {
           })}
         </div>
         <p className="text-center text-xs text-gray-400 mt-2">
-          {ALL_TYPES.length}개 중 {selectedTypes.size}개 선택됨
+          {MENU_TYPES.length}개 중 {selectedTypes.size}개 선택됨
         </p>
       </div>
 
