@@ -24,7 +24,8 @@ RUN pnpm --filter server build
 # → pnpm workspace 의 심링크 문제 회피
 RUN pnpm --filter server --legacy deploy --prod /prod/server
 # deploy 이후 prod deps 로 Prisma Client 재생성
-RUN cd /prod/server && pnpm exec prisma generate
+# corepack 우회: pnpm 버전 해석 없이 prisma 바이너리 직접 실행
+RUN cd /prod/server && node node_modules/prisma/build/index.js generate
 
 # ── Runtime Stage ──
 FROM node:20-alpine

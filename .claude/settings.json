@@ -159,7 +159,8 @@
       "Bash(echo \"lint EXIT=$?\")",
       "Bash(echo \"tsc EXIT=$?\")",
       "Bash(echo \"server tsc EXIT=$?\")",
-      "Bash(echo \"server lint EXIT=$?\")"
+      "Bash(echo \"server lint EXIT=$?\")",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/nakyutae/personal/git/baby-rang/server/package.json','utf8'\\)\\)\")"
     ],
     "additionalDirectories": [
       "/tmp",
