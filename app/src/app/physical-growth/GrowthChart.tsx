@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import type { GrowthData, MetricType, Gender } from './growthStandards';
-import { getGrowthStandard, calcAgeMonths, calcPercentile } from './growthStandards';
+import { getGrowthStandard, calcAgeMonths } from './growthStandards';
 
 type DataPoint = {
   ageMonths: number;
@@ -23,11 +23,11 @@ type GrowthChartProps = {
 
 // 차트 레이아웃 상수
 const CHART_W = 360;
-const CHART_H = 240;
-const PAD_L = 38;
-const PAD_R = 36;
-const PAD_T = 16;
-const PAD_B = 28;
+const CHART_H = 280;
+const PAD_L = 28;
+const PAD_R = 22;
+const PAD_T = 6;
+const PAD_B = 22;
 const PLOT_W = CHART_W - PAD_L - PAD_R;
 const PLOT_H = CHART_H - PAD_T - PAD_B;
 
@@ -142,40 +142,13 @@ export default function GrowthChart({
   const yStart = Math.ceil(minVal / yStep) * yStep;
   for (let v = yStart; v <= maxVal; v += yStep) yTicks.push(v);
 
-  // 마지막 포인트의 백분위수 추정
-  const lastPoint = childPoints.length > 0 ? childPoints[childPoints.length - 1] : null;
-  const lastPercentile = lastPoint
-    ? calcPercentile(gender, metric, lastPoint.ageMonths, lastPoint.value)
-    : null;
-
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <span className="text-[15px] font-bold text-gray-900">{standard.label}</span>
-          <span className="text-[12px] text-gray-400 ml-1">({standard.unit})</span>
-        </div>
-        {lastPercentile != null && lastPoint && (
-          <div className="text-right">
-            <span className="text-[11px] text-gray-500">최근 측정</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-[15px] font-bold text-primary-500">
-                {lastPoint.value}{standard.unit}
-              </span>
-              <span className="text-[11px] text-gray-500">
-                ({lastPercentile}백분위수)
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
+    <div className="bg-white rounded-lg p-4 border border-gray-200">
       {/* SVG 차트 */}
       <svg
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-        className="w-full"
-        style={{ aspectRatio: `${CHART_W}/${CHART_H}` }}
+        className="w-full block"
+        style={{ aspectRatio: `${CHART_W}/${CHART_H}`, minHeight: '280px' }}
       >
         {/* 밴드 영역 */}
         <path d={makeBand(chartData, 'p3', 'p15')} fill={BAND_COLORS.outer} />
@@ -191,10 +164,30 @@ export default function GrowthChart({
             y1={toY(v)}
             x2={CHART_W - PAD_R}
             y2={toY(v)}
-            stroke="#f1f5f9"
-            strokeWidth={0.5}
+            stroke="#e2e8f0"
+            strokeWidth={0.6}
+            strokeDasharray="3,3"
           />
         ))}
+
+        {/* Y축 (좌측 세로) */}
+        <line
+          x1={PAD_L}
+          y1={PAD_T}
+          x2={PAD_L}
+          y2={CHART_H - PAD_B}
+          stroke="#EEF0F1"
+          strokeWidth={1}
+        />
+        {/* X축 (하단 가로) */}
+        <line
+          x1={PAD_L}
+          y1={CHART_H - PAD_B}
+          x2={CHART_W - PAD_R}
+          y2={CHART_H - PAD_B}
+          stroke="#EEF0F1"
+          strokeWidth={1}
+        />
 
         {/* 백분위수 곡선 */}
         {(['p3', 'p15', 'p50', 'p85', 'p97'] as const).map((key) => {
@@ -222,50 +215,57 @@ export default function GrowthChart({
               key={key}
               x={CHART_W - PAD_R + 4}
               y={toY(lastData.percentiles[key]) + 3}
-              fontSize={8}
-              fill="#94a3b8"
+              fontSize={10}
+              fill="#BBC0C5"
             >
               {label}
             </text>
           );
         })}
 
-        {/* X축 라벨 */}
-        {xTicks.map((m) => (
+        {/* X축 라벨 (X축 선에서 6px 아래) */}
+        {xTicks.map((m, i) => (
           <text
             key={m}
             x={toX(m)}
-            y={CHART_H - 4}
-            textAnchor="middle"
-            fontSize={9}
-            fill="#94a3b8"
+            y={CHART_H - PAD_B + 6}
+            textAnchor={i === 0 ? 'start' : 'middle'}
+            dominantBaseline="hanging"
+            fontSize={10}
+            fill="#BBC0C5"
           >
-            {m}
+            {i === 0 ? `${m}개월` : m}
           </text>
         ))}
-        <text
-          x={CHART_W / 2}
-          y={CHART_H}
-          textAnchor="middle"
-          fontSize={8}
-          fill="#cbd5e1"
-        >
-          개월
-        </text>
 
-        {/* Y축 라벨 */}
-        {yTicks.map((v) => (
-          <text
-            key={v}
-            x={PAD_L - 4}
-            y={toY(v) + 3}
-            textAnchor="end"
-            fontSize={9}
-            fill="#94a3b8"
-          >
-            {v}
-          </text>
-        ))}
+        {/* Y축 라벨 (Y축 선에서 좌측 10px) */}
+        {yTicks.map((v, idx) => {
+          const isHighest = idx === yTicks.length - 1;
+          return (
+            <g key={v}>
+              <text
+                x={PAD_L - 10}
+                y={toY(v) + 3}
+                textAnchor="end"
+                fontSize={10}
+                fill="#BBC0C5"
+              >
+                {v}
+              </text>
+              {isHighest && (
+                <text
+                  x={PAD_L - 10}
+                  y={toY(v) + 14}
+                  textAnchor="end"
+                  fontSize={10}
+                  fill="#BBC0C5"
+                >
+                  {standard.unit}
+                </text>
+              )}
+            </g>
+          );
+        })}
 
         {/* 아기 데이터 라인 */}
         {childPath && (
@@ -301,27 +301,23 @@ export default function GrowthChart({
       </svg>
 
       {/* 범례 */}
-      <div className="flex items-center justify-center gap-4 mt-2">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-0.5 bg-primary-500 rounded" />
-          <span className="text-[10px] text-gray-500">50백분위수</span>
+      <div className="flex items-center justify-center gap-6 mt-6">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 flex items-center">
+            <div className="w-full h-0.5 bg-primary-500 rounded" />
+          </div>
+          <span className="text-[12px] font-normal text-black">50백분위수</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full border-2 border-primary-500 bg-white" />
-          <span className="text-[10px] text-gray-500">우리 아기</span>
+          <span className="text-[12px] font-normal text-black">우리 아기</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-2 rounded-sm" style={{ background: BAND_COLORS.inner }} />
-          <span className="text-[10px] text-gray-500">정상 범위</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-[2px]" style={{ background: BAND_COLORS.inner }} />
+          <span className="text-[12px] font-normal text-black">정상 범위</span>
         </div>
       </div>
 
-      {/* 데이터 없을 때 안내 */}
-      {childPoints.length === 0 && (
-        <p className="text-center text-[12px] text-gray-400 mt-2">
-          측정 기록을 추가하면 성장 곡선에 표시됩니다
-        </p>
-      )}
     </div>
   );
 }

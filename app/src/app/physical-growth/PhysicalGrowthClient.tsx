@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
 import EmptyChildState from '@/components/EmptyChildState';
+import WheelDatePickerModal from '@/components/WheelDatePickerModal';
+import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import GrowthChart from './GrowthChart';
 import type { MetricType, Gender } from './growthStandards';
 
@@ -30,6 +32,22 @@ function formatDate(iso: string): string {
   const d = iso.slice(0, 10);
   const [y, m, dd] = d.split('-');
   return `${y}. ${m}. ${dd}`;
+}
+
+function formatDateShort(iso: string): string {
+  const d = iso.slice(0, 10);
+  const [y, m, dd] = d.split('-');
+  return `${y.slice(2)}.${m}.${dd}.`;
+}
+
+/** 출생일과 측정일 사이의 D+일수 (출생일 당일 = D+1, 한국식). */
+function daysSinceBirth(birthDate: string, measuredAt: string): number {
+  const birthYmd = toKstYmd(birthDate);
+  const measuredYmd = toKstYmd(measuredAt);
+  const birth = kstYmdToLocalMidnight(birthYmd).getTime();
+  const measured = kstYmdToLocalMidnight(measuredYmd).getTime();
+  if (Number.isNaN(birth) || Number.isNaN(measured)) return 1;
+  return Math.max(1, Math.floor((measured - birth) / 86400000) + 1);
 }
 
 const METRIC_TABS: { key: MetricType; label: string }[] = [
@@ -68,6 +86,18 @@ export default function PhysicalGrowthClient() {
 
   // 삭제 확인
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // 날짜 선택 모달
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!showForm) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [showForm]);
 
   useEffect(() => {
     if (isLoaded && childList.length > 0 && !selected) {
@@ -154,7 +184,6 @@ export default function PhysicalGrowthClient() {
     );
     setMemo(record.memo ?? '');
     setShowForm(true);
-    setViewTab('records');
   };
 
   const handleDelete = async (id: string) => {
@@ -183,10 +212,8 @@ export default function PhysicalGrowthClient() {
     );
   }
 
-  const isFormValid = !!(heightCm || weightKg || headCircumCm);
-
   return (
-    <main className="min-h-[100dvh] bg-gray-50 pb-32">
+    <main className="min-h-[100dvh] bg-white pb-32">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-white">
         <div className="flex items-center justify-between px-5 h-[56px]">
@@ -205,14 +232,14 @@ export default function PhysicalGrowthClient() {
 
       {/* 성장도표 / 기록 탭 전환 */}
       <div className="px-5 mt-3">
-        <div className="flex bg-gray-100 rounded-xl p-1">
+        <div className="flex h-[38px] bg-gray-100 rounded-xl p-1">
           <button
             type="button"
             onClick={() => setViewTab('chart')}
-            className={`flex-1 h-[36px] rounded-lg text-[13px] font-semibold transition-colors ${
+            className={`flex-1 h-[30px] rounded-lg text-[14px] transition-colors ${
               viewTab === 'chart'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500'
+                ? 'bg-white text-black font-medium shadow-sm'
+                : 'text-gray-500 font-normal'
             }`}
           >
             성장도표
@@ -220,10 +247,10 @@ export default function PhysicalGrowthClient() {
           <button
             type="button"
             onClick={() => setViewTab('records')}
-            className={`flex-1 h-[36px] rounded-lg text-[13px] font-semibold transition-colors ${
+            className={`flex-1 h-[30px] rounded-lg text-[14px] transition-colors ${
               viewTab === 'records'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500'
+                ? 'bg-white text-black font-medium shadow-sm'
+                : 'text-gray-500 font-normal'
             }`}
           >
             기록
@@ -235,16 +262,16 @@ export default function PhysicalGrowthClient() {
       {viewTab === 'chart' && selected && (
         <div className="px-5 mt-4">
           {/* 지표 선택 탭 (키/체중/머리둘레) */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-6">
             {METRIC_TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveMetric(tab.key)}
-                className={`flex-1 h-[32px] rounded-lg text-[13px] font-medium transition-colors ${
+                className={`flex-1 h-[30px] rounded-lg text-[12px] font-medium transition-colors ${
                   activeMetric === tab.key
                     ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-gray-100 text-black'
                 }`}
               >
                 {tab.label}
@@ -261,22 +288,16 @@ export default function PhysicalGrowthClient() {
           />
 
           {/* 성장도표 안내 문구 */}
-          <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
-            2017 소아청소년 성장도표 기준 (0-36개월: WHO Growth Standards)
-          </p>
-
-          {/* 기록 추가 버튼 */}
-          <button
-            type="button"
-            onClick={() => {
-              resetForm();
-              setShowForm(true);
-              setViewTab('records');
-            }}
-            className="w-full h-[44px] mt-4 rounded-xl bg-primary-500 text-white font-semibold text-[14px] active:opacity-80"
-          >
-            + 성장 기록 추가
-          </button>
+          <ul className="mt-6 space-y-1 text-[10px] font-normal text-gray-500">
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>기록을 추가하면 성장 곡선에 표시됩니다</span>
+            </li>
+            <li className="flex gap-1.5">
+              <span aria-hidden="true">•</span>
+              <span>2017 소아청소년 성장도표 기준(0-36개월: WHO Growth Standards)</span>
+            </li>
+          </ul>
         </div>
       )}
 
@@ -284,136 +305,8 @@ export default function PhysicalGrowthClient() {
       {viewTab === 'records' && (
         <>
 
-      {/* 새 기록 추가 버튼 */}
-      {!showForm && (
-        <div className="px-5 mt-4">
-          <button
-            type="button"
-            onClick={() => {
-              resetForm();
-              setShowForm(true);
-            }}
-            className="w-full h-[48px] rounded-xl bg-primary-500 text-white font-semibold text-[15px] active:opacity-80"
-          >
-            + 성장 기록 추가
-          </button>
-        </div>
-      )}
-
-      {/* 입력 폼 */}
-      {showForm && (
-        <div className="px-5 mt-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="text-[16px] font-bold text-gray-900 mb-4">
-              {editingId ? '기록 수정' : '새 기록'}
-            </h2>
-
-            {/* 측정일 */}
-            <label className="block mb-3">
-              <span className="text-[13px] font-medium text-gray-600 mb-1 block">
-                측정일
-              </span>
-              <input
-                type="date"
-                value={measuredAt}
-                onChange={(e) => setMeasuredAt(e.target.value)}
-                max={todayString()}
-                className="w-full h-[44px] px-3 rounded-lg border border-gray-200 text-[15px] text-gray-900 bg-white"
-              />
-            </label>
-
-            {/* 키 */}
-            <label className="block mb-3">
-              <span className="text-[13px] font-medium text-gray-600 mb-1 block">
-                키 (cm)
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                placeholder="예: 75.5"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                className="w-full h-[44px] px-3 rounded-lg border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-400"
-              />
-            </label>
-
-            {/* 몸무게 */}
-            <label className="block mb-3">
-              <span className="text-[13px] font-medium text-gray-600 mb-1 block">
-                몸무게 (kg)
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                placeholder="예: 9.8"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                className="w-full h-[44px] px-3 rounded-lg border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-400"
-              />
-            </label>
-
-            {/* 머리둘레 */}
-            <label className="block mb-3">
-              <span className="text-[13px] font-medium text-gray-600 mb-1 block">
-                머리둘레 (cm)
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.1"
-                placeholder="예: 45.2"
-                value={headCircumCm}
-                onChange={(e) => setHeadCircumCm(e.target.value)}
-                className="w-full h-[44px] px-3 rounded-lg border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-400"
-              />
-            </label>
-
-            {/* 메모 */}
-            <label className="block mb-4">
-              <span className="text-[13px] font-medium text-gray-600 mb-1 block">
-                메모 (선택)
-              </span>
-              <input
-                type="text"
-                placeholder="예: 병원 정기검진"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                className="w-full h-[44px] px-3 rounded-lg border border-gray-200 text-[15px] text-gray-900 placeholder:text-gray-400"
-              />
-            </label>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                className="flex-1 h-[44px] rounded-xl bg-gray-100 text-gray-600 font-semibold text-[14px] active:opacity-80"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!isFormValid || saving}
-                className="flex-1 h-[44px] rounded-xl bg-primary-500 text-white font-semibold text-[14px] active:opacity-80 disabled:opacity-40"
-              >
-                {saving ? '저장 중...' : editingId ? '수정' : '저장'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 기록 목록 */}
       <div className="px-5 mt-6">
-        <h2 className="text-[15px] font-bold text-gray-900 mb-3">
-          기록 내역
-        </h2>
-
         {loading && records.length === 0 && (
           <div className="flex items-center justify-center py-12">
             <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -431,80 +324,289 @@ export default function PhysicalGrowthClient() {
         )}
 
         <div className="flex flex-col gap-3">
-          {records.map((record) => (
-            <div
-              key={record.id}
-              className="bg-white rounded-xl p-4 shadow-sm"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[13px] font-semibold text-gray-900">
-                  {formatDate(record.measuredAt)}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(record)}
-                    className="text-[12px] text-gray-500 active:text-gray-700"
-                  >
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeletingId(record.id)}
-                    className="text-[12px] text-red-400 active:text-red-600"
-                  >
-                    삭제
-                  </button>
+          {(() => {
+            const latestId = records.length > 0
+              ? records.reduce((a, b) =>
+                  a.measuredAt > b.measuredAt ? a : b,
+                ).id
+              : null;
+            return records.map((record) => {
+              const isLatest = record.id === latestId;
+              const days = selected
+                ? daysSinceBirth(selected.birthDate, record.measuredAt)
+                : 0;
+              return (
+                <div
+                  key={record.id}
+                  className="relative bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+                >
+                  {isLatest && (
+                    <div
+                      className="absolute -top-2 -right-2 w-9 h-9 rounded-full text-white text-[12px] font-bold flex items-center justify-center shadow-md"
+                      style={{ backgroundColor: '#22C58B' }}
+                      aria-label="최신 기록"
+                    >
+                      최
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-primary-500 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+                        D+{days}
+                      </span>
+                      <span className="text-[14px] font-semibold text-gray-900">
+                        {formatDateShort(record.measuredAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(record)}
+                        className="active:text-gray-600"
+                      >
+                        수정
+                      </button>
+                      <span aria-hidden="true">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingId(record.id)}
+                        className="active:text-red-600"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-gray-50 rounded-lg py-3 text-center">
+                      <p className="text-[11px] text-gray-500 mb-1">키</p>
+                      <p className="text-[15px] font-bold text-gray-900">
+                        {record.heightCm != null ? (
+                          <>
+                            {record.heightCm}
+                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                              cm
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg py-3 text-center">
+                      <p className="text-[11px] text-gray-500 mb-1">체중</p>
+                      <p className="text-[15px] font-bold text-gray-900">
+                        {record.weightKg != null ? (
+                          <>
+                            {record.weightKg}
+                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                              kg
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg py-3 text-center">
+                      <p className="text-[11px] text-gray-500 mb-1">머리둘레</p>
+                      <p className="text-[15px] font-bold text-gray-900">
+                        {record.headCircumCm != null ? (
+                          <>
+                            {record.headCircumCm}
+                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                              cm
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {record.memo && (
+                    <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2.5">
+                      <p className="text-[12px] text-gray-600">
+                        {record.memo}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {record.heightCm != null && (
-                  <div className="bg-gray-50 rounded-lg p-2 text-center">
-                    <p className="text-[11px] text-gray-500">키</p>
-                    <p className="text-[15px] font-bold text-gray-900">
-                      {record.heightCm}
-                      <span className="text-[11px] font-normal text-gray-500 ml-0.5">
-                        cm
-                      </span>
-                    </p>
-                  </div>
-                )}
-                {record.weightKg != null && (
-                  <div className="bg-gray-50 rounded-lg p-2 text-center">
-                    <p className="text-[11px] text-gray-500">몸무게</p>
-                    <p className="text-[15px] font-bold text-gray-900">
-                      {record.weightKg}
-                      <span className="text-[11px] font-normal text-gray-500 ml-0.5">
-                        kg
-                      </span>
-                    </p>
-                  </div>
-                )}
-                {record.headCircumCm != null && (
-                  <div className="bg-gray-50 rounded-lg p-2 text-center">
-                    <p className="text-[11px] text-gray-500">머리둘레</p>
-                    <p className="text-[15px] font-bold text-gray-900">
-                      {record.headCircumCm}
-                      <span className="text-[11px] font-normal text-gray-500 ml-0.5">
-                        cm
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {record.memo && (
-                <p className="text-[12px] text-gray-500 mt-2">
-                  {record.memo}
-                </p>
-              )}
-            </div>
-          ))}
+              );
+            });
+          })()}
         </div>
       </div>
 
       </>
+      )}
+
+      {/* + 기록 FAB — 하단 네비게이션 위 16px */}
+      {!showForm && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-5 pointer-events-none flex justify-end"
+          style={{ bottom: 'var(--bottom-nav-space)' }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              setShowForm(true);
+            }}
+            className="pointer-events-auto flex items-center h-[32px] rounded-full bg-primary-500 text-white text-[12px] font-medium shadow-lg active:scale-95 transition-transform"
+            style={{ padding: '10px 12px', gap: '6px' }}
+            aria-label="성장 기록 추가"
+          >
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            기록
+          </button>
+        </div>
+      )}
+
+      {/* 입력 바텀시트 */}
+      {showForm && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center">
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => {
+              setShowForm(false);
+              resetForm();
+            }}
+            className="absolute inset-0 bg-black/40"
+          />
+          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90dvh] flex flex-col pb-[var(--safe-area-bottom)]">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4">
+              <h2 className="text-[16px] font-medium text-black">
+                {editingId ? '성장 기록 수정' : '성장 기록하기'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
+                className="w-5 h-5 flex items-center justify-center text-black"
+                aria-label="닫기"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-5 pb-0 space-y-3">
+              {/* 측정일 */}
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">
+                  측정일 <span className="text-red-500">*</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setDatePickerOpen(true)}
+                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-left text-gray-900 bg-white active:bg-gray-50"
+                >
+                  {formatDate(measuredAt)}.
+                </button>
+              </div>
+
+              {/* 키 */}
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">
+                  키(cm)
+                </p>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  placeholder="51"
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* 몸무게 */}
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">
+                  몸무게(kg)
+                </p>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  placeholder="3.09"
+                  value={weightKg}
+                  onChange={(e) => setWeightKg(e.target.value)}
+                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* 머리둘레 */}
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">
+                  머리둘레(cm)
+                </p>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  placeholder="41"
+                  value={headCircumCm}
+                  onChange={(e) => setHeadCircumCm(e.target.value)}
+                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* 메모 */}
+              <div>
+                <p className="text-[12px] font-medium text-gray-500 mb-2">
+                  메모
+                </p>
+                <input
+                  type="text"
+                  placeholder="병원 정기검진 등"
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="px-5 pt-4 pb-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
+                className="flex-1 h-[48px] rounded-[4px] bg-gray-100 text-gray-600 font-semibold text-[15px] active:opacity-80"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 h-[48px] rounded-[4px] bg-primary-500 text-white font-semibold text-[15px] active:opacity-80 disabled:opacity-40"
+              >
+                {saving ? '저장 중...' : editingId ? '수정' : '저장'}
+              </button>
+            </div>
+          </div>
+
+          <WheelDatePickerModal
+            open={datePickerOpen}
+            value={measuredAt}
+            max={todayString()}
+            onClose={() => setDatePickerOpen(false)}
+            onConfirm={(d) => setMeasuredAt(d)}
+          />
+        </div>
       )}
 
       {/* 삭제 확인 모달 */}
