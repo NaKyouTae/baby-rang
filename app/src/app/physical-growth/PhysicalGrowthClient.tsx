@@ -37,7 +37,7 @@ function formatDate(iso: string): string {
 function formatDateShort(iso: string): string {
   const d = iso.slice(0, 10);
   const [y, m, dd] = d.split('-');
-  return `${y.slice(2)}.${m}.${dd}.`;
+  return `${y.slice(2)}.${m}.${dd}`;
 }
 
 /** 출생일과 측정일 사이의 D+일수 (출생일 당일 = D+1, 한국식). */
@@ -324,50 +324,33 @@ export default function PhysicalGrowthClient() {
         )}
 
         <div className="flex flex-col gap-3">
-          {(() => {
-            const latestId = records.length > 0
-              ? records.reduce((a, b) =>
-                  a.measuredAt > b.measuredAt ? a : b,
-                ).id
-              : null;
-            return records.map((record) => {
-              const isLatest = record.id === latestId;
-              const days = selected
-                ? daysSinceBirth(selected.birthDate, record.measuredAt)
-                : 0;
-              return (
+          {records.map((record) => {
+            const days = selected
+              ? daysSinceBirth(selected.birthDate, record.measuredAt)
+              : 0;
+            return (
                 <div
                   key={record.id}
-                  className="relative bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+                  className="relative bg-white rounded-lg p-4 border border-gray-100"
                 >
-                  {isLatest && (
-                    <div
-                      className="absolute -top-2 -right-2 w-9 h-9 rounded-full text-white text-[12px] font-bold flex items-center justify-center shadow-md"
-                      style={{ backgroundColor: '#22C58B' }}
-                      aria-label="최신 기록"
-                    >
-                      최
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-primary-500 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-1">
+                      <span className="bg-primary-500 text-white text-[12px] font-medium leading-none h-4 px-1 py-0.5 rounded flex items-center">
                         D+{days}
                       </span>
-                      <span className="text-[14px] font-semibold text-gray-900">
+                      <span className="text-[12px] font-normal text-black">
                         {formatDateShort(record.measuredAt)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
+                    <div className="flex items-center gap-2 text-[12px] font-normal text-gray-500">
                       <button
                         type="button"
                         onClick={() => handleEdit(record)}
-                        className="active:text-gray-600"
+                        className="active:text-gray-700"
                       >
                         수정
                       </button>
-                      <span aria-hidden="true">|</span>
+                      <span aria-hidden="true" className="w-px h-2.5 bg-gray-200" />
                       <button
                         type="button"
                         onClick={() => setDeletingId(record.id)}
@@ -378,65 +361,70 @@ export default function PhysicalGrowthClient() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-gray-50 rounded-lg py-3 text-center">
-                      <p className="text-[11px] text-gray-500 mb-1">키</p>
-                      <p className="text-[15px] font-bold text-gray-900">
+                  <div className="grid grid-cols-3 gap-1">
+                    <div className="bg-gray-100 rounded py-[9px] text-center">
+                      <p className="text-[10px] font-normal text-gray-500 leading-none">키</p>
+                      <p className="mt-2 leading-none">
                         {record.heightCm != null ? (
                           <>
-                            {record.heightCm}
-                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                            <span className="text-[12px] font-medium text-black">
+                              {record.heightCm}
+                            </span>
+                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
                               cm
                             </span>
                           </>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-[12px] text-gray-400">-</span>
                         )}
                       </p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg py-3 text-center">
-                      <p className="text-[11px] text-gray-500 mb-1">체중</p>
-                      <p className="text-[15px] font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded py-[9px] text-center">
+                      <p className="text-[10px] font-normal text-gray-500 leading-none">체중</p>
+                      <p className="mt-2 leading-none">
                         {record.weightKg != null ? (
                           <>
-                            {record.weightKg}
-                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                            <span className="text-[12px] font-medium text-black">
+                              {record.weightKg}
+                            </span>
+                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
                               kg
                             </span>
                           </>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-[12px] text-gray-400">-</span>
                         )}
                       </p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg py-3 text-center">
-                      <p className="text-[11px] text-gray-500 mb-1">머리둘레</p>
-                      <p className="text-[15px] font-bold text-gray-900">
+                    <div className="bg-gray-100 rounded py-[9px] text-center">
+                      <p className="text-[10px] font-normal text-gray-500 leading-none">머리둘레</p>
+                      <p className="mt-2 leading-none">
                         {record.headCircumCm != null ? (
                           <>
-                            {record.headCircumCm}
-                            <span className="text-[11px] font-normal text-gray-500 ml-0.5">
+                            <span className="text-[12px] font-medium text-black">
+                              {record.headCircumCm}
+                            </span>
+                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
                               cm
                             </span>
                           </>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-[12px] text-gray-400">-</span>
                         )}
                       </p>
                     </div>
                   </div>
 
                   {record.memo && (
-                    <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2.5">
-                      <p className="text-[12px] text-gray-600">
+                    <div className="mt-2.5 bg-gray-100 rounded px-3 py-2">
+                      <p className="text-[10px] font-normal text-black">
                         {record.memo}
                       </p>
                     </div>
                   )}
                 </div>
               );
-            });
-          })()}
+            })}
         </div>
       </div>
 

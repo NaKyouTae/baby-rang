@@ -162,7 +162,12 @@
       "Bash(echo \"server lint EXIT=$?\")",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/nakyutae/personal/git/baby-rang/server/package.json','utf8'\\)\\)\")",
       "Bash(echo \"exit: $?\")",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "WebFetch(domain:funeral.khuhs.or.kr)",
+      "WebFetch(domain:ulsanskypark.com)",
+      "WebFetch(domain:www.bacjin.kr)",
+      "Bash(npm -v)",
+      "Bash(pnpm -v)"
     ],
     "additionalDirectories": [
       "/tmp",
