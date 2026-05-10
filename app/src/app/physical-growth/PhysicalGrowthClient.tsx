@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
+import ConfirmModal from '@/components/ConfirmModal';
 import EmptyChildState from '@/components/EmptyChildState';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
@@ -598,34 +599,23 @@ export default function PhysicalGrowthClient() {
       )}
 
       {/* 삭제 확인 모달 */}
-      {deletingId && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl p-6 mx-6 w-full max-w-[320px]">
-            <p className="text-[15px] font-semibold text-gray-900 text-center mb-1">
-              기록을 삭제할까요?
-            </p>
-            <p className="text-[13px] text-gray-500 text-center mb-5">
-              삭제된 기록은 복구할 수 없어요.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDeletingId(null)}
-                className="flex-1 h-[44px] rounded-xl bg-gray-100 text-gray-600 font-semibold text-[14px] active:opacity-80"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(deletingId)}
-                className="flex-1 h-[44px] rounded-xl bg-red-500 text-white font-semibold text-[14px] active:opacity-80"
-              >
-                삭제
-              </button>
-            </div>
+      <ConfirmModal
+        open={deletingId !== null}
+        icon={
+          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M29.1788 6.44333H4M26.7099 10.146L26.0286 20.3658C25.7665 24.2966 25.6361 26.262 24.355 27.4604C23.0738 28.6587 21.1024 28.66 17.1626 28.66H16.0163C12.0764 28.66 10.1051 28.66 8.82393 27.4604C7.54275 26.262 7.41096 24.2966 7.15028 20.3658L6.46898 10.146" stroke="black" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M8.44336 6.44334H8.60629C9.20235 6.4281 9.77995 6.23335 10.2635 5.88454C10.7471 5.53574 11.1142 5.04909 11.3167 4.48825L11.3671 4.33571L11.5108 3.90469C11.6337 3.53593 11.6959 3.35226 11.7774 3.19527C11.9376 2.88775 12.1676 2.62205 12.449 2.41937C12.7304 2.21671 13.0552 2.08274 13.3977 2.02814C13.5709 2 13.765 2 14.153 2H19.0259C19.414 2 19.608 2 19.7813 2.02814C20.1237 2.08274 20.4486 2.21671 20.73 2.41937C21.0114 2.62205 21.2414 2.88775 21.4017 3.19527C21.4831 3.35226 21.5453 3.53593 21.6682 3.90469L21.8118 4.33571C21.9996 4.95966 22.3878 5.50432 22.9163 5.88534C23.4448 6.26637 24.0843 6.46248 24.7356 6.44334" stroke="black" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </div>
-        </div>
-      )}
+        }
+        title="기록 삭제하기"
+        description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        onConfirm={() => deletingId && handleDelete(deletingId)}
+        onClose={() => setDeletingId(null)}
+      />
     </main>
   );
 }
