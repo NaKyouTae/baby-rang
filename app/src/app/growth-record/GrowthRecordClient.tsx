@@ -15,9 +15,36 @@ import EntrySheet from './EntrySheet';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 
-const DEFAULT_QUICK_TYPES: GrowthType[] = ['FORMULA', 'SLEEP', 'DIAPER'];
+const DEFAULT_QUICK_TYPES: GrowthType[] = [
+  'FORMULA',
+  'BREASTFEEDING',
+  'PUMPED_FEEDING',
+  'PUMPING',
+  'BABY_FOOD',
+  'SLEEP',
+  'BATH',
+];
 const QUICK_LONG_PRESS_MS = 500;
-const MAX_QUICK_TYPES = Infinity;
+
+const ACCENT: Record<GrowthType, { time: string; dot: string; border: string }> = {
+  FORMULA: { time: 'text-rose-500', dot: 'bg-rose-400', border: 'border-rose-300' },
+  BREASTFEEDING: { time: 'text-pink-600', dot: 'bg-pink-400', border: 'border-pink-300' },
+  PUMPED_FEEDING: { time: 'text-amber-500', dot: 'bg-amber-400', border: 'border-amber-300' },
+  PUMPING: { time: 'text-emerald-500', dot: 'bg-emerald-400', border: 'border-emerald-300' },
+  SLEEP: { time: 'text-blue-500', dot: 'bg-blue-400', border: 'border-blue-300' },
+  BATH: { time: 'text-cyan-500', dot: 'bg-cyan-400', border: 'border-cyan-300' },
+  MEDICATION: { time: 'text-purple-500', dot: 'bg-purple-400', border: 'border-purple-300' },
+  DIAPER: { time: 'text-gray-700', dot: 'bg-gray-500', border: 'border-yellow-300' },
+  BABY_FOOD: { time: 'text-teal-500', dot: 'bg-teal-400', border: 'border-teal-300' },
+  MILK: { time: 'text-blue-500', dot: 'bg-blue-400', border: 'border-blue-300' },
+  WATER: { time: 'text-sky-500', dot: 'bg-sky-400', border: 'border-sky-300' },
+  HOSPITAL: { time: 'text-red-500', dot: 'bg-red-400', border: 'border-red-300' },
+  TEMPERATURE: { time: 'text-rose-500', dot: 'bg-rose-400', border: 'border-rose-300' },
+  SNACK: { time: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-300' },
+  PLAY: { time: 'text-emerald-600', dot: 'bg-emerald-400', border: 'border-emerald-300' },
+  TUMMY_TIME: { time: 'text-teal-500', dot: 'bg-teal-400', border: 'border-teal-300' },
+  ETC: { time: 'text-gray-500', dot: 'bg-gray-400', border: 'border-gray-300' },
+};
 
 function todayString(): string {
   const d = new Date();
@@ -32,13 +59,23 @@ function shiftDate(date: string, days: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function formatTime(iso: string): string {
+function formatTime24(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
-  const h = d.getHours();
-  const period = h < 12 ? '오전' : '오후';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${period} ${h12}:${pad(d.getMinutes())}`;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatHeaderDate(date: string): string {
+  const d = new Date(`${date}T00:00:00`);
+  const dow = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  return `${d.getMonth() + 1}월 ${d.getDate()}일(${dow})`;
+}
+
+function dayOfLife(birthDate: string, date: string): number {
+  const birth = new Date(`${birthDate}T00:00:00`);
+  const target = new Date(`${date}T00:00:00`);
+  const diff = Math.floor((target.getTime() - birth.getTime()) / 86400000);
+  return Math.max(1, diff + 1);
 }
 
 const FEEDING_TYPES: GrowthType[] = [
@@ -60,6 +97,7 @@ function formatDuration(mins: number): string {
 function computeDayStats(records: GrowthRecord[], date: string) {
   let sleepMin = 0;
   let feedingMl = 0;
+  let breastMin = 0;
   for (const r of records) {
     if (r.type === 'SLEEP' && r.endAt) {
       sleepMin += Math.max(
@@ -73,18 +111,23 @@ function computeDayStats(records: GrowthRecord[], date: string) {
       const ml = Number((r.data as Record<string, unknown>)?.amountMl);
       if (!Number.isNaN(ml)) feedingMl += ml;
     }
+    if (r.type === 'BREASTFEEDING') {
+      const data = (r.data ?? {}) as Record<string, unknown>;
+      const left = Number(data.leftMin) || 0;
+      const right = Number(data.rightMin) || 0;
+      breastMin += left + right;
+    }
   }
   const today = todayString();
   let dayLengthMin: number;
   if (date === today) {
     const now = new Date();
-    dayLengthMin =
-      now.getHours() * 60 + now.getMinutes();
+    dayLengthMin = now.getHours() * 60 + now.getMinutes();
   } else {
     dayLengthMin = 24 * 60;
   }
   const awakeMin = Math.max(0, dayLengthMin - sleepMin);
-  return { sleepMin, awakeMin, feedingMl };
+  return { sleepMin, awakeMin, feedingMl, breastMin };
 }
 
 function findLatestByTypes(
@@ -127,7 +170,6 @@ export default function GrowthRecordPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
-  const [showAllPicker, setShowAllPicker] = useState(false);
   const [showAddQuick, setShowAddQuick] = useState(false);
   const [editQuickMode, setEditQuickMode] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -148,7 +190,6 @@ export default function GrowthRecordPage() {
     return () => ro.disconnect();
   }, []);
 
-  // 첫 진입 시 자동 선택
   useEffect(() => {
     if (isLoaded && children.length > 0 && !selectedChild) {
       setSelectedChild(children[0]);
@@ -170,15 +211,12 @@ export default function GrowthRecordPage() {
     loadingRef.current = true;
     setLoadingMore(true);
     try {
-      // earliest 이전이면 종료
       if (!earliestDate) {
         setHasMore(false);
         return;
       }
       let localCursor = cursor;
       let foundAny = false;
-      // 빈 페이지는 건너뛰며 데이터가 나오거나 earliest를 지날 때까지 계속 조회
-      // (한 호출에서 최대 안전 가드 60일까지)
       for (let safety = 0; safety < 20; safety++) {
         if (localCursor < earliestDate) {
           setHasMore(false);
@@ -202,7 +240,6 @@ export default function GrowthRecordPage() {
         localCursor = nextCursor;
         setCursor(localCursor);
         if (foundAny) break;
-        // 데이터가 없고, 다음 커서가 earliest보다 이전이면 종료
         if (localCursor < earliestDate) {
           setHasMore(false);
           break;
@@ -214,7 +251,6 @@ export default function GrowthRecordPage() {
     }
   }, [selectedChild, cursor, hasMore, fetchDay, earliestDate]);
 
-  // 자식 선택/변경 시 초기화 & 첫 로드 — BFF로 한 번에 가져오기
   useEffect(() => {
     if (!selectedChild) return;
     let cancelled = false;
@@ -229,22 +265,18 @@ export default function GrowthRecordPage() {
       const to = today;
 
       try {
-        // BFF: quick-buttons + earliest + range 를 Vercel Function 1개에서 병렬 처리
         const res = await fetch(
           `/api/growth-records/page-init?childId=${selectedChild.id}&from=${from}&to=${to}`,
         );
         if (res.ok) {
           const data = await res.json();
           if (cancelled) return;
-          // quick buttons
           const types: GrowthType[] = (data.quickButtons ?? []).filter(
             (t: GrowthType) => TYPE_CONFIG[t],
           );
           setQuickTypes(types.length > 0 ? types : DEFAULT_QUICK_TYPES);
-          // earliest
           const earliest = data.earliestDate ?? null;
           setEarliestDate(earliest);
-          // records — range API 응답을 날짜별로 그룹핑
           const allRecords: GrowthRecord[] = data.records ?? [];
           const dateMap = new Map<string, GrowthRecord[]>();
           for (const r of allRecords) {
@@ -268,7 +300,6 @@ export default function GrowthRecordPage() {
         /* BFF 실패 시 fallback */
       }
 
-      // fallback: 개별 호출
       const earliestPromise = fetch(
         `/api/growth-records/earliest?childId=${selectedChild.id}`,
       )
@@ -329,23 +360,6 @@ export default function GrowthRecordPage() {
     setInitialLoading(false);
   }, [selectedChild, fetchDay]);
 
-  const fetchQuick = useCallback(async () => {
-    try {
-      const res = await fetch('/api/growth-quick-buttons');
-      if (res.ok) {
-        const json = await res.json();
-        const types: GrowthType[] = (json.types ?? []).filter(
-          (t: GrowthType) => TYPE_CONFIG[t],
-        );
-        setQuickTypes(types.length > 0 ? types : DEFAULT_QUICK_TYPES);
-        return;
-      }
-    } catch {
-      /* noop */
-    }
-    setQuickTypes(DEFAULT_QUICK_TYPES);
-  }, []);
-
   const persistQuick = useCallback(async (next: GrowthType[]) => {
     setQuickTypes(next);
     try {
@@ -363,6 +377,9 @@ export default function GrowthRecordPage() {
     if (longPressRef.current !== null) window.clearTimeout(longPressRef.current);
     longPressRef.current = window.setTimeout(() => {
       setEditQuickMode(true);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try { navigator.vibrate?.(20); } catch {}
+      }
     }, QUICK_LONG_PRESS_MS);
   }, []);
 
@@ -373,7 +390,6 @@ export default function GrowthRecordPage() {
     }
   }, []);
 
-  // tap outside to exit edit mode
   useEffect(() => {
     if (!editQuickMode) return;
     const onDown = (e: PointerEvent) => {
@@ -386,9 +402,6 @@ export default function GrowthRecordPage() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [editQuickMode]);
 
-  // fetchQuick은 BFF page-init에서 처리됨 — fallback/reload 시에만 개별 호출
-
-  // 무한 스크롤 옵저버
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -434,189 +447,289 @@ export default function GrowthRecordPage() {
 
   if (!selectedChild) return null;
 
+  const today = todayString();
+
   return (
     <div className="flex flex-col min-h-dvh bg-white px-6">
-      <div ref={titleBarRef} className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+      {/* 상단 헤더: 자식 선택 + 카테고리 + 마지막 기록 카드 */}
+      <div
+        ref={titleBarRef}
+        className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3"
+        style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}
+      >
         <ChildSelector
           children={children}
           selected={selectedChild}
           onSelect={setSelectedChild}
         />
 
+        {/* 카테고리 가로 스크롤 */}
+        <div data-quick-bar-root className="-mx-6 mt-3">
+          <div
+            className="overflow-x-auto no-scrollbar pl-6 pr-2"
+            style={{
+              scrollbarWidth: 'none',
+              maskImage:
+                'linear-gradient(to right, black, black calc(100% - 24px), transparent)',
+              WebkitMaskImage:
+                'linear-gradient(to right, black, black calc(100% - 24px), transparent)',
+            }}
+          >
+            <Reorder.Group
+              axis="x"
+              as="div"
+              values={quickTypes}
+              onReorder={(next: GrowthType[]) => persistQuick(next)}
+              className="inline-flex items-start gap-3 py-1 align-top"
+            >
+              {quickTypes.map((t) => {
+                const cfg = TYPE_CONFIG[t];
+                const accent = ACCENT[t];
+                return (
+                  <Reorder.Item
+                    key={t}
+                    value={t}
+                    as="div"
+                    drag={editQuickMode ? 'x' : false}
+                    dragListener={editQuickMode}
+                    onDragStart={() => { draggingRef.current = true; }}
+                    onDragEnd={() => { setTimeout(() => { draggingRef.current = false; }, 0); }}
+                    whileDrag={{ scale: 1.05, zIndex: 10 }}
+                    transition={{ layout: { duration: 0 } }}
+                    style={{ touchAction: editQuickMode ? 'none' : 'auto' }}
+                    className="relative shrink-0"
+                  >
+                    <button
+                      type="button"
+                      onPointerDown={() => { if (!editQuickMode) startQuickLongPress(); }}
+                      onPointerUp={clearQuickLongPress}
+                      onPointerCancel={clearQuickLongPress}
+                      onPointerLeave={clearQuickLongPress}
+                      onClick={(e) => {
+                        if (draggingRef.current) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          return;
+                        }
+                        if (editQuickMode) {
+                          e.preventDefault();
+                          return;
+                        }
+                        setEditing(null);
+                        setSheetType(t);
+                      }}
+                      className="flex flex-col items-center gap-1 w-14"
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-full bg-white border-2 ${accent.border} flex items-center justify-center text-xl active:scale-95 transition-transform`}
+                      >
+                        {cfg.emoji}
+                      </div>
+                      <span className="text-[10px] text-gray-700 font-medium truncate max-w-full">
+                        {cfg.label}
+                      </span>
+                    </button>
+                    {editQuickMode && (
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          persistQuick(quickTypes.filter((x) => x !== t));
+                        }}
+                        className="absolute -top-0.5 right-0 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center shadow z-10"
+                        aria-label="삭제"
+                      >
+                        <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
+                          <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    )}
+                  </Reorder.Item>
+                );
+              })}
+              {/* + 버튼 */}
+              <button
+                type="button"
+                onClick={() => setShowAddQuick(true)}
+                className="flex flex-col items-center gap-1 w-14 shrink-0"
+                aria-label="간편 버튼 추가"
+              >
+                <div className="w-12 h-12 rounded-full bg-white border-2 border-dashed border-gray-300 flex items-center justify-center text-xl text-gray-400 active:scale-95 transition-transform">
+                  +
+                </div>
+                <span className="text-[10px] text-gray-400 font-medium">추가</span>
+              </button>
+            </Reorder.Group>
+          </div>
+        </div>
+
+        {/* 마지막 기록 3종 카드 */}
         {(() => {
           const nowMs = Date.now();
-          const lastDiaper = findLatestByTypes(sortedDays, ['DIAPER']);
           const lastFeed = findLatestByTypes(sortedDays, FEEDING_TYPES);
           const lastSleep = findLatestByTypes(sortedDays, ['SLEEP']);
+          const lastDiaper = findLatestByTypes(sortedDays, ['DIAPER']);
           const Item = ({
-            emoji,
             label,
             rec,
           }: {
-            emoji: string;
             label: string;
             rec: GrowthRecord | null;
           }) => (
-            <div className="flex-1 bg-white rounded-xl px-2.5 py-2 shadow-sm">
-              <div className="flex items-center gap-1 text-[11px] text-gray-400">
-                <span>{emoji}</span>
-                <span>{label}</span>
-              </div>
-              <p className="text-[12px] font-bold text-gray-900 mt-0.5 tabular-nums">
+            <div className="flex-1 bg-gray-50 rounded-xl px-2.5 py-2">
+              <p className="text-[10px] text-gray-500 text-center">{label}</p>
+              <p className="text-[12px] font-bold text-gray-900 text-center mt-0.5 tabular-nums">
                 {rec ? formatAgo(rec.startAt, nowMs) : '기록 없음'}
               </p>
             </div>
           );
           return (
-            <div className="flex items-stretch gap-2 mt-2">
-              <Item emoji="🩲" label="마지막 기저귀" rec={lastDiaper} />
-              <Item emoji="🍼" label="마지막 수유" rec={lastFeed} />
-              <Item emoji="😴" label="마지막 수면" rec={lastSleep} />
+            <div className="flex items-stretch gap-2 mt-3">
+              <Item label="마지막 수유" rec={lastFeed} />
+              <Item label="마지막 수면" rec={lastSleep} />
+              <Item label="마지막 기저귀" rec={lastDiaper} />
             </div>
           );
         })()}
       </div>
 
       {/* 타임라인 - 날짜별 세로 나열 + 무한 스크롤 */}
-      <main className="flex-1 pb-56">
+      <main className="flex-1 pb-32">
         {initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">
             아직 기록이 없어요.<br />
-            아래 버튼으로 첫 기록을 남겨보세요.
+            위 버튼으로 첫 기록을 남겨보세요.
           </div>
         ) : (
           <div className="pt-2">
-            {sortedDays.map((group) => (
-              <section key={group.date} className="mb-6">
-                <div
-                  className="sticky z-10 bg-gray-50 py-2 flex items-center justify-between gap-2"
-                  style={{ top: titleBarH - 4 }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePicker(true)}
-                    className="text-sm font-bold text-gray-900 shrink-0 flex items-center gap-1.5 -ml-1 px-1 py-0.5 rounded-md active:bg-gray-100"
-                    aria-label="다른 날짜 선택"
+            {sortedDays.map((group) => {
+              const stats = computeDayStats(group.records, group.date);
+              const isToday = group.date === today;
+              const dDay = selectedChild.birthDate
+                ? dayOfLife(selectedChild.birthDate, group.date)
+                : null;
+              return (
+                <section key={group.date} className="mb-2">
+                  <div
+                    className="sticky z-10 bg-white py-3 border-b border-gray-100"
+                    style={{ top: titleBarH - 4 }}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-gray-500"
-                    >
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                    <span>
-                      {group.date.replace(/-/g, '. ')}.
-                      <span className="ml-2 text-xs font-normal text-gray-400">
-                        {['일', '월', '화', '수', '목', '금', '토'][new Date(`${group.date}T00:00:00`).getDay()]}요일
-                      </span>
-                    </span>
-                  </button>
-                  {(() => {
-                    const stats = computeDayStats(group.records, group.date);
-                    return (
-                      <div className="flex items-center gap-2 text-[10px] text-gray-500 tabular-nums">
-                        <span className="flex items-center gap-0.5">
-                          <span>😴</span>
-                          <span>{formatDuration(stats.sleepMin)}</span>
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <span>👀</span>
-                          <span>{formatDuration(stats.awakeMin)}</span>
-                        </span>
-                        <span className="flex items-center gap-0.5">
-                          <span>🍼</span>
-                          <span>{stats.feedingMl}ml</span>
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </div>
-                <div className="relative pl-6 pt-2">
-                  <div className="absolute left-[11px] top-2 bottom-0 w-0.5 bg-gray-200" />
-                  {group.records.map((r) => {
-                    const cfg = TYPE_CONFIG[r.type];
-                    const summary = summarizeRecord(r);
-                    return (
+                    <div className="flex items-center justify-between gap-2">
                       <button
-                        key={r.id}
                         type="button"
-                        onClick={() => {
-                          setEditing(r);
-                          setSheetType(r.type);
-                        }}
-                        className="relative w-full text-left mb-3 block"
+                        onClick={() => setShowDatePicker(true)}
+                        className="flex items-center gap-1 text-sm font-bold text-gray-900 -ml-1 px-1 py-0.5 rounded-md active:bg-gray-100"
+                        aria-label="다른 날짜 선택"
                       >
-                        <span className="absolute -left-[19px] top-3 w-3 h-3 rounded-full bg-white border-2 border-gray-900" />
-                        <div className="bg-white rounded-2xl p-3.5 shadow-sm active:bg-gray-50">
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${cfg.color}`}
-                            >
-                              {cfg.emoji}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline justify-between gap-2">
-                                <p className="text-sm font-bold text-gray-900">
-                                  {cfg.label}
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                  {formatTime(r.startAt)}
-                                  {cfg.hasEnd && r.endAt
-                                    ? ` ~ ${formatTime(r.endAt)}`
-                                    : ''}
-                                </p>
-                              </div>
-                              {summary && (
-                                <p className="text-xs text-gray-500 mt-0.5">{summary}</p>
-                              )}
-                              {r.memo && (
-                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                  {r.memo}
-                                </p>
-                              )}
-                              {(() => {
-                                const urls = r.imageUrls && r.imageUrls.length > 0
-                                  ? r.imageUrls
-                                  : r.imageUrl
-                                    ? [r.imageUrl]
-                                    : [];
-                                if (urls.length === 0) return null;
-                                return (
-                                  <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
-                                    {urls.map((u: string) => (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img
-                                        key={u}
-                                        src={u}
-                                        alt=""
-                                        className="shrink-0 w-20 h-20 object-cover rounded-lg"
-                                      />
-                                    ))}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </div>
+                        <span>{formatHeaderDate(group.date)}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
                       </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
+                      <span className="text-xs font-medium text-gray-400 tabular-nums">
+                        {isToday ? '오늘' : dDay !== null ? `D ${dDay}` : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-500 tabular-nums">
+                      <span className="flex items-center gap-1">
+                        <span>☀️</span>
+                        <span>{formatDuration(stats.awakeMin)}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span>🌙</span>
+                        <span>{formatDuration(stats.sleepMin)}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span>🍼</span>
+                        <span>
+                          {stats.feedingMl}ml
+                          {stats.breastMin > 0 ? ` +${stats.breastMin}분` : ''}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 기록 행 */}
+                  <div>
+                    {group.records.map((r) => {
+                      const cfg = TYPE_CONFIG[r.type];
+                      const accent = ACCENT[r.type];
+                      const summary = summarizeRecord(r);
+                      const urls =
+                        r.imageUrls && r.imageUrls.length > 0
+                          ? r.imageUrls
+                          : r.imageUrl
+                            ? [r.imageUrl]
+                            : [];
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => {
+                            setEditing(r);
+                            setSheetType(r.type);
+                          }}
+                          className="w-full text-left flex items-start gap-3 py-3 border-b border-dashed border-gray-100 active:bg-gray-50"
+                        >
+                          <span
+                            className={`text-xs font-semibold tabular-nums w-10 shrink-0 pt-0.5 ${accent.time}`}
+                          >
+                            {formatTime24(r.startAt)}
+                          </span>
+                          <span
+                            className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${accent.dot}`}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 leading-snug">
+                              {cfg.label}
+                            </p>
+                            {summary && (
+                              <p className="text-[11px] text-gray-500 mt-0.5">{summary}</p>
+                            )}
+                            {r.memo && (
+                              <p className="text-[11px] text-gray-600 mt-1 line-clamp-2">
+                                {r.memo}
+                              </p>
+                            )}
+                            {urls.length > 0 && (
+                              <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
+                                {urls.map((u: string) => (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    key={u}
+                                    src={u}
+                                    alt=""
+                                    className="shrink-0 w-16 h-16 object-cover rounded-lg"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-gray-300 mt-1 shrink-0"
+                            aria-hidden="true"
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
             {hasMore ? (
               <div ref={sentinelRef} className="py-6 text-center text-xs text-gray-400">
                 {loadingMore ? '불러오는 중...' : ''}
@@ -630,14 +743,12 @@ export default function GrowthRecordPage() {
         )}
       </main>
 
-      {/* 간편 버튼 바 — 하단 네비게이션 위 여백 유지 */}
-      <div
-        data-quick-bar-root
-        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
-        style={{ bottom: 'calc(max(var(--safe-area-bottom), 16px) + 72px)' }}
-      >
-        {editQuickMode && (
-          <div className="mb-4 flex justify-center pointer-events-auto">
+      {editQuickMode && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
+          style={{ bottom: 'calc(max(var(--safe-area-bottom), 16px) + 96px)' }}
+        >
+          <div className="flex justify-center pointer-events-auto">
             <button
               type="button"
               onClick={() => setEditQuickMode(false)}
@@ -645,141 +756,6 @@ export default function GrowthRecordPage() {
             >
               완료
             </button>
-          </div>
-        )}
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-lg pointer-events-auto flex items-stretch overflow-hidden">
-          {/* 스크롤 영역: 간편 버튼들 */}
-          <div
-            className="flex-1 min-w-0 overflow-x-auto no-scrollbar"
-            style={{
-              scrollbarWidth: 'none',
-              maskImage: 'linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 12px, black calc(100% - 12px), transparent)',
-            }}
-          >
-            <div className="inline-flex gap-1 p-1.5">
-              <Reorder.Group
-                axis="x"
-                as="div"
-                values={quickTypes}
-                onReorder={(next: GrowthType[]) => persistQuick(next)}
-                className="flex"
-              >
-                {quickTypes.map((t) => {
-                  const cfg = TYPE_CONFIG[t];
-                  return (
-                    <Reorder.Item
-                      key={t}
-                      value={t}
-                      as="div"
-                      drag={editQuickMode ? 'x' : false}
-                      dragListener={editQuickMode}
-                      onDragStart={() => { draggingRef.current = true; }}
-                      onDragEnd={() => { setTimeout(() => { draggingRef.current = false; }, 0); }}
-                      whileDrag={{ scale: 1.05, zIndex: 10 }}
-                      transition={{ layout: { duration: 0 } }}
-                      style={{ touchAction: editQuickMode ? 'none' : 'auto' }}
-                      className="relative shrink-0 w-[60px] px-0.5"
-                    >
-                      <button
-                        type="button"
-                        onPointerDown={() => { if (!editQuickMode) startQuickLongPress(); }}
-                        onPointerUp={clearQuickLongPress}
-                        onPointerCancel={clearQuickLongPress}
-                        onPointerLeave={clearQuickLongPress}
-                        onClick={(e) => {
-                          if (draggingRef.current) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return;
-                          }
-                          if (editQuickMode) {
-                            e.preventDefault();
-                            return;
-                          }
-                          setEditing(null);
-                          setSheetType(t);
-                        }}
-                        className={`w-full flex flex-col items-center gap-0.5 py-1.5 rounded-lg ${cfg.color}`}
-                      >
-                        <span className="text-base leading-none">{cfg.emoji}</span>
-                        <span className="text-[9px] font-semibold">{cfg.label}</span>
-                      </button>
-                      {editQuickMode && (
-                        <button
-                          type="button"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            persistQuick(quickTypes.filter((x) => x !== t));
-                          }}
-                          className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gray-800 text-white flex items-center justify-center shadow z-10"
-                          aria-label="삭제"
-                        >
-                          <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true">
-                            <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                          </svg>
-                        </button>
-                      )}
-                    </Reorder.Item>
-                  );
-                })}
-              </Reorder.Group>
-            </div>
-          </div>
-          {/* 고정 + 버튼 */}
-          <button
-            type="button"
-            onClick={() => setShowAddQuick(true)}
-            className="shrink-0 w-11 flex items-center justify-center border-l border-gray-100 text-gray-400 rounded-r-2xl active:bg-gray-50"
-            aria-label="간편 버튼 추가"
-          >
-            <span className="text-xl leading-none">+</span>
-          </button>
-        </div>
-      </div>
-
-      
-      {/* 전체 항목 선택 */}
-      {showAllPicker && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowAllPicker(false)}
-          />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[var(--safe-area-bottom)]">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">기록 추가</h2>
-              <button
-                onClick={() => setShowAllPicker(false)}
-                className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400"
-                aria-label="닫기"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-y-auto px-5 py-4 grid grid-cols-3 gap-2">
-              {MENU_TYPES.map((t) => {
-                const cfg = TYPE_CONFIG[t];
-                return (
-                  <button
-                    key={t}
-                    onClick={() => {
-                      setShowAllPicker(false);
-                      setEditing(null);
-                      setSheetType(t);
-                    }}
-                    className="flex flex-col items-center gap-1 py-3 rounded-2xl bg-gray-50 active:bg-gray-100"
-                  >
-                    <span className="text-2xl">{cfg.emoji}</span>
-                    <span className="text-xs font-medium text-gray-700">
-                      {cfg.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}
