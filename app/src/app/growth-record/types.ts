@@ -54,14 +54,14 @@ export interface TypeConfig {
 
 export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
   FORMULA: {
-    label: '분유수유',
+    label: '분유',
     emoji: '🍼',
     color: 'bg-amber-50 text-amber-600',
     hasEnd: true,
     fields: [{ key: 'amountMl', label: '먹은 양', kind: 'number', unit: 'ml' }],
   },
   BREASTFEEDING: {
-    label: '모유수유',
+    label: '모유',
     emoji: '🤱',
     color: 'bg-pink-50 text-pink-600',
     hasEnd: true,
@@ -225,10 +225,6 @@ export const MENU_TYPES: GrowthType[] = [
   'BATH',
   'MEDICATION',
   'DIAPER',
-  'HOSPITAL',
-  'SNACK',
-  'PLAY',
-  'TUMMY_TIME',
   'TEMPERATURE',
 ];
 
@@ -253,7 +249,6 @@ export function summarizeRecord(r: GrowthRecord): string {
       if (data.amountG) parts.push(`${data.amountG}g`);
       break;
     case 'SLEEP':
-      parts.push(data.kind === 'NIGHT' ? '밤잠' : '낮잠');
       break;
     case 'PUMPING':
       if (data.leftMl) parts.push(`좌 ${data.leftMl}ml`);

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Reorder } from 'framer-motion';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import EmptyChildState from '@/components/EmptyChildState';
 import {
@@ -23,27 +22,49 @@ const DEFAULT_QUICK_TYPES: GrowthType[] = [
   'BABY_FOOD',
   'SLEEP',
   'BATH',
+  'MEDICATION',
+  'DIAPER',
+  'TEMPERATURE',
 ];
-const QUICK_LONG_PRESS_MS = 500;
 
-const ACCENT: Record<GrowthType, { time: string; dot: string; border: string }> = {
-  FORMULA: { time: 'text-rose-500', dot: 'bg-rose-400', border: 'border-rose-300' },
-  BREASTFEEDING: { time: 'text-pink-600', dot: 'bg-pink-400', border: 'border-pink-300' },
-  PUMPED_FEEDING: { time: 'text-amber-500', dot: 'bg-amber-400', border: 'border-amber-300' },
-  PUMPING: { time: 'text-emerald-500', dot: 'bg-emerald-400', border: 'border-emerald-300' },
-  SLEEP: { time: 'text-blue-500', dot: 'bg-blue-400', border: 'border-blue-300' },
-  BATH: { time: 'text-cyan-500', dot: 'bg-cyan-400', border: 'border-cyan-300' },
-  MEDICATION: { time: 'text-purple-500', dot: 'bg-purple-400', border: 'border-purple-300' },
-  DIAPER: { time: 'text-gray-700', dot: 'bg-gray-500', border: 'border-yellow-300' },
-  BABY_FOOD: { time: 'text-teal-500', dot: 'bg-teal-400', border: 'border-teal-300' },
-  MILK: { time: 'text-blue-500', dot: 'bg-blue-400', border: 'border-blue-300' },
-  WATER: { time: 'text-sky-500', dot: 'bg-sky-400', border: 'border-sky-300' },
-  HOSPITAL: { time: 'text-red-500', dot: 'bg-red-400', border: 'border-red-300' },
-  TEMPERATURE: { time: 'text-rose-500', dot: 'bg-rose-400', border: 'border-rose-300' },
-  SNACK: { time: 'text-amber-600', dot: 'bg-amber-500', border: 'border-amber-300' },
-  PLAY: { time: 'text-emerald-600', dot: 'bg-emerald-400', border: 'border-emerald-300' },
-  TUMMY_TIME: { time: 'text-teal-500', dot: 'bg-teal-400', border: 'border-teal-300' },
-  ETC: { time: 'text-gray-500', dot: 'bg-gray-400', border: 'border-gray-300' },
+const RECORD_ICONS: Record<GrowthType, string> = {
+  FORMULA: '/icon-record-formula.svg',
+  BREASTFEEDING: '/icon-record-breastfeeding.svg',
+  PUMPED_FEEDING: '/icon-record-pumped-feeding.svg',
+  PUMPING: '/icon-record-pumping.svg',
+  SLEEP: '/icon-record-sleep.svg',
+  BATH: '/icon-record-bath.svg',
+  MEDICATION: '/icon-record-medication.svg',
+  DIAPER: '/icon-record-diaper.svg',
+  BABY_FOOD: '/icon-record-baby-food.svg',
+  MILK: '/icon-record-milk.svg',
+  WATER: '/icon-record-water.svg',
+  TEMPERATURE: '/icon-record-temperature.svg',
+  HOSPITAL: '/icon-record-etc.svg',
+  SNACK: '/icon-record-etc.svg',
+  PLAY: '/icon-record-etc.svg',
+  TUMMY_TIME: '/icon-record-etc.svg',
+  ETC: '/icon-record-etc.svg',
+};
+
+const CATEGORY_STYLE: Record<GrowthType, { border: string; bg: string }> = {
+  FORMULA: { border: '#FF5675', bg: 'rgba(255, 86, 117, 0.05)' },
+  BREASTFEEDING: { border: '#FF7C5A', bg: 'rgba(255, 124, 90, 0.05)' },
+  PUMPED_FEEDING: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
+  PUMPING: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  BABY_FOOD: { border: '#6CC68A', bg: 'rgba(108, 198, 138, 0.05)' },
+  SLEEP: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  BATH: { border: '#6A92EA', bg: 'rgba(106, 146, 234, 0.05)' },
+  MEDICATION: { border: '#B67CF0', bg: 'rgba(182, 124, 240, 0.05)' },
+  DIAPER: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
+  TEMPERATURE: { border: '#515C66', bg: 'rgba(81, 92, 102, 0.05)' },
+  MILK: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  WATER: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  HOSPITAL: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
+  SNACK: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
+  PLAY: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  TUMMY_TIME: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  ETC: { border: '#BBC0C5', bg: 'rgba(187, 192, 197, 0.05)' },
 };
 
 function todayString(): string {
@@ -154,7 +175,7 @@ function formatAgo(iso: string, nowMs: number): string {
   return `${formatDuration(diffMin)} 전`;
 }
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 30;
 
 type DayGroup = { date: string; records: GrowthRecord[] };
 
@@ -171,10 +192,7 @@ export default function GrowthRecordPage() {
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
   const [showAddQuick, setShowAddQuick] = useState(false);
-  const [editQuickMode, setEditQuickMode] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const longPressRef = useRef<number | null>(null);
-  const draggingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
   const titleBarRef = useRef<HTMLDivElement | null>(null);
@@ -216,30 +234,37 @@ export default function GrowthRecordPage() {
         return;
       }
       let localCursor = cursor;
-      let foundAny = false;
-      for (let safety = 0; safety < 20; safety++) {
+      // 데이터가 나올 때까지 또는 earliestDate에 도달할 때까지 range API로 청크 단위 조회
+      for (let safety = 0; safety < 12; safety++) {
         if (localCursor < earliestDate) {
           setHasMore(false);
           break;
         }
-        const targets: string[] = [];
-        for (let i = 0; i < PAGE_SIZE; i++) {
-          targets.push(shiftDate(localCursor, -i));
-        }
-        const results = await Promise.all(
-          targets.map((d) =>
-            fetchDay(selectedChild.id, d).then((records) => ({ date: d, records })),
-          ),
+        const to = localCursor;
+        const fromCandidate = shiftDate(to, -(PAGE_SIZE - 1));
+        const from = fromCandidate < earliestDate ? earliestDate : fromCandidate;
+        const res = await fetch(
+          `/api/growth-records/range?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
         );
-        const next = results.filter((g) => g.records.length > 0);
-        if (next.length > 0) {
-          setDays((prev) => [...prev, ...next]);
-          foundAny = true;
+        const records: GrowthRecord[] = res.ok ? await res.json() : [];
+        const dateMap = new Map<string, GrowthRecord[]>();
+        for (const r of records) {
+          const dt = new Date(r.startAt);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+          if (!dateMap.has(d)) dateMap.set(d, []);
+          dateMap.get(d)!.push(r);
         }
-        const nextCursor = shiftDate(targets[targets.length - 1], -1);
+        const grouped = Array.from(dateMap.entries())
+          .map(([date, recs]) => ({ date, records: recs }))
+          .sort((a, b) => b.date.localeCompare(a.date));
+        if (grouped.length > 0) {
+          setDays((prev) => [...prev, ...grouped]);
+        }
+        const nextCursor = shiftDate(from, -1);
         localCursor = nextCursor;
         setCursor(localCursor);
-        if (foundAny) break;
+        if (grouped.length > 0) break;
         if (localCursor < earliestDate) {
           setHasMore(false);
           break;
@@ -249,7 +274,7 @@ export default function GrowthRecordPage() {
       loadingRef.current = false;
       setLoadingMore(false);
     }
-  }, [selectedChild, cursor, hasMore, fetchDay, earliestDate]);
+  }, [selectedChild, cursor, hasMore, earliestDate]);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -271,10 +296,10 @@ export default function GrowthRecordPage() {
         if (res.ok) {
           const data = await res.json();
           if (cancelled) return;
-          const types: GrowthType[] = (data.quickButtons ?? []).filter(
-            (t: GrowthType) => TYPE_CONFIG[t],
+          const saved: GrowthType[] = (data.quickButtons ?? []).filter(
+            (t: GrowthType) => (MENU_TYPES as string[]).includes(t),
           );
-          setQuickTypes(types.length > 0 ? types : DEFAULT_QUICK_TYPES);
+          setQuickTypes(saved.length > 0 ? saved : DEFAULT_QUICK_TYPES);
           const earliest = data.earliestDate ?? null;
           setEarliestDate(earliest);
           const allRecords: GrowthRecord[] = data.records ?? [];
@@ -334,31 +359,38 @@ export default function GrowthRecordPage() {
     setDays([]);
     setHasMore(true);
     setInitialLoading(true);
-    const earliestPromise = fetch(
-      `/api/growth-records/earliest?childId=${selectedChild.id}`,
-    )
-      .then((r) => (r.ok ? r.json() : { date: null }))
-      .then((j) => (j?.date as string | null) ?? null)
-      .catch(() => null);
     const start = fromDate ?? todayString();
-    const targets: string[] = [];
-    for (let i = 0; i < PAGE_SIZE; i++) targets.push(shiftDate(start, -i));
-    const [earliest, results] = await Promise.all([
-      earliestPromise,
-      Promise.all(
-        targets.map((d) =>
-          fetchDay(selectedChild.id, d).then((records) => ({ date: d, records })),
-        ),
-      ),
-    ]);
-    setEarliestDate(earliest);
-    const next = results.filter((g) => g.records.length > 0);
-    setDays(next);
-    const nextCursor = shiftDate(targets[targets.length - 1], -1);
-    setCursor(nextCursor);
-    if (!earliest || nextCursor < earliest) setHasMore(false);
-    setInitialLoading(false);
-  }, [selectedChild, fetchDay]);
+    const from = shiftDate(start, -(PAGE_SIZE - 1));
+    const to = start;
+    try {
+      const res = await fetch(
+        `/api/growth-records/page-init?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const earliest: string | null = data.earliestDate ?? null;
+        setEarliestDate(earliest);
+        const allRecords: GrowthRecord[] = data.records ?? [];
+        const dateMap = new Map<string, GrowthRecord[]>();
+        for (const r of allRecords) {
+          const dt = new Date(r.startAt);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+          if (!dateMap.has(d)) dateMap.set(d, []);
+          dateMap.get(d)!.push(r);
+        }
+        const grouped = Array.from(dateMap.entries())
+          .map(([date, recs]) => ({ date, records: recs }))
+          .sort((a, b) => b.date.localeCompare(a.date));
+        setDays(grouped);
+        const nextCursor = shiftDate(from, -1);
+        setCursor(nextCursor);
+        if (!earliest || nextCursor < earliest) setHasMore(false);
+      }
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [selectedChild]);
 
   const persistQuick = useCallback(async (next: GrowthType[]) => {
     setQuickTypes(next);
@@ -373,34 +405,20 @@ export default function GrowthRecordPage() {
     }
   }, []);
 
-  const startQuickLongPress = useCallback(() => {
-    if (longPressRef.current !== null) window.clearTimeout(longPressRef.current);
-    longPressRef.current = window.setTimeout(() => {
-      setEditQuickMode(true);
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate?.(20); } catch {}
-      }
-    }, QUICK_LONG_PRESS_MS);
-  }, []);
-
-  const clearQuickLongPress = useCallback(() => {
-    if (longPressRef.current !== null) {
-      window.clearTimeout(longPressRef.current);
-      longPressRef.current = null;
-    }
-  }, []);
-
+  // 페이지 복귀(브라우저 탭 전환, bfcache 복원 등) 시 데이터 재로드
   useEffect(() => {
-    if (!editQuickMode) return;
-    const onDown = (e: PointerEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-quick-bar-root]') && !target.closest('[data-quick-add-sheet]')) {
-        setEditQuickMode(false);
-      }
+    if (!selectedChild) return;
+    const onPageShow = () => reload();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') reload();
     };
-    window.addEventListener('pointerdown', onDown);
-    return () => window.removeEventListener('pointerdown', onDown);
-  }, [editQuickMode]);
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [selectedChild, reload]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -426,6 +444,11 @@ export default function GrowthRecordPage() {
         ),
       })),
     [days],
+  );
+
+  const visibleQuickTypes = useMemo(
+    () => DEFAULT_QUICK_TYPES.filter((t) => quickTypes.includes(t)),
+    [quickTypes],
   );
 
   if (!isLoaded) return null;
@@ -466,7 +489,7 @@ export default function GrowthRecordPage() {
         {/* 카테고리 가로 스크롤 */}
         <div data-quick-bar-root className="-mx-6 mt-3">
           <div
-            className="overflow-x-auto no-scrollbar pl-6 pr-2"
+            className="overflow-x-auto no-scrollbar pl-6 pr-6"
             style={{
               scrollbarWidth: 'none',
               maskImage:
@@ -475,93 +498,65 @@ export default function GrowthRecordPage() {
                 'linear-gradient(to right, black, black calc(100% - 24px), transparent)',
             }}
           >
-            <Reorder.Group
-              axis="x"
-              as="div"
-              values={quickTypes}
-              onReorder={(next: GrowthType[]) => persistQuick(next)}
-              className="inline-flex items-start gap-3 py-1 align-top"
-            >
-              {quickTypes.map((t) => {
+            <div className="inline-flex items-start gap-[10px] py-1 align-top">
+              {visibleQuickTypes.map((t) => {
                 const cfg = TYPE_CONFIG[t];
-                const accent = ACCENT[t];
+                const style = CATEGORY_STYLE[t];
                 return (
-                  <Reorder.Item
+                  <button
                     key={t}
-                    value={t}
-                    as="div"
-                    drag={editQuickMode ? 'x' : false}
-                    dragListener={editQuickMode}
-                    onDragStart={() => { draggingRef.current = true; }}
-                    onDragEnd={() => { setTimeout(() => { draggingRef.current = false; }, 0); }}
-                    whileDrag={{ scale: 1.05, zIndex: 10 }}
-                    transition={{ layout: { duration: 0 } }}
-                    style={{ touchAction: editQuickMode ? 'none' : 'auto' }}
-                    className="relative shrink-0"
+                    type="button"
+                    onClick={() => {
+                      setEditing(null);
+                      setSheetType(t);
+                    }}
+                    className="flex flex-col items-center gap-[4px] shrink-0"
                   >
-                    <button
-                      type="button"
-                      onPointerDown={() => { if (!editQuickMode) startQuickLongPress(); }}
-                      onPointerUp={clearQuickLongPress}
-                      onPointerCancel={clearQuickLongPress}
-                      onPointerLeave={clearQuickLongPress}
-                      onClick={(e) => {
-                        if (draggingRef.current) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          return;
-                        }
-                        if (editQuickMode) {
-                          e.preventDefault();
-                          return;
-                        }
-                        setEditing(null);
-                        setSheetType(t);
-                      }}
-                      className="flex flex-col items-center gap-1 w-14"
+                    <div
+                      className="w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
+                      style={{ borderColor: style.border, backgroundColor: style.bg }}
                     >
-                      <div
-                        className={`w-12 h-12 rounded-full bg-white border-2 ${accent.border} flex items-center justify-center text-xl active:scale-95 transition-transform`}
-                      >
-                        {cfg.emoji}
-                      </div>
-                      <span className="text-[10px] text-gray-700 font-medium truncate max-w-full">
-                        {cfg.label}
-                      </span>
-                    </button>
-                    {editQuickMode && (
-                      <button
-                        type="button"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          persistQuick(quickTypes.filter((x) => x !== t));
-                        }}
-                        className="absolute -top-0.5 right-0 w-5 h-5 rounded-full bg-gray-800 text-white flex items-center justify-center shadow z-10"
-                        aria-label="삭제"
-                      >
-                        <svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true">
-                          <path d="M2 2 L8 8 M8 2 L2 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    )}
-                  </Reorder.Item>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={RECORD_ICONS[t]}
+                        alt=""
+                        width={24}
+                        height={24}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <span className="text-[10px] font-normal text-gray-500 whitespace-nowrap">
+                      {cfg.label}
+                    </span>
+                  </button>
                 );
               })}
-              {/* + 버튼 */}
+              {/* 설정 버튼 */}
               <button
                 type="button"
                 onClick={() => setShowAddQuick(true)}
-                className="flex flex-col items-center gap-1 w-14 shrink-0"
-                aria-label="간편 버튼 추가"
+                className="flex flex-col items-center gap-[4px] shrink-0"
+                aria-label="기록 항목 설정"
               >
-                <div className="w-12 h-12 rounded-full bg-white border-2 border-dashed border-gray-300 flex items-center justify-center text-xl text-gray-400 active:scale-95 transition-transform">
-                  +
+                <div
+                  className="w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
+                  style={{
+                    borderColor: '#BBC0C5',
+                    backgroundColor: 'rgba(187, 192, 197, 0.05)',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/icon-settings.svg"
+                    alt=""
+                    width={24}
+                    height={24}
+                    aria-hidden="true"
+                  />
                 </div>
-                <span className="text-[10px] text-gray-400 font-medium">추가</span>
+                <span className="text-[10px] font-normal text-gray-500">설정</span>
               </button>
-            </Reorder.Group>
+            </div>
           </div>
         </div>
 
@@ -578,15 +573,15 @@ export default function GrowthRecordPage() {
             label: string;
             rec: GrowthRecord | null;
           }) => (
-            <div className="flex-1 bg-gray-50 rounded-xl px-2.5 py-2">
-              <p className="text-[10px] text-gray-500 text-center">{label}</p>
-              <p className="text-[12px] font-bold text-gray-900 text-center mt-0.5 tabular-nums">
-                {rec ? formatAgo(rec.startAt, nowMs) : '기록 없음'}
+            <div className="flex-1 flex flex-col items-center justify-center gap-[6px] py-[10px] rounded-[4px] bg-gray-100 border border-gray-200">
+              <p className="text-[10px] font-medium text-gray-500">{label}</p>
+              <p className="text-[12px] font-semibold text-primary-500 tabular-nums">
+                {rec ? formatAgo(rec.startAt, nowMs) : '-'}
               </p>
             </div>
           );
           return (
-            <div className="flex items-stretch gap-2 mt-3">
+            <div className="flex items-stretch gap-[10px] mt-[10px]">
               <Item label="마지막 수유" rec={lastFeed} />
               <Item label="마지막 수면" rec={lastSleep} />
               <Item label="마지막 기저귀" rec={lastDiaper} />
@@ -599,13 +594,17 @@ export default function GrowthRecordPage() {
       <main className="flex-1 pb-32">
         {initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
-        ) : sortedDays.length === 0 ? (
+        ) : sortedDays.length === 0 && !hasMore ? (
           <div className="py-16 text-center text-sm text-gray-400">
             아직 기록이 없어요.<br />
             위 버튼으로 첫 기록을 남겨보세요.
           </div>
+        ) : sortedDays.length === 0 ? (
+          <div ref={sentinelRef} className="py-16 text-center text-sm text-gray-400">
+            {loadingMore ? '이전 기록을 불러오는 중...' : '이전 기록을 찾는 중...'}
+          </div>
         ) : (
-          <div className="pt-2">
+          <div className="mt-[24px] rounded-[8px] border border-gray-200 bg-white">
             {sortedDays.map((group) => {
               const stats = computeDayStats(group.records, group.date);
               const isToday = group.date === today;
@@ -615,37 +614,40 @@ export default function GrowthRecordPage() {
               return (
                 <section key={group.date} className="mb-2">
                   <div
-                    className="sticky z-10 bg-white py-3 border-b border-gray-100"
+                    className="sticky z-10 bg-white px-4 py-3 border-b border-dotted border-gray-200"
                     style={{ top: titleBarH - 4 }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => setShowDatePicker(true)}
-                        className="flex items-center gap-1 text-sm font-bold text-gray-900 -ml-1 px-1 py-0.5 rounded-md active:bg-gray-100"
+                        className="flex items-center gap-[2px] -ml-1 px-1 py-0.5 rounded-md active:bg-gray-100"
                         aria-label="다른 날짜 선택"
                       >
-                        <span>{formatHeaderDate(group.date)}</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300">
+                        <span className="text-[12px] font-semibold text-gray-900">{formatHeaderDate(group.date)}</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
                           <polyline points="9 18 15 12 9 6" />
                         </svg>
                       </button>
-                      <span className="text-xs font-medium text-gray-400 tabular-nums">
+                      <span className="text-[12px] font-normal text-gray-900 tabular-nums">
                         {isToday ? '오늘' : dDay !== null ? `D ${dDay}` : ''}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-gray-500 tabular-nums">
-                      <span className="flex items-center gap-1">
-                        <span>☀️</span>
-                        <span>{formatDuration(stats.awakeMin)}</span>
+                    <div className="flex items-center justify-end gap-[10px] mt-[10px] tabular-nums">
+                      <span className="flex items-center gap-[2px]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/icon-stat-awake.svg" alt="" width={16} height={16} aria-hidden="true" />
+                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.awakeMin)}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <span>🌙</span>
-                        <span>{formatDuration(stats.sleepMin)}</span>
+                      <span className="flex items-center gap-[2px]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
+                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.sleepMin)}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <span>🍼</span>
-                        <span>
+                      <span className="flex items-center gap-[2px]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
+                        <span className="text-[10px] font-medium text-gray-900">
                           {stats.feedingMl}ml
                           {stats.breastMin > 0 ? ` +${stats.breastMin}분` : ''}
                         </span>
@@ -657,8 +659,14 @@ export default function GrowthRecordPage() {
                   <div>
                     {group.records.map((r) => {
                       const cfg = TYPE_CONFIG[r.type];
-                      const accent = ACCENT[r.type];
+                      const catStyle = CATEGORY_STYLE[r.type] ?? CATEGORY_STYLE.ETC;
                       const summary = summarizeRecord(r);
+                      const title =
+                        r.type === 'SLEEP'
+                          ? ((r.data as Record<string, unknown> | null)?.kind === 'NIGHT'
+                              ? '밤잠'
+                              : '낮잠')
+                          : cfg.label;
                       const urls =
                         r.imageUrls && r.imageUrls.length > 0
                           ? r.imageUrls
@@ -673,25 +681,35 @@ export default function GrowthRecordPage() {
                             setEditing(r);
                             setSheetType(r.type);
                           }}
-                          className="w-full text-left flex items-start gap-3 py-3 border-b border-dashed border-gray-100 active:bg-gray-50"
+                          className="w-full text-left flex items-start px-4 py-3 border-b border-dotted border-gray-200 last:border-b-0 active:bg-gray-50"
                         >
                           <span
-                            className={`text-xs font-semibold tabular-nums w-10 shrink-0 pt-0.5 ${accent.time}`}
+                            className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums shrink-0 mt-0.5"
+                            style={{
+                              height: 16,
+                              backgroundColor: catStyle.bg,
+                              color: catStyle.border,
+                            }}
                           >
                             {formatTime24(r.startAt)}
                           </span>
                           <span
-                            className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${accent.dot}`}
+                            className="ml-[24px] mt-[7px] rounded-full shrink-0"
+                            style={{
+                              width: 6,
+                              height: 6,
+                              backgroundColor: catStyle.border,
+                            }}
                           />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-gray-900 leading-snug">
-                              {cfg.label}
+                          <div className="ml-2 flex-1 min-w-0">
+                            <p className="text-[14px] font-semibold text-gray-900 leading-snug">
+                              {title}
                             </p>
                             {summary && (
-                              <p className="text-[11px] text-gray-500 mt-0.5">{summary}</p>
+                              <p className="text-[12px] font-normal text-gray-500 mt-2">{summary}</p>
                             )}
                             {r.memo && (
-                              <p className="text-[11px] text-gray-600 mt-1 line-clamp-2">
+                              <p className="text-[11px] text-gray-600 mt-2 line-clamp-2">
                                 {r.memo}
                               </p>
                             )}
@@ -710,15 +728,15 @@ export default function GrowthRecordPage() {
                             )}
                           </div>
                           <svg
-                            width="14"
-                            height="14"
+                            width="16"
+                            height="16"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="text-gray-300 mt-1 shrink-0"
+                            className="text-gray-400 ml-2 mt-0.5 shrink-0"
                             aria-hidden="true"
                           >
                             <polyline points="9 18 15 12 9 6" />
@@ -730,35 +748,14 @@ export default function GrowthRecordPage() {
                 </section>
               );
             })}
-            {hasMore ? (
+            {hasMore && (
               <div ref={sentinelRef} className="py-6 text-center text-xs text-gray-400">
                 {loadingMore ? '불러오는 중...' : ''}
-              </div>
-            ) : (
-              <div className="py-6 text-center text-xs text-gray-400">
-                저장된 기록이 더이상 없습니다.
               </div>
             )}
           </div>
         )}
       </main>
-
-      {editQuickMode && (
-        <div
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
-          style={{ bottom: 'calc(max(var(--safe-area-bottom), 16px) + 96px)' }}
-        >
-          <div className="flex justify-center pointer-events-auto">
-            <button
-              type="button"
-              onClick={() => setEditQuickMode(false)}
-              className="px-4 py-1.5 rounded-full bg-gray-900 text-white text-xs font-semibold shadow"
-            >
-              완료
-            </button>
-          </div>
-        </div>
-      )}
 
       {sheetType && (
         <EntrySheet
@@ -821,7 +818,14 @@ export default function GrowthRecordPage() {
                         </svg>
                       </span>
                     )}
-                    <span className="text-2xl">{cfg.emoji}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={RECORD_ICONS[t]}
+                      alt=""
+                      width={32}
+                      height={32}
+                      aria-hidden="true"
+                    />
                     <span className={`text-xs font-medium ${selected ? 'text-primary-700' : 'text-gray-700'}`}>
                       {cfg.label}
                     </span>
