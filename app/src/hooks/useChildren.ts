@@ -9,6 +9,9 @@ import {
   childrenCacheLoaded,
   childListeners,
   setChildrenCache,
+  selectedChildId as storedSelectedChildId,
+  selectedChildListeners,
+  setSelectedChildId,
 } from './appCache';
 
 export type Gender = 'male' | 'female';
@@ -135,4 +138,38 @@ export function useChildren() {
   );
 
   return { children, isLoaded, addChild, removeChild, updateChild };
+}
+
+/**
+ * 전역으로 "현재 선택된 아이"를 유지한다.
+ * - localStorage 에 id 만 저장되어 새 세션에서도 복원
+ * - 아직 children 이 로드되지 않았으면 null 반환
+ * - 저장된 id 가 children 에 없거나 비어 있으면 children[0] 으로 폴백 후 전역에 저장
+ */
+export function useSelectedChild() {
+  const { children, isLoaded } = useChildren();
+  const [currentId, setCurrentId] = useState<string | null>(storedSelectedChildId);
+
+  useEffect(() => {
+    const l = (id: string | null) => setCurrentId(id);
+    selectedChildListeners.add(l);
+    return () => { selectedChildListeners.delete(l); };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || children.length === 0) return;
+    const exists = currentId && children.some((c) => c.id === currentId);
+    if (!exists) setSelectedChildId(children[0].id);
+  }, [isLoaded, children, currentId]);
+
+  const selectedChild =
+    children.find((c) => c.id === currentId) ??
+    (isLoaded && children.length > 0 ? children[0] : null);
+
+  return {
+    children,
+    isLoaded,
+    selectedChild,
+    selectChild: (child: Child | null) => setSelectedChildId(child?.id ?? null),
+  };
 }

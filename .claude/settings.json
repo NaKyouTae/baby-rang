@@ -195,7 +195,28 @@
       "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern src/app.module.ts src/auth/auth.service.ts src/cars/cars.service.ts src/cars/dto/car-query.dto.ts src/cars/dto/create-car.dto.ts src/cars/dto/update-car.dto.ts src/chat/chat.controller.ts src/chat/chat.module.ts src/chat/chat.service.ts src/wishlist/my-wishlist.controller.ts src/wishlist/wishlist.controller.ts src/wishlist/wishlist.module.ts src/wishlist/wishlist.service.ts)",
       "Bash(dig @ns1.hosting.co.kr k-dream.kr A +short)",
       "Bash(dig @ns1.hosting.co.kr k-dream.kr ANY +short)",
-      "Bash(dig k-dream.kr SOA +short)"
+      "Bash(dig k-dream.kr SOA +short)",
+      "Bash(pnpm --filter server add dotenv)",
+      "Bash(echo \"===EXIT: $?===\")",
+      "Bash(pnpm --filter app --filter admin add -D eslint-plugin-import)",
+      "Bash(echo \"===app exit: $?===\")",
+      "Bash(echo \"===admin exit: $?===\")",
+      "Bash(pnpm --filter app exec eslint --no-error-on-unmatched-pattern app/src/components/BottomNav.tsx app/src/app/api/auth/send-code/route.ts)",
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/email.service.ts)",
+      "Bash(pnpm --filter app exec eslint --no-error-on-unmatched-pattern app/src/app/api/auth/send-code/route.ts app/src/app/cars/\\\\[id\\\\]/page.tsx app/src/app/layout.tsx app/src/app/page.tsx app/src/components/BottomNav.tsx app/src/components/Header.tsx)",
+      "Bash(pnpm --filter admin exec eslint --no-error-on-unmatched-pattern admin/src/app/\\\\\\(admin\\\\\\)/layout.tsx admin/src/app/\\\\\\(admin\\\\\\)/options/page.tsx admin/src/app/layout.tsx)",
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/app.service.ts server/src/auth/email.service.ts)",
+      "Bash(mkdir -p \"/Users/nakyutae/personal/git/export-used-car/app/src/app/api/quick-phrases/[id]\")",
+      "Bash(pnpm --filter server build)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=진행해줘 pnpm prisma migrate reset --force)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=진행해줘 pnpm prisma migrate dev --name unify_user_model --skip-seed)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=진행해줘 pnpm prisma migrate dev --name unify_user_model)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=진행해줘 pnpm prisma migrate dev --name init --create-only)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=진행해줘 pnpm prisma migrate deploy)",
+      "Bash(awk -F= '/^\\(SMTP_|EMAIL_\\)/ {print $1\"=\\(len:\"length\\($2\\)\"\\)\"}' /Users/nakyutae/personal/git/export-used-car/server/.env)",
+      "Bash(tee /tmp/new_init.sql)",
+      "Bash(tee /tmp/tsc-app.log)",
+      "Bash(echo \"tsc exit: $?\")"
     ],
     "additionalDirectories": [
       "/tmp",
@@ -205,7 +226,8 @@
       "/Users/nakyutae/personal/git/export-used-car/.husky",
       "/Users/nakyutae/personal/git/export-used-car/.claude",
       "/Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests",
-      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests"
+      "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests",
+      "/Users/nakyutae/personal/git/export-used-car/app/src/app/api/quick-phrases"
     ]
   }
 }

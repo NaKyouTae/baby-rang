@@ -36,6 +36,37 @@ export function setChildrenCache(children: ChildData[]) {
   childListeners.forEach((l) => l(children));
 }
 
+// --- Selected Child (persisted) ---
+// 페이지 간 이동 시 어떤 아이가 "현재 선택" 상태인지 기억하기 위한 전역 상태.
+// localStorage 에 id 만 저장하여 새 세션에서도 복원 가능.
+const SELECTED_CHILD_KEY = 'baby-rang:selected-child-id';
+
+function readStoredSelectedChildId(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(SELECTED_CHILD_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export let selectedChildId: string | null = readStoredSelectedChildId();
+export const selectedChildListeners = new Set<(id: string | null) => void>();
+
+export function setSelectedChildId(id: string | null) {
+  if (selectedChildId === id) return;
+  selectedChildId = id;
+  if (typeof window !== 'undefined') {
+    try {
+      if (id) window.localStorage.setItem(SELECTED_CHILD_KEY, id);
+      else window.localStorage.removeItem(SELECTED_CHILD_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  selectedChildListeners.forEach((l) => l(id));
+}
+
 // --- Generic fetch cache ---
 // URL 기반의 단순 메모리 캐시. 같은 URL에 대해 TTL 내 재요청을 방지한다.
 const fetchCache = new Map<string, { data: unknown; ts: number }>();

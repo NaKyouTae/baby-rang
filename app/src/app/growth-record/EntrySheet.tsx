@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FieldDef,
   GrowthRecord,
   GrowthType,
   TYPE_CONFIG,
 } from './types';
-import HorizontalNumberPicker from './HorizontalNumberPicker';
-import DateTimeDragPicker from './DateTimeDragPicker';
 import TimePickerModal from './TimePickerModal';
+import WheelPickerModal from './WheelPickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
 
 function rangeFor(field: FieldDef): { min: number; max: number; step: number; decimals: number } {
@@ -49,12 +48,6 @@ function nowLocalInput(date: string): string {
   return `${date}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
-function nowFullLocalInput(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-}
-
 function parseLocal(s: string) {
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (!m) {
@@ -75,11 +68,36 @@ function fmtLocal(y: number, mo: number, d: number, h: number, mi: number) {
   return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}`;
 }
 
-function formatHourMin(s: string): string {
-  const { h, mi } = parseLocal(s);
-  const period = h < 12 ? '오전' : '오후';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${period} ${h12}:${String(mi).padStart(2, '0')}`;
+function formatDisplayDate(s: string): string {
+  const { y, mo, d, h, mi } = parseLocal(s);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${y}. ${p(mo)}. ${p(d)}. ${p(h)}:${p(mi)}`;
+}
+
+type FieldRow =
+  | { kind: 'single'; field: FieldDef }
+  | { kind: 'pair'; left: FieldDef; right: FieldDef };
+
+function pairFields(fields: FieldDef[]): FieldRow[] {
+  const rows: FieldRow[] = [];
+  let i = 0;
+  while (i < fields.length) {
+    const a = fields[i];
+    const b = fields[i + 1];
+    const isPair =
+      a && b &&
+      a.kind === 'number' && b.kind === 'number' &&
+      a.unit === b.unit &&
+      a.key.startsWith('left') && b.key.startsWith('right');
+    if (isPair) {
+      rows.push({ kind: 'pair', left: a, right: b });
+      i += 2;
+    } else {
+      rows.push({ kind: 'single', field: a });
+      i += 1;
+    }
+  }
+  return rows;
 }
 
 export default function EntrySheet({
@@ -95,7 +113,9 @@ export default function EntrySheet({
   const [startAt, setStartAt] = useState(
     initial ? toLocalInput(initial.startAt) : nowLocalInput(defaultDate),
   );
-  const [endAt, setEndAt] = useState(
+  // endAt 컬럼은 유지하지만 UI 에서 노출하지 않는다.
+  // 편집 시 기존 값을 그대로 전송하기 위해 보관.
+  const [endAt] = useState(
     initial?.endAt ? toLocalInput(initial.endAt) : '',
   );
   const [memo, setMemo] = useState(initial?.memo ?? '');
@@ -110,22 +130,10 @@ export default function EntrySheet({
     });
     return d;
   });
-  const initialUrls: string[] = (() => {
-    const arr = initial?.imageUrls && initial.imageUrls.length > 0
-      ? initial.imageUrls
-      : initial?.imageUrl
-        ? [initial.imageUrl]
-        : [];
-    return arr.slice(0, 5);
-  })();
-  const [keepUrls, setKeepUrls] = useState<string[]>(initialUrls);
-  const [newFiles, setNewFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [showEndModal, setShowEndModal] = useState(false);
-
-  const totalImages = keepUrls.length + newFiles.length;
-  const canAddImage = totalImages < 5;
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [pickerField, setPickerField] = useState<FieldDef | null>(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -133,6 +141,8 @@ export default function EntrySheet({
       document.body.style.overflow = '';
     };
   }, []);
+
+  const fieldRows = useMemo(() => pairFields(cfg.fields), [cfg.fields]);
 
   async function handleSave() {
     if (!startAt) return;
@@ -155,9 +165,7 @@ export default function EntrySheet({
         cleanData[k] = f?.kind === 'number' ? Number(v) : v;
       });
       fd.append('data', JSON.stringify(cleanData));
-      // 다중 이미지: 유지할 기존 url 목록 + 새 파일들
-      fd.append('keepImageUrls', JSON.stringify(keepUrls));
-      newFiles.forEach((f) => fd.append('images', f));
+      fd.append('keepImageUrls', JSON.stringify([]));
 
       const url = initial ? `/api/growth-records/${initial.id}` : '/api/growth-records';
       const method = initial ? 'PATCH' : 'POST';
@@ -188,259 +196,237 @@ export default function EntrySheet({
     }
   }
 
+  function elapsedMinutesFromStart(): number {
+    const start = new Date(startAt).getTime();
+    const now = Date.now();
+    return Math.max(0, Math.round((now - start) / 60000));
+  }
+
+  function fillNow(field: FieldDef) {
+    const mins = elapsedMinutesFromStart();
+    const r = rangeFor(field);
+    const clamped = Math.min(r.max, Math.max(r.min, mins));
+    setData({ ...data, [field.key]: String(clamped) });
+  }
+
+  function formatFieldValue(f: FieldDef, raw: string | undefined): string {
+    if (raw === undefined || raw === '') return '0';
+    const r = rangeFor(f);
+    const n = Number(raw);
+    return r.decimals > 0 ? n.toFixed(r.decimals) : String(n);
+  }
+
+  function formatWheelItem(f: FieldDef, v: number): string {
+    const r = rangeFor(f);
+    const num = r.decimals > 0 ? v.toFixed(r.decimals) : String(v);
+    return f.unit ? `${num}${f.unit}` : num;
+  }
+
+  function renderNumberField(f: FieldDef, opts?: { showNowButton?: boolean }) {
+    const showNow = opts?.showNowButton;
+    return (
+      <div className="flex items-stretch gap-2">
+        <button
+          type="button"
+          onClick={() => setPickerField(f)}
+          className="flex-1 min-w-0 px-3 py-3 rounded-xl border border-gray-200 bg-white text-left text-sm text-gray-900 tabular-nums active:bg-gray-50"
+        >
+          {data[f.key] && data[f.key] !== '' && data[f.key] !== '0' ? (
+            <span className="text-gray-900">{formatFieldValue(f, data[f.key])}</span>
+          ) : (
+            <span className="text-gray-400">0</span>
+          )}
+        </button>
+        {showNow && (
+          <button
+            type="button"
+            onClick={() => fillNow(f)}
+            className="shrink-0 px-3 rounded-xl bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700 active:bg-gray-200 leading-tight"
+            style={{ minWidth: 56 }}
+          >
+            지금<br />완료
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  function renderFieldHeader(f: FieldDef) {
+    return (
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="text-sm font-semibold text-gray-700">{f.label}</span>
+        {f.unit && (
+          <span className="text-xs font-medium text-gray-400">({f.unit})</span>
+        )}
+      </div>
+    );
+  }
+
+  const startParsed = parseLocal(startAt);
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[var(--safe-area-bottom)]">
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{cfg.emoji}</span>
-            <h2 className="text-base font-bold text-gray-900">{cfg.label}</h2>
-          </div>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h2 className="text-lg font-bold text-gray-900">{cfg.label}</h2>
           <button
             onClick={onClose}
             className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400 active:text-gray-600"
             aria-label="닫기"
           >
-            ✕
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-5 space-y-6">
+        <div className="overflow-y-auto px-5 py-2 space-y-5">
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-gray-900">시작 시간</label>
-              {cfg.hasEnd && (
-                endAt ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowEndModal(true)}
-                      className="text-xs font-semibold text-blue-600 active:text-blue-800"
-                    >
-                      ~ {formatHourMin(endAt)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEndAt('')}
-                      className="text-[11px] text-gray-400 active:text-gray-600"
-                      aria-label="완료 시간 지우기"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEndAt(nowFullLocalInput())}
-                      className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 active:bg-blue-100"
-                    >
-                      지금 완료
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEndAt(nowFullLocalInput());
-                        setShowEndModal(true);
-                      }}
-                      className="text-xs font-semibold text-gray-500 active:text-gray-700"
-                    >
-                      + 완료 시간
-                    </button>
-                  </div>
-                )
-              )}
+            <div className="flex items-baseline mb-2">
+              <span className="text-sm font-semibold text-gray-700">측정일시</span>
+              <span className="ml-1 text-sm font-semibold text-red-500">*</span>
             </div>
-            <DateTimeDragPicker value={startAt} onChange={setStartAt} />
+            <button
+              type="button"
+              onClick={() => setShowStartModal(true)}
+              className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white text-left text-sm text-gray-900 tabular-nums active:bg-gray-50"
+            >
+              {formatDisplayDate(startAt)}
+            </button>
           </div>
 
-          {cfg.hasEnd && showEndModal && (() => {
-            const base = endAt || nowFullLocalInput();
-            const { y, mo, d, h, mi } = parseLocal(base);
-            return (
-              <TimePickerModal
-                open={showEndModal}
-                year={y}
-                month={mo}
-                day={d}
-                hour={h}
-                minute={mi}
-                onClose={() => setShowEndModal(false)}
-                onConfirm={(nmo, nd, nh, nm) =>
-                  setEndAt(fmtLocal(y, nmo, nd, nh, nm))
-                }
-              />
-            );
-          })()}
+          {showStartModal && (
+            <TimePickerModal
+              open={showStartModal}
+              year={startParsed.y}
+              month={startParsed.mo}
+              day={startParsed.d}
+              hour={startParsed.h}
+              minute={startParsed.mi}
+              onClose={() => setShowStartModal(false)}
+              onConfirm={(nmo, nd, nh, nm) =>
+                setStartAt(fmtLocal(startParsed.y, nmo, nd, nh, nm))
+              }
+            />
+          )}
 
-          {cfg.fields.map((f) => (
-            <div key={f.key}>
-              <label className="block text-sm font-bold text-gray-900 mb-2">
-                {f.label}
-                {f.unit && (
-                  <span className="ml-1.5 text-xs font-medium text-gray-400">
-                    ({f.unit})
-                  </span>
-                )}
-              </label>
-              {f.kind === 'segmented' && f.options ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {f.options.map((o) => (
-                    <button
-                      key={o.value}
-                      type="button"
-                      onClick={() => setData({ ...data, [f.key]: o.value })}
-                      className={`py-3 rounded-xl text-sm font-medium transition ${
-                        data[f.key] === o.value
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-50 text-gray-600'
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
+          {fieldRows.map((row, idx) => {
+            if (row.kind === 'pair') {
+              const showNow = row.left.unit === '분';
+              return (
+                <div key={`pair-${idx}`} className="grid grid-cols-2 gap-3">
+                  <div>
+                    {renderFieldHeader(row.left)}
+                    {renderNumberField(row.left, { showNowButton: showNow })}
+                  </div>
+                  <div>
+                    {renderFieldHeader(row.right)}
+                    {renderNumberField(row.right, { showNowButton: showNow })}
+                  </div>
                 </div>
-              ) : f.kind === 'number' ? (
-                (() => {
-                  const r = rangeFor(f);
-                  const current = data[f.key] !== undefined && data[f.key] !== ''
-                    ? Number(data[f.key])
-                    : r.min;
-                  return (
-                    <div className="rounded-xl bg-gray-50 p-2">
-                      <HorizontalNumberPicker
-                        value={current}
-                        min={r.min}
-                        max={r.max}
-                        step={r.step}
-                        decimals={r.decimals}
-                        itemWidth={56}
-                        format={(v) =>
-                          r.decimals > 0 ? v.toFixed(r.decimals) : String(v)
-                        }
-                        onChange={(v) =>
-                          setData({ ...data, [f.key]: String(v) })
-                        }
-                      />
-                    </div>
-                  );
-                })()
-              ) : (
-                <input
-                  type="text"
-                  value={data[f.key] ?? ''}
-                  onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                  placeholder={f.placeholder}
-                  className="w-full px-3 py-3 rounded-xl bg-gray-50 text-sm"
-                />
-              )}
-            </div>
-          ))}
+              );
+            }
+            const f = row.field;
+            return (
+              <div key={f.key}>
+                {renderFieldHeader(f)}
+                {f.kind === 'segmented' && f.options ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {f.options.map((o) => (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => setData({ ...data, [f.key]: o.value })}
+                        className={`py-3 rounded-xl text-sm font-medium transition ${
+                          data[f.key] === o.value
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-gray-50 text-gray-600'
+                        }`}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : f.kind === 'number' ? (
+                  renderNumberField(f)
+                ) : (
+                  <input
+                    type="text"
+                    value={data[f.key] ?? ''}
+                    onChange={(e) =>
+                      setData({ ...data, [f.key]: e.target.value })
+                    }
+                    placeholder={f.placeholder}
+                    className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white text-sm"
+                  />
+                )}
+              </div>
+            );
+          })}
 
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">
-              메모
-            </label>
+            <div className="text-sm font-semibold text-gray-700 mb-2">메모</div>
             <textarea
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               rows={3}
-              className="w-full px-3 py-3 rounded-xl bg-gray-50 text-sm resize-none"
-              placeholder="메모를 입력하세요"
+              className="w-full px-3 py-3 rounded-xl border border-gray-200 bg-white text-sm resize-none"
+              placeholder=""
             />
           </div>
-
-          {/* 사진 추가 기능 임시 비활성화
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-bold text-gray-900">사진</label>
-              <span className="text-[11px] text-gray-400">{totalImages}/5</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
-              {keepUrls.map((url) => (
-                <div
-                  key={url}
-                  className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
-                >
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setKeepUrls(keepUrls.filter((u) => u !== url))}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[11px] flex items-center justify-center"
-                    aria-label="이미지 삭제"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              {newFiles.map((file, idx) => {
-                const url = URL.createObjectURL(file);
-                return (
-                  <div
-                    key={`${file.name}-${idx}`}
-                    className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-gray-100"
-                  >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setNewFiles(newFiles.filter((_, i) => i !== idx))
-                      }
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-[11px] flex items-center justify-center"
-                      aria-label="이미지 삭제"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
-              {canAddImage && (
-                <label className="shrink-0 w-20 h-20 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 cursor-pointer active:bg-gray-100">
-                  <span className="text-2xl leading-none">＋</span>
-                  <span className="text-[10px] mt-1">사진 추가</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const picked = Array.from(e.target.files ?? []).filter(
-                        (f) => f.type.startsWith('image/'),
-                      );
-                      if (picked.length === 0) return;
-                      const remaining = 5 - totalImages;
-                      setNewFiles([...newFiles, ...picked.slice(0, remaining)]);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-          */}
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 flex gap-2">
+        <div className="px-5 pt-3 pb-3 flex gap-2">
           {initial && (
             <button
               type="button"
               onClick={handleDelete}
-              className="px-4 py-3 rounded-xl bg-red-50 text-red-600 text-sm font-semibold"
+              className="px-4 py-3.5 rounded-xl bg-red-50 text-red-600 text-sm font-semibold active:bg-red-100"
             >
               삭제
             </button>
           )}
           <button
             type="button"
+            onClick={onClose}
+            className="flex-1 py-3.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+          >
+            취소
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-3 rounded-xl bg-primary-500 text-white text-sm font-semibold disabled:opacity-50"
+            className="flex-1 py-3.5 rounded-xl bg-primary-500 text-white text-sm font-semibold disabled:opacity-50 active:bg-primary-600"
           >
             {saving ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>
+
+      {pickerField && (() => {
+        const r = rangeFor(pickerField);
+        const current =
+          data[pickerField.key] !== undefined && data[pickerField.key] !== ''
+            ? Number(data[pickerField.key])
+            : r.min;
+        return (
+          <WheelPickerModal
+            open={true}
+            title={pickerField.label}
+            value={current}
+            min={r.min}
+            max={r.max}
+            step={r.step}
+            decimals={r.decimals}
+            format={(v) => formatWheelItem(pickerField, v)}
+            onClose={() => setPickerField(null)}
+            onConfirm={(v) => setData({ ...data, [pickerField.key]: String(v) })}
+          />
+        );
+      })()}
 
       <ConfirmModal
         open={deleteConfirmOpen}

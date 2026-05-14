@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useChildren, type Child } from '@/hooks/useChildren';
+import { useSelectedChild } from '@/hooks/useChildren';
 import EmptyChildState from '@/components/EmptyChildState';
 import {
   MENU_TYPES,
@@ -180,8 +180,7 @@ const PAGE_SIZE = 30;
 type DayGroup = { date: string; records: GrowthRecord[] };
 
 export default function GrowthRecordPage() {
-  const { children, isLoaded } = useChildren();
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const [days, setDays] = useState<DayGroup[]>([]);
   const [cursor, setCursor] = useState<string>(todayString());
   const [hasMore, setHasMore] = useState(true);
@@ -207,12 +206,6 @@ export default function GrowthRecordPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  useEffect(() => {
-    if (isLoaded && children.length > 0 && !selectedChild) {
-      setSelectedChild(children[0]);
-    }
-  }, [isLoaded, children, selectedChild]);
 
   const fetchDay = useCallback(
     async (childId: string, d: string): Promise<GrowthRecord[]> => {
@@ -483,7 +476,7 @@ export default function GrowthRecordPage() {
         <ChildSelector
           children={children}
           selected={selectedChild}
-          onSelect={setSelectedChild}
+          onSelect={selectChild}
         />
 
         {/* 카테고리 가로 스크롤 */}

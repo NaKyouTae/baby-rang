@@ -83,8 +83,10 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     color: 'bg-sky-50 text-sky-600',
     hasEnd: true,
     fields: [
-      { key: 'leftMl', label: '왼쪽', kind: 'number', unit: 'ml' },
-      { key: 'rightMl', label: '오른쪽', kind: 'number', unit: 'ml' },
+      { key: 'leftMin', label: '왼쪽', kind: 'number', unit: '분' },
+      { key: 'rightMin', label: '오른쪽', kind: 'number', unit: '분' },
+      { key: 'leftMl', label: '왼쪽 유축량', kind: 'number', unit: 'ml' },
+      { key: 'rightMl', label: '오른쪽 유축량', kind: 'number', unit: 'ml' },
     ],
   },
   SLEEP: {
@@ -250,10 +252,17 @@ export function summarizeRecord(r: GrowthRecord): string {
       break;
     case 'SLEEP':
       break;
-    case 'PUMPING':
-      if (data.leftMl) parts.push(`좌 ${data.leftMl}ml`);
-      if (data.rightMl) parts.push(`우 ${data.rightMl}ml`);
+    case 'PUMPING': {
+      const min: string[] = [];
+      if (data.leftMin) min.push(`좌 ${data.leftMin}분`);
+      if (data.rightMin) min.push(`우 ${data.rightMin}분`);
+      if (min.length) parts.push(min.join(' '));
+      const ml: string[] = [];
+      if (data.leftMl) ml.push(`좌 ${data.leftMl}ml`);
+      if (data.rightMl) ml.push(`우 ${data.rightMl}ml`);
+      if (ml.length) parts.push(ml.join(' '));
       break;
+    }
     case 'MEDICATION':
       if (data.name) parts.push(String(data.name));
       if (data.dose) parts.push(String(data.dose));
