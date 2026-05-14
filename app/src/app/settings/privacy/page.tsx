@@ -188,6 +188,15 @@ export default function SettingsPrivacyPage() {
         </section>
 
         <section>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>사업자명 : 스펙트럼</li>
+            <li>대표자 : 나규태</li>
+            <li>사업자등록번호 : 244-20-02381</li>
+            <li>고객센터 : spectrum.mesh@gmail.com</li>
+          </ul>
+        </section>
+
+        <section>
           <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 4월 8일부터 시행됩니다.</p>
         </section>
       </article>
