@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
+import PageHeader from '@/components/PageHeader';
 import { calcChildAge } from '@/lib/childAge';
 
 // 월령 계산 (KST 기준, 공통 함수 사용)
@@ -40,7 +41,7 @@ const MONTH_TIPS: Record<number, string> = {
   1: '수유 텀이 짧아요. 졸음 신호(눈 비비기·하품·먼 곳 응시)를 놓치지 마세요.',
   2: '낮밤 구분이 시작되는 시기예요. 일관된 취침 루틴을 만들기 좋아요.',
   3: '수면 패턴이 점차 안정돼요. 같은 시간 잠자리에 들이는 연습을 시작해보세요.',
-  4: '4개월 수면 퇴행기예요. 수면 사이클이 성인과 비슷해지며 자주 깰 수 있어요. 4회 낮잠으로 일관된 루틴을 유지하세요.',
+  4: '4개월은 수면 퇴행기예요. 수면 사이클이 성인과 비슷해지며 자주 깰 수 있어요. 4회 낮잠으로 일관된 루틴을 유지해 주세요.',
   5: '뒤집기가 시작되며 자다 깰 수 있어요. 안전한 수면 환경(빈 침대, 단단한 매트리스)을 점검하세요.',
   6: '이유식이 시작되고 밤중 수유를 줄일 수 있는 시기예요. 패턴이 일시적으로 흔들릴 수 있어요.',
   7: '분리불안이 시작돼요. 잠들기 전 충분한 안정감과 일관된 루틴을 주세요.',
@@ -62,9 +63,7 @@ const MONTH_TIPS: Record<number, string> = {
 };
 
 function getMonthTip(months: number, fallback: string): string {
-  // 정확히 일치하는 월령이 있으면 우선 사용
   if (MONTH_TIPS[months]) return MONTH_TIPS[months];
-  // 가장 가까운 작은 월령의 팁 사용 (단, 같은 stage 안에서만)
   for (let m = months - 1; m >= 0; m--) {
     if (MONTH_TIPS[m]) return MONTH_TIPS[m];
   }
@@ -98,22 +97,45 @@ function formatKoreanTime(hhmm: string): string {
   return `${period} ${hh}:${String(m).padStart(2, '0')}`;
 }
 
+function formatHourMinute(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+const NAP_LABELS = ['낮잠 01', '낮잠 02', '낮잠 03', '낮잠 04', '낮잠 05'];
+
+const SCHEDULE_COLORS = {
+  wake: '#FEC851', // yellow04
+  nap: '#3078C9', // primary teal
+  night: '#AF52DE', // purple
+} as const;
+
+const WHITE_NOISE_SOUNDS = [
+  { id: 'wind', label: '사운드 01', name: '고요한 바람', iconSrc: '/icon-sound-wind.svg' },
+  { id: 'wave', label: '사운드 02', name: '잔잔한 파도', iconSrc: '/icon-sound-wave.svg' },
+  { id: 'melody', label: '사운드 03', name: '편안한 선율', iconSrc: '/icon-sound-note.svg' },
+];
+
 export default function SleepGoldenTimeClient() {
   const { children, isLoaded } = useChildren();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [manualMonths, setManualMonths] = useState<number>(6);
+  const [manualMonths, setManualMonths] = useState<number | null>(null);
   const [period, setPeriod] = useState<'AM' | 'PM'>('AM');
   const [hour12, setHour12] = useState<number>(7);
   const [minute, setMinute] = useState<number>(0);
+  const [selectedSound, setSelectedSound] = useState<string>('wind');
 
-  // 아기가 1명이면 자동 선택 (선택 화면 없이)
-  const effectiveChild =
-    selectedChild ?? (children.length === 1 ? children[0] : null);
+  // 등록된 첫 번째 아기를 자동 선택해 별도 선택 화면 없이 바로 상세를 보여줌
+  const effectiveChild = selectedChild ?? children[0] ?? null;
 
-  const ageMonths = effectiveChild
+  const calculatedMonths = effectiveChild
     ? getAgeInMonths(effectiveChild.birthDate)
-    : manualMonths;
+    : 6;
+  const ageMonths = manualMonths ?? calculatedMonths;
   const wakeWindow = useMemo(() => findWindow(ageMonths), [ageMonths]);
+  const stageNumber = wakeWindow.label.replace(/개월$/, '');
 
   const morningWake = useMemo(() => {
     let h = hour12 % 12;
@@ -121,25 +143,22 @@ export default function SleepGoldenTimeClient() {
     return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }, [period, hour12, minute]);
 
-  // 낮잠 스케줄 생성
   const schedule = useMemo(() => {
     const wakeWin = Math.round((wakeWindow.wakeMin + wakeWindow.wakeMax) / 2);
     const napDur = Math.round((wakeWindow.napDurMin + wakeWindow.napDurMax) / 2);
-    const naps: { start: string; end: string; wakeBefore: number }[] = [];
+    const naps: { start: string; end: string; wakeBefore: number; durMin: number }[] = [];
     let cur = morningWake;
     for (let i = 0; i < wakeWindow.napCount; i++) {
       const start = addMinutes(cur, wakeWin);
-      // 마지막 낮잠은 cat nap (짧게)
       const dur = i === wakeWindow.napCount - 1 && wakeWindow.napCount >= 3
         ? Math.max(30, Math.round(napDur / 2))
         : napDur;
       const end = addMinutes(start, dur);
-      naps.push({ start, end, wakeBefore: wakeWin });
+      naps.push({ start, end, wakeBefore: wakeWin, durMin: dur });
       cur = end;
     }
     const bedtime = addMinutes(cur, wakeWin);
 
-    // 24h 타임라인 세그먼트 (0:00 ~ 24:00)
     const segments: { startMin: number; endMin: number; type: 'night' | 'awake' | 'nap' }[] = [];
     const morningMin = toMinutes(morningWake);
     const bedtimeMin = toMinutes(bedtime);
@@ -161,257 +180,305 @@ export default function SleepGoldenTimeClient() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
-      <div className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
-        {children.length > 0 && effectiveChild ? (
+    <>
+      <PageHeader title="수면추천" variant="back" />
+
+      <main className="flex flex-col gap-[24px] px-5 pt-1 pb-4">
+        {/* 아기 정보 카드 — 자동 선택, 다중 등록 시 드롭다운으로 전환 */}
+        {effectiveChild ? (
           <ChildSelector
             children={children}
             selected={effectiveChild}
             onSelect={setSelectedChild}
           />
-        ) : (
-          <div className="relative inline-block">
+        ) : null}
+
+        {/* 월령 선택 + 수면 단계 / 권장 낮잠 (10px 간격으로 묶음) */}
+        <div className="flex flex-col gap-[10px]">
+          {/* 월령 드롭다운 */}
+          <div className="relative">
             <select
-              value={manualMonths}
+              value={ageMonths}
               onChange={(e) => setManualMonths(Number(e.target.value))}
-              className="text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-full pl-4 pr-8 py-1.5 shadow-sm appearance-none"
-              aria-label="개월 수 선택"
+              className="w-full appearance-none bg-white border border-gray-200 rounded-lg pl-4 pr-10 py-3 text-[14px] font-normal text-black focus:outline-none focus:border-primary-500"
+              aria-label="월령 선택"
             >
               {Array.from({ length: 37 }, (_, i) => i).map((m) => (
-                <option key={m} value={m}>
-                  {m}개월
-                </option>
+                <option key={m} value={m}>{m}개월</option>
               ))}
             </select>
             <svg
-              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </div>
-        )}
-      </div>
 
-      <main>
-      {/* 수면 단계 요약 */}
-      <div className="flex items-center justify-between bg-white rounded-2xl p-3.5 shadow-sm mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-2xl">
-            🌙
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-400 leading-none mb-1">수면 단계</p>
-            <p className="text-sm font-bold text-gray-900">{wakeWindow.label}</p>
+          {/* 수면 단계 / 권장 낮잠 */}
+          <div className="grid grid-cols-2 gap-[10px]">
+            <StatCard label="수면 단계" value={stageNumber} unit="개월" />
+            <StatCard label="권장 낮잠" value={String(wakeWindow.napCount)} unit="회" />
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-gray-400 leading-none">권장 낮잠</p>
-          <p className="text-2xl font-extrabold text-primary-600 leading-tight">{wakeWindow.napCount}<span className="text-xs font-bold text-gray-400 ml-0.5">회</span></p>
-        </div>
-      </div>
 
-      {/* 기상 시간 stepper */}
-      <section className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-bold text-gray-900">☀️ 아침 기상 시간</p>
-          <div className="flex bg-gray-100 rounded-full p-0.5">
-            {(['AM', 'PM'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                  period === p ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400'
-                }`}
-              >
-                {p === 'AM' ? '오전' : '오후'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setHour12((h) => (h === 1 ? 12 : h - 1))}
-              className="w-9 h-9 rounded-full bg-gray-50 active:bg-gray-200 text-xl text-gray-500 font-bold flex items-center justify-center"
-            >
-              −
-            </button>
-            <div className="w-14 text-center">
-              <p className="text-3xl font-bold text-gray-900 tabular-nums leading-none">{hour12}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">시</p>
+        {/* 기상 시간 */}
+        <section className="flex flex-col gap-[10px]">
+          <h2 className="text-[14px] font-semibold text-black">기상 시간</h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 flex items-stretch gap-[12px]">
+            <div className="flex flex-col gap-[4px] shrink-0">
+              {(['AM', 'PM'] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPeriod(p)}
+                  className={`w-10 h-6 rounded-lg text-[12px] transition-colors ${
+                    period === p
+                      ? 'bg-primary-500 text-white font-medium'
+                      : 'bg-gray-200 text-gray-500 font-normal'
+                  }`}
+                >
+                  {p === 'AM' ? '오전' : '오후'}
+                </button>
+              ))}
             </div>
-            <button
-              onClick={() => setHour12((h) => (h === 12 ? 1 : h + 1))}
-              className="w-9 h-9 rounded-full bg-gray-50 active:bg-gray-200 text-xl text-gray-500 font-bold flex items-center justify-center"
-            >
-              +
-            </button>
+            <Stepper
+              value={hour12}
+              onMinus={() => setHour12((h) => (h === 1 ? 12 : h - 1))}
+              onPlus={() => setHour12((h) => (h === 12 ? 1 : h + 1))}
+              format={(v) => String(v)}
+            />
+            <Stepper
+              value={minute}
+              onMinus={() => setMinute((m) => (m - 5 + 60) % 60)}
+              onPlus={() => setMinute((m) => (m + 5) % 60)}
+              format={(v) => String(v).padStart(2, '0')}
+            />
           </div>
-          <span className="text-2xl text-gray-200 font-bold">:</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMinute((m) => (m - 5 + 60) % 60)}
-              className="w-9 h-9 rounded-full bg-gray-50 active:bg-gray-200 text-xl text-gray-500 font-bold flex items-center justify-center"
-            >
-              −
-            </button>
-            <div className="w-14 text-center">
-              <p className="text-3xl font-bold text-gray-900 tabular-nums leading-none">{String(minute).padStart(2, '0')}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">분</p>
+        </section>
+
+        {/* 하루 일과 한 눈에 보기 — 차트 영역 + 타임라인 영역 (white bg) */}
+        <section className="flex flex-col gap-[10px]">
+          <h2 className="text-[14px] font-semibold text-black">하루 일과 한 눈에 보기</h2>
+
+          {/* 24h 바 차트 영역 */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex h-[10px] rounded-[100px] overflow-hidden bg-gray-100">
+              {schedule.segments.map((s, i) => {
+                const pct = ((s.endMin - s.startMin) / 1440) * 100;
+                const cls =
+                  s.type === 'night'
+                    ? 'bg-primary-500'
+                    : s.type === 'nap'
+                    ? 'bg-primary-200'
+                    : 'bg-transparent';
+                return <div key={i} className={cls} style={{ width: `${pct}%` }} />;
+              })}
             </div>
-            <button
-              onClick={() => setMinute((m) => (m + 5) % 60)}
-              className="w-9 h-9 rounded-full bg-gray-50 active:bg-gray-200 text-xl text-gray-500 font-bold flex items-center justify-center"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 24시간 타임라인 바 */}
-      <section className="bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 rounded-2xl p-5 mb-4 text-white shadow-lg">
-        <div className="flex items-baseline justify-between mb-3">
-          <div>
-            <p className="text-[10px] uppercase tracking-wider opacity-70">Today&apos;s rhythm</p>
-            <p className="text-base font-bold mt-0.5">하루 한눈에 보기</p>
-          </div>
-          <p className="text-[10px] opacity-70">총 24시간</p>
-        </div>
-        <div className="flex h-4 rounded-full overflow-hidden bg-white/10 ring-1 ring-white/20">
-          {schedule.segments.map((s, i) => {
-            const pct = ((s.endMin - s.startMin) / 1440) * 100;
-            const cls =
-              s.type === 'night'
-                ? 'bg-indigo-950'
-                : s.type === 'nap'
-                ? 'bg-purple-300'
-                : 'bg-amber-200';
-            return <div key={i} className={cls} style={{ width: `${pct}%` }} />;
-          })}
-        </div>
-        <div className="flex justify-between text-[9px] opacity-60 mt-1.5 px-0.5">
-          <span>0</span>
-          <span>6</span>
-          <span>12</span>
-          <span>18</span>
-          <span>24</span>
-        </div>
-        <div className="flex gap-3 mt-3 text-[10px]">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-200" />
-            <span className="opacity-80">활동</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-purple-300" />
-            <span className="opacity-80">낮잠</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-indigo-950 ring-1 ring-white/40" />
-            <span className="opacity-80">밤잠</span>
-          </div>
-        </div>
-      </section>
-
-      {/* 수직 타임라인 */}
-      <section className="bg-white rounded-2xl p-5 shadow-sm mb-4">
-        <p className="text-sm font-bold text-gray-900 mb-4">📅 오늘의 수면 일정</p>
-        <div className="relative">
-          {/* 타임라인 세로선 */}
-          <div className="absolute left-[19px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-amber-300 via-purple-300 to-indigo-400" />
-
-          {/* 기상 */}
-          <div className="flex items-start gap-3 mb-5 relative">
-            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-lg shrink-0 z-10 ring-4 ring-white">
-              ☀️
+            <div className="flex justify-between text-[10px] font-normal text-gray-500 mt-[4px] px-0.5 tabular-nums">
+              <span>0</span>
+              <span>6</span>
+              <span>12</span>
+              <span>18</span>
+              <span>24</span>
             </div>
-            <div className="flex-1 pt-1">
-              <p className="text-[11px] text-amber-600 font-semibold">아침 기상</p>
-              <p className="text-lg font-bold text-gray-900 leading-tight">{formatKoreanTime(morningWake)}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">하루 시작</p>
-            </div>
-          </div>
-
-          {/* 낮잠들 */}
-          {schedule.naps.map((nap, idx) => {
-            const labels = ['첫', '두 번째', '세 번째', '네 번째', '다섯 번째'];
-            const isCatNap = idx === schedule.naps.length - 1 && schedule.naps.length >= 3;
-            const durMin = toMinutes(nap.end) - toMinutes(nap.start);
-            return (
-              <div key={idx} className="flex items-start gap-3 mb-5 relative">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-lg shrink-0 z-10 ring-4 ring-white">
-                  {isCatNap ? '😺' : '💤'}
-                </div>
-                <div className="flex-1 pt-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-[11px] text-purple-600 font-semibold">{labels[idx] ?? `${idx + 1}번째`} 낮잠</p>
-                    {isCatNap && (
-                      <span className="text-[9px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded">CAT NAP</span>
-                    )}
-                  </div>
-                  <p className="text-lg font-bold text-gray-900 leading-tight tabular-nums">
-                    {formatKoreanTime(nap.start)} <span className="text-gray-300 mx-0.5">→</span> {formatKoreanTime(nap.end)}
-                  </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">약 {durMin}분 · 깨어있던 시간 {Math.round(schedule.wakeWin / 60 * 10) / 10}h</p>
-                </div>
+            <div className="flex gap-[12px] mt-[12px] justify-end">
+              <div className="flex items-center gap-[6px]">
+                <span className="w-2 h-2 rounded-[2px] bg-primary-200" />
+                <span className="text-[12px] font-normal text-black">낮잠</span>
               </div>
-            );
-          })}
-
-          {/* 밤잠 (수면추천) */}
-          <div className="flex items-start gap-3 relative">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg shrink-0 z-10 ring-4 ring-white shadow-md">
-              🌙
-            </div>
-            <div className="flex-1 pt-1">
-              <p className="text-[11px] text-indigo-600 font-semibold">밤잠 추천 시간</p>
-              <p className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent leading-tight tabular-nums">
-                {formatKoreanTime(schedule.bedtime)}
-              </p>
-              <p className="text-[11px] text-gray-400 mt-0.5">권장 시간대 {wakeWindow.bedtimeMin} – {wakeWindow.bedtimeMax}</p>
+              <div className="flex items-center gap-[6px]">
+                <span className="w-2 h-2 rounded-[2px] bg-primary-500" />
+                <span className="text-[12px] font-normal text-black">밤잠</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* 월령 팁 */}
-      <section className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4 flex gap-3">
-        <span className="text-xl shrink-0">💡</span>
-        <p className="text-xs text-amber-800 leading-relaxed flex-1">
-          <span className="font-bold">{ageMonths}개월 · </span>
-          {getMonthTip(ageMonths, wakeWindow.tip)}
-        </p>
-      </section>
+          {/* 수면 일정 타임라인 영역 */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="relative">
+              <div className="absolute left-[19px] top-5 bottom-6 w-px bg-gray-100" />
 
-      {/* 수면추천 정보 (접힘 가능) */}
-      <details className="bg-white rounded-2xl shadow-sm overflow-hidden group">
-        <summary className="p-4 cursor-pointer flex items-center justify-between list-none">
-          <span className="text-sm font-bold text-gray-900">수면추천이란?</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-open:rotate-180 transition-transform">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </summary>
-        <div className="px-4 pb-4 -mt-1">
-          <p className="text-xs text-gray-500 leading-relaxed mb-3">
-            멜라토닌이 가장 잘 분비되는 시간대에 잠들면 깊은 수면에 쉽게 들어갈 수 있어요.
-            이 시간을 놓치면 코르티솔(각성 호르몬)이 다시 올라가는 &quot;second wind&quot; 현상으로 잠들기 어려워집니다.
+              {/* 기상 */}
+              <ScheduleRow
+                iconSrc="/icon-sleep-wake.svg"
+                iconAlt="기상"
+                color={SCHEDULE_COLORS.wake}
+                label="기상"
+                time={formatKoreanTime(morningWake)}
+                caption="하루 시작"
+              />
+
+              {/* 낮잠 */}
+              {schedule.naps.map((nap, idx) => {
+                const isLastNap = idx === schedule.naps.length - 1 && schedule.naps.length >= 2;
+                return (
+                  <ScheduleRow
+                    key={idx}
+                    iconSrc={isLastNap ? '/icon-sleep-cat-nap.svg' : '/icon-sleep-nap.svg'}
+                    iconAlt={isLastNap ? '마지막 낮잠' : '낮잠'}
+                    color={SCHEDULE_COLORS.nap}
+                    label={NAP_LABELS[idx] ?? `낮잠 ${String(idx + 1).padStart(2, '0')}`}
+                    time={`${formatKoreanTime(nap.start)} - ${formatKoreanTime(nap.end)}`}
+                    caption={`약 ${nap.durMin}분  |  깨어있던 시간 ${formatHourMinute(nap.wakeBefore)}`}
+                  />
+                );
+              })}
+
+              {/* 밤잠 */}
+              <ScheduleRow
+                iconSrc="/icon-sleep-night.svg"
+                iconAlt="밤잠"
+                color={SCHEDULE_COLORS.night}
+                label="밤잠 추천 시간"
+                time={formatKoreanTime(schedule.bedtime)}
+                caption={`권장 시간대 ${wakeWindow.bedtimeMin} - ${wakeWindow.bedtimeMax}`}
+                isLast
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 월령 수면 TIP */}
+        <section className="bg-[#FFCC00]/5 rounded-lg p-3">
+          <p className="text-[12px] font-semibold text-black mb-[8px]">{ageMonths}개월 수면 TIP</p>
+          <p className="text-[12px] font-normal text-black">
+            {getMonthTip(ageMonths, wakeWindow.tip)}
           </p>
-          <ul className="text-xs text-gray-600 space-y-1.5 leading-relaxed">
-            <li>• 멜라토닌은 해 진 뒤 1–2시간 후부터 분비가 시작돼요</li>
-            <li>• 취침 30분 전부터 조명을 어둡게 하고 차분한 루틴을 시작하세요</li>
-            <li>• 자극적인 놀이·화면 노출은 피해주세요</li>
-          </ul>
-        </div>
-      </details>
+        </section>
+
+        {/* 백색소음 */}
+        <section className="flex flex-col gap-[10px]">
+          <h2 className="text-[14px] font-semibold text-black">백색소음</h2>
+          <div className="grid grid-cols-3 gap-[10px]">
+            {WHITE_NOISE_SOUNDS.map((s) => {
+              const isSelected = selectedSound === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedSound(s.id)}
+                  className={`h-[108px] border rounded-lg p-3 flex flex-col items-center transition-colors ${
+                    isSelected
+                      ? 'border-primary-500 bg-primary-500/10'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  <div className="w-10 h-10 border border-primary-500 rounded-[24px] flex items-center justify-center bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.iconSrc} alt={s.name} width={24} height={24} />
+                  </div>
+                  <p className="mt-[10px] text-[16px] font-medium text-black leading-none">{s.label}</p>
+                  <p className="mt-[6px] text-[12px] font-normal text-gray-500 leading-none">{s.name}</p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </main>
+    </>
+  );
+}
+
+function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div className="bg-gray-100 border border-gray-200 rounded-lg py-[10px] px-[12px] flex flex-col gap-[10px]">
+      <p className="text-[12px] font-normal text-black leading-none">{label}</p>
+      <p className="text-right leading-none">
+        <span className="text-[32px] font-bold text-primary-500 tabular-nums leading-none">{value}</span>
+        <span className="text-[12px] font-normal text-gray-500 ml-1 align-baseline">{unit}</span>
+      </p>
     </div>
   );
 }
+
+function Stepper({
+  value,
+  onMinus,
+  onPlus,
+  format,
+}: {
+  value: number;
+  onMinus: () => void;
+  onPlus: () => void;
+  format: (v: number) => string;
+}) {
+  return (
+    <div className="flex-1 flex items-stretch justify-center gap-[10px]">
+      <button
+        type="button"
+        onClick={onMinus}
+        className="h-full w-9 rounded-lg bg-gray-100 flex items-center justify-center active:bg-gray-200"
+        aria-label="감소"
+      >
+        <MinusIcon />
+      </button>
+      <span className="text-[32px] font-black text-black tabular-nums min-w-9 text-center leading-none self-center">
+        {format(value)}
+      </span>
+      <button
+        type="button"
+        onClick={onPlus}
+        className="h-full w-9 rounded-lg bg-gray-100 flex items-center justify-center active:bg-gray-200"
+        aria-label="증가"
+      >
+        <PlusIcon />
+      </button>
+    </div>
+  );
+}
+
+function MinusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <line x1="3" y1="8" x2="13" y2="8" stroke="#515C66" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <line x1="3" y1="8" x2="13" y2="8" stroke="#515C66" strokeWidth="1.6" strokeLinecap="round" />
+      <line x1="8" y1="3" x2="8" y2="13" stroke="#515C66" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ScheduleRow({
+  iconSrc,
+  iconAlt,
+  color,
+  label,
+  time,
+  caption,
+  isLast,
+}: {
+  iconSrc: string;
+  iconAlt: string;
+  color: string;
+  label: string;
+  time: string;
+  caption: string;
+  isLast?: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-[16px] relative ${isLast ? '' : 'mb-[24px]'}`}>
+      <div
+        className="w-10 h-10 rounded-[24px] flex items-center justify-center bg-white shrink-0 z-10"
+        style={{ border: `1px solid ${color}` }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={iconSrc} alt={iconAlt} width={24} height={24} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-medium leading-none" style={{ color }}>{label}</p>
+        <p className="text-[16px] font-bold text-black tabular-nums leading-none mt-[4px]">{time}</p>
+        <p className="text-[10px] font-normal text-gray-500 leading-none mt-[4px]">{caption}</p>
+      </div>
+    </div>
+  );
+}
+

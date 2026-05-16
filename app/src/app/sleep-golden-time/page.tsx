@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import SleepGoldenTimeClient from './SleepGoldenTimeClient';
 
 export const metadata: Metadata = {
-  title: '수면 골든타임',
+  title: '수면추천',
   description:
     '아기의 월령에 맞는 낮잠 횟수, 활동 시간, 밤잠 추천 시간을 확인하세요. 수면추천으로 건강한 수면 습관을 만들어요.',
   alternates: { canonical: '/sleep-golden-time' },
   openGraph: {
-    title: '수면 골든타임 - 아기 월령별 수면 가이드 | 아기랑',
+    title: '수면추천 - 아기 월령별 수면 가이드 | 아기랑',
     description:
-      '아기의 월령에 맞는 낮잠 횟수, 활동 시간, 밤잠 추천 시간을 확인하세요. 수면 골든타임으로 건강한 수면 습관을 만들어요.',
+      '아기의 월령에 맞는 낮잠 횟수, 활동 시간, 밤잠 추천 시간을 확인하세요. 수면추천으로 건강한 수면 습관을 만들어요.',
     url: 'https://baby-rang.spectrify.kr/sleep-golden-time',
   },
 };

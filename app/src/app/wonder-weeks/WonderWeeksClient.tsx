@@ -1,11 +1,10 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useChildren, type Child } from '@/hooks/useChildren';
+import { useSelectedChild } from '@/hooks/useChildren';
 import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_components/WonderWeeksCalendar';
 import ChildSelector from '@/components/ChildSelector';
-import ChildPickScreen from '@/components/ChildPickScreen';
 import EmptyChildState from '@/components/EmptyChildState';
 import PageHeader from '@/components/PageHeader';
 
@@ -18,28 +17,20 @@ export default function WonderWeeksClient() {
 }
 
 function WonderWeeksContent() {
-  const { children, isLoaded } = useChildren();
+  const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const searchParams = useSearchParams();
   const childIdParam = searchParams.get('childId');
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const calendarRef = useRef<WonderWeeksCalendarHandle | null>(null);
   const topRef = useRef<HTMLDivElement | null>(null);
 
-  // 첫 진입 시 ?childId= 가 있으면 해당 아기 자동 선택, 아기가 1명이면 자동 선택,
-  // 그 외에는 아기 선택 화면을 먼저 보여준다.
+  // ?childId= 로 들어온 경우 해당 아기를 전역 선택으로 동기화한다.
   useEffect(() => {
-    if (!isLoaded || children.length === 0 || selectedChild) return;
-    if (childIdParam) {
-      const matched = children.find((c) => c.id === childIdParam);
-      if (matched) {
-        setSelectedChild(matched); // eslint-disable-line react-hooks/set-state-in-effect -- auto-select child on mount
-        return;
-      }
+    if (!isLoaded || !childIdParam) return;
+    const matched = children.find((c) => c.id === childIdParam);
+    if (matched && matched.id !== selectedChild?.id) {
+      selectChild(matched);
     }
-    if (children.length === 1) {
-      setSelectedChild(children[0]);
-    }
-  }, [isLoaded, children, selectedChild, childIdParam]);
+  }, [isLoaded, children, childIdParam, selectedChild, selectChild]);
 
   if (!isLoaded) return null;
 
@@ -59,17 +50,7 @@ function WonderWeeksContent() {
     );
   }
 
-  if (!selectedChild) {
-    return (
-      <ChildPickScreen
-        emoji="👶"
-        title="우리 아기 원더 윅스"
-        description={<>원더윅스를 확인할 아기를 선택해주세요.</>}
-        children={children}
-        onSelect={setSelectedChild}
-      />
-    );
-  }
+  if (!selectedChild) return null;
 
   return (
     <div className="flex flex-col min-h-dvh bg-white">
@@ -80,7 +61,7 @@ function WonderWeeksContent() {
           <ChildSelector
             children={children}
             selected={selectedChild}
-            onSelect={setSelectedChild}
+            onSelect={selectChild}
           />
         </div>
 

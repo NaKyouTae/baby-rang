@@ -25,6 +25,24 @@ interface MenuItem {
   showDot?: boolean;
 }
 
+const ROLE_ICONS: Record<string, string> = {
+  mom: '/icon-mom.svg',
+  dad: '/icon-dad.svg',
+  grandmother: '/icon-grandmother.svg',
+  grandfather: '/icon-grandfather.svg',
+  caregiver: '/icon-caregiver.svg',
+  other: '/icon-other.svg',
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  mom: '엄마',
+  dad: '아빠',
+  grandmother: '할머니',
+  grandfather: '할아버지',
+  caregiver: '돌보미',
+  other: '기타',
+};
+
 interface MenuSection {
   title: string;
   items: MenuItem[];
@@ -286,15 +304,13 @@ export default function SettingsPage() {
                     className="rounded-[30px] object-cover"
                     style={{ width: 60, height: 60 }}
                   />
-                ) : user?.parentRole === 'mom' ? (
-                  <img src="/icon-mom.svg" alt="엄마" width={32} height={32} />
                 ) : (
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M12 21.3333C13.1333 22.1733 14.5133 22.6667 16 22.6667C17.4867 22.6667 18.8667 22.1733 20 21.3333" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                    <path d="M20.0001 16C20.7365 16 21.3334 15.1046 21.3334 14C21.3334 12.8954 20.7365 12 20.0001 12C19.2637 12 18.6667 12.8954 18.6667 14C18.6667 15.1046 19.2637 16 20.0001 16Z" fill="black"/>
-                    <path d="M12.0001 16C12.7365 16 13.3334 15.1046 13.3334 14C13.3334 12.8954 12.7365 12 12.0001 12C11.2637 12 10.6667 12.8954 10.6667 14C10.6667 15.1046 11.2637 16 12.0001 16Z" fill="black"/>
-                    <path d="M2.93335 13.3333C3.45755 10.7717 4.72264 8.42042 6.57154 6.57152C8.42044 4.72262 10.7717 3.45753 13.3334 2.93333M2.93335 18.6667C3.45755 21.2283 4.72264 23.5796 6.57154 25.4285C8.42044 27.2774 10.7717 28.5425 13.3334 29.0667M29.0667 13.3333C28.5425 10.7717 27.2774 8.42042 25.4285 6.57152C23.5796 4.72262 21.2283 3.45753 18.6667 2.93333M29.0667 18.6667C28.5425 21.2283 27.2774 23.5796 25.4285 25.4285C23.5796 27.2774 21.2283 28.5425 18.6667 29.0667" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+                  <img
+                    src={ROLE_ICONS[user?.parentRole ?? ''] ?? ROLE_ICONS.other}
+                    alt={ROLE_LABELS[user?.parentRole ?? ''] ?? '프로필'}
+                    width={32}
+                    height={32}
+                  />
                 )}
               </div>
               <div className="flex-1 min-w-0">
