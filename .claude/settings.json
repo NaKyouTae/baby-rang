@@ -216,7 +216,13 @@
       "Bash(awk -F= '/^\\(SMTP_|EMAIL_\\)/ {print $1\"=\\(len:\"length\\($2\\)\"\\)\"}' /Users/nakyutae/personal/git/export-used-car/server/.env)",
       "Bash(tee /tmp/new_init.sql)",
       "Bash(tee /tmp/tsc-app.log)",
-      "Bash(echo \"tsc exit: $?\")"
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(git stash *)",
+      "Bash(curl -s -o /dev/null -w \"/: %{http_code}\\\\n\" \"http://localhost:15555/\")",
+      "Bash(curl -s -o /dev/null -w \"/setup?mode=normal: %{http_code}\\\\n\" \"http://localhost:15555/setup?mode=normal\")",
+      "Bash(curl -s -o /dev/null -w \"/play: %{http_code}\\\\n\" \"http://localhost:15555/play\")",
+      "Bash(curl -s -o /dev/null -w \"/finish: %{http_code}\\\\n\" \"http://localhost:15555/finish\")",
+      "Bash(pkill -f \"next-server\")"
     ],
     "additionalDirectories": [
       "/tmp",

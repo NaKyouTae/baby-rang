@@ -230,6 +230,46 @@ export const MENU_TYPES: GrowthType[] = [
   'TEMPERATURE',
 ];
 
+export const RECORD_ICONS: Record<GrowthType, string> = {
+  FORMULA: '/icon-record-formula.svg',
+  BREASTFEEDING: '/icon-record-breastfeeding.svg',
+  PUMPED_FEEDING: '/icon-record-pumped-feeding.svg',
+  PUMPING: '/icon-record-pumping.svg',
+  SLEEP: '/icon-record-sleep.svg',
+  BATH: '/icon-record-bath.svg',
+  MEDICATION: '/icon-record-medication.svg',
+  DIAPER: '/icon-record-diaper.svg',
+  BABY_FOOD: '/icon-record-baby-food.svg',
+  MILK: '/icon-record-milk.svg',
+  WATER: '/icon-record-water.svg',
+  TEMPERATURE: '/icon-record-temperature.svg',
+  HOSPITAL: '/icon-record-etc.svg',
+  SNACK: '/icon-record-etc.svg',
+  PLAY: '/icon-record-etc.svg',
+  TUMMY_TIME: '/icon-record-etc.svg',
+  ETC: '/icon-record-etc.svg',
+};
+
+export const CATEGORY_STYLE: Record<GrowthType, { border: string; bg: string }> = {
+  FORMULA: { border: '#FF5675', bg: 'rgba(255, 86, 117, 0.05)' },
+  BREASTFEEDING: { border: '#FF7C5A', bg: 'rgba(255, 124, 90, 0.05)' },
+  PUMPED_FEEDING: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
+  PUMPING: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  BABY_FOOD: { border: '#6CC68A', bg: 'rgba(108, 198, 138, 0.05)' },
+  SLEEP: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  BATH: { border: '#6A92EA', bg: 'rgba(106, 146, 234, 0.05)' },
+  MEDICATION: { border: '#B67CF0', bg: 'rgba(182, 124, 240, 0.05)' },
+  DIAPER: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
+  TEMPERATURE: { border: '#515C66', bg: 'rgba(81, 92, 102, 0.05)' },
+  MILK: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  WATER: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
+  HOSPITAL: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
+  SNACK: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
+  PLAY: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  TUMMY_TIME: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
+  ETC: { border: '#BBC0C5', bg: 'rgba(187, 192, 197, 0.05)' },
+};
+
 export function summarizeRecord(r: GrowthRecord): string {
   const cfg = TYPE_CONFIG[r.type];
   const data = (r.data ?? {}) as Record<string, unknown>;

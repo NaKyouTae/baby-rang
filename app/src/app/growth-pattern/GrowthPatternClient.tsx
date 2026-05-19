@@ -9,6 +9,8 @@ import {
   GrowthRecord,
   GrowthType,
   TYPE_CONFIG,
+  RECORD_ICONS,
+  CATEGORY_STYLE,
 } from '../growth-record/types';
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -447,22 +449,41 @@ export default function GrowthPatternClient() {
 
       {/* 타입 필터 */}
       <div className="mt-4">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+        <div className="flex gap-[10px] overflow-x-auto scrollbar-hide pb-1">
           {MENU_TYPES.map((t) => {
             const cfg = TYPE_CONFIG[t];
+            const style = CATEGORY_STYLE[t];
             const active = selectedTypes.has(t);
             return (
               <button
                 key={t}
+                type="button"
                 onClick={() => toggleType(t)}
-                className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-base border transition-all ${
-                  active
-                    ? `${cfg.color} border-transparent shadow-sm`
-                    : 'bg-gray-100 text-gray-300 border-gray-100 grayscale opacity-60'
-                }`}
+                className="flex flex-col items-center gap-[4px] shrink-0"
                 aria-label={cfg.label}
+                aria-pressed={active}
               >
-                {cfg.emoji}
+                <div
+                  className={`w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden active:scale-95 transition-all ${
+                    active ? '' : 'grayscale opacity-50'
+                  }`}
+                  style={{
+                    borderColor: active ? style.border : '#E5E7EB',
+                    backgroundColor: active ? style.bg : '#F3F4F6',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={RECORD_ICONS[t]}
+                    alt=""
+                    width={24}
+                    height={24}
+                    aria-hidden="true"
+                  />
+                </div>
+                <span className="text-[10px] font-normal text-gray-500 whitespace-nowrap">
+                  {cfg.label}
+                </span>
               </button>
             );
           })}
