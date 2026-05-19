@@ -3,26 +3,8 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
-import { authorizeWithKakao } from '@/lib/kakao';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
-const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
-
-function startKakaoLogin() {
-  // SDK가 로드/초기화되면 모바일에서 카카오톡 앱 SSO로 진입.
-  // JS 키 미설정 또는 로드 실패 시 서버 OAuth 리다이렉트(웹 로그인)로 폴백.
-  const fallback = () => {
-    window.location.href = `${API_URL}/auth/kakao`;
-  };
-  if (!KAKAO_JS_KEY) {
-    fallback();
-    return;
-  }
-  authorizeWithKakao({
-    jsKey: KAKAO_JS_KEY,
-    redirectUri: `${API_URL}/auth/kakao/callback`,
-  }).catch(fallback);
-}
 
 type LoginPromptContextValue = {
   /** Returns true if already logged in. Otherwise opens the login prompt and returns false. */
@@ -88,7 +70,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  startKakaoLogin();
+                  window.location.href = `${API_URL}/auth/kakao`;
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}

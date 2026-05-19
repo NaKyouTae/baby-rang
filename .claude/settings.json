@@ -222,7 +222,9 @@
       "Bash(curl -s -o /dev/null -w \"/setup?mode=normal: %{http_code}\\\\n\" \"http://localhost:15555/setup?mode=normal\")",
       "Bash(curl -s -o /dev/null -w \"/play: %{http_code}\\\\n\" \"http://localhost:15555/play\")",
       "Bash(curl -s -o /dev/null -w \"/finish: %{http_code}\\\\n\" \"http://localhost:15555/finish\")",
-      "Bash(pkill -f \"next-server\")"
+      "Bash(pkill -f \"next-server\")",
+      "WebFetch(domain:yiyb-blog.vercel.app)",
+      "WebFetch(domain:kakao-tam.tistory.com)"
     ],
     "additionalDirectories": [
       "/tmp",
