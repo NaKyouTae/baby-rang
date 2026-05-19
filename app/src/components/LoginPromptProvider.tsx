@@ -3,8 +3,28 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
+import { authorizeWithKakao } from '@/lib/kakao';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
+const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+
+type KakaoLoginMode = 'talk' | 'account';
+
+function startKakaoLogin(mode: KakaoLoginMode) {
+  // 서버 OAuth 리다이렉트(웹 계정 입력 흐름)로 폴백.
+  const fallback = () => {
+    window.location.href = `${API_URL}/auth/kakao`;
+  };
+  if (!KAKAO_JS_KEY) {
+    fallback();
+    return;
+  }
+  authorizeWithKakao({
+    jsKey: KAKAO_JS_KEY,
+    redirectUri: `${API_URL}/auth/kakao/callback`,
+    throughTalk: mode === 'talk',
+  }).catch(fallback);
+}
 
 type LoginPromptContextValue = {
   /** Returns true if already logged in. Otherwise opens the login prompt and returns false. */
@@ -70,7 +90,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  window.location.href = `${API_URL}/auth/kakao`;
+                  startKakaoLogin('talk');
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}
@@ -78,7 +98,24 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
                   <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.7-.8 3.1-.1.5.2.5.4.4.2-.1 2.7-1.8 3.7-2.5.6.1 1.2.1 1.9.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z" />
                 </svg>
-                카카오로 시작하기
+                카카오톡으로 로그인
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  startKakaoLogin('account');
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
+                style={{
+                  height: 40,
+                  fontSize: 14,
+                  backgroundColor: '#FFFFFF',
+                  color: '#191919',
+                  border: `1px solid ${palette.gray300}`,
+                }}
+              >
+                카카오 계정으로 로그인
               </button>
               <button
                 type="button"
