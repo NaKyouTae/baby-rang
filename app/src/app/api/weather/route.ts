@@ -330,6 +330,7 @@ async function safeJson(res: Response, label: string) {
 }
 
 interface HourlyForecast {
+  fcstDate: string; // YYYYMMDD
   fcstTime: string;
   temperature: string | null;
   sky: string;
@@ -474,29 +475,6 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
     }
   }
 
-  // 시간별 예보: fcstDate+fcstTime으로 그룹핑 → 다음 4시간 추출
-  const hourlyGroups = new Map<string, Record<string, string>>();
-  for (const item of fcstItems) {
-    if (item.fcstValue !== undefined && item.fcstDate && item.fcstTime) {
-      const key = `${item.fcstDate}${item.fcstTime}`;
-      let bucket = hourlyGroups.get(key);
-      if (!bucket) {
-        bucket = {};
-        hourlyGroups.set(key, bucket);
-      }
-      bucket[item.category] = item.fcstValue;
-    }
-  }
-  const hourlyForecast: HourlyForecast[] = Array.from(hourlyGroups.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(0, 4)
-    .map(([key, data]) => ({
-      fcstTime: key.slice(8, 12),
-      temperature: data["T1H"] ?? null,
-      sky: data["SKY"] ?? "",
-      pty: data["PTY"] ?? "0",
-    }));
-
   const airData = await safeJson(airRes, "에어코리아 시도별");
   const airItems: AirItem[] = airData?.response?.body?.items ?? [];
   let air: AirItem = {};
@@ -510,22 +488,51 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
   const sky = fcstMap["SKY"] ?? "";
   const pty = weather["PTY"] ?? fcstMap["PTY"] ?? "0";
 
-  // 단기예보(VilageFcst): D+0~D+2의 TMN/TMX, SKY/PTY 추출
+  // 단기예보(VilageFcst): 시간별 예보(다음 24시간) + D+0~D+2의 TMN/TMX, SKY/PTY 추출
   const vilageData = await safeJson(vilageRes, "기상청 단기예보");
   const vilageItems: WeatherItem[] = vilageData?.response?.body?.items?.item ?? [];
+
+  // 시간별로 그룹핑
+  const hourlyGroups = new Map<string, Record<string, string>>();
   const vilageByDate = new Map<string, { tmn?: string; tmx?: string; sky?: string; pty?: string }>();
   for (const item of vilageItems) {
     if (!item.fcstDate || item.fcstValue === undefined) continue;
-    let bucket = vilageByDate.get(item.fcstDate);
-    if (!bucket) {
-      bucket = {};
-      vilageByDate.set(item.fcstDate, bucket);
+    // 시간별 그룹
+    if (item.fcstTime) {
+      const key = `${item.fcstDate}${item.fcstTime}`;
+      let bucket = hourlyGroups.get(key);
+      if (!bucket) {
+        bucket = {};
+        hourlyGroups.set(key, bucket);
+      }
+      bucket[item.category] = item.fcstValue;
     }
-    if (item.category === "TMN") bucket.tmn = item.fcstValue;
-    else if (item.category === "TMX") bucket.tmx = item.fcstValue;
-    else if (item.category === "SKY" && item.fcstTime === "1200") bucket.sky = item.fcstValue;
-    else if (item.category === "PTY" && item.fcstTime === "1200") bucket.pty = item.fcstValue;
+    // 일별 집계
+    let dayBucket = vilageByDate.get(item.fcstDate);
+    if (!dayBucket) {
+      dayBucket = {};
+      vilageByDate.set(item.fcstDate, dayBucket);
+    }
+    if (item.category === "TMN") dayBucket.tmn = item.fcstValue;
+    else if (item.category === "TMX") dayBucket.tmx = item.fcstValue;
+    else if (item.category === "SKY" && item.fcstTime === "1200") dayBucket.sky = item.fcstValue;
+    else if (item.category === "PTY" && item.fcstTime === "1200") dayBucket.pty = item.fcstValue;
   }
+
+  // 현재 KST 시간 (YYYYMMDDHH00 형식) — 이 시간 이후 24시간 추출
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const nowKey = `${kstNow.getUTCFullYear()}${String(kstNow.getUTCMonth() + 1).padStart(2, "0")}${String(kstNow.getUTCDate()).padStart(2, "0")}${String(kstNow.getUTCHours()).padStart(2, "0")}00`;
+  const hourlyForecast: HourlyForecast[] = Array.from(hourlyGroups.entries())
+    .filter(([key]) => key >= nowKey)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(0, 24)
+    .map(([key, data]) => ({
+      fcstDate: key.slice(0, 8),
+      fcstTime: key.slice(8, 12),
+      temperature: data["TMP"] ?? null,
+      sky: data["SKY"] ?? "",
+      pty: data["PTY"] ?? "0",
+    }));
 
   // 중기육상예보(MidLandFcst): D+3~D+7의 sky 추출
   const midLandData = await safeJson(midLandRes, "기상청 중기육상예보");
