@@ -242,7 +242,9 @@
       "Bash(grep -nE '^####|^#####|^# [^ ]|^##\\\\s*$|^###\\\\s*$' /Users/nakyutae/personal/git/spectrify-blog/src/data/posts.ts)",
       "Bash(awk '/^[[:space:]]*\\\\{/{start=NR} /content: `/{cs=NR} /slug:/{s=$0} NR==1480{print \"post slug context:\"; print s; print \"content started line:\", cs}' /Users/nakyutae/personal/git/spectrify-blog/src/data/posts.ts)",
       "Bash(git -C /Users/nakyutae/personal/git/spectrify-blog status)",
-      "Bash(git -C /Users/nakyutae/personal/git/spectrify-blog diff --stat)"
+      "Bash(git -C /Users/nakyutae/personal/git/spectrify-blog diff --stat)",
+      "Bash(pnpm --filter app exec eslint --no-error-on-unmatched-pattern app/src/app/growth-record/GrowthRecordClient.tsx app/src/app/growth-record/types.ts)",
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/growth-records/growth-records.service.ts)"
     ],
     "additionalDirectories": [
       "/tmp",
