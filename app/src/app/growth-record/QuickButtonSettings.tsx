@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import BottomSheet from '@/components/BottomSheet';
 import { MENU_TYPES, GrowthType, TYPE_CONFIG } from './types';
 
 interface Props {
@@ -12,13 +13,6 @@ interface Props {
 export default function QuickButtonSettings({ current, onClose, onSaved }: Props) {
   const [selected, setSelected] = useState<GrowthType[]>(current);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
 
   function toggle(t: GrowthType) {
     setSelected((prev) =>
@@ -45,9 +39,7 @@ export default function QuickButtonSettings({ current, onClose, onSaved }: Props
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col pb-[var(--safe-area-bottom)]">
+    <BottomSheet open onClose={onClose} maxHeight="85vh" ariaLabel="간편 버튼 설정">
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">간편 버튼 설정</h2>
           <button
@@ -97,7 +89,6 @@ export default function QuickButtonSettings({ current, onClose, onSaved }: Props
             {saving ? '저장 중...' : '저장'}
           </button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }

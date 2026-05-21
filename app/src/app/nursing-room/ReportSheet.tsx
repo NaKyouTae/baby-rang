@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
 import { palette } from "@/lib/colors";
 
 export interface NursingRoomReport {
@@ -264,16 +265,16 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
-      <div
-        className="relative w-full max-w-[430px] bg-white rounded-t-[24px] shadow-2xl flex flex-col"
-        style={{ maxHeight: "calc(100dvh - 172px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <BottomSheet
+      open
+      onClose={onClose}
+      zIndex={100}
+      maxHeight="calc(100dvh - 172px)"
+      ariaLabel="수유실 제보하기"
+    >
         {/* 지도 피커 오버레이 */}
         {pickerOpen && (
-          <div className="absolute inset-0 z-20 bg-white rounded-t-3xl flex flex-col">
+          <div className="absolute inset-0 z-20 bg-white rounded-3xl flex flex-col">
             <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-gray-100">
               <button
                 type="button"
@@ -313,7 +314,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
 
         {/* 주소 검색 오버레이 (모바일 전체화면) */}
         {postcodeOpen && (
-          <div className="absolute inset-0 z-10 bg-white rounded-t-3xl flex flex-col">
+          <div className="absolute inset-0 z-10 bg-white rounded-3xl flex flex-col">
             <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-gray-100">
               <button
                 type="button"
@@ -481,10 +482,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
         </div>
 
         {/* 푸터 */}
-        <div
-          className="px-4 pt-0"
-          style={{ paddingBottom: "calc(var(--safe-area-bottom) + 16px)" }}
-        >
+        <div className="px-4 pt-0 pb-4">
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
@@ -493,8 +491,7 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
             제보하기
           </button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
 

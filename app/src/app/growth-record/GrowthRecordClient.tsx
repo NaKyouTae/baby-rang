@@ -18,6 +18,7 @@ import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
+import PageHeader from '@/components/PageHeader';
 
 const SWIPE_DELETE_WIDTH = 80;
 const SWIPE_OPEN_THRESHOLD = 40;
@@ -585,16 +586,19 @@ export default function GrowthRecordPage() {
 
   if (children.length === 0) {
     return (
-      <EmptyChildState
-        emoji="📒"
-        title="기록"
-        description={
-          <>
-            아기를 등록하면<br />
-            매일의 기록을 남길 수 있어요.
-          </>
-        }
-      />
+      <>
+        <PageHeader title="기록" variant="back" />
+        <EmptyChildState
+          emoji="📒"
+          title="기록"
+          description={
+            <>
+              아기를 등록하면<br />
+              매일의 기록을 남길 수 있어요.
+            </>
+          }
+        />
+      </>
     );
   }
 
@@ -604,6 +608,9 @@ export default function GrowthRecordPage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-white px-6">
+      <div className="-mx-6">
+        <PageHeader title="기록" variant="back" />
+      </div>
       {/* 상단 헤더: 자식 선택 + 카테고리 + 마지막 기록 카드 */}
       <div
         ref={titleBarRef}

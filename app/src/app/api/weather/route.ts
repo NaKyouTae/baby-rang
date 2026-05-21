@@ -10,7 +10,11 @@ export const dynamic = "force-dynamic";
 const API_KEY = process.env.DATA_GO_KR_API_KEY ?? "";
 const KMA_BASE = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst";
 const KMA_FCST_BASE = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst";
+const KMA_VILAGE = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst";
+const KMA_MID_LAND = "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst";
+const KMA_MID_TA = "https://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa";
 const AIR_SIDO = "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty";
+const AIR_DUST_FRCST = "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth";
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
 const STALE_TTL_MS = 30 * 60 * 1000; // 30분 (stale 캐시 최대 보관)
@@ -84,6 +88,124 @@ function latLngToGrid(lat: number, lng: number) {
     nx: Math.floor(ra * Math.sin(theta) + XO + 0.5),
     ny: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5),
   };
+}
+
+// 중기육상예보 regId (광역권 단위)
+function getMidLandRegId(sido: string, lng: number): string {
+  const map: Record<string, string> = {
+    "서울": "11B00000",
+    "인천": "11B00000",
+    "경기": "11B00000",
+    "충북": "11C10000",
+    "대전": "11C20000",
+    "세종": "11C20000",
+    "충남": "11C20000",
+    "전북": "11F10000",
+    "광주": "11F20000",
+    "전남": "11F20000",
+    "대구": "11H10000",
+    "경북": "11H10000",
+    "부산": "11H20000",
+    "울산": "11H20000",
+    "경남": "11H20000",
+    "제주": "11G00000",
+  };
+  if (sido === "강원") {
+    return lng > 128.5 ? "11D20000" : "11D10000"; // 영동 / 영서
+  }
+  return map[sido] ?? "11B00000";
+}
+
+// 중기기온예보 regId (대표 도시 단위)
+function getMidTaRegId(sido: string, lng: number): string {
+  const map: Record<string, string> = {
+    "서울": "11B10101",
+    "인천": "11B20201",
+    "경기": "11B20601", // 수원
+    "충북": "11C10301", // 청주
+    "대전": "11C20401",
+    "세종": "11C20404",
+    "충남": "11C20104", // 천안
+    "전북": "11F10201", // 전주
+    "광주": "11F20501",
+    "전남": "11F20401", // 여수
+    "대구": "11H10701",
+    "경북": "11H10501", // 안동
+    "부산": "11H20201",
+    "울산": "11H20101",
+    "경남": "11H20301", // 창원
+    "제주": "11G00201",
+  };
+  if (sido === "강원") {
+    return lng > 128.5 ? "11D20501" : "11D10301"; // 강릉 / 춘천
+  }
+  return map[sido] ?? "11B10101";
+}
+
+// 대기질 예보 informGrade 안에서 사용되는 권역명
+function getDustForecastRegion(sido: string, lat: number, lng: number): string {
+  if (sido === "경기") return lat >= 37.5 ? "경기북부" : "경기남부";
+  if (sido === "강원") return lng > 128.5 ? "영동" : "영서";
+  return sido;
+}
+
+// 중기예보 tmFc 계산 (06시/18시 발표, 약간의 버퍼)
+function getMidFcstTmFc(): string {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const hour = kst.getUTCHours();
+  const minute = kst.getUTCMinutes();
+  const useDate = new Date(kst);
+  let useHour = 600;
+  if (hour < 6 || (hour === 6 && minute < 30)) {
+    useDate.setUTCDate(useDate.getUTCDate() - 1);
+    useHour = 1800;
+  } else if (hour < 18 || (hour === 18 && minute < 30)) {
+    useHour = 600;
+  } else {
+    useHour = 1800;
+  }
+  const y = useDate.getUTCFullYear();
+  const m = String(useDate.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(useDate.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${d}${useHour === 600 ? "0600" : "1800"}`;
+}
+
+// 단기예보 base_time 계산 (02, 05, 08, 11, 14, 17, 20, 23 발표, 10분 이후 제공)
+function getVilageFcstBaseDateTime(): { base_date: string; base_time: string } {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const hour = kst.getUTCHours();
+  const minute = kst.getUTCMinutes();
+  const baseHours = [2, 5, 8, 11, 14, 17, 20, 23];
+  let baseHour = -1;
+  for (let i = baseHours.length - 1; i >= 0; i--) {
+    const bh = baseHours[i];
+    if (hour > bh || (hour === bh && minute >= 15)) {
+      baseHour = bh;
+      break;
+    }
+  }
+  const useDate = new Date(kst);
+  if (baseHour === -1) {
+    useDate.setUTCDate(useDate.getUTCDate() - 1);
+    baseHour = 23;
+  }
+  const y = useDate.getUTCFullYear();
+  const m = String(useDate.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(useDate.getUTCDate()).padStart(2, "0");
+  return {
+    base_date: `${y}${m}${d}`,
+    base_time: `${String(baseHour).padStart(2, "0")}00`,
+  };
+}
+
+function addDaysYmd(yyyymmdd: string, days: number): string {
+  const y = Number(yyyymmdd.slice(0, 4));
+  const m = Number(yyyymmdd.slice(4, 6)) - 1;
+  const d = Number(yyyymmdd.slice(6, 8));
+  const dt = new Date(Date.UTC(y, m, d + days));
+  return `${dt.getUTCFullYear()}${String(dt.getUTCMonth() + 1).padStart(2, "0")}${String(dt.getUTCDate()).padStart(2, "0")}`;
 }
 
 // 위경도 → 시도명 매핑 (대략적인 경계 기반)
@@ -178,6 +300,8 @@ interface WeatherItem {
   category: string;
   obsrValue?: string;
   fcstValue?: string;
+  fcstDate?: string;
+  fcstTime?: string;
 }
 
 interface AirItem {
@@ -205,6 +329,24 @@ async function safeJson(res: Response, label: string) {
   }
 }
 
+interface HourlyForecast {
+  fcstTime: string;
+  temperature: string | null;
+  sky: string;
+  pty: string;
+}
+
+interface DailyForecast {
+  date: string; // YYYYMMDD
+  minTemp: string | null;
+  maxTemp: string | null;
+  // sky: "맑음" | "구름많음" | "흐림" | "비" | "비/눈" | "눈" 등
+  sky: string | null;
+  // dust: "좋음" | "보통" | "나쁨" | "매우나쁨" (에어코리아 환경부 기준 예보; D+0~D+2만 제공)
+  pm10Forecast: string | null;
+  pm25Forecast: string | null;
+}
+
 interface WeatherResult {
   weather: {
     temperature: string | null;
@@ -224,24 +366,93 @@ interface WeatherResult {
     stationName: string;
     dataTime: string | null;
   };
+  hourlyForecast: HourlyForecast[];
+  dailyForecast: DailyForecast[];
   sido: string;
 }
 
-async function fetchWeatherData(
-  nx: number, ny: number,
-  base_date: string, base_time: string,
-  fcst: { base_date: string; base_time: string },
-  sidoName: string,
-): Promise<WeatherResult | null> {
-  const [weatherRes, fcstRes, airRes] = await Promise.all([
+interface FetchCtx {
+  nx: number;
+  ny: number;
+  base_date: string;
+  base_time: string;
+  fcst: { base_date: string; base_time: string };
+  vilage: { base_date: string; base_time: string };
+  midFcTime: string;
+  sidoName: string;
+  midLandRegId: string;
+  midTaRegId: string;
+  dustRegion: string;
+  searchDate: string;
+}
+
+interface DustForecastItem {
+  informCode?: string;
+  informData?: string;
+  informGrade?: string;
+}
+
+function parseInformGradeForRegion(informGrade: string | undefined, region: string): string | null {
+  if (!informGrade) return null;
+  const entries = informGrade.split(",").map((s) => s.trim());
+  for (const entry of entries) {
+    const idx = entry.indexOf(":");
+    if (idx === -1) continue;
+    const reg = entry.slice(0, idx).trim();
+    const grade = entry.slice(idx + 1).trim();
+    if (reg === region) return grade;
+  }
+  return null;
+}
+
+// 중기예보 sky 텍스트("구름많고 비" 등)를 표준 라벨로 정규화
+function normalizeMidSkyLabel(s: string | undefined | null): string | null {
+  if (!s) return null;
+  if (s.includes("비/눈")) return "비/눈";
+  if (s.includes("눈") && !s.includes("비")) return "눈";
+  if (s.includes("비") || s.includes("소나기")) return "비";
+  if (s.includes("흐림") || s.includes("흐리고")) return "흐림";
+  if (s.includes("구름")) return "구름많음";
+  if (s.includes("맑음")) return "맑음";
+  return s;
+}
+
+// SKY(1/3/4) + PTY(0~7) → 표준 sky 라벨
+function skyPtyLabel(sky: string | undefined, pty: string | undefined): string | null {
+  const p = Number(pty);
+  if (p === 1 || p === 5) return "비";
+  if (p === 2 || p === 6) return "비/눈";
+  if (p === 3 || p === 7) return "눈";
+  const s = Number(sky);
+  if (s === 1) return "맑음";
+  if (s === 3) return "구름많음";
+  if (s === 4) return "흐림";
+  return null;
+}
+
+async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
+  const { nx, ny, base_date, base_time, fcst, vilage, midFcTime, sidoName, midLandRegId, midTaRegId, dustRegion, searchDate } = ctx;
+  const [weatherRes, fcstRes, airRes, vilageRes, midLandRes, midTaRes, dustRes] = await Promise.all([
     fetch(
       `${KMA_BASE}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`,
     ),
     fetch(
-      `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=60&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
+      `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=100&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
     ),
     fetch(
       `${AIR_SIDO}?serviceKey=${API_KEY}&returnType=json&sidoName=${encodeURIComponent(sidoName)}&ver=1.3&numOfRows=100&pageNo=1`,
+    ),
+    fetch(
+      `${KMA_VILAGE}?serviceKey=${API_KEY}&numOfRows=1000&pageNo=1&dataType=JSON&base_date=${vilage.base_date}&base_time=${vilage.base_time}&nx=${nx}&ny=${ny}`,
+    ),
+    fetch(
+      `${KMA_MID_LAND}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&regId=${midLandRegId}&tmFc=${midFcTime}`,
+    ),
+    fetch(
+      `${KMA_MID_TA}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&regId=${midTaRegId}&tmFc=${midFcTime}`,
+    ),
+    fetch(
+      `${AIR_DUST_FRCST}?serviceKey=${API_KEY}&returnType=json&searchDate=${searchDate}&numOfRows=100&pageNo=1`,
     ),
   ]);
 
@@ -263,6 +474,29 @@ async function fetchWeatherData(
     }
   }
 
+  // 시간별 예보: fcstDate+fcstTime으로 그룹핑 → 다음 4시간 추출
+  const hourlyGroups = new Map<string, Record<string, string>>();
+  for (const item of fcstItems) {
+    if (item.fcstValue !== undefined && item.fcstDate && item.fcstTime) {
+      const key = `${item.fcstDate}${item.fcstTime}`;
+      let bucket = hourlyGroups.get(key);
+      if (!bucket) {
+        bucket = {};
+        hourlyGroups.set(key, bucket);
+      }
+      bucket[item.category] = item.fcstValue;
+    }
+  }
+  const hourlyForecast: HourlyForecast[] = Array.from(hourlyGroups.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(0, 4)
+    .map(([key, data]) => ({
+      fcstTime: key.slice(8, 12),
+      temperature: data["T1H"] ?? null,
+      sky: data["SKY"] ?? "",
+      pty: data["PTY"] ?? "0",
+    }));
+
   const airData = await safeJson(airRes, "에어코리아 시도별");
   const airItems: AirItem[] = airData?.response?.body?.items ?? [];
   let air: AirItem = {};
@@ -275,6 +509,100 @@ async function fetchWeatherData(
 
   const sky = fcstMap["SKY"] ?? "";
   const pty = weather["PTY"] ?? fcstMap["PTY"] ?? "0";
+
+  // 단기예보(VilageFcst): D+0~D+2의 TMN/TMX, SKY/PTY 추출
+  const vilageData = await safeJson(vilageRes, "기상청 단기예보");
+  const vilageItems: WeatherItem[] = vilageData?.response?.body?.items?.item ?? [];
+  const vilageByDate = new Map<string, { tmn?: string; tmx?: string; sky?: string; pty?: string }>();
+  for (const item of vilageItems) {
+    if (!item.fcstDate || item.fcstValue === undefined) continue;
+    let bucket = vilageByDate.get(item.fcstDate);
+    if (!bucket) {
+      bucket = {};
+      vilageByDate.set(item.fcstDate, bucket);
+    }
+    if (item.category === "TMN") bucket.tmn = item.fcstValue;
+    else if (item.category === "TMX") bucket.tmx = item.fcstValue;
+    else if (item.category === "SKY" && item.fcstTime === "1200") bucket.sky = item.fcstValue;
+    else if (item.category === "PTY" && item.fcstTime === "1200") bucket.pty = item.fcstValue;
+  }
+
+  // 중기육상예보(MidLandFcst): D+3~D+7의 sky 추출
+  const midLandData = await safeJson(midLandRes, "기상청 중기육상예보");
+  const midLandRow = midLandData?.response?.body?.items?.item?.[0] ?? {};
+
+  // 중기기온예보(MidTa): D+3~D+7의 min/max temp 추출
+  const midTaData = await safeJson(midTaRes, "기상청 중기기온예보");
+  const midTaRow = midTaData?.response?.body?.items?.item?.[0] ?? {};
+
+  // 대기질 예보(MinuDustFrcstDspth): D+0~D+2의 PM10/PM2.5 등급 추출
+  const dustData = await safeJson(dustRes, "에어코리아 대기질 예보");
+  const dustItems: DustForecastItem[] = dustData?.response?.body?.items ?? [];
+  const dustByDate = new Map<string, { pm10?: string; pm25?: string }>();
+  for (const item of dustItems) {
+    if (!item.informData) continue;
+    const dateKey = item.informData.replaceAll("-", "");
+    const grade = parseInformGradeForRegion(item.informGrade, dustRegion);
+    if (!grade) continue;
+    let bucket = dustByDate.get(dateKey);
+    if (!bucket) {
+      bucket = {};
+      dustByDate.set(dateKey, bucket);
+    }
+    // informCode: "PM10" 또는 "PM25"
+    if (item.informCode === "PM10") bucket.pm10 = grade;
+    else if (item.informCode === "PM25") bucket.pm25 = grade;
+  }
+
+  // 일별 예보 D+0 ~ D+6 구성
+  const dailyForecast: DailyForecast[] = [];
+  const todayYmd = searchDate.replaceAll("-", ""); // YYYYMMDD
+  for (let d = 0; d <= 6; d++) {
+    const date = addDaysYmd(todayYmd, d);
+    let minTemp: string | null = null;
+    let maxTemp: string | null = null;
+    let dailySky: string | null = null;
+
+    if (d <= 2) {
+      // 단기예보에서 추출
+      const bucket = vilageByDate.get(date);
+      if (bucket) {
+        minTemp = bucket.tmn ?? null;
+        maxTemp = bucket.tmx ?? null;
+        dailySky = skyPtyLabel(bucket.sky, bucket.pty);
+      }
+    } else {
+      // 중기예보에서 추출 (D+3~D+7 → wf3*~wf7* / taMin3~taMax7)
+      const taRow = midTaRow as Record<string, unknown>;
+      const landRow = midLandRow as Record<string, unknown>;
+      const rawMin = taRow[`taMin${d}`];
+      const rawMax = taRow[`taMax${d}`];
+      const rawSkyAm = landRow[`wf${d}Am`];
+      const rawSkyPm = landRow[`wf${d}Pm`];
+      minTemp = rawMin != null ? String(rawMin) : null;
+      maxTemp = rawMax != null ? String(rawMax) : null;
+      dailySky = normalizeMidSkyLabel(
+        (typeof rawSkyAm === "string" ? rawSkyAm : null) ??
+          (typeof rawSkyPm === "string" ? rawSkyPm : null),
+      );
+    }
+
+    // D+0(오늘)의 기온이 단기예보에서 빠졌으면 실황 값으로 보강
+    if (d === 0 && minTemp == null && weather["T1H"]) {
+      // 실황엔 일최저/일최고가 없지만, 최소한 현재 기온이라도 보여줄지 결정
+      // → null 유지 (정직성). 클라이언트에서 "-" 표시.
+    }
+
+    const dust = dustByDate.get(date);
+    dailyForecast.push({
+      date,
+      minTemp,
+      maxTemp,
+      sky: dailySky,
+      pm10Forecast: dust?.pm10 ?? null,
+      pm25Forecast: dust?.pm25 ?? null,
+    });
+  }
 
   return {
     weather: {
@@ -295,6 +623,8 @@ async function fetchWeatherData(
       stationName: air.stationName ?? "",
       dataTime: air.dataTime ?? null,
     },
+    hourlyForecast,
+    dailyForecast,
     sido: sidoName,
   };
 }
@@ -315,10 +645,28 @@ export async function GET(req: Request) {
   const { nx, ny } = latLngToGrid(lat, lng);
   const { base_date, base_time } = getBaseDateTime();
   const fcst = getFcstBaseDateTime();
+  const vilage = getVilageFcstBaseDateTime();
+  const midFcTime = getMidFcstTmFc();
   const sidoName = getSidoName(lat, lng);
+  const midLandRegId = getMidLandRegId(sidoName, lng);
+  const midTaRegId = getMidTaRegId(sidoName, lng);
+  const dustRegion = getDustForecastRegion(sidoName, lat, lng);
+  // 오늘 날짜 (KST 기준 YYYY-MM-DD)
+  const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const searchDate = `${kstNow.getUTCFullYear()}-${String(kstNow.getUTCMonth() + 1).padStart(2, "0")}-${String(kstNow.getUTCDate()).padStart(2, "0")}`;
 
-  // 격자 단위로 캐시 (같은 격자 = 같은 날씨)
-  const cacheKey = `${nx},${ny},${base_date},${base_time},${fcst.base_date},${fcst.base_time},${sidoName}`;
+  const ctx: FetchCtx = {
+    nx, ny, base_date, base_time, fcst, vilage, midFcTime,
+    sidoName, midLandRegId, midTaRegId, dustRegion, searchDate,
+  };
+
+  // 격자 + 권역 + 발표시각 단위로 캐시
+  const cacheKey = [
+    nx, ny, base_date, base_time,
+    fcst.base_date, fcst.base_time,
+    vilage.base_date, vilage.base_time,
+    midFcTime, sidoName, dustRegion, searchDate,
+  ].join(",");
 
   // 1) fresh 캐시가 있으면 즉시 반환
   const fresh = getFreshCache(cacheKey);
@@ -336,7 +684,7 @@ export async function GET(req: Request) {
   if (stale) {
     if (!refreshing.has(cacheKey)) {
       refreshing.add(cacheKey);
-      fetchWeatherData(nx, ny, base_date, base_time, fcst, sidoName)
+      fetchWeatherData(ctx)
         .then((result) => { if (result) setCache(cacheKey, result); })
         .catch(() => {})
         .finally(() => refreshing.delete(cacheKey));
@@ -351,7 +699,7 @@ export async function GET(req: Request) {
 
   // 3) 캐시 없음 — 느리더라도 무조건 대기해서 데이터 반환
   try {
-    const result = await fetchWeatherData(nx, ny, base_date, base_time, fcst, sidoName);
+    const result = await fetchWeatherData(ctx);
     if (result) {
       setCache(cacheKey, result);
       return NextResponse.json(result, {

@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
+import { palette } from "@/lib/colors";
+import {
+  GRADE_COLOR,
+  gradeBg,
+  gradeColor,
+  gradeLabel,
+  whoGradePm10,
+  whoGradePm25,
+} from "@/lib/airQualityGrade";
 
 interface WeatherData {
   temperature: string | null;
@@ -24,30 +34,40 @@ interface AirData {
   dataTime: string | null;
 }
 
+interface HourlyForecast {
+  fcstTime: string;
+  temperature: string | null;
+  sky: string;
+  pty: string;
+}
+
+interface DailyForecast {
+  date: string; // YYYYMMDD
+  minTemp: string | null;
+  maxTemp: string | null;
+  sky: string | null;
+  pm10Forecast: string | null;
+  pm25Forecast: string | null;
+}
+
 type LocStatus = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
-const GRADE_LABEL: Record<string, string> = { "1": "좋음", "2": "보통", "3": "나쁨", "4": "매우나쁨" };
-const GRADE_COLOR: Record<string, string> = {
-  "1": "#3078C9",
-  "2": "#339AF0",
-  "3": "#FF922B",
-  "4": "#FF3B30",
-};
-const GRADE_BG: Record<string, string> = {
-  "1": "#E6F7F9",
-  "2": "#EDF5FF",
-  "3": "#FFF4E6",
-  "4": "#FFEFEE",
+const LABEL_TO_GRADE: Record<string, string> = {
+  "좋음": "1",
+  "보통": "2",
+  "나쁨": "3",
+  "매우나쁨": "4",
 };
 
-function gradeLabel(grade: string | null) {
-  return grade ? GRADE_LABEL[grade] ?? "-" : "-";
+function labelToGrade(label: string | null): string | null {
+  if (!label) return null;
+  return LABEL_TO_GRADE[label] ?? null;
 }
-function gradeColor(grade: string | null) {
-  return grade ? GRADE_COLOR[grade] ?? "#808991" : "#808991";
-}
-function gradeBg(grade: string | null) {
-  return grade ? GRADE_BG[grade] ?? "#F7F8F9" : "#F7F8F9";
+
+function formatDate(yyyymmdd: string): string {
+  const m = Number(yyyymmdd.slice(4, 6));
+  const d = Number(yyyymmdd.slice(6, 8));
+  return `${m}월 ${d}일`;
 }
 
 function getSkyLabel(sky: string, pty: string) {
@@ -73,18 +93,19 @@ function getSkyIcon(sky: string, pty: string): string {
   return "/sun.svg";
 }
 
-function getOutdoorAdvice(pm10Grade: string | null, pm25Grade: string | null) {
-  const worst = Math.max(Number(pm10Grade ?? 1), Number(pm25Grade ?? 1));
-  if (worst <= 1) return { text: "외출하기 좋은 날이에요!", color: "#3078C9" };
-  if (worst === 2) return { text: "외출 가능하지만 민감한 아기는 주의하세요.", color: "#339AF0" };
-  if (worst === 3) return { text: "외출을 자제하고, 외출 시 마스크를 착용하세요.", color: "#FF922B" };
-  return { text: "외출을 삼가고 실내 활동을 권장합니다.", color: "#FF3B30" };
+function formatHour(fcstTime: string): string {
+  return `${Number(fcstTime.slice(0, 2))}시`;
 }
 
+const HOUR_GRID = "grid-cols-[56px_repeat(4,1fr)]";
+
 export default function AirQualityClient() {
+  const router = useRouter();
   const [locStatus, setLocStatus] = useState<LocStatus>("idle");
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [air, setAir] = useState<AirData | null>(null);
+  const [hourly, setHourly] = useState<HourlyForecast[]>([]);
+  const [daily, setDaily] = useState<DailyForecast[]>([]);
   const [loading, setLoading] = useState(false);
   const [guideModal, setGuideModal] = useState(false);
 
@@ -112,6 +133,8 @@ export default function AirQualityClient() {
       const data = await res.json();
       setWeather(data.weather);
       setAir(data.air);
+      setHourly(data.hourlyForecast ?? []);
+      setDaily(data.dailyForecast ?? []);
     } catch {
       // silently fail
     } finally {
@@ -132,20 +155,41 @@ export default function AirQualityClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const advice = getOutdoorAdvice(air?.pm10Grade ?? null, air?.pm25Grade ?? null);
+  const pm10WhoGrade = whoGradePm10(air?.pm10 ?? null);
+  const pm25WhoGrade = whoGradePm25(air?.pm25 ?? null);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-gray-100">
+    <div className="flex flex-col min-h-dvh bg-white">
+      <header
+        className="flex items-center justify-center relative px-5 py-4"
+        style={{ paddingTop: "calc(var(--safe-area-top) + 16px)" }}
+      >
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="뒤로가기"
+          className="absolute left-4 flex h-9 w-9 items-center justify-center"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={palette.black}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <h1 className="text-[16px] font-medium text-black">미세먼지</h1>
+      </header>
+
       <main
         className="flex-1 px-4"
-        style={{
-          paddingTop: "calc(var(--safe-area-top) + 20px)",
-          paddingBottom: "var(--bottom-nav-space)",
-        }}
+        style={{ paddingBottom: "var(--bottom-nav-space)" }}
       >
-        {/* 헤더 */}
-        <h1 className="text-[20px] font-bold text-app-black mb-4 px-2">미세먼지</h1>
-
         {locStatus === "denied" && (
           <div className="bg-white rounded-2xl p-6 text-center">
             <p className="text-[15px] text-gray-600 mb-4">
@@ -172,105 +216,216 @@ export default function AirQualityClient() {
         )}
 
         {weather && air && !loading && (
-          <div className="flex flex-col gap-4">
-            {/* 날씨 카드 */}
+          <div className="flex flex-col gap-3">
+            {/* 실시간 대기질 */}
             <section className="bg-white rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[16px] font-bold text-app-black">현재 날씨</h2>
-                {air.stationName && (
-                  <span className="text-[12px] text-gray-500">{air.stationName} 측정소</span>
+              <div className="flex items-start justify-between mb-3 gap-3">
+                <h2 className="text-[15px] font-bold text-app-black shrink-0">실시간 대기질</h2>
+                {(air.stationName || air.dataTime) && (
+                  <span className="text-[11px] text-gray-500 text-right leading-tight">
+                    {air.stationName && <>{air.stationName} 측정소</>}
+                    {air.dataTime && (
+                      <>
+                        {" "}
+                        <span className="text-gray-400">{air.dataTime}</span>
+                      </>
+                    )}
+                  </span>
                 )}
               </div>
-              <div className="flex items-center gap-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={getSkyIcon(weather.sky, weather.pty)} alt="" width={48} height={48} />
-                <div>
-                  <p className="text-[32px] font-bold text-app-black leading-tight">
-                    {weather.temperature ?? "-"}°
-                  </p>
-                  <p className="text-[14px] text-gray-500 mt-1">
-                    {getSkyLabel(weather.sky, weather.pty)}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-3">
-                <InfoChip label="습도" value={weather.humidity ? `${weather.humidity}%` : "-"} />
-                <InfoChip label="풍속" value={weather.windSpeed ? `${weather.windSpeed}m/s` : "-"} />
-                <InfoChip
-                  label="강수"
-                  value={
-                    weather.rainfall && weather.rainfall !== "0"
-                      ? `${weather.rainfall}mm`
-                      : "없음"
-                  }
-                />
-              </div>
-            </section>
-
-            {/* 외출 가이드 */}
-            <section
-              className="rounded-2xl p-4 flex items-center gap-3"
-              style={{ backgroundColor: advice.color + "10" }}
-            >
-              <span className="text-[24px]">👶</span>
-              <p className="text-[14px] font-semibold" style={{ color: advice.color }}>
-                {advice.text}
-              </p>
-            </section>
-
-            {/* 미세먼지 카드 */}
-            <section className="bg-white rounded-2xl p-5">
-              <h2 className="text-[16px] font-bold text-app-black mb-4">대기질</h2>
               <div className="grid grid-cols-2 gap-3">
                 <DustCard
                   label="미세먼지"
                   sub="PM10"
                   value={air.pm10}
                   unit="㎍/㎥"
-                  grade={air.pm10Grade}
+                  grade={pm10WhoGrade}
                 />
                 <DustCard
                   label="초미세먼지"
                   sub="PM2.5"
                   value={air.pm25}
                   unit="㎍/㎥"
-                  grade={air.pm25Grade}
+                  grade={pm25WhoGrade}
                 />
               </div>
-              {air.khaiValue && (
-                <div className="mt-3 flex items-center justify-between px-1">
-                  <span className="text-[13px] text-gray-500">통합대기환경지수</span>
-                  <span
-                    className="text-[13px] font-bold"
-                    style={{ color: gradeColor(air.khaiGrade) }}
-                  >
-                    {air.khaiValue} ({gradeLabel(air.khaiGrade)})
-                  </span>
-                </div>
-              )}
             </section>
 
-            {/* 기준 안내 */}
-            <section className="bg-white rounded-2xl p-5">
-              <h2 className="text-[16px] font-bold text-app-black mb-3">대기질 기준</h2>
-              <div className="space-y-2">
-                <GradeRow label="좋음" pm10="0~30" pm25="0~15" grade="1" />
-                <GradeRow label="보통" pm10="31~80" pm25="16~35" grade="2" />
-                <GradeRow label="나쁨" pm10="81~150" pm25="36~75" grade="3" />
-                <GradeRow label="매우나쁨" pm10="151~" pm25="76~" grade="4" />
+            {/* 날씨 strip */}
+            <section className="bg-white rounded-2xl px-5 py-4">
+              <div className="flex items-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getSkyIcon(weather.sky, weather.pty)}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="shrink-0"
+                />
+                <div className="shrink-0">
+                  <p className="text-[18px] font-bold text-app-black leading-none">
+                    {weather.temperature ?? "-"}°
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-1.5 leading-none">
+                    {getSkyLabel(weather.sky, weather.pty)}
+                  </p>
+                </div>
+                <div className="ml-auto flex items-center gap-4">
+                  <WeatherStat label="습도" value={weather.humidity ? `${weather.humidity}%` : "-"} />
+                  <WeatherStat label="풍속" value={weather.windSpeed ? `${weather.windSpeed}m/s` : "-"} />
+                  <WeatherStat
+                    label="강수"
+                    value={
+                      weather.rainfall && weather.rainfall !== "0"
+                        ? `${weather.rainfall}mm`
+                        : "없음"
+                    }
+                  />
+                </div>
               </div>
+            </section>
+
+            {/* 시간별 예보 */}
+            {hourly.length > 0 && (
+              <section className="bg-white rounded-2xl p-5">
+                <h2 className="text-[15px] font-bold text-app-black mb-4">시간별 예보</h2>
+
+                {/* 시간 */}
+                <div className={`grid ${HOUR_GRID} items-center gap-1 text-[12px] text-gray-500`}>
+                  <div />
+                  {hourly.map((h) => (
+                    <div key={`t-${h.fcstTime}`} className="text-center">
+                      {formatHour(h.fcstTime)}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 아이콘 */}
+                <div className={`grid ${HOUR_GRID} items-center gap-1 mt-2`}>
+                  <div />
+                  {hourly.map((h) => (
+                    <div key={`i-${h.fcstTime}`} className="flex justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getSkyIcon(h.sky, h.pty)}
+                        alt={getSkyLabel(h.sky, h.pty)}
+                        width={28}
+                        height={28}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* 기온 */}
+                <HourRow label="기온">
+                  {hourly.map((h) => (
+                    <div key={`temp-${h.fcstTime}`} className="text-center text-app-black">
+                      {h.temperature ?? "-"}°
+                    </div>
+                  ))}
+                </HourRow>
+
+                {/* 미세먼지 (현재 측정값 기준) */}
+                <HourRow label="미세먼지">
+                  {hourly.map((h) => (
+                    <div
+                      key={`pm10-${h.fcstTime}`}
+                      className="text-center font-semibold"
+                      style={{ color: gradeColor(pm10WhoGrade) }}
+                    >
+                      {gradeLabel(pm10WhoGrade)}
+                    </div>
+                  ))}
+                </HourRow>
+
+                {/* 초미세먼지 (현재 측정값 기준) */}
+                <HourRow label="초미세먼지" last>
+                  {hourly.map((h) => (
+                    <div
+                      key={`pm25-${h.fcstTime}`}
+                      className="text-center font-semibold"
+                      style={{ color: gradeColor(pm25WhoGrade) }}
+                    >
+                      {gradeLabel(pm25WhoGrade)}
+                    </div>
+                  ))}
+                </HourRow>
+
+                <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+                  ※ 미세먼지·초미세먼지는 현재 측정값 기준이에요.
+                </p>
+              </section>
+            )}
+
+            {/* 일별 예보 */}
+            {daily.length > 0 && (
+              <section className="bg-white rounded-2xl p-5">
+                <h2 className="text-[15px] font-bold text-app-black mb-4">일별 예보</h2>
+
+                {/* 헤더 */}
+                <div className="grid grid-cols-[58px_1.4fr_1fr_1fr] gap-1 pb-2 border-b border-gray-100 text-[11px] text-gray-500">
+                  <div />
+                  <div className="text-center">기온(최저/최고)</div>
+                  <div className="text-center">미세먼지</div>
+                  <div className="text-center">초미세먼지</div>
+                </div>
+
+                {/* 데이터 행 */}
+                {daily.map((d, idx) => {
+                  const pm10g = labelToGrade(d.pm10Forecast);
+                  const pm25g = labelToGrade(d.pm25Forecast);
+                  return (
+                    <div
+                      key={d.date}
+                      className={`grid grid-cols-[58px_1.4fr_1fr_1fr] gap-1 items-center py-2.5 text-[12px]${
+                        idx === daily.length - 1 ? "" : " border-b border-gray-50"
+                      }`}
+                    >
+                      <div className="text-gray-600">{formatDate(d.date)}</div>
+                      <div className="text-center text-app-black">
+                        {d.minTemp != null && d.maxTemp != null
+                          ? `${d.minTemp}°/${d.maxTemp}°`
+                          : "-"}
+                      </div>
+                      <div
+                        className="text-center font-semibold"
+                        style={{ color: gradeColor(pm10g) }}
+                      >
+                        {d.pm10Forecast ?? "-"}
+                      </div>
+                      <div
+                        className="text-center font-semibold"
+                        style={{ color: gradeColor(pm25g) }}
+                      >
+                        {d.pm25Forecast ?? "-"}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+                  ※ 미세먼지 예보는 환경부 기준으로 모레까지 제공돼요.
+                </p>
+              </section>
+            )}
+
+            {/* 대기질 기준 (WHO) */}
+            <section className="bg-white rounded-2xl p-5">
+              <div className="flex items-end justify-between mb-3">
+                <h2 className="text-[15px] font-bold text-app-black">대기질 기준</h2>
+                <span className="text-[11px] text-gray-400">WHO 기준 · ㎍/㎥</span>
+              </div>
+              <GradeTable />
             </section>
 
             {/* 데이터 출처 */}
-            <footer className="px-2 pb-4 text-center">
+            <footer className="px-2 pb-4 pt-1 text-center">
               <p className="text-[11px] text-gray-400 leading-relaxed">
                 날씨 데이터: 기상청 단기예보 조회서비스
                 <br />
                 대기질 데이터: 한국환경공단 에어코리아
                 <br />
-                {air.dataTime && (
-                  <span className="text-gray-300">측정 시간: {air.dataTime}</span>
-                )}
+                대기질 등급: WHO 2021 가이드라인 기준
               </p>
             </footer>
           </div>
@@ -300,11 +455,32 @@ export default function AirQualityClient() {
   );
 }
 
-function InfoChip({ label, value }: { label: string; value: string }) {
+function WeatherStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex-1 bg-gray-100 rounded-xl px-3 py-2 text-center">
-      <p className="text-[11px] text-gray-500">{label}</p>
-      <p className="text-[13px] font-semibold text-app-black mt-0.5">{value}</p>
+    <div className="text-center">
+      <p className="text-[10px] text-gray-500 leading-none">{label}</p>
+      <p className="text-[13px] font-semibold text-app-black leading-none mt-1.5">{value}</p>
+    </div>
+  );
+}
+
+function HourRow({
+  label,
+  last,
+  children,
+}: {
+  label: string;
+  last?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`grid ${HOUR_GRID} items-center gap-1 text-[12px] py-2.5 mt-1${
+        last ? "" : " border-b border-gray-50"
+      }`}
+    >
+      <div className="text-gray-500">{label}</div>
+      {children}
     </div>
   );
 }
@@ -324,43 +500,45 @@ function DustCard({
 }) {
   return (
     <div className="rounded-xl p-4" style={{ backgroundColor: gradeBg(grade) }}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1.5">
         <span className="text-[13px] text-gray-600">{label}</span>
         <span className="text-[11px] text-gray-400">{sub}</span>
       </div>
-      <p className="text-[28px] font-bold leading-tight" style={{ color: gradeColor(grade) }}>
-        {value ?? "-"}
+      <p className="leading-tight" style={{ color: gradeColor(grade) }}>
+        <span className="text-[28px] font-bold">{value ?? "-"}</span>
         <span className="text-[12px] font-normal text-gray-400 ml-1">{unit}</span>
       </p>
-      <p className="text-[13px] font-semibold mt-1" style={{ color: gradeColor(grade) }}>
+      <p className="text-[13px] font-semibold mt-0.5" style={{ color: gradeColor(grade) }}>
         {gradeLabel(grade)}
       </p>
     </div>
   );
 }
 
-function GradeRow({
-  label,
-  pm10,
-  pm25,
-  grade,
-}: {
-  label: string;
-  pm10: string;
-  pm25: string;
-  grade: string;
-}) {
+function GradeTable() {
   return (
-    <div className="flex items-center text-[12px] gap-2">
-      <span
-        className="w-2 h-2 rounded-full shrink-0"
-        style={{ backgroundColor: GRADE_COLOR[grade] }}
-      />
-      <span className="font-semibold w-16" style={{ color: GRADE_COLOR[grade] }}>
-        {label}
-      </span>
-      <span className="text-gray-500 flex-1">PM10: {pm10}</span>
-      <span className="text-gray-500 flex-1">PM2.5: {pm25}</span>
+    <div className="text-[12px]">
+      <div className="grid grid-cols-[64px_repeat(4,1fr)] gap-1 pb-2 border-b border-gray-100">
+        <div />
+        <div className="text-center font-semibold" style={{ color: GRADE_COLOR["1"] }}>좋음</div>
+        <div className="text-center font-semibold" style={{ color: GRADE_COLOR["2"] }}>보통</div>
+        <div className="text-center font-semibold" style={{ color: GRADE_COLOR["3"] }}>나쁨</div>
+        <div className="text-center font-semibold" style={{ color: GRADE_COLOR["4"] }}>매우나쁨</div>
+      </div>
+      <div className="grid grid-cols-[64px_repeat(4,1fr)] gap-1 py-2.5 border-b border-gray-100 items-center">
+        <div className="text-gray-500">미세먼지</div>
+        <div className="text-center text-gray-700">0~30</div>
+        <div className="text-center text-gray-700">31~50</div>
+        <div className="text-center text-gray-700">51~100</div>
+        <div className="text-center text-gray-700">101~</div>
+      </div>
+      <div className="grid grid-cols-[64px_repeat(4,1fr)] gap-1 pt-2.5 items-center">
+        <div className="text-gray-500">초미세먼지</div>
+        <div className="text-center text-gray-700">0~15</div>
+        <div className="text-center text-gray-700">16~25</div>
+        <div className="text-center text-gray-700">26~50</div>
+        <div className="text-center text-gray-700">51~</div>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 } from './types';
 import TimePickerModal from './TimePickerModal';
 import WheelPickerModal from './WheelPickerModal';
+import BottomSheet from '@/components/BottomSheet';
 import ConfirmModal from '@/components/ConfirmModal';
 import RecordDefaultsSheet, { RecordDefaultsMode } from './RecordDefaultsSheet';
 import {
@@ -261,13 +262,6 @@ export default function EntrySheet({
   type TimerState = { baseSec: number; startMs: number | null };
   const [timers, setTimers] = useState<Record<string, TimerState>>({});
   const [, forceTick] = useState(0);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
 
   useEffect(() => {
     const anyRunning = Object.values(timers).some((t) => t.startMs !== null);
@@ -633,9 +627,8 @@ export default function EntrySheet({
   const startParsed = parseLocal(startAt);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[var(--safe-area-bottom)]">
+    <>
+    <BottomSheet open onClose={onClose} ariaLabel={cfg.label}>
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">{cfg.label}</h2>
           {initial ? (
@@ -989,7 +982,7 @@ export default function EntrySheet({
             {saving ? '저장 중...' : '저장'}
           </button>
         </div>
-      </div>
+    </BottomSheet>
 
       {pickerField && (() => {
         const activeUnit = pickerField.units
@@ -1107,6 +1100,6 @@ export default function EntrySheet({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

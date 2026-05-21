@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
+import BottomSheet from '@/components/BottomSheet';
 import ChildSelector from '@/components/ChildSelector';
 import ConfirmModal from '@/components/ConfirmModal';
 import EmptyChildState from '@/components/EmptyChildState';
+import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import GrowthChart from './GrowthChart';
@@ -199,17 +201,20 @@ export default function PhysicalGrowthClient() {
 
   if (isLoaded && childList.length === 0) {
     return (
-      <EmptyChildState
-        emoji="📏"
-        title="성장 측정을 시작해보세요"
-        description={
-          <>
-            우리 아기를 등록하면
-            <br />
-            키, 몸무게, 머리둘레를 기록할 수 있어요.
-          </>
-        }
-      />
+      <>
+        <PageHeader title="성장" variant="back" />
+        <EmptyChildState
+          emoji="📏"
+          title="성장 측정을 시작해보세요"
+          description={
+            <>
+              우리 아기를 등록하면
+              <br />
+              키, 몸무게, 머리둘레를 기록할 수 있어요.
+            </>
+          }
+        />
+      </>
     );
   }
 
@@ -217,9 +222,7 @@ export default function PhysicalGrowthClient() {
     <main className="min-h-[100dvh] bg-white pb-32">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-white">
-        <div className="flex items-center justify-between px-5 h-[56px]">
-          <h1 className="text-[18px] font-bold text-gray-900">성장 측정</h1>
-        </div>
+        <PageHeader title="성장" variant="back" />
         {childList.length > 0 && selected && (
           <div className="px-5 pb-3">
             <ChildSelector
@@ -457,146 +460,140 @@ export default function PhysicalGrowthClient() {
       )}
 
       {/* 입력 바텀시트 */}
-      {showForm && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center">
+      <BottomSheet
+        open={showForm}
+        onClose={() => {
+          setShowForm(false);
+          resetForm();
+        }}
+        maxHeight="90dvh"
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <h2 className="text-[16px] font-medium text-black">
+            {editingId ? '성장 기록 수정' : '성장 기록하기'}
+          </h2>
           <button
             type="button"
-            aria-label="닫기"
             onClick={() => {
               setShowForm(false);
               resetForm();
             }}
-            className="absolute inset-0 bg-black/40"
-          />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90dvh] flex flex-col pb-[var(--safe-area-bottom)]">
-            <div className="flex items-center justify-between px-5 pt-5 pb-4">
-              <h2 className="text-[16px] font-medium text-black">
-                {editingId ? '성장 기록 수정' : '성장 기록하기'}
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                className="w-5 h-5 flex items-center justify-center text-black"
-                aria-label="닫기"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-                  <path d="M5 5l10 10M15 5L5 15" />
-                </svg>
-              </button>
-            </div>
+            className="w-5 h-5 flex items-center justify-center text-black"
+            aria-label="닫기"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M5 5l10 10M15 5L5 15" />
+            </svg>
+          </button>
+        </div>
 
-            <div className="overflow-y-auto px-5 pb-0 space-y-3">
-              {/* 측정일 */}
-              <div>
-                <p className="text-[12px] font-medium text-gray-500 mb-2">
-                  측정일 <span className="text-red-500">*</span>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setDatePickerOpen(true)}
-                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-left text-gray-900 bg-white active:bg-gray-50"
-                >
-                  {formatDate(measuredAt)}.
-                </button>
-              </div>
-
-              {/* 키 */}
-              <div>
-                <p className="text-[12px] font-medium text-gray-500 mb-2">
-                  키(cm)
-                </p>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  placeholder="51"
-                  value={heightCm}
-                  onChange={(e) => setHeightCm(e.target.value)}
-                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* 몸무게 */}
-              <div>
-                <p className="text-[12px] font-medium text-gray-500 mb-2">
-                  몸무게(kg)
-                </p>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  placeholder="3.09"
-                  value={weightKg}
-                  onChange={(e) => setWeightKg(e.target.value)}
-                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* 머리둘레 */}
-              <div>
-                <p className="text-[12px] font-medium text-gray-500 mb-2">
-                  머리둘레(cm)
-                </p>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  placeholder="41"
-                  value={headCircumCm}
-                  onChange={(e) => setHeadCircumCm(e.target.value)}
-                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* 메모 */}
-              <div>
-                <p className="text-[12px] font-medium text-gray-500 mb-2">
-                  메모
-                </p>
-                <input
-                  type="text"
-                  placeholder="병원 정기검진 등"
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-                />
-              </div>
-            </div>
-
-            <div className="px-5 pt-4 pb-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                className="flex-1 h-[48px] rounded-[4px] bg-gray-100 text-gray-600 font-semibold text-[15px] active:opacity-80"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 h-[48px] rounded-[4px] bg-primary-500 text-white font-semibold text-[15px] active:opacity-80 disabled:opacity-40"
-              >
-                {saving ? '저장 중...' : editingId ? '수정' : '저장'}
-              </button>
-            </div>
+        <div className="overflow-y-auto px-5 pb-0 space-y-3">
+          {/* 측정일 */}
+          <div>
+            <p className="text-[12px] font-medium text-gray-500 mb-2">
+              측정일 <span className="text-red-500">*</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setDatePickerOpen(true)}
+              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-left text-gray-900 bg-white active:bg-gray-50"
+            >
+              {formatDate(measuredAt)}.
+            </button>
           </div>
 
-          <WheelDatePickerModal
-            open={datePickerOpen}
-            value={measuredAt}
-            max={todayString()}
-            onClose={() => setDatePickerOpen(false)}
-            onConfirm={(d) => setMeasuredAt(d)}
-          />
+          {/* 키 */}
+          <div>
+            <p className="text-[12px] font-medium text-gray-500 mb-2">
+              키(cm)
+            </p>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              placeholder="51"
+              value={heightCm}
+              onChange={(e) => setHeightCm(e.target.value)}
+              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+            />
+          </div>
+
+          {/* 몸무게 */}
+          <div>
+            <p className="text-[12px] font-medium text-gray-500 mb-2">
+              몸무게(kg)
+            </p>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              placeholder="3.09"
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value)}
+              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+            />
+          </div>
+
+          {/* 머리둘레 */}
+          <div>
+            <p className="text-[12px] font-medium text-gray-500 mb-2">
+              머리둘레(cm)
+            </p>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              placeholder="41"
+              value={headCircumCm}
+              onChange={(e) => setHeadCircumCm(e.target.value)}
+              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+            />
+          </div>
+
+          {/* 메모 */}
+          <div>
+            <p className="text-[12px] font-medium text-gray-500 mb-2">
+              메모
+            </p>
+            <input
+              type="text"
+              placeholder="병원 정기검진 등"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
+            />
+          </div>
         </div>
-      )}
+
+        <div className="px-5 pt-4 pb-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(false);
+              resetForm();
+            }}
+            className="flex-1 h-[48px] rounded-[4px] bg-gray-100 text-gray-600 font-semibold text-[15px] active:opacity-80"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 h-[48px] rounded-[4px] bg-primary-500 text-white font-semibold text-[15px] active:opacity-80 disabled:opacity-40"
+          >
+            {saving ? '저장 중...' : editingId ? '수정' : '저장'}
+          </button>
+        </div>
+      </BottomSheet>
+
+      <WheelDatePickerModal
+        open={datePickerOpen}
+        value={measuredAt}
+        max={todayString()}
+        onClose={() => setDatePickerOpen(false)}
+        onConfirm={(d) => setMeasuredAt(d)}
+      />
 
       {/* 삭제 확인 모달 */}
       <ConfirmModal

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import BottomSheet from '@/components/BottomSheet';
 
 const ITEM_H = 44;
 const VISIBLE = 5;
@@ -77,82 +78,78 @@ export default function WheelPickerModal({
     }, 90);
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/30"
-      onClick={onClose}
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      zIndex={80}
+      surfaceClassName="bg-gray-100"
+      lockBodyScroll={false}
     >
-      <div
-        className="w-full max-w-[430px] bg-gray-100 rounded-t-2xl pb-[var(--safe-area-bottom)] mb-2 mx-2 overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {title && (
-          <div className="px-5 pt-4 pb-2 text-sm font-semibold text-gray-700 text-center">
-            {title}
-          </div>
-        )}
-        <div className="relative bg-white mx-2 mt-2 rounded-2xl">
-          <div
-            className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-gray-200"
-            style={{ height: ITEM_H }}
-          />
-          <div
-            ref={ref}
-            onScroll={onScroll}
-            className="overflow-y-auto scrollbar-hide relative"
-            style={{ height: HEIGHT, scrollBehavior: 'auto' }}
-          >
-            <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
-              {items.map((v, i) => {
-                const selected = i === selectedIdx;
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-center tabular-nums select-none transition-colors ${
-                      selected
-                        ? 'text-gray-900 font-bold text-xl'
-                        : 'text-gray-400 text-base'
-                    }`}
-                    style={{ height: ITEM_H }}
-                  >
-                    {format ? format(v) : String(v)}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+      {title && (
+        <div className="px-5 pt-4 pb-2 text-sm font-semibold text-gray-700 text-center">
+          {title}
         </div>
-
-        <div className="px-2 pt-2 pb-2">
-          <button
-            type="button"
-            onClick={() => {
-              // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
-              // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
-              // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
-              const el = ref.current;
-              let idx = selectedIdx;
-              if (el) {
-                if (timer.current) {
-                  window.clearTimeout(timer.current);
-                  timer.current = null;
-                }
-                idx = Math.max(
-                  0,
-                  Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)),
-                );
-              }
-              onConfirm(items[idx]);
-              onClose();
-            }}
-            className="w-full py-3.5 rounded-2xl bg-white text-primary-500 text-base font-semibold active:bg-gray-50"
-          >
-            확인
-          </button>
+      )}
+      <div className="relative bg-white mx-2 mt-2 rounded-2xl">
+        <div
+          className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-gray-200"
+          style={{ height: ITEM_H }}
+        />
+        <div
+          ref={ref}
+          onScroll={onScroll}
+          className="overflow-y-auto scrollbar-hide relative"
+          style={{ height: HEIGHT, scrollBehavior: 'auto' }}
+        >
+          <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
+            {items.map((v, i) => {
+              const selected = i === selectedIdx;
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center justify-center tabular-nums select-none transition-colors ${
+                    selected
+                      ? 'text-gray-900 font-bold text-xl'
+                      : 'text-gray-400 text-base'
+                  }`}
+                  style={{ height: ITEM_H }}
+                >
+                  {format ? format(v) : String(v)}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="px-2 pt-2 pb-2">
+        <button
+          type="button"
+          onClick={() => {
+            // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
+            // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
+            // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
+            const el = ref.current;
+            let idx = selectedIdx;
+            if (el) {
+              if (timer.current) {
+                window.clearTimeout(timer.current);
+                timer.current = null;
+              }
+              idx = Math.max(
+                0,
+                Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)),
+              );
+            }
+            onConfirm(items[idx]);
+            onClose();
+          }}
+          className="w-full py-3.5 rounded-2xl bg-white text-primary-500 text-base font-semibold active:bg-gray-50"
+        >
+          확인
+        </button>
+      </div>
+    </BottomSheet>
   );
 }

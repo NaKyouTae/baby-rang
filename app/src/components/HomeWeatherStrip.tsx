@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { gradeColor, gradeLabel, whoGradePm10, whoGradePm25 } from "@/lib/airQualityGrade";
 
 interface WeatherAirData {
   weather: {
@@ -16,20 +17,6 @@ interface WeatherAirData {
     pm25Grade: string | null;
     stationName: string;
   };
-}
-
-const GRADE_LABEL: Record<string, string> = { "1": "좋음", "2": "보통", "3": "나쁨", "4": "매우나쁨" };
-const GRADE_COLOR: Record<string, string> = {
-  "1": "#3B82F6",
-  "2": "#22C55E",
-  "3": "#F97316",
-  "4": "#EF4444",
-};
-function gradeLabel(grade: string | null) {
-  return grade ? GRADE_LABEL[grade] ?? "-" : "-";
-}
-function gradeColor(grade: string | null) {
-  return grade ? GRADE_COLOR[grade] ?? "#808991" : "#808991";
 }
 function getSkyIcon(sky: string, pty: string): string {
   const p = Number(pty);
@@ -102,6 +89,8 @@ export default function HomeWeatherStrip() {
 
   const weather = data?.weather;
   const air = data?.air;
+  const pm10Grade = whoGradePm10(air?.pm10 ?? null);
+  const pm25Grade = whoGradePm25(air?.pm25 ?? null);
 
   return (
     <Link href="/air-quality" className="block active:opacity-80">
@@ -151,9 +140,9 @@ export default function HomeWeatherStrip() {
                   <p className="text-[12px] font-medium text-black" style={{ lineHeight: 1 }}>미세먼지</p>
                   <p
                     className="text-[12px] font-semibold mt-1"
-                    style={{ color: gradeColor(air!.pm10Grade), lineHeight: 1 }}
+                    style={{ color: gradeColor(pm10Grade), lineHeight: 1 }}
                   >
-                    {gradeLabel(air!.pm10Grade)}
+                    {gradeLabel(pm10Grade)}
                   </p>
                   <p className="text-[10px] font-normal text-gray-500 mt-1" style={{ lineHeight: 1 }}>{air!.pm10 ?? "-"}㎍/㎥</p>
                 </>
@@ -171,9 +160,9 @@ export default function HomeWeatherStrip() {
                   <p className="text-[12px] font-medium text-black" style={{ lineHeight: 1 }}>초미세먼지</p>
                   <p
                     className="text-[12px] font-semibold mt-1"
-                    style={{ color: gradeColor(air!.pm25Grade), lineHeight: 1 }}
+                    style={{ color: gradeColor(pm25Grade), lineHeight: 1 }}
                   >
-                    {gradeLabel(air!.pm25Grade)}
+                    {gradeLabel(pm25Grade)}
                   </p>
                   <p className="text-[10px] font-normal text-gray-500 mt-1" style={{ lineHeight: 1 }}>{air!.pm25 ?? "-"}㎍/㎥</p>
                 </>

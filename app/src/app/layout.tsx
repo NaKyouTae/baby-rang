@@ -40,6 +40,11 @@ export const metadata: Metadata = {
   creator: "Spectrify",
   publisher: "Spectrify",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

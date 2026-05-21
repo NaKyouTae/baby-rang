@@ -56,7 +56,7 @@ export default function HomePage() {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-header.svg" alt="아기랑" width={72} height={20} />
+        <img src="/header-logo.png" alt="아기랑" width={32} height={32} />
         <HomeHeaderActions />
       </header>
 

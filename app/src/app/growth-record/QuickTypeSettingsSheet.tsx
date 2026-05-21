@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import BottomSheet from '@/components/BottomSheet';
 import {
   DndContext,
   DragEndEvent,
@@ -201,13 +202,6 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
     }),
   );
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
   function toggleVisible(type: GrowthType) {
     setItems((prev) =>
       prev.map((it) =>
@@ -233,9 +227,7 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[var(--safe-area-bottom)]">
+    <BottomSheet open onClose={onClose} ariaLabel="설정">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">설정</h2>
           <button
@@ -289,7 +281,6 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
             저장
           </button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }

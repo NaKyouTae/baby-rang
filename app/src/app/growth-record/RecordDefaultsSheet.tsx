@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import BottomSheet from '@/components/BottomSheet';
 import {
   BabyFoodUnit,
   DiaperKind,
@@ -68,13 +69,6 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
     mode === 'sleepNight' ? getSleepNightRange() : { start: '19:00', end: '07:00' },
   );
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, []);
-
   function handleSave() {
     if (mode === 'babyfood') setBabyFoodDefaultUnit(unit);
     else if (mode === 'diaper') setDiaperDefaultKind(diaper);
@@ -84,9 +78,7 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[90vh] flex flex-col pb-[var(--safe-area-bottom)]">
+    <BottomSheet open onClose={onClose} zIndex={80} ariaLabel={TITLE[mode]}>
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">{TITLE[mode]}</h2>
           <button
@@ -183,7 +175,6 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
             저장하기
           </button>
         </div>
-      </div>
-    </div>
+    </BottomSheet>
   );
 }
