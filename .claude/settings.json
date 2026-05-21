@@ -224,7 +224,25 @@
       "Bash(curl -s -o /dev/null -w \"/finish: %{http_code}\\\\n\" \"http://localhost:15555/finish\")",
       "Bash(pkill -f \"next-server\")",
       "WebFetch(domain:yiyb-blog.vercel.app)",
-      "WebFetch(domain:kakao-tam.tistory.com)"
+      "WebFetch(domain:kakao-tam.tistory.com)",
+      "Bash(grep -n '`' /Users/nakyutae/personal/git/spectrify-blog/src/data/posts.ts)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=6144\" npm run build)",
+      "Bash(rm /Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]/opengraph-image.tsx && ls /Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]/)",
+      "Bash(rm \"/Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]/opengraph-image.tsx\" && ls \"/Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:13001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13001/posts/kepco-bill-calculation)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13001/posts/ohms-law-basics)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13001/category/bills)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13001/category/safety)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13001/category/knowledge)",
+      "Bash(curl -s http://localhost:13001/)",
+      "Bash(curl -s http://localhost:13001/posts/kepco-bill-calculation)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(grep -nE '^####|^#####|^# [^ ]|^##\\\\s*$|^###\\\\s*$' /Users/nakyutae/personal/git/spectrify-blog/src/data/posts.ts)",
+      "Bash(awk '/^[[:space:]]*\\\\{/{start=NR} /content: `/{cs=NR} /slug:/{s=$0} NR==1480{print \"post slug context:\"; print s; print \"content started line:\", cs}' /Users/nakyutae/personal/git/spectrify-blog/src/data/posts.ts)",
+      "Bash(git -C /Users/nakyutae/personal/git/spectrify-blog status)",
+      "Bash(git -C /Users/nakyutae/personal/git/spectrify-blog diff --stat)"
     ],
     "additionalDirectories": [
       "/tmp",
@@ -235,7 +253,8 @@
       "/Users/nakyutae/personal/git/export-used-car/.claude",
       "/Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests",
-      "/Users/nakyutae/personal/git/export-used-car/app/src/app/api/quick-phrases"
+      "/Users/nakyutae/personal/git/export-used-car/app/src/app/api/quick-phrases",
+      "/Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]"
     ]
   }
 }

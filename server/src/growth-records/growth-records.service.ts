@@ -107,7 +107,7 @@ export class GrowthRecordsService {
         childId,
         startAt: { gte: start, lt: end },
       },
-      orderBy: { startAt: 'asc' },
+      orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -123,7 +123,7 @@ export class GrowthRecordsService {
         childId,
         startAt: { gte: start, lt: end },
       },
-      orderBy: { startAt: 'asc' },
+      orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
     });
   }
 

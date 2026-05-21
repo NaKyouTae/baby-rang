@@ -129,7 +129,22 @@ export default function WheelPickerModal({
           <button
             type="button"
             onClick={() => {
-              onConfirm(items[selectedIdx]);
+              // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
+              // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
+              // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
+              const el = ref.current;
+              let idx = selectedIdx;
+              if (el) {
+                if (timer.current) {
+                  window.clearTimeout(timer.current);
+                  timer.current = null;
+                }
+                idx = Math.max(
+                  0,
+                  Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)),
+                );
+              }
+              onConfirm(items[idx]);
               onClose();
             }}
             className="w-full py-3.5 rounded-2xl bg-white text-primary-500 text-base font-semibold active:bg-gray-50"

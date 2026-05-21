@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSelectedChild } from '@/hooks/useChildren';
 import EmptyChildState from '@/components/EmptyChildState';
 import {
@@ -13,8 +14,130 @@ import {
   summarizeRecord,
 } from './types';
 import EntrySheet from './EntrySheet';
+import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
+import ConfirmModal from '@/components/ConfirmModal';
+
+const SWIPE_DELETE_WIDTH = 80;
+const SWIPE_OPEN_THRESHOLD = 40;
+
+function SwipeableRow({
+  open,
+  onOpenChange,
+  onDelete,
+  children,
+  isLast,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDelete: () => void;
+  children: ReactNode;
+  isLast: boolean;
+}) {
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const lockedRef = useRef<'h' | 'v' | null>(null);
+  const baseRef = useRef(0);
+  const movedRef = useRef(false);
+
+  const offset = dragging ? dragX : open ? -SWIPE_DELETE_WIDTH : 0;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    startYRef.current = e.touches[0].clientY;
+    baseRef.current = open ? -SWIPE_DELETE_WIDTH : 0;
+    lockedRef.current = null;
+    movedRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - startXRef.current;
+    const dy = e.touches[0].clientY - startYRef.current;
+    if (lockedRef.current === null) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      lockedRef.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (lockedRef.current === 'h') {
+        setDragging(true);
+        setDragX(baseRef.current + dx);
+      }
+      return;
+    }
+    if (lockedRef.current === 'v') return;
+    movedRef.current = true;
+    let next = baseRef.current + dx;
+    if (next > 0) next = 0;
+    if (next < -SWIPE_DELETE_WIDTH) {
+      next = -SWIPE_DELETE_WIDTH - (Math.abs(next + SWIPE_DELETE_WIDTH) * 0.3);
+    }
+    setDragX(next);
+  };
+
+  const handleTouchEnd = () => {
+    if (lockedRef.current === 'h') {
+      const shouldOpen = dragX < -SWIPE_OPEN_THRESHOLD;
+      onOpenChange(shouldOpen);
+      setDragX(shouldOpen ? -SWIPE_DELETE_WIDTH : 0);
+      setDragging(false);
+    }
+    lockedRef.current = null;
+  };
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (movedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      movedRef.current = false;
+      return;
+    }
+    if (open) {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <div
+      data-swipe-row
+      className={`relative overflow-hidden bg-white border-b border-dotted border-gray-200 ${
+        isLast ? 'border-b-0' : ''
+      }`}
+    >
+      <button
+        type="button"
+        data-swipe-delete
+        onClick={onDelete}
+        aria-label="삭제"
+        tabIndex={open ? 0 : -1}
+        className="absolute top-0 right-0 bottom-0 w-20 bg-red-500 active:bg-red-600 flex items-center justify-center"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icon-trash.svg"
+          alt=""
+          width={24}
+          height={24}
+          aria-hidden="true"
+          style={{ filter: 'brightness(0) invert(1)' }}
+        />
+      </button>
+      <div
+        className={`relative bg-white ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
+        style={{ transform: `translateX(${offset}px)`, touchAction: 'pan-y' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        onClickCapture={handleClickCapture}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 const DEFAULT_QUICK_TYPES: GrowthType[] = [
   'FORMULA',
@@ -79,7 +202,9 @@ function formatDuration(mins: number): string {
 
 function computeDayStats(records: GrowthRecord[], date: string) {
   let sleepMin = 0;
-  let feedingMl = 0;
+  let formulaMl = 0;
+  let pumpedMl = 0;
+  let otherFeedingMl = 0;
   let breastMin = 0;
   for (const r of records) {
     if (r.type === 'SLEEP' && r.endAt) {
@@ -92,13 +217,19 @@ function computeDayStats(records: GrowthRecord[], date: string) {
     }
     if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') {
       const ml = Number((r.data as Record<string, unknown>)?.amountMl);
-      if (!Number.isNaN(ml)) feedingMl += ml;
+      if (!Number.isNaN(ml)) {
+        if (r.type === 'FORMULA') formulaMl += ml;
+        else if (r.type === 'PUMPED_FEEDING') pumpedMl += ml;
+        else otherFeedingMl += ml;
+      }
     }
     if (r.type === 'BREASTFEEDING') {
       const data = (r.data ?? {}) as Record<string, unknown>;
       const left = Number(data.leftMin) || 0;
+      const leftS = Number(data.leftSec) || 0;
       const right = Number(data.rightMin) || 0;
-      breastMin += left + right;
+      const rightS = Number(data.rightSec) || 0;
+      breastMin += left + right + Math.round((leftS + rightS) / 60);
     }
   }
   const today = todayString();
@@ -110,7 +241,8 @@ function computeDayStats(records: GrowthRecord[], date: string) {
     dayLengthMin = 24 * 60;
   }
   const awakeMin = Math.max(0, dayLengthMin - sleepMin);
-  return { sleepMin, awakeMin, feedingMl, breastMin };
+  const feedingMl = formulaMl + pumpedMl + otherFeedingMl;
+  return { sleepMin, awakeMin, feedingMl, formulaMl, pumpedMl, breastMin };
 }
 
 function findLatestByTypes(
@@ -154,6 +286,8 @@ export default function GrowthRecordPage() {
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
   const [showAddQuick, setShowAddQuick] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [swipedRowId, setSwipedRowId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GrowthRecord | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
   const titleBarRef = useRef<HTMLDivElement | null>(null);
@@ -349,6 +483,40 @@ export default function GrowthRecordPage() {
     }
   }, [selectedChild]);
 
+  const deleteRecord = useCallback(
+    async (id: string) => {
+      const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDays((prev) =>
+          prev
+            .map((g) => ({ ...g, records: g.records.filter((r) => r.id !== id) }))
+            .filter((g) => g.records.length > 0),
+        );
+        setSwipedRowId(null);
+      }
+    },
+    [],
+  );
+
+  // 스와이프 열린 행 — 바깥 탭/스크롤 시 닫기
+  useEffect(() => {
+    if (!swipedRowId) return;
+    const close = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-swipe-row]')) return;
+      setSwipedRowId(null);
+    };
+    const onScroll = () => setSwipedRowId(null);
+    document.addEventListener('touchstart', close, { passive: true });
+    document.addEventListener('mousedown', close);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', close);
+      document.removeEventListener('mousedown', close);
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [swipedRowId]);
+
   const persistQuick = useCallback(async (next: GrowthType[]) => {
     setQuickTypes(next);
     try {
@@ -396,15 +564,20 @@ export default function GrowthRecordPage() {
     () =>
       days.map((g) => ({
         date: g.date,
-        records: [...g.records].sort(
-          (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime(),
-        ),
+        records: [...g.records].sort((a, b) => {
+          const diff =
+            new Date(b.startAt).getTime() - new Date(a.startAt).getTime();
+          if (diff !== 0) return diff;
+          const ca = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const cb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return cb - ca;
+        }),
       })),
     [days],
   );
 
   const visibleQuickTypes = useMemo(
-    () => DEFAULT_QUICK_TYPES.filter((t) => quickTypes.includes(t)),
+    () => quickTypes.filter((t) => (MENU_TYPES as string[]).includes(t)),
     [quickTypes],
   );
 
@@ -552,9 +725,25 @@ export default function GrowthRecordPage() {
         {initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 && !hasMore ? (
-          <div className="py-16 text-center text-sm text-gray-400">
-            아직 기록이 없어요.<br />
-            위 버튼으로 첫 기록을 남겨보세요.
+          <div className="mt-[24px] rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon-empty-record.svg"
+                alt=""
+                width={20}
+                height={20}
+                aria-hidden="true"
+              />
+            </div>
+            <p className="mt-[10px] text-[14px] font-medium text-black">아직 등록된 기록이 없어요.</p>
+            <p className="mt-[4px] text-[12px] font-normal text-gray-500">우리 아기의 하루를 기록해 보세요.</p>
+            <Link
+              href="/settings/import-data"
+              className="mt-[10px] inline-flex items-center justify-center px-3 h-6 rounded-[6px] text-[12px] font-semibold text-white bg-primary-500 active:opacity-80 transition-opacity"
+            >
+              데이터 가져오기
+            </Link>
           </div>
         ) : sortedDays.length === 0 ? (
           <div ref={sentinelRef} className="py-16 text-center text-sm text-gray-400">
@@ -569,7 +758,7 @@ export default function GrowthRecordPage() {
                 ? dayOfLife(selectedChild.birthDate, group.date)
                 : null;
               return (
-                <section key={group.date} className="mb-2">
+                <section key={group.date} className="mb-2 border-t border-gray-200 first:border-t-0">
                   <div
                     className="sticky z-10 bg-white px-4 py-3 border-b border-dotted border-gray-200"
                     style={{ top: titleBarH - 4 }}
@@ -587,7 +776,7 @@ export default function GrowthRecordPage() {
                         </svg>
                       </button>
                       <span className="text-[12px] font-normal text-gray-900 tabular-nums">
-                        {isToday ? '오늘' : dDay !== null ? `D ${dDay}` : ''}
+                        {isToday ? '오늘' : dDay !== null ? `D+${dDay}` : ''}
                       </span>
                     </div>
                     <div className="flex items-center justify-end gap-[10px] mt-[10px] tabular-nums">
@@ -601,20 +790,40 @@ export default function GrowthRecordPage() {
                         <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
                         <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.sleepMin)}</span>
                       </span>
-                      <span className="flex items-center gap-[2px]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
-                        <span className="text-[10px] font-medium text-gray-900">
-                          {stats.feedingMl}ml
-                          {stats.breastMin > 0 ? ` +${stats.breastMin}분` : ''}
+                      {stats.feedingMl > 0 || stats.breastMin > 0 ? (
+                        <span className="flex items-center gap-[2px]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
+                          <span className="text-[10px] font-medium text-gray-900">
+                            {stats.feedingMl > 0 ? `${stats.feedingMl}ml` : ''}
+                            {stats.formulaMl > 0 || stats.pumpedMl > 0 ? (
+                              <>
+                                (
+                                {stats.formulaMl > 0 ? (
+                                  <span style={{ color: CATEGORY_STYLE.FORMULA.border }}>{stats.formulaMl}</span>
+                                ) : null}
+                                {stats.formulaMl > 0 && stats.pumpedMl > 0 ? '+' : ''}
+                                {stats.pumpedMl > 0 ? (
+                                  <span style={{ color: CATEGORY_STYLE.PUMPED_FEEDING.border }}>{stats.pumpedMl}</span>
+                                ) : null}
+                                )
+                              </>
+                            ) : null}
+                            {stats.breastMin > 0 ? (
+                              <>
+                                {stats.feedingMl > 0 ? '+' : ''}
+                                <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
+                              </>
+                            ) : null}
+                          </span>
                         </span>
-                      </span>
+                      ) : null}
                     </div>
                   </div>
 
                   {/* 기록 행 */}
                   <div>
-                    {group.records.map((r) => {
+                    {group.records.map((r, idx) => {
                       const cfg = TYPE_CONFIG[r.type];
                       const catStyle = CATEGORY_STYLE[r.type] ?? CATEGORY_STYLE.ETC;
                       const summary = summarizeRecord(r);
@@ -631,74 +840,83 @@ export default function GrowthRecordPage() {
                             ? [r.imageUrl]
                             : [];
                       return (
-                        <button
+                        <SwipeableRow
                           key={r.id}
-                          type="button"
-                          onClick={() => {
-                            setEditing(r);
-                            setSheetType(r.type);
+                          open={swipedRowId === r.id}
+                          onOpenChange={(o) => setSwipedRowId(o ? r.id : null)}
+                          onDelete={() => {
+                            setDeleteTarget(r);
                           }}
-                          className="w-full text-left flex items-start px-4 py-3 border-b border-dotted border-gray-200 last:border-b-0 active:bg-gray-50"
+                          isLast={idx === group.records.length - 1}
                         >
-                          <span
-                            className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums shrink-0 mt-0.5"
-                            style={{
-                              height: 16,
-                              backgroundColor: catStyle.bg,
-                              color: catStyle.border,
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(r);
+                              setSheetType(r.type);
                             }}
+                            className="w-full text-left flex items-start px-4 py-3 active:bg-gray-50"
                           >
-                            {formatTime24(r.startAt)}
-                          </span>
-                          <span
-                            className="ml-[24px] mt-[7px] rounded-full shrink-0"
-                            style={{
-                              width: 6,
-                              height: 6,
-                              backgroundColor: catStyle.border,
-                            }}
-                          />
-                          <div className="ml-2 flex-1 min-w-0">
-                            <p className="text-[14px] font-semibold text-gray-900 leading-snug">
-                              {title}
-                            </p>
-                            {summary && (
-                              <p className="text-[12px] font-normal text-gray-500 mt-2">{summary}</p>
-                            )}
-                            {r.memo && (
-                              <p className="text-[11px] text-gray-600 mt-2 line-clamp-2">
-                                {r.memo}
+                            <span
+                              className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums shrink-0 mt-0.5"
+                              style={{
+                                height: 16,
+                                backgroundColor: catStyle.bg,
+                                color: catStyle.border,
+                              }}
+                            >
+                              {formatTime24(r.startAt)}
+                            </span>
+                            <span
+                              className="ml-[24px] mt-[7px] rounded-full shrink-0"
+                              style={{
+                                width: 6,
+                                height: 6,
+                                backgroundColor: catStyle.border,
+                              }}
+                            />
+                            <div className="ml-2 flex-1 min-w-0">
+                              <p className="text-[14px] font-semibold text-gray-900 leading-snug">
+                                {title}
                               </p>
-                            )}
-                            {urls.length > 0 && (
-                              <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
-                                {urls.map((u: string) => (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    key={u}
-                                    src={u}
-                                    alt=""
-                                    className="shrink-0 w-16 h-16 object-cover rounded-lg"
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-gray-400 ml-2 mt-0.5 shrink-0"
-                            aria-hidden="true"
-                          >
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                        </button>
+                              {summary && (
+                                <p className="text-[12px] font-normal text-gray-500 mt-2">{summary}</p>
+                              )}
+                              {r.memo && (
+                                <p className="text-[11px] text-gray-600 mt-2 line-clamp-2">
+                                  {r.memo}
+                                </p>
+                              )}
+                              {urls.length > 0 && (
+                                <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
+                                  {urls.map((u: string) => (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      key={u}
+                                      src={u}
+                                      alt=""
+                                      className="shrink-0 w-16 h-16 object-cover rounded-lg"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-gray-400 ml-2 mt-0.5 shrink-0"
+                              aria-hidden="true"
+                            >
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </button>
+                        </SwipeableRow>
                       );
                     })}
                   </div>
@@ -729,69 +947,14 @@ export default function GrowthRecordPage() {
       )}
 
       {showAddQuick && (
-        <div
-          data-quick-add-sheet
-          className="fixed inset-0 z-[70] flex items-end justify-center"
-        >
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowAddQuick(false)}
-          />
-          <div className="relative w-full max-w-[430px] bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col pb-[var(--safe-area-bottom)]">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">간편 버튼 추가</h2>
-              <button
-                onClick={() => setShowAddQuick(false)}
-                className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400"
-                aria-label="닫기"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="overflow-y-auto px-5 py-4 grid grid-cols-3 gap-2">
-              {MENU_TYPES.map((t) => {
-                const cfg = TYPE_CONFIG[t];
-                const selected = quickTypes.includes(t);
-                return (
-                  <button
-                    key={t}
-                    onClick={() => {
-                      if (selected) {
-                        persistQuick(quickTypes.filter((x) => x !== t));
-                      } else {
-                        persistQuick([...quickTypes, t]);
-                      }
-                    }}
-                    className={`relative flex flex-col items-center gap-1 py-3 rounded-2xl transition ${
-                      selected
-                        ? 'bg-primary-50 ring-2 ring-primary-500'
-                        : 'bg-gray-50 active:bg-gray-100'
-                    }`}
-                  >
-                    {selected && (
-                      <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    )}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={RECORD_ICONS[t]}
-                      alt=""
-                      width={32}
-                      height={32}
-                      aria-hidden="true"
-                    />
-                    <span className={`text-xs font-medium ${selected ? 'text-primary-700' : 'text-gray-700'}`}>
-                      {cfg.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <QuickTypeSettingsSheet
+          current={quickTypes}
+          onClose={() => setShowAddQuick(false)}
+          onSave={(next) => {
+            persistQuick(next);
+            setShowAddQuick(false);
+          }}
+        />
       )}
 
       <DatePickerModal
@@ -801,6 +964,27 @@ export default function GrowthRecordPage() {
         max={todayString()}
         onClose={() => setShowDatePicker(false)}
         onConfirm={(d: string) => reload(d)}
+      />
+
+      <ConfirmModal
+        open={deleteTarget !== null}
+        icon={
+          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon-trash.svg" alt="" width={32} height={32} />
+          </div>
+        }
+        title="기록 삭제하기"
+        description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        variant="danger"
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) deleteRecord(target.id);
+        }}
+        onClose={() => setDeleteTarget(null)}
       />
     </div>
   );

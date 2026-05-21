@@ -27,6 +27,7 @@ export interface GrowthRecord {
   imageUrl?: string | null;
   imageUrls?: string[] | null;
   data?: Record<string, unknown> | null;
+  createdAt?: string;
 }
 
 export type FieldKind =
@@ -40,8 +41,10 @@ export interface FieldDef {
   label: string;
   kind: FieldKind;
   unit?: string;
+  units?: string[];
   options?: { value: string; label: string }[];
   placeholder?: string;
+  showSettingsLink?: boolean;
 }
 
 export interface TypeConfig {
@@ -50,6 +53,8 @@ export interface TypeConfig {
   color: string;
   hasEnd: boolean;
   fields: FieldDef[];
+  showDuration?: boolean;
+  showEndPicker?: boolean;
 }
 
 export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
@@ -82,23 +87,22 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '🥛',
     color: 'bg-sky-50 text-sky-600',
     hasEnd: true,
-    fields: [
-      { key: 'leftMin', label: '왼쪽', kind: 'number', unit: '분' },
-      { key: 'rightMin', label: '오른쪽', kind: 'number', unit: '분' },
-      { key: 'leftMl', label: '왼쪽 유축량', kind: 'number', unit: 'ml' },
-      { key: 'rightMl', label: '오른쪽 유축량', kind: 'number', unit: 'ml' },
-    ],
+    // 좌우/동시 모드에 따라 EntrySheet에서 커스텀 렌더링
+    fields: [],
   },
   SLEEP: {
     label: '수면',
     emoji: '😴',
     color: 'bg-indigo-50 text-indigo-600',
     hasEnd: true,
+    showDuration: true,
+    showEndPicker: true,
     fields: [
       {
         key: 'kind',
-        label: '구분',
+        label: '타입',
         kind: 'segmented',
+        showSettingsLink: true,
         options: [
           { value: 'NAP', label: '낮잠' },
           { value: 'NIGHT', label: '밤잠' },
@@ -110,7 +114,8 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     label: '목욕',
     emoji: '🛁',
     color: 'bg-cyan-50 text-cyan-600',
-    hasEnd: false,
+    hasEnd: true,
+    showDuration: true,
     fields: [],
   },
   MEDICATION: {
@@ -118,10 +123,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '💊',
     color: 'bg-purple-50 text-purple-600',
     hasEnd: false,
-    fields: [
-      { key: 'name', label: '약 이름', kind: 'text' },
-      { key: 'dose', label: '용량', kind: 'text', placeholder: '예) 5ml' },
-    ],
+    fields: [],
   },
   DIAPER: {
     label: '기저귀',
@@ -131,8 +133,9 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     fields: [
       {
         key: 'kind',
-        label: '종류',
+        label: '타입',
         kind: 'segmented',
+        showSettingsLink: true,
         options: [
           { value: 'PEE', label: '소변' },
           { value: 'POO', label: '대변' },
@@ -147,8 +150,13 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     color: 'bg-orange-50 text-orange-600',
     hasEnd: false,
     fields: [
-      { key: 'menu', label: '메뉴', kind: 'text', placeholder: '예) 소고기죽' },
-      { key: 'amountG', label: '먹은 양', kind: 'number', unit: 'g' },
+      {
+        key: 'amount',
+        label: '먹은양',
+        kind: 'number',
+        units: ['ml', 'g'],
+        showSettingsLink: true,
+      },
     ],
   },
   MILK: {
@@ -180,7 +188,9 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '🌡️',
     color: 'bg-rose-50 text-rose-600',
     hasEnd: false,
-    fields: [{ key: 'tempC', label: '체온', kind: 'number', unit: '℃' }],
+    fields: [
+      { key: 'tempC', label: '체온', kind: 'number', unit: '℃', placeholder: '36.5' },
+    ],
   },
   SNACK: {
     label: '간식',
@@ -256,8 +266,8 @@ export const CATEGORY_STYLE: Record<GrowthType, { border: string; bg: string }> 
   PUMPED_FEEDING: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
   PUMPING: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
   BABY_FOOD: { border: '#6CC68A', bg: 'rgba(108, 198, 138, 0.05)' },
-  SLEEP: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
-  BATH: { border: '#6A92EA', bg: 'rgba(106, 146, 234, 0.05)' },
+  SLEEP: { border: '#6A92EA', bg: 'rgba(106, 146, 234, 0.05)' },
+  BATH: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
   MEDICATION: { border: '#B67CF0', bg: 'rgba(182, 124, 240, 0.05)' },
   DIAPER: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
   TEMPERATURE: { border: '#515C66', bg: 'rgba(81, 92, 102, 0.05)' },
@@ -270,14 +280,25 @@ export const CATEGORY_STYLE: Record<GrowthType, { border: string; bg: string }> 
   ETC: { border: '#BBC0C5', bg: 'rgba(187, 192, 197, 0.05)' },
 };
 
+function fmtMinSec(min: number, sec: number): string {
+  if (min > 0 && sec > 0) return `${min}분 ${sec}초`;
+  if (min > 0) return `${min}분`;
+  if (sec > 0) return `${sec}초`;
+  return '0분';
+}
+
 export function summarizeRecord(r: GrowthRecord): string {
   const cfg = TYPE_CONFIG[r.type];
   const data = (r.data ?? {}) as Record<string, unknown>;
   const parts: string[] = [];
   switch (r.type) {
     case 'BREASTFEEDING': {
-      if (data.leftMin) parts.push(`좌 ${data.leftMin}분`);
-      if (data.rightMin) parts.push(`우 ${data.rightMin}분`);
+      const lm = Number(data.leftMin) || 0;
+      const ls = Number(data.leftSec) || 0;
+      const rm = Number(data.rightMin) || 0;
+      const rs = Number(data.rightSec) || 0;
+      if (lm > 0 || ls > 0) parts.push(`좌 ${fmtMinSec(lm, ls)}`);
+      if (rm > 0 || rs > 0) parts.push(`우 ${fmtMinSec(rm, rs)}`);
       break;
     }
     case 'FORMULA':
@@ -288,18 +309,34 @@ export function summarizeRecord(r: GrowthRecord): string {
       break;
     case 'BABY_FOOD':
       if (data.menu) parts.push(String(data.menu));
-      if (data.amountG) parts.push(`${data.amountG}g`);
+      if (data.amount && data.amountUnit) parts.push(`${data.amount}${data.amountUnit}`);
+      else if (data.amountG) parts.push(`${data.amountG}g`);
+      else if (data.amountMl) parts.push(`${data.amountMl}ml`);
       break;
     case 'SLEEP':
       break;
     case 'PUMPING': {
+      const pumpingMode = String(data.pumpingMode ?? 'LR');
+      const volumeMode = String(data.volumeMode ?? 'LR');
+      const lm = Number(data.leftMin) || 0;
+      const ls = Number(data.leftSec) || 0;
+      const rm = Number(data.rightMin) || 0;
+      const rs = Number(data.rightSec) || 0;
       const min: string[] = [];
-      if (data.leftMin) min.push(`좌 ${data.leftMin}분`);
-      if (data.rightMin) min.push(`우 ${data.rightMin}분`);
+      if (pumpingMode === 'BOTH') {
+        if (lm > 0 || ls > 0) min.push(`동시 ${fmtMinSec(lm, ls)}`);
+      } else {
+        if (lm > 0 || ls > 0) min.push(`좌 ${fmtMinSec(lm, ls)}`);
+        if (rm > 0 || rs > 0) min.push(`우 ${fmtMinSec(rm, rs)}`);
+      }
       if (min.length) parts.push(min.join(' '));
       const ml: string[] = [];
-      if (data.leftMl) ml.push(`좌 ${data.leftMl}ml`);
-      if (data.rightMl) ml.push(`우 ${data.rightMl}ml`);
+      if (volumeMode === 'BOTH') {
+        if (data.amountMl) ml.push(`${data.amountMl}ml`);
+      } else {
+        if (data.leftMl) ml.push(`좌 ${data.leftMl}ml`);
+        if (data.rightMl) ml.push(`우 ${data.rightMl}ml`);
+      }
       if (ml.length) parts.push(ml.join(' '));
       break;
     }
