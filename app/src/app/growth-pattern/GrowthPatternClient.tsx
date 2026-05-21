@@ -6,6 +6,7 @@ import EmptyChildState from '@/components/EmptyChildState';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { calcChildAge } from '@/lib/childAge';
 import {
   MENU_TYPES,
@@ -659,6 +660,10 @@ export default function GrowthPatternClient() {
           </div>
         </div>
       </div>
+
+      <section className="mt-6 flex justify-center shrink-0">
+        <KakaoAdBanner unit="DAN-P9dlZp9cPFgYuYgZ" />
+      </section>
 
       <WheelDatePickerModal
         open={datePickerOpen}

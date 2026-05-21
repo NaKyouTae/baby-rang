@@ -12,14 +12,10 @@ export default function HomeHeaderActions() {
           <path d="M5.83332 2.78167C7.09953 2.04894 8.53706 1.66426 9.99999 1.66667C14.6025 1.66667 18.3333 5.3975 18.3333 10C18.3333 14.6025 14.6025 18.3333 9.99999 18.3333C5.39749 18.3333 1.66666 14.6025 1.66666 10C1.66666 8.4825 2.07249 7.05833 2.78166 5.83333" stroke="black" strokeWidth="1.25" strokeLinecap="round"/>
         </svg>
       </Link>
-      <button
-        type="button"
-        aria-label="메뉴"
-        onClick={() => alert("기능 개발중입니다.")}
-      >
+      <Link href="/menu" aria-label="메뉴">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/hamburger-menu-linear.svg" alt="" width={24} height={24} />
-      </button>
+      </Link>
     </div>
   );
 }

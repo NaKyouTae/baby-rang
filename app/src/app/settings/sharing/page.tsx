@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { palette } from '@/lib/colors';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -276,6 +277,13 @@ export default function SharingPage() {
               </div>
             )}
 
+            {/* 카카오 배너 */}
+            {myShare && (
+              <div className="mt-6 -mx-5 flex justify-center">
+                <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
+              </div>
+            )}
+
             {/* 멤버 목록 */}
             {myShare && myShare.members.length > 0 && (
               <ul className="mt-6 space-y-2.5">
@@ -330,6 +338,11 @@ export default function SharingPage() {
               >
                 {joining ? '참여 중...' : '확인'}
               </button>
+            </div>
+
+            {/* 카카오 배너 */}
+            <div className="mt-6 -mx-5 flex justify-center">
+              <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
             </div>
 
             {sharedWithMe.length === 0 ? (

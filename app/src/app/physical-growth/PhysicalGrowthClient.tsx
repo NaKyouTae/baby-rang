@@ -10,6 +10,7 @@ import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import GrowthChart from './GrowthChart';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import type { MetricType, Gender } from './growthStandards';
 
 interface PhysicalGrowthRecord {
@@ -233,6 +234,10 @@ export default function PhysicalGrowthClient() {
           </div>
         )}
       </header>
+
+      <section className="pt-2 flex justify-center">
+        <KakaoAdBanner unit="DAN-Fm093TsMO8DEkFC3" />
+      </section>
 
       {/* 성장도표 / 기록 탭 전환 */}
       <div className="px-5 mt-3">

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 import HomeHeaderActions from "@/components/HomeHeaderActions";
+import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -93,6 +94,10 @@ export default function HomePage() {
               })}
             </div>
           </section>
+
+          <div className="mt-6 -mx-6 flex justify-center">
+            <KakaoAdBanner unit="DAN-go0noPJx8cIt6SU7" />
+          </div>
 
           <div className="mt-6">
             <HomeWeatherStrip />

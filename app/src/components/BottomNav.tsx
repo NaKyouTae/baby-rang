@@ -190,6 +190,15 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
 
   const isHomeActive = pathname === HOME_HREF || pathname === "/";
 
+  // 테스트 시작/진행/결과, 데이터 가져오기, 메뉴 페이지에서는 하단 네비 숨김
+  const hideNav =
+    /^\/tests\/[^/]+$/.test(pathname ?? "") ||
+    /^\/tests\/[^/]+\/test\/[^/]+$/.test(pathname ?? "") ||
+    /^\/tests\/[^/]+\/result\/[^/]+$/.test(pathname ?? "") ||
+    pathname === "/settings/import-data" ||
+    pathname === "/menu";
+  if (hideNav) return null;
+
   return (
     <>
       <nav

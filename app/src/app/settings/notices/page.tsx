@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 type Notice = {
   id: string;
@@ -65,6 +66,10 @@ export default function NoticesPage() {
   return (
     <div className="flex flex-col min-h-dvh bg-white">
       <PageHeader title="공지사항" variant="back" />
+
+      <div className="mt-4 flex justify-center">
+        <KakaoAdBanner unit="DAN-WilN4RkA8BlLlFxS" />
+      </div>
 
       <div className="mt-3 px-6">
         {loading ? (

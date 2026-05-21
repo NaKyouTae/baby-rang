@@ -66,9 +66,9 @@ export default function TermsPage() {
         <section>
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>제5조 (서비스의 제공 및 변경)</h2>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>회사는 회원에게 아기 성장 기록, 발달 패턴, 기질 검사, 수유실 안내 등의 서비스를 제공합니다.</li>
+            <li>회사는 회원에게 아기 성장 기록, 발달 패턴, 기질 테스트, 수유실 안내 등의 서비스를 제공합니다.</li>
             <li>회사는 서비스의 내용, 운영상·기술상 사항 등을 변경할 수 있으며, 변경 시 사전에 공지합니다.</li>
-            <li>서비스에서 제공하는 정보(성장 기준, 발달 정보 등)는 일반적인 참고 자료이며, 의료 행위나 진단을 대체하지 않습니다.</li>
+            <li>본 서비스에서 제공하는 모든 정보(수면, 수유, 발달, 기질 분석 등)는 일반적인 참고 자료이며, 의료적 진단이나 치료를 위한 것이 아닙니다. 건강과 관련된 판단은 반드시 전문가와 상담하시기 바랍니다.</li>
           </ol>
         </section>
 
@@ -77,7 +77,7 @@ export default function TermsPage() {
           <ol className="list-decimal pl-5 space-y-1">
             <li>회원은 회사가 정한 결제 수단을 통해 유료 서비스를 이용할 수 있습니다.</li>
             <li>유료 서비스의 가격, 이용 기간, 환불 조건 등은 각 상품 안내 페이지에 표시된 내용에 따릅니다.</li>
-            <li>유료 서비스의 환불에 관한 사항은 별도로 정한 <a href="/refund" className="text-blue-600 underline">환불정책</a>을 따릅니다.</li>
+            <li>유료 서비스 환불은 관련 법령 및 회사의 환불 정책에 따라 처리됩니다.</li>
           </ol>
         </section>
 

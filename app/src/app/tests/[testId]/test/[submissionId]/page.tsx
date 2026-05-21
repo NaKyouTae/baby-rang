@@ -8,6 +8,7 @@ import ProgressBar from '../../_components/ProgressBar';
 import QuestionCard from '../../_components/QuestionCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 type ScreenState =
   | { type: 'question'; index: number }
@@ -182,7 +183,7 @@ export default function TestPage() {
         current={Object.keys(answers).length}
         total={questions.length}
       />
-      <main className="flex flex-col overflow-hidden px-6">
+      <main className="flex flex-col overflow-hidden px-6 pb-[88px]">
         <div className="flex-1 overflow-y-auto pt-12 pb-6">
           {currentQuestion && (
             <QuestionCard
@@ -208,6 +209,13 @@ export default function TestPage() {
           </button>
         </div>
       </main>
+
+      {/* 카카오 배너 — 화면 하단 24px */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 flex justify-center pointer-events-none">
+        <div className="pointer-events-auto">
+          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
+        </div>
+      </div>
 
       <ConfirmModal
         open={!!errorModal}

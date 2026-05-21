@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
+import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 import { palette } from "@/lib/colors";
 import {
   GRADE_COLOR,
@@ -284,6 +285,11 @@ export default function AirQualityClient() {
                 </div>
               </div>
             </section>
+
+            {/* 카카오 광고 */}
+            <div className="mt-3 -mx-4 flex justify-center">
+              <KakaoAdBanner unit="DAN-ecnv6Du49hgANqEs" />
+            </div>
 
             {/* 시간별 예보 */}
             {hourly.length > 0 && (

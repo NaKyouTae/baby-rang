@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 const TEMPERAMENT_PRICE = 4900;
 import type { TestResult } from '@/lib/api';
@@ -95,7 +96,7 @@ export default function ResultPage() {
 
   return (
     <div className="flex flex-col min-h-dvh bg-white">
-      <PageHeader title="검사 결과" variant="back" />
+      <PageHeader title="검사 결과" variant="back" onAction={() => router.push('/tests')} />
       <main className="flex-1 pb-8 px-6 pt-6">
         <ResultCover
           primaryType={result.summary.primaryType}
@@ -103,6 +104,12 @@ export default function ResultPage() {
           title={result.summary.title}
           description={result.summary.description}
         />
+
+      {!result.isPaid && (
+        <div className="my-6 -mx-6 flex justify-center">
+          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
+        </div>
+      )}
 
       <DimensionBar scores={result.scores} />
 

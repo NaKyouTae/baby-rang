@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { palette } from '@/lib/colors';
 
 type TestItem = {
@@ -31,7 +32,7 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
     <div className="flex flex-col min-h-dvh bg-white">
       <PageHeader title="테스트" variant="back" />
 
-      <main className="flex-1 px-5 pt-6 pb-28">
+      <main className="flex-1 flex flex-col px-5 pt-6 pb-28">
         {tests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 text-sm">
             <span className="text-3xl mb-2">📝</span>
@@ -154,6 +155,10 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
             ))}
           </ul>
         )}
+
+        <div className="mt-auto pt-6 -mx-5 flex justify-center">
+          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
+        </div>
       </main>
     </div>
   );

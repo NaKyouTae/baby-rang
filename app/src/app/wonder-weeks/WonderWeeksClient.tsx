@@ -7,6 +7,7 @@ import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_componen
 import ChildSelector from '@/components/ChildSelector';
 import EmptyChildState from '@/components/EmptyChildState';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 export default function WonderWeeksClient() {
   return (
@@ -63,6 +64,11 @@ function WonderWeeksContent() {
             selected={selectedChild}
             onSelect={selectChild}
           />
+        </div>
+
+        {/* 카카오 배너 */}
+        <div className="pb-6 -mx-6 flex justify-center">
+          <KakaoAdBanner unit="DAN-h3a1xEldDr1zxYca" />
         </div>
 
         <WonderWeeksCalendar ref={calendarRef} birthDate={selectedChild.birthDate} />

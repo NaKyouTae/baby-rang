@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { calcChildAge } from '@/lib/childAge';
 
 // 월령 계산 (KST 기준, 공통 함수 사용)
@@ -257,6 +258,10 @@ export default function SleepGoldenTimeClient() {
             />
           </div>
         </section>
+
+        <div className="-mx-5 flex justify-center">
+          <KakaoAdBanner unit="DAN-R24cGE36FOCEgdQH" />
+        </div>
 
         {/* 하루 일과 한 눈에 보기 — 차트 영역 + 타임라인 영역 (white bg) */}
         <section className="flex flex-col gap-[10px]">

@@ -11,6 +11,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 import PageHeader from "@/components/PageHeader";
+import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -284,7 +285,7 @@ export default function SettingsPage() {
       )}
 
       {/* 헤더 */}
-      <PageHeader title="마이페이지" variant="close" />
+      <PageHeader title="마이페이지" variant="close" onAction={() => router.push('/home')} />
 
       <div className="flex-1 overflow-y-auto pb-36">
         {/* 사용자 프로필 */}
@@ -356,6 +357,11 @@ export default function SettingsPage() {
           requireLogin={requireLogin}
           router={router}
         />
+
+        {/* 카카오 배너 */}
+        <section className="mb-[24px] flex justify-center">
+          <KakaoAdBanner unit="DAN-1WW9dvD0fELxhvgl" />
+        </section>
 
         {/* 권한 설정 */}
         {locationPerm !== null && (

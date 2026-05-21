@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { type ReactNode } from 'react';
 import PageHeader from '@/components/PageHeader';
+import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { palette } from '@/lib/colors';
 import type { TestInfo } from './types';
 
@@ -39,7 +40,7 @@ export default function TestStartShell({
   return (
     <>
       <PageHeader title="테스트" variant="back" />
-      <main className="flex flex-col items-center text-center px-5 pb-[168px]">
+      <main className="flex flex-col items-center text-center px-5 pb-[232px]">
         <div
           className="mt-[136px] mb-6 flex items-center justify-center w-[100px] h-[100px] rounded-full"
           style={{ backgroundColor: 'rgba(48, 120, 201, 0.05)' }}
@@ -114,9 +115,12 @@ export default function TestStartShell({
         {middleSlot && <div className="w-full max-w-xs mb-5">{middleSlot}</div>}
       </main>
 
-      {/* Bottom CTA: 하단 네비(64px + 24px 마진) 위 24px 간격 */}
-      <div className="fixed bottom-[112px] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-5 z-40 pointer-events-none">
-        <div className="pointer-events-auto">{bottomSlot}</div>
+      {/* Bottom CTA + 배너: 배너 하단을 화면 하단 24px, 버튼은 배너 위 24px */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none">
+        <div className="pointer-events-auto mb-6 px-5">{bottomSlot}</div>
+        <div className="pointer-events-auto flex justify-center">
+          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
+        </div>
       </div>
     </>
   );

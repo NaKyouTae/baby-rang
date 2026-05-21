@@ -249,7 +249,8 @@
       "Bash(tee /tmp/tsc.log)",
       "Bash(ls -lat /private/tmp 2>/dev/null | head -20; echo \"---\"; find /var/folders -name \"*.png\" -newer /tmp -mmin -30 2>/dev/null | head -10)",
       "Read(//private/var/folders/**)",
-      "Bash(sips -g pixelWidth -g pixelHeight -g format /Users/nakyutae/personal/git/baby-rang/app/public/favicon.png)"
+      "Bash(sips -g pixelWidth -g pixelHeight -g format /Users/nakyutae/personal/git/baby-rang/app/public/favicon.png)",
+      "Bash(echo \"DONE: $?\")"
     ],
     "additionalDirectories": [
       "/tmp",
