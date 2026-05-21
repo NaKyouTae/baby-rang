@@ -250,7 +250,17 @@
       "Bash(ls -lat /private/tmp 2>/dev/null | head -20; echo \"---\"; find /var/folders -name \"*.png\" -newer /tmp -mmin -30 2>/dev/null | head -10)",
       "Read(//private/var/folders/**)",
       "Bash(sips -g pixelWidth -g pixelHeight -g format /Users/nakyutae/personal/git/baby-rang/app/public/favicon.png)",
-      "Bash(echo \"DONE: $?\")"
+      "Bash(echo \"DONE: $?\")",
+      "Bash(echo \"TSC EXIT: $?\")",
+      "Bash(echo \"LINT EXIT: $?\")",
+      "Bash(md5 /Users/nakyutae/personal/git/baby-rang/app/src/app/icon.png /Users/nakyutae/personal/git/baby-rang/admin/src/app/icon.png /Users/nakyutae/personal/git/baby-rang/app/public/favicon.png)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:13000/tesma)",
+      "Bash(curl -s http://localhost:13000/tesma)",
+      "Bash(curl -s -o /tmp/tesma.html -w \"HTTP %{http_code}\\\\n\" -m 10 http://localhost:13000/tesma)",
+      "Bash(curl -sS -A \"Mozilla/5.0\" -m 30 -o /tmp/tesma.html -w \"HTTP %{http_code}\\\\nSize: %{size_download}\\\\n\" http://localhost:13000/tesma)",
+      "Bash(curl -sS -A \"Mozilla/5.0\" -m 60 -o /tmp/tesma.html -w \"HTTP %{http_code}\\\\nSize: %{size_download}\\\\n\" http://localhost:13000/tesma)",
+      "Bash(curl -sS -A \"Mozilla/5.0\" -m 60 http://localhost:13000/tesma -o /tmp/tesma2.html -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(grep -oE \"data-bottom-nav-root.{0,80}|display:none\" /tmp/tesma2.html)"
     ],
     "additionalDirectories": [
       "/tmp",

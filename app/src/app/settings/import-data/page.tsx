@@ -317,10 +317,10 @@ export default function ImportDataPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       <PageHeader title="데이터 가져오기" variant="back" />
 
-      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-5">
+      <div className="px-5 pt-6 pb-5">
         {/* 아기 선택 */}
         {isLoaded && selectedChild && (
           <div className="mb-6">

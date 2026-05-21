@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
-import EmptyChildState from '@/components/EmptyChildState';
+import NoChildCard from '@/components/NoChildCard';
+import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
@@ -226,6 +227,7 @@ function computeDayStats(records: GrowthRecord[], dateStr: string, todayStr: str
 
 export default function GrowthPatternClient() {
   const { children, isLoaded } = useChildren();
+  const { openLoginPrompt } = useLoginPrompt();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const todayStr = toDateStr(new Date());
@@ -409,23 +411,8 @@ export default function GrowthPatternClient() {
   };
 
   if (!isLoaded) return null;
-  if (children.length === 0) {
-    return (
-      <>
-        <PageHeader title="패턴" variant="back" />
-        <EmptyChildState
-          emoji="📊"
-          title="패턴"
-          description={
-            <>
-              아기를 등록하면<br />
-              하루 리듬을 한눈에 볼 수 있어요.
-            </>
-          }
-        />
-      </>
-    );
-  }
+
+  const noChild = !selectedChild;
 
   const rangeLabel =
     viewMode === 'day'
@@ -440,11 +427,15 @@ export default function GrowthPatternClient() {
     <div className="flex flex-col h-[100dvh] bg-white pb-[112px] overflow-hidden">
       <PageHeader title="패턴" variant="back" />
       <div className="px-6 flex flex-col flex-1 min-h-0">
-        <ChildSelector
-          children={children}
-          selected={selectedChild}
-          onSelect={setSelectedChild}
-        />
+        {noChild ? (
+          <NoChildCard loginMessage="로그인하고 우리 아기의 하루 리듬을 확인하세요." />
+        ) : (
+          <ChildSelector
+            children={children}
+            selected={selectedChild}
+            onSelect={setSelectedChild}
+          />
+        )}
 
         {/* 일/주 토글 */}
         <div className="mt-4 bg-gray-100 rounded-lg p-1 flex">
@@ -481,7 +472,13 @@ export default function GrowthPatternClient() {
                 <button
                   key={t}
                   type="button"
-                  onClick={() => toggleType(t)}
+                  onClick={() => {
+                    if (noChild) {
+                      openLoginPrompt('로그인하고 우리 아기의 하루 리듬을 확인하세요.');
+                      return;
+                    }
+                    toggleType(t);
+                  }}
                   className="flex flex-col items-center gap-[4px] shrink-0"
                   aria-label={cfg.label}
                   aria-pressed={active}

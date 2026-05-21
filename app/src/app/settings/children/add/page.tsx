@@ -11,7 +11,7 @@ export default function AddChildPage() {
   const { addChild } = useChildren();
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="아기 추가하기" variant="close" />
       <section className="pt-6 flex justify-center">
         <KakaoAdBanner unit="DAN-JK9I9W9ilVyrtSj4" />

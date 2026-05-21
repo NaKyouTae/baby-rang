@@ -64,7 +64,7 @@ export default function NoticesPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="공지사항" variant="back" />
 
       <div className="mt-4 flex justify-center">

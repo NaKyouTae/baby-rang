@@ -46,10 +46,10 @@ const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursing
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       {/* 홈 헤더 */}
       <header
-        className="flex items-center justify-between px-6 shrink-0"
+        className="sticky top-0 z-30 bg-white flex items-center justify-between px-6 shrink-0"
         style={{
           minHeight: 56,
           paddingTop: 'calc(var(--safe-area-top) + 12px)',

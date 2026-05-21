@@ -3,7 +3,8 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSelectedChild } from '@/hooks/useChildren';
-import EmptyChildState from '@/components/EmptyChildState';
+import NoChildCard from '@/components/NoChildCard';
+import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import {
   MENU_TYPES,
   GrowthRecord,
@@ -277,6 +278,7 @@ type DayGroup = { date: string; records: GrowthRecord[] };
 
 export default function GrowthRecordPage() {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
+  const { openLoginPrompt } = useLoginPrompt();
   const [days, setDays] = useState<DayGroup[]>([]);
   const [cursor, setCursor] = useState<string>(todayString());
   const [hasMore, setHasMore] = useState(true);
@@ -585,44 +587,27 @@ export default function GrowthRecordPage() {
 
   if (!isLoaded) return null;
 
-  if (children.length === 0) {
-    return (
-      <>
-        <PageHeader title="기록" variant="back" />
-        <EmptyChildState
-          emoji="📒"
-          title="기록"
-          description={
-            <>
-              아기를 등록하면<br />
-              매일의 기록을 남길 수 있어요.
-            </>
-          }
-        />
-      </>
-    );
-  }
-
-  if (!selectedChild) return null;
-
+  const noChild = !selectedChild;
   const today = todayString();
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6">
-      <div className="-mx-6">
-        <PageHeader title="기록" variant="back" />
-      </div>
-      {/* 상단 헤더: 자식 선택 + 카테고리 + 마지막 기록 카드 */}
+    <div className="flex flex-col bg-white px-6">
+      {/* 상단 헤더: PageHeader + 자식 선택 + 카테고리 + 마지막 기록 카드 */}
       <div
         ref={titleBarRef}
-        className="sticky top-0 z-20 bg-white -mx-6 px-6 pb-3"
-        style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}
+        className="sticky top-0 z-30 bg-white -mx-6"
       >
-        <ChildSelector
-          children={children}
-          selected={selectedChild}
-          onSelect={selectChild}
-        />
+        <PageHeader title="기록" variant="back" />
+        <div className="px-6 pb-3 pt-6">
+        {noChild ? (
+          <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
+        ) : (
+          <ChildSelector
+            children={children}
+            selected={selectedChild}
+            onSelect={selectChild}
+          />
+        )}
 
         {/* 카테고리 가로 스크롤 */}
         <div data-quick-bar-root className="-mx-6 mt-3">
@@ -645,6 +630,10 @@ export default function GrowthRecordPage() {
                     key={t}
                     type="button"
                     onClick={() => {
+                      if (noChild) {
+                        openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.');
+                        return;
+                      }
                       setEditing(null);
                       setSheetType(t);
                     }}
@@ -672,7 +661,13 @@ export default function GrowthRecordPage() {
               {/* 설정 버튼 */}
               <button
                 type="button"
-                onClick={() => setShowAddQuick(true)}
+                onClick={() => {
+                  if (noChild) {
+                    openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.');
+                    return;
+                  }
+                  setShowAddQuick(true);
+                }}
                 className="flex flex-col items-center gap-[4px] shrink-0"
                 aria-label="기록 항목 설정"
               >
@@ -726,6 +721,7 @@ export default function GrowthRecordPage() {
             </div>
           );
         })()}
+        </div>
       </div>
 
       {/* 타임라인 - 날짜별 세로 나열 + 무한 스크롤 */}
@@ -733,7 +729,29 @@ export default function GrowthRecordPage() {
         className="flex-1"
         style={{ paddingBottom: "186px" }}
       >
-        {initialLoading && sortedDays.length === 0 ? (
+        {noChild ? (
+          <div className="mt-[24px] rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon-empty-record.svg"
+                alt=""
+                width={20}
+                height={20}
+                aria-hidden="true"
+              />
+            </div>
+            <p className="mt-[10px] text-[14px] font-medium text-black">아직 등록된 기록이 없어요.</p>
+            <p className="mt-[4px] text-[12px] font-normal text-gray-500">우리 아기의 하루를 기록해 보세요.</p>
+            <button
+              type="button"
+              onClick={() => openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.')}
+              className="mt-[10px] inline-flex items-center justify-center px-3 h-6 rounded-[6px] text-[12px] font-semibold text-white bg-primary-500 active:opacity-80 transition-opacity"
+            >
+              데이터 가져오기
+            </button>
+          </div>
+        ) : initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 && !hasMore ? (
           <div className="mt-[24px] rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
@@ -765,7 +783,7 @@ export default function GrowthRecordPage() {
             {sortedDays.map((group) => {
               const stats = computeDayStats(group.records, group.date);
               const isToday = group.date === today;
-              const dDay = selectedChild.birthDate
+              const dDay = selectedChild?.birthDate
                 ? dayOfLife(selectedChild.birthDate, group.date)
                 : null;
               return (
@@ -955,7 +973,7 @@ export default function GrowthRecordPage() {
         </div>
       </div>
 
-      {sheetType && (
+      {sheetType && selectedChild && (
         <EntrySheet
           childId={selectedChild.id}
           type={sheetType}

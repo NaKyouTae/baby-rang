@@ -5,7 +5,7 @@ import { palette } from '@/lib/colors';
 
 export default function SettingsTermsPage() {
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="이용약관" variant="back" />
 
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-6" style={{ color: palette.gray500 }}>

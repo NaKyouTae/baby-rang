@@ -59,7 +59,7 @@ export default function PaymentsPage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="결제 내역" variant="back" />
 
       <section className="pt-6 flex justify-center">

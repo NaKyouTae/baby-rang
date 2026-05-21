@@ -158,9 +158,9 @@ export default function AirQualityClient() {
   const pm25WhoGrade = whoGradePm25(air?.pm25 ?? null);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       <header
-        className="flex items-center justify-center relative px-5 py-4"
+        className="sticky top-0 z-30 bg-white flex items-center justify-center relative px-5 py-4"
         style={{ paddingTop: "calc(var(--safe-area-top) + 16px)" }}
       >
         <button

@@ -5,7 +5,8 @@ import { useChildren, type Child } from '@/hooks/useChildren';
 import BottomSheet from '@/components/BottomSheet';
 import ChildSelector from '@/components/ChildSelector';
 import ConfirmModal from '@/components/ConfirmModal';
-import EmptyChildState from '@/components/EmptyChildState';
+import NoChildCard from '@/components/NoChildCard';
+import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
@@ -68,6 +69,7 @@ function resolveGender(child: Child): Gender {
 
 export default function PhysicalGrowthClient() {
   const { children: childList, isLoaded } = useChildren();
+  const { openLoginPrompt } = useLoginPrompt();
   const [selected, setSelected] = useState<Child | null>(null);
   const [records, setRecords] = useState<PhysicalGrowthRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -200,39 +202,24 @@ export default function PhysicalGrowthClient() {
     }
   };
 
-  if (isLoaded && childList.length === 0) {
-    return (
-      <>
-        <PageHeader title="성장" variant="back" />
-        <EmptyChildState
-          emoji="📏"
-          title="성장 측정을 시작해보세요"
-          description={
-            <>
-              우리 아기를 등록하면
-              <br />
-              키, 몸무게, 머리둘레를 기록할 수 있어요.
-            </>
-          }
-        />
-      </>
-    );
-  }
+  const noChild = !selected;
 
   return (
-    <main className="min-h-[100dvh] bg-white pb-32">
+    <main className="bg-white pb-32">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-white">
         <PageHeader title="성장" variant="back" />
-        {childList.length > 0 && selected && (
-          <div className="px-5 pb-3">
+        <div className="px-5 pb-3">
+          {noChild ? (
+            <NoChildCard loginMessage="로그인하고 우리 아기의 성장 기록을 확인하세요." />
+          ) : (
             <ChildSelector
               children={childList}
               selected={selected}
               onSelect={setSelected}
             />
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <section className="pt-2 flex justify-center">
@@ -268,7 +255,7 @@ export default function PhysicalGrowthClient() {
       </div>
 
       {/* ── 성장도표 탭 ── */}
-      {viewTab === 'chart' && selected && (
+      {viewTab === 'chart' && (
         <div className="px-5 mt-4">
           {/* 지표 선택 탭 (키/체중/머리둘레) */}
           <div className="flex gap-2 mb-6">
@@ -288,12 +275,12 @@ export default function PhysicalGrowthClient() {
             ))}
           </div>
 
-          {/* 성장 도표 차트 */}
+          {/* 성장 도표 차트 — 비로그인/아기 미등록 시에도 WHO 기준 곡선만 표시 */}
           <GrowthChart
-            gender={resolveGender(selected)}
+            gender={selected ? resolveGender(selected) : 'male'}
             metric={activeMetric}
-            birthDate={selected.birthDate}
-            records={records}
+            birthDate={selected?.birthDate ?? todayString()}
+            records={selected ? records : []}
           />
 
           {/* 성장도표 안내 문구 */}
@@ -449,6 +436,10 @@ export default function PhysicalGrowthClient() {
           <button
             type="button"
             onClick={() => {
+              if (noChild) {
+                openLoginPrompt('로그인하고 우리 아기의 성장 기록을 시작하세요.');
+                return;
+              }
               resetForm();
               setShowForm(true);
             }}

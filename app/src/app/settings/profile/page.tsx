@@ -76,7 +76,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader
         title="내 정보"
         variant="back"

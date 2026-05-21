@@ -95,7 +95,7 @@ export default function ResultPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       <PageHeader title="검사 결과" variant="back" onAction={() => router.push('/tests')} />
       <main className="flex-1 pb-8 px-6 pt-6">
         <ResultCover

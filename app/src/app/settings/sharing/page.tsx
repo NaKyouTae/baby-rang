@@ -215,7 +215,7 @@ export default function SharingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       {/* 헤더 */}
       <div className="bg-white">
         <PageHeader title="기록 공유" variant="back" />

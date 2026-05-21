@@ -103,7 +103,7 @@ export default function OnboardingClient() {
   const datePickerChild = children.find((c) => c.key === datePickerFor);
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white px-6 pb-32" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+    <div className="flex flex-col bg-white px-6 pb-32" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
       {/* 헤더 */}
       <header className="pb-2">
         <p className="text-xs text-primary-600 font-semibold">회원가입</p>

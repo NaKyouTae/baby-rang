@@ -264,7 +264,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       {locationGuide && (
         <ConfirmModal
           open={locationGuideOpen}
@@ -287,7 +287,7 @@ export default function SettingsPage() {
       {/* 헤더 */}
       <PageHeader title="마이페이지" variant="close" onAction={() => router.push('/home')} />
 
-      <div className="flex-1 overflow-y-auto pb-36">
+      <div className="pb-36">
         {/* 사용자 프로필 */}
         <section className="px-6 pt-5 pb-[24px]">
           {!isAuthLoaded ? (

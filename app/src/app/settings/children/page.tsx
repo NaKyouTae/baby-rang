@@ -17,7 +17,7 @@ export default function ChildrenSettingsPage() {
   if (!isLoaded) return null;
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader
         title="아기 추가하기"
         variant="back"

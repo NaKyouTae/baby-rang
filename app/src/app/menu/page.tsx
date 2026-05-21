@@ -52,10 +52,10 @@ export default function MenuPage() {
   const { openLoginPrompt } = useLoginPrompt();
 
   return (
-    <div className="flex flex-col min-h-dvh bg-white">
+    <div className="flex flex-col bg-white">
       {/* 헤더 — 홈 헤더와 동일 레이아웃, 우측은 프로필 + X */}
       <header
-        className="flex items-center justify-between px-6 shrink-0"
+        className="sticky top-0 z-30 bg-white flex items-center justify-between px-6 shrink-0"
         style={{
           minHeight: 56,
           paddingTop: 'calc(var(--safe-area-top) + 12px)',
@@ -85,7 +85,7 @@ export default function MenuPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 32 }}>
+      <div style={{ paddingBottom: 32 }}>
         {/* 사용자 프로필 */}
         <section className="px-6 pt-5 pb-[24px]">
           {!isAuthLoaded ? (
