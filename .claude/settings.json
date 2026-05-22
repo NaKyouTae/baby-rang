@@ -260,7 +260,20 @@
       "Bash(curl -sS -A \"Mozilla/5.0\" -m 30 -o /tmp/tesma.html -w \"HTTP %{http_code}\\\\nSize: %{size_download}\\\\n\" http://localhost:13000/tesma)",
       "Bash(curl -sS -A \"Mozilla/5.0\" -m 60 -o /tmp/tesma.html -w \"HTTP %{http_code}\\\\nSize: %{size_download}\\\\n\" http://localhost:13000/tesma)",
       "Bash(curl -sS -A \"Mozilla/5.0\" -m 60 http://localhost:13000/tesma -o /tmp/tesma2.html -w \"HTTP %{http_code}\\\\n\")",
-      "Bash(grep -oE \"data-bottom-nav-root.{0,80}|display:none\" /tmp/tesma2.html)"
+      "Bash(grep -oE \"data-bottom-nav-root.{0,80}|display:none\" /tmp/tesma2.html)",
+      "Bash(mkdir -p /tmp/baby-rang-ppt)",
+      "Bash(npm init *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -sI https://baby-rang.spectrify.kr)",
+      "Bash(curl -sIL https://baby-rang.spectrify.kr)",
+      "Bash(curl -s https://baby-rang.spectrify.kr/api/tests)",
+      "Bash(curl -s https://baby-rang.spectrify.kr/tests)",
+      "Bash(curl -s \"https://baby-rang-api.spectrify.kr/tests\")",
+      "Bash(curl -s \"https://api.baby-rang.spectrify.kr/tests\")",
+      "Bash(curl -s \"https://baby-rang.spectrify.kr/home\")",
+      "Bash(curl -s \"https://baby-rang.spectrify.kr/menu\")",
+      "Bash(node capture.js)",
+      "Bash(xcodebuild -scheme BabyRang -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO)"
     ],
     "additionalDirectories": [
       "/tmp",

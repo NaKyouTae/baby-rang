@@ -264,7 +264,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
           data-nav-picker
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[51] pointer-events-none"
         >
-          <div className="mx-6 mb-[calc(max(min(var(--safe-area-bottom),34px),24px)+66px)] pointer-events-auto">
+          <div className="mx-6 mb-[calc(max(min(var(--safe-area-bottom),34px),24px)+74px)] pointer-events-auto">
             <div
               className="bg-white rounded-lg p-[10px] shadow-[0_0_20px_rgba(0,0,0,0.08)]"
               onClick={(e) => e.stopPropagation()}

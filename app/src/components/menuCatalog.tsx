@@ -90,9 +90,9 @@ export const ALL_MENU_IDS: MenuId[] = [
 ];
 
 export const DEFAULT_NAV_SLOTS: (MenuId | null)[] = [
-  "nursing-room",
-  "sleep-golden-time",
   "growth-record",
+  "growth-pattern",
+  "physical-growth",
   null,
 ];
 

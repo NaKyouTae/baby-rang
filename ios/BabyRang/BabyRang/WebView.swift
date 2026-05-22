@@ -4,9 +4,10 @@ import CoreLocation
 
 struct WebView: UIViewRepresentable {
     let url: URL
+    @Binding var isLoaded: Bool
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(isLoaded: $isLoaded)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -40,8 +41,10 @@ struct WebView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate {
         private let locationManager = CLLocationManager()
         private var permissionCompletion: ((Bool) -> Void)?
+        @Binding var isLoaded: Bool
 
-        override init() {
+        init(isLoaded: Binding<Bool>) {
+            self._isLoaded = isLoaded
             super.init()
             locationManager.delegate = self
 
@@ -66,6 +69,14 @@ struct WebView: UIViewRepresentable {
         }
 
         // MARK: - WKNavigationDelegate
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // 첫 페이지 로드 완료 → 스플래시 페이드아웃
+            // 200ms 여유를 줘서 React hydration 직후 깜빡임을 흡수
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+                self?.isLoaded = true
+            }
+        }
 
         func webView(_ webView: WKWebView,
                      decidePolicyFor navigationAction: WKNavigationAction,
