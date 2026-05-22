@@ -4,10 +4,10 @@ import CoreLocation
 
 struct WebView: UIViewRepresentable {
     let url: URL
-    @Binding var isLoaded: Bool
+    let onLoad: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isLoaded: $isLoaded)
+        Coordinator(onLoad: onLoad)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -41,10 +41,11 @@ struct WebView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, CLLocationManagerDelegate {
         private let locationManager = CLLocationManager()
         private var permissionCompletion: ((Bool) -> Void)?
-        @Binding var isLoaded: Bool
+        private let onLoad: () -> Void
+        private var hasNotifiedLoad = false
 
-        init(isLoaded: Binding<Bool>) {
-            self._isLoaded = isLoaded
+        init(onLoad: @escaping () -> Void) {
+            self.onLoad = onLoad
             super.init()
             locationManager.delegate = self
 
@@ -73,8 +74,11 @@ struct WebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // 첫 페이지 로드 완료 → 스플래시 페이드아웃
             // 200ms 여유를 줘서 React hydration 직후 깜빡임을 흡수
+            // 중복 호출 방지 (Next.js SPA 내비 시 didFinish 재호출 가능)
+            guard !hasNotifiedLoad else { return }
+            hasNotifiedLoad = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.isLoaded = true
+                self?.onLoad()
             }
         }
 

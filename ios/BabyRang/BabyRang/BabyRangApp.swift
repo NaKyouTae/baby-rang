@@ -14,19 +14,26 @@ struct BabyRangApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                WebView(
-                    url: URL(string: "https://baby-rang.spectrify.kr")!,
-                    isLoaded: $isWebViewLoaded
-                )
+                WebView(url: URL(string: "https://baby-rang.spectrify.kr")!) {
+                    isWebViewLoaded = true
+                }
                 .ignoresSafeArea()
 
-                if !isWebViewLoaded {
-                    SplashView()
-                        .transition(.opacity)
-                        .ignoresSafeArea()
+                SplashView()
+                    .ignoresSafeArea()
+                    .opacity(isWebViewLoaded ? 0 : 1)
+                    .allowsHitTesting(!isWebViewLoaded)
+                    .animation(.easeOut(duration: 0.4), value: isWebViewLoaded)
+                    .zIndex(10)
+            }
+            .onAppear {
+                // didFinish가 안 떨어지는 경우(네트워크 오류 등) 대비 6초 후 강제 dismiss
+                DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                    if !isWebViewLoaded {
+                        isWebViewLoaded = true
+                    }
                 }
             }
-            .animation(.easeOut(duration: 0.4), value: isWebViewLoaded)
         }
     }
 }
