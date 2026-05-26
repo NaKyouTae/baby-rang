@@ -18,15 +18,6 @@ type TestItem = {
   questionCount: number | null;
 };
 
-const formatDuration = (
-  min: number | null,
-  max: number | null,
-): string | null => {
-  if (min == null && max == null) return null;
-  if (min != null && max != null && min !== max) return `${min}~${max}분`;
-  return `${min ?? max}분`;
-};
-
 export default function TestsClient({ tests }: { tests: TestItem[] }) {
   return (
     <div className="flex flex-col bg-white min-h-screen-safe">
@@ -77,48 +68,8 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
                         </p>
                       )}
                     </div>
-                    {(() => {
-                      const duration = formatDuration(
-                        t.durationMinMinutes,
-                        t.durationMaxMinutes,
-                      );
-                      const hasMeta =
-                        duration != null ||
-                        t.questionCount != null ||
-                        t.labels.length > 0;
-                      if (!hasMeta) return null;
-                      return (
+                    {t.labels.length > 0 && (
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {duration != null && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[12px] font-medium leading-none"
-                            style={{ color: palette.gray500 }}
-                          >
-                            <Image
-                              src="/icon-test-time.svg"
-                              alt=""
-                              width={14}
-                              height={14}
-                              aria-hidden
-                            />
-                            {duration}
-                          </span>
-                        )}
-                        {t.questionCount != null && (
-                          <span
-                            className="inline-flex items-center gap-1 text-[12px] font-medium leading-none"
-                            style={{ color: palette.gray500 }}
-                          >
-                            <Image
-                              src="/icon-test-write.svg"
-                              alt=""
-                              width={14}
-                              height={14}
-                              aria-hidden
-                            />
-                            {t.questionCount}문항
-                          </span>
-                        )}
                         {t.labels.map((label) => (
                           <span
                             key={label}
@@ -132,8 +83,7 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
                           </span>
                         ))}
                       </div>
-                      );
-                    })()}
+                    )}
                   </div>
 
                   <svg

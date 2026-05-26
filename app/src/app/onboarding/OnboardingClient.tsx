@@ -2,26 +2,58 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import DatePickerModal from '@/components/DatePickerModal';
+import Link from 'next/link';
+import BottomSheet from '@/components/BottomSheet';
+import FormInput from '@/components/FormInput';
+import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { useAuth } from '@/hooks/useAuth';
+import { calcChildAge, toKstYmd } from '@/lib/childAge';
+import { palette } from '@/lib/colors';
 
-type ParentRole = 'mom' | 'dad' | '';
-type Gender = 'male' | 'female' | '';
+type ParentRole =
+  | 'mom'
+  | 'dad'
+  | 'grandmother'
+  | 'grandfather'
+  | 'caregiver'
+  | 'other'
+  | '';
+
+type Gender = 'male' | 'female';
+
+const ROLE_OPTIONS: { value: Exclude<ParentRole, ''>; label: string }[] = [
+  { value: 'mom', label: '엄마' },
+  { value: 'dad', label: '아빠' },
+  { value: 'grandmother', label: '할머니' },
+  { value: 'grandfather', label: '할아버지' },
+  { value: 'caregiver', label: '돌보미' },
+  { value: 'other', label: '기타' },
+];
 
 type ChildDraft = {
   key: string;
   name: string;
   gender: Gender;
   birthDate: string;
+  dueDate: string;
 };
 
-const newChild = (): ChildDraft => ({
-  key: Math.random().toString(36).slice(2),
-  name: '',
-  gender: '',
-  birthDate: '',
-});
+type TermKey = 'service' | 'privacy' | 'marketing' | 'thirdParty';
+type Term = { key: TermKey; required: boolean; label: string; href?: string };
+
+const TERMS: Term[] = [
+  { key: 'service', required: true, label: '이용약관 동의', href: '/settings/terms' },
+  { key: 'privacy', required: true, label: '개인정보 수집 및 이용 동의', href: '/settings/privacy' },
+  { key: 'marketing', required: false, label: '마케팅 정보 수신 동의' },
+  { key: 'thirdParty', required: false, label: '개인정보 제3자 제공 동의' },
+];
+
+const newKey = () => Math.random().toString(36).slice(2);
+
+function formatBirthDate(d: string): string {
+  const ymd = toKstYmd(d);
+  return ymd ? ymd.replace(/-/g, '. ') + '.' : '';
+}
 
 export default function OnboardingClient() {
   const router = useRouter();
@@ -30,9 +62,23 @@ export default function OnboardingClient() {
   const [nickname, setNickname] = useState('');
   const [parentRole, setParentRole] = useState<ParentRole>('');
   const [children, setChildren] = useState<ChildDraft[]>([]);
-  const [datePickerFor, setDatePickerFor] = useState<string | null>(null);
+  const [agree, setAgree] = useState<Record<TermKey, boolean>>({
+    service: false,
+    privacy: false,
+    marketing: false,
+    thirdParty: false,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 아기 추가 BottomSheet 상태
+  const [addChildOpen, setAddChildOpen] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftGender, setDraftGender] = useState<Gender>('male');
+  const [draftBirthDate, setDraftBirthDate] = useState('');
+  const [draftDueDate, setDraftDueDate] = useState('');
+  const [draftDatePickerOpen, setDraftDatePickerOpen] = useState(false);
+  const [draftDueDatePickerOpen, setDraftDueDatePickerOpen] = useState(false);
 
   // 카카오 닉네임 자동 기입
   useEffect(() => {
@@ -43,15 +89,46 @@ export default function OnboardingClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isAuthenticated, user]);
 
-  const canSubmit = nickname.trim().length > 0 && parentRole !== '' && !submitting;
+  const allAgreed = TERMS.every((t) => agree[t.key]);
+  const requiredAgreed = TERMS.filter((t) => t.required).every((t) => agree[t.key]);
+  const canSubmit =
+    nickname.trim().length > 0 && parentRole !== '' && requiredAgreed && !submitting;
 
-  const updateChild = (key: string, patch: Partial<ChildDraft>) => {
-    setChildren((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  const handleToggleAll = () => {
+    const next = !allAgreed;
+    setAgree({ service: next, privacy: next, marketing: next, thirdParty: next });
   };
+  const handleToggleTerm = (key: TermKey) =>
+    setAgree((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const addChildRow = () => setChildren((prev) => [...prev, newChild()]);
-  const removeChildRow = (key: string) =>
+  const removeChild = (key: string) =>
     setChildren((prev) => prev.filter((c) => c.key !== key));
+
+  const resetDraftChild = () => {
+    setDraftName('');
+    setDraftGender('male');
+    setDraftBirthDate('');
+    setDraftDueDate('');
+  };
+  const openAddChild = () => {
+    resetDraftChild();
+    setAddChildOpen(true);
+  };
+  const saveDraftChild = () => {
+    if (!draftName.trim() || !draftBirthDate) return;
+    setChildren((prev) => [
+      ...prev,
+      {
+        key: newKey(),
+        name: draftName.trim(),
+        gender: draftGender,
+        birthDate: draftBirthDate,
+        dueDate: draftDueDate,
+      },
+    ]);
+    setAddChildOpen(false);
+    resetDraftChild();
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -62,14 +139,6 @@ export default function OnboardingClient() {
     setSubmitting(true);
     setError(null);
 
-    const validChildren = children
-      .filter((c) => c.name.trim() && c.gender && c.birthDate)
-      .map((c) => ({
-        name: c.name.trim(),
-        gender: c.gender,
-        birthDate: c.birthDate,
-      }));
-
     try {
       const res = await fetch('/api/auth/onboarding', {
         method: 'POST',
@@ -77,7 +146,12 @@ export default function OnboardingClient() {
         body: JSON.stringify({
           nickname: nickname.trim(),
           parentRole,
-          children: validChildren,
+          children: children.map((c) => ({
+            name: c.name,
+            gender: c.gender,
+            birthDate: c.birthDate,
+            ...(c.dueDate ? { dueDate: c.dueDate } : {}),
+          })),
         }),
       });
       if (!res.ok) {
@@ -100,191 +174,433 @@ export default function OnboardingClient() {
     );
   }
 
-  const datePickerChild = children.find((c) => c.key === datePickerFor);
+  const canSaveDraft = draftName.trim().length > 0 && draftBirthDate !== '';
 
   return (
-    <div className="flex flex-col bg-white px-6 pb-32" style={{ paddingTop: 'calc(var(--safe-area-top) + 24px)' }}>
+    <div
+      className="flex flex-col bg-white"
+      style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 120px)' }}
+    >
       {/* 헤더 */}
-      <header className="pb-2">
-        <p className="text-xs text-primary-600 font-semibold">회원가입</p>
-        <h1 className="mt-1 text-2xl font-extrabold text-gray-900 leading-tight">
-          아기랑에 오신 걸 환영해요
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          몇 가지만 알려주시면 바로 시작할 수 있어요.
-        </p>
+      <header
+        className="sticky top-0 z-30 bg-white flex items-center justify-center px-5 py-4"
+        style={{ paddingTop: 'calc(var(--safe-area-top) + 16px)' }}
+      >
+        <h1 className="text-[16px] font-medium text-black">회원가입</h1>
       </header>
 
-      <main className="flex-1 mt-4 space-y-4">
-        {/* 카카오 프로필 표시 */}
-        {user && (
-          <div className="rounded-2xl bg-white p-4 shadow-sm flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-primary-50 shrink-0">
-              {user.profileImage ? (
-                <Image src={user.profileImage} alt="프로필" fill className="object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl">🙂</div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] text-gray-400">카카오 계정</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {user.email || user.nickname || '카카오 로그인됨'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* 닉네임 */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <label className="text-xs font-semibold text-gray-500">
-            닉네임 <span className="text-primary-600">*</span>
-          </label>
-          <input
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="앱에서 사용할 닉네임"
-            maxLength={20}
-            className="mt-2 w-full text-base font-bold text-gray-900 placeholder-gray-300 border-b border-gray-200 pb-1.5 outline-none focus:border-gray-400 bg-transparent"
+      <main className="flex-1 px-6 pt-2 space-y-[24px]">
+        {/* 이메일 */}
+        <section>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">이메일</p>
+          <FormInput
+            value={user?.email || ''}
+            placeholder="이메일이 등록되지 않았어요"
+            disabled
+            readOnly
           />
         </section>
 
-        {/* 성별(부모 역할) */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold text-gray-500">
-            역할 <span className="text-primary-600">*</span>
+        {/* 닉네임 */}
+        <section>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">
+            닉네임 <span className="text-red-500">*</span>
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setParentRole('mom')}
-              className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
-                parentRole === 'mom'
-                  ? 'bg-pink-50 border-pink-300 text-pink-600'
-                  : 'bg-gray-50 border-gray-100 text-gray-400'
-              }`}
-            >
-              🤱 엄마
-            </button>
-            <button
-              type="button"
-              onClick={() => setParentRole('dad')}
-              className={`py-3 rounded-xl text-sm font-semibold border transition-colors ${
-                parentRole === 'dad'
-                  ? 'bg-blue-50 border-blue-300 text-blue-600'
-                  : 'bg-gray-50 border-gray-100 text-gray-400'
-              }`}
-            >
-              👨 아빠
-            </button>
-          </div>
+          <FormInput
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="닉네임을 입력해 주세요."
+            maxLength={20}
+          />
         </section>
 
-        {/* 아기 등록 (선택, 여러 명) */}
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500">우리 아기 (선택)</p>
-            <span className="text-[10px] text-gray-300">지금 등록하지 않아도 돼요</span>
-          </div>
-
-          <div className="mt-3 space-y-3">
-            {children.map((c) => (
-              <div key={c.key} className="rounded-xl bg-gray-50 p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    value={c.name}
-                    onChange={(e) => updateChild(c.key, { name: e.target.value })}
-                    placeholder="아기 이름"
-                    className="flex-1 min-w-0 text-sm font-bold text-gray-900 placeholder-gray-300 border-b border-gray-200 pb-0.5 outline-none focus:border-gray-400 bg-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeChildRow(c.key)}
-                    className="p-1.5 text-gray-300"
-                    aria-label="아기 삭제"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateChild(c.key, { gender: 'male' })}
-                    className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
-                      c.gender === 'male'
-                        ? 'bg-blue-50 text-blue-500 font-semibold'
-                        : 'bg-white text-gray-400 border border-gray-100'
-                    }`}
-                  >
-                    남자아기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateChild(c.key, { gender: 'female' })}
-                    className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
-                      c.gender === 'female'
-                        ? 'bg-pink-50 text-pink-500 font-semibold'
-                        : 'bg-white text-gray-400 border border-gray-100'
-                    }`}
-                  >
-                    여자아기
-                  </button>
-                </div>
+        {/* 관계 */}
+        <section>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">
+            관계 <span className="text-red-500">*</span>
+          </p>
+          <div className="flex flex-wrap gap-[8px]">
+            {ROLE_OPTIONS.map(({ value, label }) => {
+              const active = parentRole === value;
+              return (
                 <button
+                  key={value}
                   type="button"
-                  onClick={() => setDatePickerFor(c.key)}
-                  className={`w-full text-left text-sm font-bold border-b border-gray-200 pb-1 outline-none bg-transparent ${
-                    c.birthDate ? 'text-gray-900' : 'text-gray-300'
+                  onClick={() => setParentRole(value)}
+                  className={`min-w-[45px] h-[28px] rounded-[20px] text-xs border transition-colors ${
+                    active
+                      ? 'font-medium text-white border-transparent'
+                      : 'font-normal bg-white border-gray-200 text-gray-400'
                   }`}
+                  style={{
+                    paddingLeft: 12,
+                    paddingRight: 12,
+                    ...(active
+                      ? { backgroundColor: palette.teal, borderColor: palette.teal }
+                      : {}),
+                  }}
                 >
-                  {c.birthDate ? c.birthDate.replace(/-/g, '. ') : '생년월일 선택'}
+                  {label}
                 </button>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addChildRow}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-400 active:bg-gray-50"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              아기 추가하기
-            </button>
+              );
+            })}
           </div>
         </section>
 
-        {error && (
-          <p className="text-xs text-red-500 text-center">{error}</p>
-        )}
+        {/* 아기 정보 */}
+        <section>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">아기 정보</p>
+          {children.length === 0 ? (
+            <div className="rounded-[8px] border border-dashed border-gray-200 p-4 flex flex-col items-center justify-center text-center">
+              <p className="text-[12px] font-normal text-black leading-relaxed mb-2">
+                아기 정보를 입력하고 맞춤형 케어를 시작하세요.
+              </p>
+              <button
+                type="button"
+                onClick={openAddChild}
+                className="text-[12px] font-medium text-white rounded-[4px] px-3 h-[24px] flex items-center"
+                style={{ backgroundColor: palette.teal }}
+              >
+                아기 추가하기
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-[10px]">
+              {children.map((c) => {
+                const { days, months, extraDays } = calcChildAge(c.birthDate);
+                return (
+                  <div
+                    key={c.key}
+                    className="relative rounded-[8px] border border-gray-200 bg-white p-3 flex flex-col items-center justify-center"
+                    style={{ minHeight: 132 }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => removeChild(c.key)}
+                      aria-label={`${c.name} 삭제`}
+                      className="absolute top-1.5 right-1.5 p-1 text-gray-300 active:text-gray-500"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                    <div
+                      className="w-[44px] h-[44px] rounded-full border flex items-center justify-center bg-white"
+                      style={{ borderColor: palette.teal }}
+                    >
+                      <img
+                        src={c.gender === 'female' ? '/icon-girl.svg' : '/icon-boy.svg'}
+                        alt={c.gender === 'female' ? '여아' : '남아'}
+                        width={26}
+                        height={26}
+                      />
+                    </div>
+                    <p className="mt-2 text-[14px] font-medium text-black">{c.name}</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span
+                        className="text-[11px] font-medium text-white px-1.5 h-[16px] flex items-center rounded"
+                        style={{ backgroundColor: palette.teal }}
+                      >
+                        D+{days}
+                      </span>
+                      <span className="text-[11px] text-gray-500">
+                        {months}개월 {extraDays}일
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={openAddChild}
+                className="rounded-[8px] border border-dashed border-gray-200 bg-white text-gray-300 flex items-center justify-center active:bg-gray-50"
+                style={{ minHeight: 132 }}
+                aria-label="아기 추가"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* 약관 동의 */}
+        <section>
+          <p className="text-xs font-medium text-gray-500 mb-[8px]">약관 동의</p>
+          <div className="rounded-[8px] border border-gray-200 bg-white overflow-hidden">
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className="w-full flex items-center px-4 py-3 border-b border-gray-200 active:bg-gray-50"
+            >
+              <CheckIcon checked={allAgreed} size={20} />
+              <span className="ml-2 text-[14px] font-medium text-black">약관 전체 동의</span>
+              <span className="ml-2 text-[11px] text-gray-400">(선택 동의 포함)</span>
+            </button>
+            <ul className="py-1">
+              {TERMS.map((t) => (
+                <li key={t.key} className="flex items-center px-4 py-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTerm(t.key)}
+                    className="flex items-center flex-1 min-w-0 active:opacity-70"
+                  >
+                    <CheckIcon checked={agree[t.key]} size={16} />
+                    <span className="ml-2 text-[13px] font-normal text-gray-600 text-left">
+                      [{t.required ? '필수' : '선택'}] {t.label}
+                    </span>
+                  </button>
+                  {t.href ? (
+                    <Link
+                      href={t.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`${t.label} 자세히 보기`}
+                      className="p-1 text-gray-300"
+                    >
+                      <ChevronRightIcon />
+                    </Link>
+                  ) : (
+                    <span aria-hidden className="p-1 text-gray-300">
+                      <ChevronRightIcon />
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       </main>
 
-      {/* 하단 고정 CTA */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-4 pb-[max(var(--safe-area-bottom),16px)] px-6">
+      {/* 하단 고정 저장 버튼 */}
+      <div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white px-6 pt-3"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+      >
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="w-full py-3.5 rounded-2xl bg-gray-900 text-white text-sm font-bold disabled:opacity-40"
+          className="w-full py-3.5 rounded-[4px] text-sm font-bold transition-colors"
+          style={{
+            backgroundColor: canSubmit ? palette.teal : palette.gray200,
+            color: canSubmit ? '#fff' : palette.gray400,
+          }}
         >
-          {submitting ? '가입 중...' : '아기랑 시작하기'}
+          {submitting ? '저장 중...' : '저장'}
         </button>
       </div>
 
-      {/* 생년월일 모달 */}
-      <DatePickerModal
-        open={datePickerFor !== null}
-        value={datePickerChild?.birthDate || ''}
+      {/* 아기 추가 BottomSheet */}
+      <BottomSheet
+        open={addChildOpen}
+        onClose={() => setAddChildOpen(false)}
+        variant="sheet"
+        ariaLabel="아기 추가하기"
+      >
+        <div className="px-6 pt-5">
+          <h2 className="text-[16px] font-medium text-black text-center">아기 추가하기</h2>
+        </div>
+        <div className="px-6 pt-4 space-y-[20px]">
+          <section>
+            <p className="text-xs font-medium text-gray-500 mb-[8px]">
+              이름(닉네임) <span className="text-red-500">*</span>
+            </p>
+            <FormInput
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              placeholder="아기 이름을 입력해 주세요."
+              maxLength={20}
+            />
+          </section>
+          <section>
+            <p className="text-xs font-medium text-gray-500 mb-[8px]">
+              성별 <span className="text-red-500">*</span>
+            </p>
+            <div className="flex gap-[8px]">
+              {(['male', 'female'] as const).map((g) => {
+                const active = draftGender === g;
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setDraftGender(g)}
+                    className={`min-w-[64px] h-[32px] rounded-[20px] text-xs border transition-colors ${
+                      active
+                        ? 'font-medium text-white border-transparent'
+                        : 'font-normal bg-white border-gray-200 text-gray-400'
+                    }`}
+                    style={{
+                      paddingLeft: 14,
+                      paddingRight: 14,
+                      ...(active
+                        ? { backgroundColor: palette.teal, borderColor: palette.teal }
+                        : {}),
+                    }}
+                  >
+                    {g === 'male' ? '남아' : '여아'}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+          <section>
+            <p className="text-xs font-medium text-gray-500 mb-[8px]">
+              출생일 <span className="text-red-500">*</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setDraftDatePickerOpen(true)}
+              className="w-full rounded-[4px] border border-gray-200 bg-white px-3 py-3 text-[14px] text-left outline-none focus:border-gray-400 transition-colors"
+            >
+              <span className={draftBirthDate ? 'text-app-black' : 'text-gray-400'}>
+                {draftBirthDate ? formatBirthDate(draftBirthDate) : '출생일을 선택해 주세요.'}
+              </span>
+            </button>
+          </section>
+          <section>
+            <p className="text-xs font-medium text-gray-500 mb-[8px]">출산예정일</p>
+            <button
+              type="button"
+              onClick={() => setDraftDueDatePickerOpen(true)}
+              className="w-full rounded-[4px] border border-gray-200 bg-white px-3 py-3 text-[14px] text-left outline-none focus:border-gray-400 transition-colors"
+            >
+              <span className={draftDueDate ? 'text-app-black' : 'text-gray-400'}>
+                {draftDueDate ? formatBirthDate(draftDueDate) : '출산예정일을 선택해 주세요.'}
+              </span>
+            </button>
+            <p className="text-[11px] text-gray-400 mt-2">
+              출산예정일을 입력하면 더 정확한 발달 분석을 확인하실 수 있어요.
+            </p>
+          </section>
+        </div>
+        <div
+          className="flex gap-2 px-6 pt-5"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+        >
+          <button
+            type="button"
+            onClick={() => setAddChildOpen(false)}
+            className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={saveDraftChild}
+            disabled={!canSaveDraft}
+            className="flex-1 h-12 rounded-[8px] text-white text-sm font-semibold disabled:opacity-40"
+            style={{ backgroundColor: palette.teal }}
+          >
+            추가
+          </button>
+        </div>
+      </BottomSheet>
+
+      <WheelDatePickerModal
+        open={draftDatePickerOpen}
+        value={draftBirthDate}
         max={new Date().toISOString().slice(0, 10)}
-        onClose={() => setDatePickerFor(null)}
-        onConfirm={(d) => {
-          if (datePickerFor) updateChild(datePickerFor, { birthDate: d });
-        }}
+        onClose={() => setDraftDatePickerOpen(false)}
+        onConfirm={(d) => setDraftBirthDate(d)}
+      />
+
+      <WheelDatePickerModal
+        open={draftDueDatePickerOpen}
+        value={draftDueDate}
+        onClose={() => setDraftDueDatePickerOpen(false)}
+        onConfirm={(d) => setDraftDueDate(d)}
       />
     </div>
+  );
+}
+
+function CheckIcon({ checked, size = 16 }: { checked: boolean; size?: number }) {
+  if (checked) {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 16 16"
+        fill="none"
+        className="shrink-0"
+        aria-hidden
+      >
+        <rect width="16" height="16" rx="8" fill="#3078C9" />
+        <path
+          d="M4 7.36957L7.48559 10.5L12 5.5"
+          stroke="#FDFDFE"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 17 17"
+      fill="none"
+      className="shrink-0"
+      aria-hidden
+    >
+      <rect x="0.5" y="0.5" width="16" height="16" rx="8" fill="#FDFDFE" />
+      <rect
+        x="0.5"
+        y="0.5"
+        width="16"
+        height="16"
+        rx="8"
+        stroke="#EEF0F1"
+        strokeLinejoin="bevel"
+      />
+      <path
+        d="M4.5 7.86957L7.98559 11L12.5 6"
+        stroke="#808991"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
   );
 }

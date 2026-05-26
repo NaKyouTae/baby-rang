@@ -276,7 +276,11 @@
       "Bash(xcodebuild -scheme BabyRang -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO)",
       "WebFetch(domain:documenter.getpostman.com)",
       "Bash(curl -sL -H \"User-Agent: Mozilla/5.0\" \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=nuf\")",
-      "Bash(curl -sL \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=namulsan360\")"
+      "Bash(curl -sL \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=namulsan360\")",
+      "Bash(echo \"PID=$!\")",
+      "Bash(curl -sS -o /tmp/onboarding.html -w \"HTTP=%{http_code}\\\\n\" http://localhost:13000/onboarding)",
+      "Bash(echo \"APP=$?\")",
+      "Bash(echo \"SERVER=$?\")"
     ],
     "additionalDirectories": [
       "/tmp",

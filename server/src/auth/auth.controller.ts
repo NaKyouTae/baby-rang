@@ -50,7 +50,12 @@ export class AuthController {
       nickname: string;
       parentRole: string;
       birthYear?: number | null;
-      children?: Array<{ name: string; gender: string; birthDate: string }>;
+      children?: Array<{
+        name: string;
+        gender: string;
+        birthDate: string;
+        dueDate?: string;
+      }>;
     },
   ) {
     return this.authService.completeOnboarding(req.user.id, body);

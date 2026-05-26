@@ -53,7 +53,12 @@ export class AuthService {
       nickname: string;
       parentRole: string;
       birthYear?: number | null;
-      children?: Array<{ name: string; gender: string; birthDate: string }>;
+      children?: Array<{
+        name: string;
+        gender: string;
+        birthDate: string;
+        dueDate?: string;
+      }>;
     },
   ) {
     const nickname = dto.nickname?.trim();
@@ -78,6 +83,9 @@ export class AuthService {
         name: c.name.trim(),
         gender: c.gender,
         birthDate: new Date(`${c.birthDate.slice(0, 10)}T12:00:00.000Z`),
+        dueDate: c.dueDate
+          ? new Date(`${c.dueDate.slice(0, 10)}T12:00:00.000Z`)
+          : null,
       }));
 
     await this.prisma.$transaction(async (tx) => {
