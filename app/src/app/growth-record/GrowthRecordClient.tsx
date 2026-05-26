@@ -22,8 +22,8 @@ import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
-const SWIPE_DELETE_WIDTH = 80;
-const SWIPE_OPEN_THRESHOLD = 40;
+const SWIPE_DELETE_WIDTH = 59;
+const SWIPE_OPEN_THRESHOLD = 30;
 
 function SwipeableRow({
   open,
@@ -31,12 +31,14 @@ function SwipeableRow({
   onDelete,
   children,
   isLast,
+  rowId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
   children: ReactNode;
   isLast: boolean;
+  rowId: string;
 }) {
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -45,26 +47,38 @@ function SwipeableRow({
   const lockedRef = useRef<'h' | 'v' | null>(null);
   const baseRef = useRef(0);
   const movedRef = useRef(false);
+  const pointerDownRef = useRef(false);
+  const pointerIdRef = useRef<number | null>(null);
 
   const offset = dragging ? dragX : open ? -SWIPE_DELETE_WIDTH : 0;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startXRef.current = e.touches[0].clientX;
-    startYRef.current = e.touches[0].clientY;
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // 마우스 좌클릭만 허용
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pointerDownRef.current = true;
+    pointerIdRef.current = e.pointerId;
+    startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     baseRef.current = open ? -SWIPE_DELETE_WIDTH : 0;
     lockedRef.current = null;
     movedRef.current = false;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - startXRef.current;
-    const dy = e.touches[0].clientY - startYRef.current;
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointerDownRef.current) return;
+    const dx = e.clientX - startXRef.current;
+    const dy = e.clientY - startYRef.current;
     if (lockedRef.current === null) {
       if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
       lockedRef.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
       if (lockedRef.current === 'h') {
         setDragging(true);
         setDragX(baseRef.current + dx);
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
       }
       return;
     }
@@ -78,7 +92,17 @@ function SwipeableRow({
     setDragX(next);
   };
 
-  const handleTouchEnd = () => {
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointerDownRef.current) return;
+    pointerDownRef.current = false;
+    if (pointerIdRef.current !== null) {
+      try {
+        e.currentTarget.releasePointerCapture(pointerIdRef.current);
+      } catch {
+        /* ignore */
+      }
+      pointerIdRef.current = null;
+    }
     if (lockedRef.current === 'h') {
       const shouldOpen = dragX < -SWIPE_OPEN_THRESHOLD;
       onOpenChange(shouldOpen);
@@ -105,6 +129,7 @@ function SwipeableRow({
   return (
     <div
       data-swipe-row
+      data-row-id={rowId}
       className={`relative overflow-hidden bg-white border-b border-dotted border-gray-200 ${
         isLast ? 'border-b-0' : ''
       }`}
@@ -115,7 +140,8 @@ function SwipeableRow({
         onClick={onDelete}
         aria-label="삭제"
         tabIndex={open ? 0 : -1}
-        className="absolute top-0 right-0 bottom-0 w-20 bg-red-500 active:bg-red-600 flex items-center justify-center"
+        style={{ width: SWIPE_DELETE_WIDTH }}
+        className="absolute top-0 right-0 bottom-0 bg-red-500 active:bg-red-600 flex items-center justify-center"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -128,12 +154,16 @@ function SwipeableRow({
         />
       </button>
       <div
-        className={`relative bg-white ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
-        style={{ transform: `translateX(${offset}px)`, touchAction: 'pan-y' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
+        className={`relative bg-white select-none ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
+        style={{
+          transform: `translateX(${offset}px)`,
+          touchAction: 'pan-y',
+          cursor: dragging ? 'grabbing' : undefined,
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
         onClickCapture={handleClickCapture}
       >
         {children}
@@ -502,12 +532,14 @@ export default function GrowthRecordPage() {
     [],
   );
 
-  // 스와이프 열린 행 — 바깥 탭/스크롤 시 닫기
+  // 스와이프 열린 행 — 다른 곳(다른 행 포함)을 탭/클릭하거나 스크롤 시 닫기
   useEffect(() => {
     if (!swipedRowId) return;
     const close = (e: Event) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('[data-swipe-row]')) return;
+      const row = target?.closest('[data-swipe-row]') as HTMLElement | null;
+      // 현재 열린 행 내부 클릭이면 그대로 둠 (행 자체의 onClickCapture가 처리)
+      if (row && row.dataset.rowId === swipedRowId) return;
       setSwipedRowId(null);
     };
     const onScroll = () => setSwipedRowId(null);
@@ -871,6 +903,7 @@ export default function GrowthRecordPage() {
                       return (
                         <SwipeableRow
                           key={r.id}
+                          rowId={r.id}
                           open={swipedRowId === r.id}
                           onOpenChange={(o) => setSwipedRowId(o ? r.id : null)}
                           onDelete={() => {

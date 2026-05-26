@@ -443,8 +443,15 @@ export default function SettingsPage() {
 
       <ConfirmModal
         open={withdrawOpen}
-        emoji="⚠️"
-        variant="danger"
+        icon={
+          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <path d="M16 11.3333V17.3333" stroke="black" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M16 21.3333H16.0133" stroke="black" strokeWidth="2.66667" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M14.0573 4.30933L2.86131 23.6667C2.62828 24.0703 2.50514 24.5278 2.50439 24.9938C2.50364 25.4598 2.62531 25.9177 2.85703 26.322C3.08875 26.7263 3.42239 27.0625 3.82475 27.2974C4.22711 27.5322 4.68404 27.6577 5.15065 27.6613H27.5426C28.0093 27.6577 28.4662 27.5322 28.8686 27.2974C29.2709 27.0625 29.6046 26.7263 29.8363 26.322C30.068 25.9177 30.1897 25.4598 30.1889 24.9938C30.1882 24.5278 30.0651 24.0703 29.832 23.6667L18.636 4.30933C18.3974 3.91671 18.0616 3.59217 17.6612 3.36705C17.2607 3.14193 16.8092 3.02368 16.3506 3.02368C15.892 3.02368 15.4405 3.14193 15.04 3.36705C14.6395 3.59217 14.3038 3.91671 14.0653 4.30933H14.0573Z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        }
         title={"정말 탈퇴하시겠어요?"}
         description={
           "탈퇴 시 우리 아기 정보, 검사 이력,\n결제 내역 등 모든 데이터가 삭제됩니다.\n삭제된 데이터는 복구할 수 없습니다."
