@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { palette } from "@/lib/colors";
 
 export const metadata: Metadata = {
-  title: "페이지를 찾을 수 없어요",
+  title: "이 페이지에 접근할 수 없어요",
   robots: { index: false, follow: false },
 };
 
-export default function NotFound() {
+export default function Forbidden() {
   return (
     <div
       className="flex flex-col items-center justify-center min-h-screen-safe px-6 text-center"
@@ -35,7 +35,13 @@ export default function NotFound() {
           aria-hidden="true"
         >
           <path
-            d="M15.4167 15.4165L18.3333 18.3332M5.625 2.72485C7.28841 1.76495 9.24404 1.44245 11.1276 1.81742C13.0111 2.19239 14.6941 3.23927 15.8631 4.76303C17.0321 6.28679 17.6073 8.18353 17.4816 10.0999C17.3559 12.0163 16.5378 13.8216 15.1798 15.1797C13.8218 16.5377 12.0165 17.3557 10.1001 17.4814C8.18368 17.6071 6.28694 17.0319 4.76318 15.8629C3.23942 14.694 2.19254 13.011 1.81757 11.1274C1.4426 9.24388 1.7651 7.28826 2.725 5.62485"
+            d="M10 11.6668V15.0001M5 8.33348V6.66682C5 6.38293 5.02306 6.10515 5.06917 5.83348M15 8.33348V6.66682C15.0001 5.65118 14.6908 4.65961 14.1135 3.82406C13.5361 2.98851 12.7179 2.3486 11.7679 1.98949C10.8179 1.63038 9.78102 1.5691 8.79531 1.8138C7.8096 2.05851 6.92178 2.59759 6.25 3.35932"
+            stroke={palette.black}
+            strokeWidth="1.25"
+            strokeLinecap="round"
+          />
+          <path
+            d="M9.16669 18.3335H6.66669C4.31002 18.3335 3.13085 18.3335 2.39919 17.601C1.66669 16.8693 1.66669 15.6902 1.66669 13.3335C1.66669 10.9768 1.66669 9.79766 2.39919 9.066C3.13085 8.3335 4.31002 8.3335 6.66669 8.3335H13.3334C15.69 8.3335 16.8692 8.3335 17.6009 9.066C18.3334 9.79766 18.3334 10.9768 18.3334 13.3335C18.3334 15.6902 18.3334 16.8693 17.6009 17.601C16.8692 18.3335 15.69 18.3335 13.3334 18.3335H12.5"
             stroke={palette.black}
             strokeWidth="1.25"
             strokeLinecap="round"
@@ -52,7 +58,7 @@ export default function NotFound() {
           color: palette.black,
         }}
       >
-        페이지를 찾을 수 없어요.
+        이 페이지에 접근할 수 없어요.
       </h1>
       <p
         className="font-normal"
@@ -63,7 +69,7 @@ export default function NotFound() {
           color: palette.gray500,
         }}
       >
-        페이지 주소를 다시 확인해 주세요.
+        권한을 확인해 주세요.
       </p>
 
       <Link
