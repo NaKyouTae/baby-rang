@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import BottomSheet from './BottomSheet';
 
 interface DatePickerModalProps {
   open: boolean;
@@ -63,18 +64,6 @@ export default function DatePickerModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  // 배경 스크롤 잠금
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [open]);
-
-  if (!open) return null;
 
   const firstDayOfWeek = new Date(viewYear, viewMonth - 1, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
@@ -164,22 +153,8 @@ export default function DatePickerModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* 백드롭 */}
-      <button
-        type="button"
-        aria-label="닫기"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/40"
-      />
-
-      {/* 시트 */}
-      <div className="relative w-full max-w-[430px] bg-white rounded-3xl shadow-xl pb-4">
-
+    <BottomSheet open={open} onClose={onClose} variant="sheet" ariaLabel={title}>
+      <>
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-3">
           <h3 className="text-base font-bold text-gray-900">{title}</h3>
@@ -367,18 +342,28 @@ export default function DatePickerModal({
           </div>
         )}
 
-        {/* 확인 버튼 */}
-        <div className="px-5 pt-2">
+        {/* 취소 / 확인 버튼 */}
+        <div
+          className="flex gap-2 px-5 pt-2"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+          >
+            취소
+          </button>
           <button
             type="button"
             onClick={handleConfirm}
             disabled={!selected}
-            className="w-full py-3 rounded-xl gradient-btn text-white text-sm font-bold disabled:opacity-40"
+            className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90 disabled:bg-gray-200 disabled:text-gray-400"
           >
             확인
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    </BottomSheet>
   );
 }

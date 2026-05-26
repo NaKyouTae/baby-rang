@@ -78,22 +78,39 @@ export default function WheelPickerModal({
     }, 90);
   };
 
+  const handleConfirm = () => {
+    // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
+    // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
+    // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
+    const el = ref.current;
+    let idx = selectedIdx;
+    if (el) {
+      if (timer.current) {
+        window.clearTimeout(timer.current);
+        timer.current = null;
+      }
+      idx = Math.max(0, Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)));
+    }
+    onConfirm(items[idx]);
+    onClose();
+  };
+
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
       zIndex={80}
-      surfaceClassName="bg-gray-100"
+      variant="sheet"
       lockBodyScroll={false}
     >
       {title && (
-        <div className="px-5 pt-4 pb-2 text-sm font-semibold text-gray-700 text-center">
+        <div className="px-5 pt-5 pb-2 text-sm font-semibold text-gray-700 text-center">
           {title}
         </div>
       )}
-      <div className="relative bg-white mx-2 mt-2 rounded-2xl">
+      <div className="relative bg-white px-5 pt-4">
         <div
-          className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-gray-200"
+          className="pointer-events-none absolute left-5 right-5 top-1/2 -translate-y-1/2 bg-gray-100 rounded-[8px]"
           style={{ height: ITEM_H }}
         />
         <div
@@ -110,7 +127,7 @@ export default function WheelPickerModal({
                   key={i}
                   className={`flex items-center justify-center tabular-nums select-none transition-colors ${
                     selected
-                      ? 'text-gray-900 font-bold text-xl'
+                      ? 'text-black font-bold text-xl'
                       : 'text-gray-400 text-base'
                   }`}
                   style={{ height: ITEM_H }}
@@ -123,29 +140,21 @@ export default function WheelPickerModal({
         </div>
       </div>
 
-      <div className="px-2 pt-2 pb-2">
+      <div
+        className="flex gap-2 px-5 pt-4"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+      >
         <button
           type="button"
-          onClick={() => {
-            // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
-            // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
-            // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
-            const el = ref.current;
-            let idx = selectedIdx;
-            if (el) {
-              if (timer.current) {
-                window.clearTimeout(timer.current);
-                timer.current = null;
-              }
-              idx = Math.max(
-                0,
-                Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)),
-              );
-            }
-            onConfirm(items[idx]);
-            onClose();
-          }}
-          className="w-full py-3.5 rounded-2xl bg-white text-primary-500 text-base font-semibold active:bg-gray-50"
+          onClick={onClose}
+          className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90"
         >
           확인
         </button>

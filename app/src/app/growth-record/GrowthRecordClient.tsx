@@ -1019,7 +1019,6 @@ export default function GrowthRecordPage() {
         description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
         confirmLabel="삭제하기"
         cancelLabel="취소"
-        variant="danger"
         onConfirm={() => {
           const target = deleteTarget;
           setDeleteTarget(null);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { palette } from '@/lib/colors';
+import BottomSheet from './BottomSheet';
 
 /* ─── 공용 Wheel Column ─── */
 
@@ -266,15 +266,6 @@ export default function WheelDatePickerModal({
     if (day > m) setDay(m);
   }, [year, month, day]);
 
-  useEffect(() => {
-    if (!open) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = original; };
-  }, [open]);
-
-  if (!open) return null;
-
   const yearIndex = years.indexOf(year);
   const monthIndex = month - 1;
   const dayIndex = day - 1;
@@ -285,10 +276,8 @@ export default function WheelDatePickerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center px-6" role="dialog" aria-modal="true">
-      <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/40" />
-
-      <div className="relative w-full max-w-[360px] bg-white rounded-[8px] shadow-xl overflow-hidden p-[16px]">
+    <BottomSheet open={open} onClose={onClose} variant="sheet" ariaLabel="날짜 선택">
+      <div className="px-5 pt-5 pb-2">
         <div className="flex justify-center">
           <WheelColumn
             items={years}
@@ -311,25 +300,27 @@ export default function WheelDatePickerModal({
             circular
           />
         </div>
-
-        <div className="flex gap-[8px] mt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 rounded-[4px] bg-gray-200 text-sm font-semibold text-gray-700"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            className="flex-1 py-3 rounded-[4px] text-sm font-semibold text-white"
-            style={{ backgroundColor: palette.teal }}
-          >
-            확인
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div
+        className="flex gap-2 px-5 pt-4"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90"
+        >
+          확인
+        </button>
+      </div>
+    </BottomSheet>
   );
 }

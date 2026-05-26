@@ -100,7 +100,7 @@ export default function NoticesPage() {
             </div>
             <p className="text-sm font-medium text-black">등록된 공지사항이 없어요.</p>
             <p className="text-xs font-normal text-gray-500 mt-1">
-              새로운 소식이 생기면 이곳에서 알려드릴게요.
+              새로운 소식이 생기면 이곳에서 알려드려요.
             </p>
           </div>
         ) : (

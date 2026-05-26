@@ -227,7 +227,7 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
   }
 
   return (
-    <BottomSheet open onClose={onClose} ariaLabel="설정">
+    <BottomSheet open onClose={onClose} variant="sheet" ariaLabel="설정">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">설정</h2>
           <button

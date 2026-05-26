@@ -269,7 +269,8 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
       open
       onClose={onClose}
       zIndex={100}
-      maxHeight="calc(100dvh - 172px)"
+      variant="sheet"
+      maxHeight="calc(100dvh - 80px)"
       ariaLabel="수유실 제보하기"
     >
         {/* 지도 피커 오버레이 */}
@@ -482,7 +483,12 @@ export default function ReportSheet({ onClose, onSubmit }: Props) {
         </div>
 
         {/* 푸터 */}
-        <div className="px-4 pt-0 pb-4">
+        <div
+          className="px-4 pt-0"
+          style={{
+            paddingBottom: "calc(var(--safe-area-bottom) + 16px)",
+          }}
+        >
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}

@@ -628,7 +628,7 @@ export default function EntrySheet({
 
   return (
     <>
-    <BottomSheet open onClose={onClose} ariaLabel={cfg.label}>
+    <BottomSheet open onClose={onClose} variant="sheet" ariaLabel={cfg.label}>
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">{cfg.label}</h2>
           {initial ? (
@@ -965,11 +965,14 @@ export default function EntrySheet({
           </div>
         </div>
 
-        <div className="px-4 pt-2 pb-3 flex gap-[10px]">
+        <div
+          className="px-4 pt-2 flex gap-[10px]"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+        >
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-12 rounded-[4px] bg-gray-200 text-gray-600 text-sm font-semibold active:bg-gray-300"
+            className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
           >
             취소
           </button>
@@ -977,7 +980,7 @@ export default function EntrySheet({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 h-12 rounded-[4px] bg-primary-500 text-white text-sm font-semibold disabled:opacity-50 active:bg-primary-600"
+            className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold disabled:opacity-50 active:opacity-90"
           >
             {saving ? '저장 중...' : '저장'}
           </button>

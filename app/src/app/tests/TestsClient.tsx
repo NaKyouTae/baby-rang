@@ -29,7 +29,7 @@ const formatDuration = (
 
 export default function TestsClient({ tests }: { tests: TestItem[] }) {
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-white min-h-screen-safe">
       <PageHeader title="테스트" variant="back" />
 
       <main className="flex-1 flex flex-col px-5 pt-6 pb-28">

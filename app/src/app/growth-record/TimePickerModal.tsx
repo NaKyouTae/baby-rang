@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import BottomSheet from '@/components/BottomSheet';
 
 interface Props {
   open: boolean;
@@ -182,17 +183,16 @@ export default function TimePickerModal({
     if (d > dayCount) setD(dayCount); // eslint-disable-line react-hooks/set-state-in-effect -- clamp day to valid range
   }, [dayCount, d]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      zIndex={80}
+      variant="sheet"
+      lockBodyScroll={false}
+      ariaLabel="날짜 · 시간 선택"
     >
-      <div
-        className="w-full max-w-[360px] bg-white rounded-2xl shadow-2xl p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="px-5 pt-5 pb-4">
         <h3 className="text-base font-bold text-gray-900 mb-4 text-center">
           날짜 · 시간 선택
         </h3>
@@ -236,27 +236,30 @@ export default function TimePickerModal({
             format={(v) => `${String(v).padStart(2, '0')}분`}
           />
         </div>
-        <div className="mt-5 flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-700"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const safeDay = Math.min(d, dayCount);
-              onConfirm(mo, safeDay, h, m);
-              onClose();
-            }}
-            className="flex-1 py-2.5 rounded-xl bg-primary-500 text-sm font-semibold text-white"
-          >
-            확인
-          </button>
-        </div>
       </div>
-    </div>
+      <div
+        className="flex gap-2 px-5"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const safeDay = Math.min(d, dayCount);
+            onConfirm(mo, safeDay, h, m);
+            onClose();
+          }}
+          className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90"
+        >
+          확인
+        </button>
+      </div>
+    </BottomSheet>
   );
 }

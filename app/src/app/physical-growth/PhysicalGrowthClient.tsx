@@ -310,11 +310,22 @@ export default function PhysicalGrowthClient() {
         )}
 
         {!loading && records.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-[14px] text-gray-400">
-              아직 기록이 없어요.
-              <br />
-              성장 기록을 추가해보세요!
+          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon-empty-record.svg"
+                alt=""
+                width={20}
+                height={20}
+                aria-hidden="true"
+              />
+            </div>
+            <p className="mt-[10px] text-[14px] font-medium text-black">
+              아직 등록된 기록이 없어요.
+            </p>
+            <p className="mt-[4px] text-[12px] font-normal text-gray-500">
+              우리 아기의 성장을 기록해 보세요.
             </p>
           </div>
         )}

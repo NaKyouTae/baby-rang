@@ -39,7 +39,7 @@ export default function QuickButtonSettings({ current, onClose, onSaved }: Props
   }
 
   return (
-    <BottomSheet open onClose={onClose} maxHeight="85vh" ariaLabel="간편 버튼 설정">
+    <BottomSheet open onClose={onClose} variant="sheet" maxHeight="85vh" ariaLabel="간편 버튼 설정">
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">간편 버튼 설정</h2>
           <button

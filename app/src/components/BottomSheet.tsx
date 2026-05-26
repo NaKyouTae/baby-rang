@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 type ZIndex = 70 | 80 | 90 | 100;
+type Variant = 'floating' | 'sheet';
 
 interface BottomSheetProps {
   open: boolean;
@@ -14,6 +15,11 @@ interface BottomSheetProps {
   lockBodyScroll?: boolean;
   closeOnBackdrop?: boolean;
   ariaLabel?: string;
+  /**
+   * 'floating'(기본): 화면 아래에 떠있는 모달 형태(네 모서리 둥글고 좌우/하단 여백)
+   * 'sheet': 화면 하단에 붙는 진짜 바텀시트(상단 모서리만 둥글고 좌우/하단 여백 없음)
+   */
+  variant?: Variant;
 }
 
 const Z_CLASS: Record<ZIndex, string> = {
@@ -33,6 +39,7 @@ export default function BottomSheet({
   lockBodyScroll = true,
   closeOnBackdrop = true,
   ariaLabel,
+  variant = 'floating',
 }: BottomSheetProps) {
   useEffect(() => {
     if (!open || !lockBodyScroll) return;
@@ -45,9 +52,16 @@ export default function BottomSheet({
 
   if (!open) return null;
 
+  const wrapperPadding =
+    variant === 'sheet'
+      ? ''
+      : 'px-4 pb-[max(var(--safe-area-bottom),16px)]';
+  const surfaceRounded =
+    variant === 'sheet' ? 'rounded-t-3xl' : 'rounded-3xl';
+
   return (
     <div
-      className={`fixed inset-0 ${Z_CLASS[zIndex]} flex items-end justify-center px-4 pb-[max(var(--safe-area-bottom),16px)]`}
+      className={`fixed inset-0 ${Z_CLASS[zIndex]} flex items-end justify-center ${wrapperPadding}`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
@@ -55,7 +69,7 @@ export default function BottomSheet({
     >
       <div className="absolute inset-0 bg-black/40 -z-10" />
       <div
-        className={`relative w-full max-w-[430px] ${surfaceClassName} rounded-3xl shadow-2xl flex flex-col overflow-hidden`}
+        className={`relative w-full max-w-[430px] ${surfaceClassName} ${surfaceRounded} shadow-2xl flex flex-col overflow-hidden`}
         style={{ maxHeight }}
         onClick={(e) => e.stopPropagation()}
       >

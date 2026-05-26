@@ -78,7 +78,7 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
   }
 
   return (
-    <BottomSheet open onClose={onClose} zIndex={80} ariaLabel={TITLE[mode]}>
+    <BottomSheet open onClose={onClose} zIndex={80} variant="sheet" ariaLabel={TITLE[mode]}>
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
           <h2 className="text-base font-medium text-app-black">{TITLE[mode]}</h2>
           <button
