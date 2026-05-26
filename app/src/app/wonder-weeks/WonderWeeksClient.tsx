@@ -61,12 +61,21 @@ function WonderWeeksContent() {
 
         {noChild ? (
           <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
-            <p className="text-[14px] font-medium text-black">
-              아직 원더윅스 정보가 없어요.
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon-empty-record.svg"
+                alt=""
+                width={20}
+                height={20}
+                aria-hidden="true"
+              />
+            </div>
+            <p className="mt-[10px] text-[14px] font-medium text-black">
+              등록된 아기 정보가 없어요.
             </p>
-            <p className="mt-1 text-[12px] font-normal text-gray-500">
-              아기를 등록하면 출생일 기준 10번의<br />
-              정신적 도약기를 캘린더에서 확인할 수 있어요.
+            <p className="mt-[4px] text-[12px] font-normal text-gray-500">
+              아기를 추가하면 원더윅스 정보를 알려드려요.
             </p>
           </div>
         ) : (

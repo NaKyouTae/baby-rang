@@ -275,7 +275,8 @@
       "Bash(node capture.js)",
       "Bash(xcodebuild -scheme BabyRang -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO)",
       "WebFetch(domain:documenter.getpostman.com)",
-      "Bash(curl -sL -H \"User-Agent: Mozilla/5.0\" \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=nuf\")"
+      "Bash(curl -sL -H \"User-Agent: Mozilla/5.0\" \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=nuf\")",
+      "Bash(curl -sL \"https://fis.daqda.kr/api/HpFuneral.aspx?ci=namulsan360\")"
     ],
     "additionalDirectories": [
       "/tmp",
