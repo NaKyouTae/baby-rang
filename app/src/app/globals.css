@@ -1,4 +1,5 @@
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+/* Pretendard 는 layout.tsx <head> 에서 <link rel="preconnect"> + <link rel="stylesheet"> 로 로드한다.
+   여기서 @import 로 불러오면 CSS 파싱이 끝난 뒤에야 폰트 CSS 요청이 시작돼 first paint 가 수백 ms 늦어진다. */
 @import "tailwindcss";
 
 @theme {

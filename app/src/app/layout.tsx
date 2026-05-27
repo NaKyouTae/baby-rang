@@ -220,6 +220,15 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full">
       <head>
+        {/* Pretendard 폰트 — preconnect 로 TLS 핸드셰이크 시간을 줄이고, <link rel="stylesheet"> 로 병렬 다운로드.
+            (globals.css @import 보다 first paint 가 빠름) */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+        {/* iOS PWA / 홈 화면 추가 시 흰 화면 대신 보여줄 splash 이미지 */}
+        <link rel="apple-touch-startup-image" href="/splash.png" />
         {/* Google AdSense — AdSenseScript 컴포넌트가 클라이언트에서 동적 로드하므로 여기서는 제거 */}
         {/* Google Analytics (gtag.js) — next/script afterInteractive로 hydration mismatch 방지 */}
         <Script

@@ -1,9 +1,9 @@
 {
   "name": "아기랑",
   "short_name": "아기랑",
-  "start_url": "/",
+  "start_url": "/home",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#F1F2F4",
   "theme_color": "#3078C9",
   "icons": [
     {

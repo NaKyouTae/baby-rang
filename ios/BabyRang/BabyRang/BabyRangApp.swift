@@ -14,7 +14,7 @@ struct BabyRangApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                WebView(url: URL(string: "https://baby-rang.spectrify.kr")!) {
+                WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!) {
                     isWebViewLoaded = true
                 }
                 .ignoresSafeArea()

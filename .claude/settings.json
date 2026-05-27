@@ -288,7 +288,10 @@
       "Bash(echo \"SERVER_TSC=$?\")",
       "Bash(echo \"APP_LINT=$?\")",
       "Bash(echo \"SERVER_LINT=$?\")",
-      "Bash(pnpm --filter server exec eslint server/src/auth/auth.controller.ts server/src/auth/auth.service.ts)"
+      "Bash(pnpm --filter server exec eslint server/src/auth/auth.controller.ts server/src/auth/auth.service.ts)",
+      "Bash(npx --no-install eslint src/app/page.tsx src/app/layout.tsx src/app/globals.css src/components/SplashProvider.tsx src/components/BottomNavServer.tsx public/manifest.json)",
+      "Bash(npx --no-install tsc --noEmit -p tsconfig.json)",
+      "Bash(npx --no-install eslint src/app/settings/page.tsx)"
     ],
     "additionalDirectories": [
       "/tmp",

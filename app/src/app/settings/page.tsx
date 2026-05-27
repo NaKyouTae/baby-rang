@@ -172,6 +172,17 @@ const MENU_SECTIONS: MenuSection[] = [
         ),
       },
       {
+        label: "환불정책",
+        href: "/settings/refund",
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2 4.66667C2 3.93029 2.59695 3.33334 3.33333 3.33334H12.6667C13.403 3.33334 14 3.93029 14 4.66667V11.3333C14 12.0697 13.403 12.6667 12.6667 12.6667H3.33333C2.59695 12.6667 2 12.0697 2 11.3333V4.66667Z" stroke="black"/>
+            <path d="M5.33325 8.66666L6.99992 7L8.66659 8.66666L10.6666 6.66666" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9.33325 6.66666H10.6666V8" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+      },
+      {
         label: "개인정보 제3자 제공 동의",
         href: "/settings/third-party",
         icon: (
