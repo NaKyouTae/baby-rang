@@ -10,6 +10,11 @@ import SwiftUI
 @main
 struct BabyRangApp: App {
     @State private var isWebViewLoaded = false
+    @State private var minimumElapsed = false
+
+    private var shouldHideSplash: Bool {
+        isWebViewLoaded && minimumElapsed
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -21,14 +26,18 @@ struct BabyRangApp: App {
 
                 SplashView()
                     .ignoresSafeArea()
-                    .opacity(isWebViewLoaded ? 0 : 1)
-                    .allowsHitTesting(!isWebViewLoaded)
-                    .animation(.easeOut(duration: 0.4), value: isWebViewLoaded)
+                    .opacity(shouldHideSplash ? 0 : 1)
+                    .allowsHitTesting(!shouldHideSplash)
+                    .animation(.easeOut(duration: 0.3), value: shouldHideSplash)
                     .zIndex(10)
             }
             .onAppear {
-                // didFinish가 안 떨어지는 경우(네트워크 오류 등) 대비 6초 후 강제 dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                // 브랜드 노출 최소 1초 보장
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    minimumElapsed = true
+                }
+                // didCommit이 안 떨어지는 경우(네트워크 오류 등) 대비 2초 후 강제 dismiss
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     if !isWebViewLoaded {
                         isWebViewLoaded = true
                     }

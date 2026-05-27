@@ -71,15 +71,15 @@ struct WebView: UIViewRepresentable {
 
         // MARK: - WKNavigationDelegate
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // 첫 페이지 로드 완료 → 스플래시 페이드아웃
-            // 200ms 여유를 줘서 React hydration 직후 깜빡임을 흡수
-            // 중복 호출 방지 (Next.js SPA 내비 시 didFinish 재호출 가능)
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            // HTML 응답이 수신되어 렌더링이 시작되는 시점에 스플래시 페이드아웃을 트리거.
+            // didFinish(전체 로드 완료)를 기다리면 JS 번들/데이터 페치까지 끝나야 해서 5초 이상 걸림.
+            // didCommit 시점엔 이미 SSR HTML이 그려지고, 웹의 SplashProvider가 동일 splash 이미지로
+            // 이어받기 때문에 끊김 없이 전환됨.
+            // 중복 호출 방지 (Next.js SPA 내비 시 재호출 가능)
             guard !hasNotifiedLoad else { return }
             hasNotifiedLoad = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.onLoad()
-            }
+            onLoad()
         }
 
         func webView(_ webView: WKWebView,
