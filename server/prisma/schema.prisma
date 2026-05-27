@@ -15,6 +15,14 @@ model User {
   parentRole    String?  // 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other'
   birthYear     Int?
   onboardedAt   DateTime?
+  // 동의 시각 — null이면 미동의 또는 철회됨. 필수(terms/privacy)는 회원가입 시 항상 기록.
+  termsAgreedAt        DateTime?
+  privacyAgreedAt      DateTime?
+  marketingAgreedAt    DateTime?
+  // 마케팅 동의 만료일 (개인정보보호법 시행령 §48조의2 — 2년 재확인 권장).
+  // null이면 미동의 또는 철회. 만료 후엔 발송 대상에서 제외하고 재동의 안내해야 함.
+  marketingExpiresAt   DateTime?
+  thirdPartyAgreedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   children      Child[]
@@ -28,8 +36,30 @@ model User {
   sharedAccess  SharedAccess[]     @relation("grantedAccess")
   sharedBy      SharedAccess[]     @relation("sharedByUser")
   noticeReads   NoticeRead[]
+  consentLogs   ConsentLog[]
 
   @@map("users")
+}
+
+enum ConsentType {
+  TERMS
+  PRIVACY
+  MARKETING
+  THIRD_PARTY
+}
+
+// 동의/철회 감사 로그 — append-only.
+// 분쟁/감사 시 정보주체가 언제 어떤 항목에 동의·철회했는지 증빙.
+model ConsentLog {
+  id          String      @id @default(uuid())
+  userId      String
+  type        ConsentType
+  agreed      Boolean
+  occurredAt  DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, occurredAt])
+  @@map("consent_logs")
 }
 
 model Banner {

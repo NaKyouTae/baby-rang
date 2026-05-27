@@ -146,6 +146,12 @@ export default function OnboardingClient() {
         body: JSON.stringify({
           nickname: nickname.trim(),
           parentRole,
+          consents: {
+            terms: agree.service,
+            privacy: agree.privacy,
+            marketing: agree.marketing,
+            thirdParty: agree.thirdParty,
+          },
           children: children.map((c) => ({
             name: c.name,
             gender: c.gender,

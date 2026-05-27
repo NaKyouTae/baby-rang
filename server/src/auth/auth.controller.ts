@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   Post,
   Req,
   Res,
@@ -50,6 +51,12 @@ export class AuthController {
       nickname: string;
       parentRole: string;
       birthYear?: number | null;
+      consents?: {
+        terms?: boolean;
+        privacy?: boolean;
+        marketing?: boolean;
+        thirdParty?: boolean;
+      };
       children?: Array<{
         name: string;
         gender: string;
@@ -59,6 +66,21 @@ export class AuthController {
     },
   ) {
     return this.authService.completeOnboarding(req.user.id, body);
+  }
+
+  @Get('consents')
+  @UseGuards(AuthGuard('jwt'))
+  getConsents(@Req() req) {
+    return this.authService.getConsents(req.user.id);
+  }
+
+  @Patch('consents')
+  @UseGuards(AuthGuard('jwt'))
+  updateConsents(
+    @Req() req,
+    @Body() body: { marketing?: boolean; thirdParty?: boolean },
+  ) {
+    return this.authService.updateConsents(req.user.id, body);
   }
 
   @Delete('withdraw')

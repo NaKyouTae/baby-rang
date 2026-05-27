@@ -145,6 +145,17 @@ const MENU_SECTIONS: MenuSection[] = [
     title: "약관/정책",
     items: [
       {
+        label: "동의 관리",
+        href: "/settings/consents",
+        requireAuth: true,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2.66675 4.66665C2.66675 3.93027 3.2637 3.33331 4.00008 3.33331H12.0001C12.7365 3.33331 13.3334 3.93027 13.3334 4.66665V11.3333C13.3334 12.0697 12.7365 12.6666 12.0001 12.6666H4.00008C3.2637 12.6666 2.66675 12.0697 2.66675 11.3333V4.66665Z" stroke="black"/>
+            <path d="M5.33325 7.99998L7.33325 9.99998L10.6666 6.66665" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+      },
+      {
         label: "이용약관",
         href: "/settings/terms",
         icon: (

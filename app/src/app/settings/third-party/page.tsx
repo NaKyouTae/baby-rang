@@ -1,11 +1,14 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
+import ConsentToggleBar from '@/components/ConsentToggleBar';
+import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 
 export default function SettingsThirdPartyPage() {
+  const { isAuthenticated } = useAuth();
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 96px)' }}>
       <PageHeader title="개인정보 제3자 제공 동의" variant="back" />
 
       <article
@@ -50,6 +53,8 @@ export default function SettingsThirdPartyPage() {
           </p>
         </section>
       </article>
+
+      {isAuthenticated && <ConsentToggleBar consentKey="thirdParty" />}
     </div>
   );
 }

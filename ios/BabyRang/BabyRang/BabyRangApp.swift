@@ -49,12 +49,13 @@ struct BabyRangApp: App {
 
 private struct SplashView: View {
     var body: some View {
-        ZStack {
-            Color(red: 241 / 255, green: 242 / 255, blue: 244 / 255)
-                .ignoresSafeArea()
-            Image("baby-rang launch screen_1")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-        }
+        // Launch Screen storyboard와 동일한 렌더링(scaleAspectFill + clip)을 유지해야
+        // 시스템 런치 → SwiftUI splash 전환 시 이미지 크기가 점프하지 않음.
+        Image("baby-rang launch screen_1")
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .background(Color(red: 241 / 255, green: 242 / 255, blue: 244 / 255))
     }
 }

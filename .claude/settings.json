@@ -292,7 +292,26 @@
       "Bash(npx --no-install eslint src/app/page.tsx src/app/layout.tsx src/app/globals.css src/components/SplashProvider.tsx src/components/BottomNavServer.tsx public/manifest.json)",
       "Bash(npx --no-install tsc --noEmit -p tsconfig.json)",
       "Bash(npx --no-install eslint src/app/settings/page.tsx)",
-      "Bash(sips -g pixelWidth -g pixelHeight /Users/nakyutae/personal/git/baby-rang/app/public/splash.png \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/baby-rang launch screen_1.imageset/앱 스플래시.png\")"
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/nakyutae/personal/git/baby-rang/app/public/splash.png \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/baby-rang launch screen_1.imageset/앱 스플래시.png\")",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(echo \"EXITCODE:$?\")",
+      "Bash(cp \"/Users/nakyutae/Downloads/앱 스플래시.svg\" /Users/nakyutae/personal/git/baby-rang/app/public/splash.svg && ls -la /Users/nakyutae/personal/git/baby-rang/app/public/splash.svg)",
+      "Bash(npx --no-install sharp-cli --version)",
+      "Bash(npx --no-install sharp-cli -i public/splash.svg -o public/splash.png --width 1242 --height 2688)",
+      "Bash(npx --no-install sharp-cli --help)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(npx --no-install sharp-cli -i public/splash.svg -o public/splash.png resize 1242 2688)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/nakyutae/personal/git/baby-rang/app/public/splash.png)",
+      "Bash(npx --no-install sharp-cli -i public/splash.svg -o public/splash.png --withMetadata false resize 1242 2688 -- png --quality 80 --compressionLevel 9 --palette)",
+      "Bash(node -e ' *)",
+      "Bash(node --experimental-vm-modules /tmp/optimize-splash.mjs)",
+      "Bash(node /tmp/optimize-splash.mjs)",
+      "Bash(pnpm --filter server exec eslint --no-error-on-unmatched-pattern server/src/auth/auth.service.ts server/src/auth/auth.controller.ts server/prisma/schema.prisma)",
+      "Bash(pnpm --filter app exec eslint --no-error-on-unmatched-pattern app/src/app/api/auth/consents/route.ts app/src/app/onboarding/OnboardingClient.tsx app/src/app/settings/consents/page.tsx app/src/app/settings/marketing/page.tsx app/src/app/settings/page.tsx app/src/app/settings/privacy/page.tsx app/src/app/settings/terms/page.tsx app/src/app/settings/third-party/page.tsx app/src/components/BottomNav.tsx app/src/components/ConsentToggleBar.tsx app/src/components/SplashProvider.tsx app/src/hooks/useConsents.ts)",
+      "Bash(echo \"APP_TSC:$?\")",
+      "Bash(echo \"SRV_TSC:$?\")",
+      "Bash(echo \"APP_LINT:$?\")",
+      "Bash(echo \"SRV_LINT:$?\")"
     ],
     "additionalDirectories": [
       "/tmp",
@@ -304,7 +323,8 @@
       "/Users/nakyutae/personal/git/baby-rang/admin/src/app/api/tests",
       "/Users/nakyutae/personal/git/baby-rang/app/src/app/api/tests",
       "/Users/nakyutae/personal/git/export-used-car/app/src/app/api/quick-phrases",
-      "/Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]"
+      "/Users/nakyutae/personal/git/spectrify-blog/src/app/posts/[slug]",
+      "/Users/nakyutae/Downloads"
     ]
   }
 }

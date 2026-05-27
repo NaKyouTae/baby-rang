@@ -1,11 +1,14 @@
 'use client';
 
 import PageHeader from '@/components/PageHeader';
+import ConsentToggleBar from '@/components/ConsentToggleBar';
+import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 
 export default function SettingsPrivacyPage() {
+  const { isAuthenticated } = useAuth();
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 96px)' }}>
       <PageHeader title="개인정보처리방침" variant="back" />
 
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-6" style={{ color: palette.gray500 }}>
@@ -200,6 +203,8 @@ export default function SettingsPrivacyPage() {
           <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 4월 8일부터 시행됩니다.</p>
         </section>
       </article>
+
+      {isAuthenticated && <ConsentToggleBar consentKey="privacy" />}
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default function SplashProvider({
         <div
           aria-hidden
           style={{
-            position: "fixed",
+            position: "absolute",
             inset: 0,
             zIndex: 200,
             backgroundColor: SPLASH_BG,
@@ -31,7 +31,7 @@ export default function SplashProvider({
             justifyContent: "center",
           }}
         >
-          {/* 네이티브 SplashView(.aspectRatio(.fit))와 동일한 크기/위치로 맞춰
+          {/* 네이티브 SplashView(scaleAspectFill)와 동일한 크기/위치로 맞춰
               네이티브→웹 전환 시 이미지 점프가 없도록 한다. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -40,7 +40,7 @@ export default function SplashProvider({
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "contain",
+              objectFit: "cover",
             }}
           />
         </div>
