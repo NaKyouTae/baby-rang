@@ -31,13 +31,15 @@ export default function SplashProvider({
             justifyContent: "center",
           }}
         >
+          {/* 네이티브 SplashView(.aspectRatio(.fit))와 동일한 크기/위치로 맞춰
+              네이티브→웹 전환 시 이미지 점프가 없도록 한다. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/splash.png"
             alt=""
             style={{
-              maxWidth: "70%",
-              maxHeight: "60%",
+              width: "100%",
+              height: "100%",
               objectFit: "contain",
             }}
           />

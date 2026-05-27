@@ -291,7 +291,8 @@
       "Bash(pnpm --filter server exec eslint server/src/auth/auth.controller.ts server/src/auth/auth.service.ts)",
       "Bash(npx --no-install eslint src/app/page.tsx src/app/layout.tsx src/app/globals.css src/components/SplashProvider.tsx src/components/BottomNavServer.tsx public/manifest.json)",
       "Bash(npx --no-install tsc --noEmit -p tsconfig.json)",
-      "Bash(npx --no-install eslint src/app/settings/page.tsx)"
+      "Bash(npx --no-install eslint src/app/settings/page.tsx)",
+      "Bash(sips -g pixelWidth -g pixelHeight /Users/nakyutae/personal/git/baby-rang/app/public/splash.png \"/Users/nakyutae/personal/git/baby-rang/ios/BabyRang/BabyRang/Assets.xcassets/baby-rang launch screen_1.imageset/앱 스플래시.png\")"
     ],
     "additionalDirectories": [
       "/tmp",
