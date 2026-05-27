@@ -280,7 +280,15 @@
       "Bash(echo \"PID=$!\")",
       "Bash(curl -sS -o /tmp/onboarding.html -w \"HTTP=%{http_code}\\\\n\" http://localhost:13000/onboarding)",
       "Bash(echo \"APP=$?\")",
-      "Bash(echo \"SERVER=$?\")"
+      "Bash(echo \"SERVER=$?\")",
+      "Bash(curl -sS -o /dev/null -w \"third-party=%{http_code} marketing=\" http://localhost:13000/settings/third-party)",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:13000/settings/marketing)",
+      "Bash(pnpm --filter app exec eslint --no-error-on-unmatched-pattern app/src/app/onboarding/OnboardingClient.tsx app/src/app/settings/page.tsx app/src/app/settings/marketing/page.tsx app/src/app/settings/third-party/page.tsx)",
+      "Bash(echo \"APP_TSC=$?\")",
+      "Bash(echo \"SERVER_TSC=$?\")",
+      "Bash(echo \"APP_LINT=$?\")",
+      "Bash(echo \"SERVER_LINT=$?\")",
+      "Bash(pnpm --filter server exec eslint server/src/auth/auth.controller.ts server/src/auth/auth.service.ts)"
     ],
     "additionalDirectories": [
       "/tmp",

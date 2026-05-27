@@ -44,8 +44,8 @@ type Term = { key: TermKey; required: boolean; label: string; href?: string };
 const TERMS: Term[] = [
   { key: 'service', required: true, label: '이용약관 동의', href: '/settings/terms' },
   { key: 'privacy', required: true, label: '개인정보 수집 및 이용 동의', href: '/settings/privacy' },
-  { key: 'marketing', required: false, label: '마케팅 정보 수신 동의' },
-  { key: 'thirdParty', required: false, label: '개인정보 제3자 제공 동의' },
+  { key: 'marketing', required: false, label: '마케팅 정보 수신 동의', href: '/settings/marketing' },
+  { key: 'thirdParty', required: false, label: '개인정보 제3자 제공 동의', href: '/settings/third-party' },
 ];
 
 const newKey = () => Math.random().toString(36).slice(2);
@@ -271,7 +271,7 @@ export default function OnboardingClient() {
                 return (
                   <div
                     key={c.key}
-                    className="relative rounded-[8px] border border-gray-200 bg-white p-3 flex flex-col items-center justify-center"
+                    className="relative rounded-[8px] border border-gray-200 bg-gray-100 p-3 flex flex-col items-center justify-center"
                     style={{ minHeight: 132 }}
                   >
                     <button
@@ -313,7 +313,7 @@ export default function OnboardingClient() {
                       >
                         D+{days}
                       </span>
-                      <span className="text-[11px] text-gray-500">
+                      <span className="text-[11px] text-black">
                         {months}개월 {extraDays}일
                       </span>
                     </div>
@@ -323,7 +323,7 @@ export default function OnboardingClient() {
               <button
                 type="button"
                 onClick={openAddChild}
-                className="rounded-[8px] border border-dashed border-gray-200 bg-white text-gray-300 flex items-center justify-center active:bg-gray-50"
+                className="rounded-[8px] border border-gray-200 bg-white text-gray-300 flex items-center justify-center active:bg-gray-100"
                 style={{ minHeight: 132 }}
                 aria-label="아기 추가"
               >
