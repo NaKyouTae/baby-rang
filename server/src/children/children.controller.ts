@@ -33,6 +33,7 @@ export class ChildrenController {
     @Body('gender') gender: string,
     @Body('birthDate') birthDate: string,
     @Body('dueDate') dueDate?: string,
+    @Body('groupId') groupId?: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.childrenService.create(
@@ -42,6 +43,7 @@ export class ChildrenController {
       birthDate,
       file,
       dueDate,
+      groupId,
     );
   }
 

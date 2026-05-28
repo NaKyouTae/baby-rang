@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
+import { AuthService, OAuthResult } from './auth.service';
 import type { Response } from 'express';
 
 @Controller('auth')
@@ -30,24 +30,39 @@ export class AuthController {
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
   kakaoCallback(@Req() req, @Res() res: Response) {
-    const token = this.authService.generateToken(req.user.id);
+    const result = req.user as OAuthResult;
     const clientUrl =
       this.configService.get('CLIENT_URL') || 'http://localhost:3000';
-    res.redirect(`${clientUrl}/auth/callback?token=${token.accessToken}`);
+
+    if (result.kind === 'existing') {
+      const { accessToken } = this.authService.generateToken(result.userId);
+      return res.redirect(`${clientUrl}/auth/callback?token=${accessToken}`);
+    }
+
+    // 신규: user를 만들지 않고 signup_token만 발급. 회원가입 버튼 클릭 시점에 user 생성.
+    const signupToken = this.authService.generateSignupToken(result.profile);
+    return res.redirect(
+      `${clientUrl}/auth/callback?signupToken=${signupToken}`,
+    );
   }
 
-  @Get('profile')
-  @UseGuards(AuthGuard('jwt'))
-  getProfile(@Req() req) {
-    return req.user;
+  // signup_token으로 소셜 프로필 미리보기 (온보딩 화면에 이메일 등 표시용).
+  @Post('signup/context')
+  signupContext(@Body() body: { signupToken: string }) {
+    const payload = this.authService.verifySignupToken(body.signupToken);
+    return {
+      provider: payload.provider,
+      nickname: payload.nickname ?? null,
+      email: payload.email ?? null,
+      profileImage: payload.profileImage ?? null,
+    };
   }
 
-  @Post('onboarding')
-  @UseGuards(AuthGuard('jwt'))
-  completeOnboarding(
-    @Req() req,
+  @Post('signup')
+  signup(
     @Body()
     body: {
+      signupToken: string;
       nickname: string;
       parentRole: string;
       birthYear?: number | null;
@@ -65,7 +80,34 @@ export class AuthController {
       }>;
     },
   ) {
-    return this.authService.completeOnboarding(req.user.id, body);
+    const { signupToken, ...dto } = body;
+    return this.authService.signup(signupToken, dto);
+  }
+
+  // 카드사 심사관용 테스트 로그인. 하드코딩된 자격증명 검증 후 access_token 반환.
+  @Post('test-login')
+  testLogin(@Body() body: { username: string; password: string }) {
+    return this.authService.testLogin(body.username, body.password);
+  }
+
+  @Get('profile')
+  @UseGuards(AuthGuard('jwt'))
+  getProfile(@Req() req) {
+    return req.user;
+  }
+
+  @Patch('profile')
+  @UseGuards(AuthGuard('jwt'))
+  updateProfile(
+    @Req() req,
+    @Body()
+    body: {
+      nickname?: string;
+      parentRole?: string;
+      birthYear?: number | null;
+    },
+  ) {
+    return this.authService.updateProfile(req.user.id, body);
   }
 
   @Get('consents')

@@ -12,6 +12,7 @@ import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 import PageHeader from "@/components/PageHeader";
 import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
+import BusinessInfo from "@/components/BusinessInfo";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -331,7 +332,7 @@ export default function SettingsPage() {
       {/* 헤더 */}
       <PageHeader title="마이페이지" variant="close" onAction={() => router.push('/home')} />
 
-      <div className="pb-36">
+      <div className="pb-8">
         {/* 사용자 프로필 */}
         <section className="px-6 pt-5 pb-[24px]">
           {!isAuthLoaded ? (
@@ -484,6 +485,8 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      <BusinessInfo />
 
       <ConfirmModal
         open={withdrawOpen}

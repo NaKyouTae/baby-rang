@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { ConsentType, Prisma } from '@prisma/client';
+import { AuthProvider, ConsentType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type ConsentInput = {
@@ -32,12 +32,35 @@ function calcMarketingExpiresAt(agreedAt: Date): Date {
   return expires;
 }
 
-interface KakaoProfile {
-  kakaoId: string;
+export interface OAuthProfile {
+  provider: AuthProvider;
+  providerId: string;
   nickname?: string;
   email?: string;
   profileImage?: string;
 }
+
+export type OAuthResult =
+  | { kind: 'existing'; userId: string }
+  | { kind: 'pending'; profile: OAuthProfile };
+
+export interface SignupTokenPayload {
+  type: 'signup';
+  provider: AuthProvider;
+  providerId: string;
+  nickname?: string;
+  email?: string;
+  profileImage?: string;
+}
+
+// signup_token 만료. 사용자가 약관 읽고 정보 입력하는 시간을 고려해 30분.
+const SIGNUP_TOKEN_TTL = '30m';
+
+// 토스페이먼츠 카드사 심사관용 테스트 계정. 카카오 외 로그인 경로가 없어서 심사 진행이 막히는 경우에만 사용.
+// 심사 종료 후 제거 예정.
+const TEST_LOGIN_USERNAME = 'toss-review';
+const TEST_LOGIN_PASSWORD = 'BabyRang2026!';
+const TEST_ACCOUNT_PROVIDER_ID = 'test-toss-review';
 
 @Injectable()
 export class AuthService {
@@ -47,23 +70,32 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async validateKakaoUser(profile: KakaoProfile) {
-    let user = await this.prisma.user.findUnique({
-      where: { kakaoId: profile.kakaoId },
+  // 소셜 로그인 결과 분기:
+  // - 이미 회원가입을 끝낸 user → existing (정식 access_token 발급)
+  // - 미온보딩(과거 흐름 잔재) 또는 신규 → pending (DB 미생성, signup_token 발급)
+  // 사용자가 "회원가입" 버튼을 누르기 전에는 user 레코드를 만들지 않음.
+  async resolveOAuthLogin(profile: OAuthProfile): Promise<OAuthResult> {
+    const existingAccount = await this.prisma.account.findUnique({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+      include: { user: true },
     });
 
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          kakaoId: profile.kakaoId,
-          nickname: profile.nickname,
-          email: profile.email,
-          profileImage: profile.profileImage,
-        },
-      });
+    if (existingAccount && existingAccount.user.onboardedAt) {
+      return { kind: 'existing', userId: existingAccount.userId };
     }
 
-    return user;
+    // 이전 흐름에서 만들어진 미온보딩 user는 정리 — 회원가입 미완료 상태를 DB에 남겨두지 않음.
+    // user를 지우면 account는 onDelete: Cascade로 같이 제거됨.
+    if (existingAccount) {
+      await this.prisma.user.delete({ where: { id: existingAccount.userId } });
+    }
+
+    return { kind: 'pending', profile };
   }
 
   generateToken(userId: string) {
@@ -72,8 +104,39 @@ export class AuthService {
     };
   }
 
-  async completeOnboarding(
-    userId: string,
+  generateSignupToken(profile: OAuthProfile): string {
+    const payload: SignupTokenPayload = {
+      type: 'signup',
+      provider: profile.provider,
+      providerId: profile.providerId,
+      nickname: profile.nickname,
+      email: profile.email,
+      profileImage: profile.profileImage,
+    };
+    return this.jwtService.sign(payload, { expiresIn: SIGNUP_TOKEN_TTL });
+  }
+
+  verifySignupToken(token: string): SignupTokenPayload {
+    let payload: SignupTokenPayload;
+    try {
+      payload = this.jwtService.verify<SignupTokenPayload>(token);
+    } catch {
+      throw new BadRequestException('invalid or expired signup token');
+    }
+    if (
+      payload?.type !== 'signup' ||
+      !payload.provider ||
+      !payload.providerId
+    ) {
+      throw new BadRequestException('invalid signup token');
+    }
+    return payload;
+  }
+
+  // 회원가입(신규): signup_token 검증 → user 생성 → 정식 access_token 발급.
+  // user 레코드는 이 시점에 최초로 생성됨 (카카오 로그인 시점에는 만들지 않음).
+  async signup(
+    signupToken: string,
     dto: {
       nickname: string;
       parentRole: string;
@@ -87,9 +150,11 @@ export class AuthService {
       }>;
     },
   ) {
+    const profile = this.verifySignupToken(signupToken);
+
     const nickname = dto.nickname?.trim();
     if (!nickname) {
-      throw new InternalServerErrorException('nickname is required');
+      throw new BadRequestException('nickname is required');
     }
     const validRoles = [
       'mom',
@@ -100,7 +165,7 @@ export class AuthService {
       'other',
     ];
     if (!validRoles.includes(dto.parentRole)) {
-      throw new InternalServerErrorException('invalid parentRole');
+      throw new BadRequestException('invalid parentRole');
     }
 
     // 필수 동의(이용약관, 개인정보 수집·이용) 검증.
@@ -124,10 +189,24 @@ export class AuthService {
 
     const now = new Date();
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
+    // 중복 가입 방어: signup_token 발급 후 다른 탭에서 이미 회원가입을 끝냈을 수도 있음.
+    const duplicate = await this.prisma.account.findUnique({
+      where: {
+        provider_providerId: {
+          provider: profile.provider,
+          providerId: profile.providerId,
+        },
+      },
+    });
+    if (duplicate) {
+      throw new BadRequestException('already signed up');
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
         data: {
+          email: profile.email,
+          profileImage: profile.profileImage,
           nickname,
           parentRole: dto.parentRole,
           birthYear: dto.birthYear ?? null,
@@ -139,26 +218,131 @@ export class AuthService {
             ? calcMarketingExpiresAt(now)
             : null,
           thirdPartyAgreedAt: consents.thirdParty ? now : null,
+          accounts: {
+            create: {
+              provider: profile.provider,
+              providerId: profile.providerId,
+            },
+          },
         },
       });
+
+      // 1인 그룹 자동 생성 — 본인이 owner.
+      // 공유는 이 그룹에 다른 사람을 초대하는 것이고, 다른 그룹 합류는 별도 group_members 추가.
+      const group = await tx.group.create({
+        data: {
+          ownerId: user.id,
+          code: await this.generateUniqueGroupCode(tx),
+          members: { create: { userId: user.id } },
+        },
+      });
+
       if (childrenData.length > 0) {
         await tx.child.createMany({
-          data: childrenData.map((c) => ({ ...c, userId })),
+          data: childrenData.map((c) => ({ ...c, groupId: group.id })),
         });
       }
       await tx.consentLog.createMany({
         data: (['terms', 'privacy', 'marketing', 'thirdParty'] as const).map(
           (key) => ({
-            userId,
+            userId: user.id,
             type: CONSENT_TYPE[key],
             agreed: !!consents[key],
             occurredAt: now,
           }),
         ),
       });
+      return user;
     });
 
-    return this.prisma.user.findUnique({ where: { id: userId } });
+    return {
+      accessToken: this.jwtService.sign({ sub: created.id }),
+      user: created,
+    };
+  }
+
+  // 카드사 심사관용 테스트 로그인. 하드코딩된 자격증명을 검증하고, 미리 만들어둔 테스트 user가 없으면 생성한다.
+  async testLogin(username: string, password: string) {
+    if (username !== TEST_LOGIN_USERNAME || password !== TEST_LOGIN_PASSWORD) {
+      throw new BadRequestException('invalid credentials');
+    }
+
+    const existing = await this.prisma.account.findUnique({
+      where: {
+        provider_providerId: {
+          provider: AuthProvider.KAKAO,
+          providerId: TEST_ACCOUNT_PROVIDER_ID,
+        },
+      },
+    });
+
+    if (existing) {
+      return { accessToken: this.jwtService.sign({ sub: existing.userId }) };
+    }
+
+    const now = new Date();
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          nickname: '테스트 계정',
+          parentRole: 'mom',
+          onboardedAt: now,
+          termsAgreedAt: now,
+          privacyAgreedAt: now,
+          accounts: {
+            create: {
+              provider: AuthProvider.KAKAO,
+              providerId: TEST_ACCOUNT_PROVIDER_ID,
+            },
+          },
+        },
+      });
+
+      await tx.group.create({
+        data: {
+          ownerId: created.id,
+          code: await this.generateUniqueGroupCode(tx),
+          members: { create: { userId: created.id } },
+        },
+      });
+
+      return created;
+    });
+
+    return { accessToken: this.jwtService.sign({ sub: user.id }) };
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: { nickname?: string; parentRole?: string; birthYear?: number | null },
+  ) {
+    const data: Prisma.UserUpdateInput = {};
+    if (typeof dto.nickname === 'string') {
+      const nickname = dto.nickname.trim();
+      if (!nickname) throw new BadRequestException('nickname is required');
+      data.nickname = nickname;
+    }
+    if (typeof dto.parentRole === 'string') {
+      const valid = [
+        'mom',
+        'dad',
+        'grandmother',
+        'grandfather',
+        'caregiver',
+        'other',
+      ];
+      if (!valid.includes(dto.parentRole)) {
+        throw new BadRequestException('invalid parentRole');
+      }
+      data.parentRole = dto.parentRole;
+    }
+    if (dto.birthYear !== undefined) {
+      data.birthYear = dto.birthYear;
+    }
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('no profile fields to update');
+    }
+    return this.prisma.user.update({ where: { id: userId }, data });
   }
 
   async getConsents(userId: string) {
@@ -238,39 +422,102 @@ export class AuthService {
     return this.getConsents(userId);
   }
 
+  // 6자리 가독성 높은 그룹 코드 생성 (I/O/0/1 제외). 중복이면 재시도.
+  private async generateUniqueGroupCode(
+    tx: Prisma.TransactionClient,
+  ): Promise<string> {
+    const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const generate = () => {
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += CHARS[Math.floor(Math.random() * CHARS.length)];
+      }
+      return code;
+    };
+    for (let i = 0; i < 10; i++) {
+      const code = generate();
+      const dup = await tx.group.findUnique({ where: { code } });
+      if (!dup) return code;
+    }
+    throw new InternalServerErrorException('failed to generate group code');
+  }
+
   async withdraw(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { accounts: true },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const adminKey = this.configService.get<string>('KAKAO_ADMIN_KEY');
-    if (!adminKey) {
-      throw new InternalServerErrorException(
-        'KAKAO_ADMIN_KEY is not configured',
-      );
+    // 소셜 unlink는 카카오만 — 외부 호출은 트랜잭션 밖에서 먼저 처리.
+    const kakaoAccount = user.accounts.find(
+      (a) => a.provider === AuthProvider.KAKAO,
+    );
+    if (kakaoAccount) {
+      const adminKey = this.configService.get<string>('KAKAO_ADMIN_KEY');
+      if (!adminKey) {
+        throw new InternalServerErrorException(
+          'KAKAO_ADMIN_KEY is not configured',
+        );
+      }
+
+      const body = new URLSearchParams({
+        target_id_type: 'user_id',
+        target_id: kakaoAccount.providerId,
+      });
+
+      const res = await fetch('https://kapi.kakao.com/v1/user/unlink', {
+        method: 'POST',
+        headers: {
+          Authorization: `KakaoAK ${adminKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new InternalServerErrorException(`Kakao unlink failed: ${text}`);
+      }
     }
 
-    const body = new URLSearchParams({
-      target_id_type: 'user_id',
-      target_id: user.kakaoId,
+    // 그룹 정리:
+    // - 본인이 owner인 그룹마다: 다른 멤버 있으면 가장 일찍 합류한 멤버에게 자동 이양
+    //                            없으면 그룹 삭제(아이/기록 cascade)
+    // - 본인이 일반 멤버인 그룹: group_members에서 본인만 빠짐 (FK cascade로 자동)
+    await this.prisma.$transaction(async (tx) => {
+      const ownedGroups = await tx.group.findMany({
+        where: { ownerId: userId },
+        include: {
+          members: {
+            where: { userId: { not: userId } },
+            orderBy: { joinedAt: 'asc' },
+            take: 1,
+          },
+        },
+      });
+
+      for (const group of ownedGroups) {
+        const successor = group.members[0];
+        if (successor) {
+          // 자동 이양: 가장 일찍 합류한 멤버가 새 owner.
+          await tx.group.update({
+            where: { id: group.id },
+            data: { ownerId: successor.userId },
+          });
+        } else {
+          // 마지막 멤버 → 그룹·아이·기록 모두 cascade 삭제.
+          await tx.group.delete({ where: { id: group.id } });
+        }
+      }
+
+      // user 삭제 → 본인 navSlots/payments/consents/temperament 등 cascade 삭제 +
+      //             group_members에서 본인 행 cascade 삭제 +
+      //             growth_records/physical_growths의 userId는 SetNull(기록 자체는 보존).
+      await tx.user.delete({ where: { id: userId } });
     });
-
-    const res = await fetch('https://kapi.kakao.com/v1/user/unlink', {
-      method: 'POST',
-      headers: {
-        Authorization: `KakaoAK ${adminKey}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body.toString(),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new InternalServerErrorException(`Kakao unlink failed: ${text}`);
-    }
-
-    await this.prisma.user.delete({ where: { id: userId } });
 
     return { success: true };
   }

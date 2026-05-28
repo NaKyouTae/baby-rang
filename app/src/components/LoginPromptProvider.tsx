@@ -24,11 +24,40 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | undefined>(undefined);
+  const [testFormOpen, setTestFormOpen] = useState(false);
+  const [testUsername, setTestUsername] = useState('');
+  const [testPassword, setTestPassword] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const openLoginPrompt = useCallback((msg?: string) => {
     setMessage(msg);
     setOpen(true);
+    setTestFormOpen(false);
+    setTestError(null);
   }, []);
+
+  const handleTestLogin = useCallback(async () => {
+    if (testLoading) return;
+    setTestLoading(true);
+    setTestError(null);
+    try {
+      const res = await fetch('/api/auth/test-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: testUsername, password: testPassword }),
+      });
+      if (!res.ok) {
+        setTestError('아이디 또는 비밀번호가 올바르지 않습니다.');
+        return;
+      }
+      window.location.href = '/home';
+    } catch {
+      setTestError('로그인 중 오류가 발생했어요.');
+    } finally {
+      setTestLoading(false);
+    }
+  }, [testUsername, testPassword, testLoading]);
 
   const requireLogin = useCallback(
     (msg?: string) => {
@@ -80,6 +109,53 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 카카오로 시작하기
               </button>
+              <button
+                type="button"
+                onClick={() => setTestFormOpen((v) => !v)}
+                className="w-full rounded-[4px] border border-gray-300 bg-white font-semibold active:bg-gray-100"
+                style={{ height: 40, fontSize: 14, color: palette.gray600 }}
+              >
+                계정으로 로그인
+              </button>
+              {testFormOpen && (
+                <div className="flex flex-col" style={{ gap: 6, marginTop: 4 }}>
+                  <input
+                    type="text"
+                    value={testUsername}
+                    onChange={(e) => setTestUsername(e.target.value)}
+                    placeholder="아이디"
+                    autoComplete="username"
+                    className="w-full rounded-[4px] border border-gray-300 px-3"
+                    style={{ height: 36, fontSize: 13 }}
+                  />
+                  <input
+                    type="password"
+                    value={testPassword}
+                    onChange={(e) => setTestPassword(e.target.value)}
+                    placeholder="비밀번호"
+                    autoComplete="current-password"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleTestLogin();
+                    }}
+                    className="w-full rounded-[4px] border border-gray-300 px-3"
+                    style={{ height: 36, fontSize: 13 }}
+                  />
+                  {testError && (
+                    <p className="text-[11px]" style={{ color: '#DC2626' }}>
+                      {testError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleTestLogin}
+                    disabled={testLoading || !testUsername || !testPassword}
+                    className="w-full rounded-[4px] font-semibold active:opacity-80 disabled:opacity-50"
+                    style={{ height: 36, fontSize: 13, backgroundColor: '#3078C9', color: '#FFFFFF' }}
+                  >
+                    {testLoading ? '로그인 중...' : '로그인'}
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}

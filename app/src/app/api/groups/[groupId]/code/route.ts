@@ -3,20 +3,19 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
-/** 공유 멤버 제거 */
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ userId: string }> },
+export async function PATCH(
+  _req: Request,
+  ctx: { params: Promise<{ groupId: string }> },
 ) {
-  const { userId } = await params;
+  const { groupId } = await ctx.params;
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${API_URL}/shares/members/${userId}`, {
-    method: 'DELETE',
+  const res = await fetch(`${API_URL}/groups/${groupId}/code`, {
+    method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }

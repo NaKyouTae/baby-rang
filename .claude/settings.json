@@ -311,7 +311,13 @@
       "Bash(echo \"APP_TSC:$?\")",
       "Bash(echo \"SRV_TSC:$?\")",
       "Bash(echo \"APP_LINT:$?\")",
-      "Bash(echo \"SRV_LINT:$?\")"
+      "Bash(echo \"SRV_LINT:$?\")",
+      "Bash(grep -nB1 -A3 \"userId\\\\|user.*relation\" /Users/nakyutae/personal/git/baby-rang/server/prisma/schema.prisma)",
+      "Bash(grep -nB2 -A2 \"model Child\\\\b\\\\|model SharedAccess\\\\|model ShareCode\" /Users/nakyutae/personal/git/baby-rang/server/prisma/schema.prisma)",
+      "Bash(echo \"---exit $?\")",
+      "Bash(createdb baby-rang-shadow *)",
+      "Bash(PGPASSWORD='Skrbxo123!@#' psql -h localhost -U postgres -c 'CREATE DATABASE \"baby-rang-shadow\";')",
+      "Bash(pnpm --filter app exec eslint src/components/SplashProvider.tsx)"
     ],
     "additionalDirectories": [
       "/tmp",

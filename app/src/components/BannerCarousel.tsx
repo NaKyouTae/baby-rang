@@ -20,7 +20,7 @@ export default function BannerCarousel() {
 
   useEffect(() => {
     cachedFetch<{ banners: Banner[] }>("/api/banners", 5 * 60_000)
-      .then((d) => setBanners(d.banners ?? []))
+      .then((d) => setBanners((d.banners ?? []).filter((b) => !!b.imageUrl)))
       .catch(() => setBanners([]));
   }, []);
 
@@ -39,7 +39,7 @@ export default function BannerCarousel() {
     return <div style={{ height: 80 }} className="rounded-[8px] bg-gray-200 animate-pulse" />;
   }
 
-  if (banners.length === 0) return <div style={{ height: 80 }} className="rounded-[8px]" />;
+  if (banners.length === 0) return null;
 
   const onScroll = () => {
     const el = scrollerRef.current;

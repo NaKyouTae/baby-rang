@@ -6,6 +6,7 @@ import {
 import { GrowthRecordType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { ChildrenService } from '../children/children.service';
 
 const ALLOWED_TYPES = new Set<GrowthRecordType>([
   'BREASTFEEDING',
@@ -41,6 +42,7 @@ export class GrowthRecordsService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private children: ChildrenService,
   ) {}
 
   private validateType(type: string): GrowthRecordType {
@@ -62,19 +64,9 @@ export class GrowthRecordsService {
     return raw as Prisma.InputJsonValue;
   }
 
-  private async assertChildAccess(userId: string, childId: string) {
-    // 1. 직접 소유자인지
-    const isOwner = await this.prisma.child.findFirst({
-      where: { id: childId, userId },
-      select: { id: true },
-    });
-    if (isOwner) return;
-
-    // 2. SharedAccess로 공유받았는지
-    const hasAccess = await this.prisma.sharedAccess.findUnique({
-      where: { childId_grantedToId: { childId, grantedToId: userId } },
-    });
-    if (!hasAccess) throw new NotFoundException('아기를 찾을 수 없습니다.');
+  // 권한 체크는 child.group 멤버십 기준 — ChildrenService.assertAccess에 위임.
+  private assertChildAccess(userId: string, childId: string) {
+    return this.children.assertAccess(userId, childId);
   }
 
   async earliestDate(userId: string, childId: string) {

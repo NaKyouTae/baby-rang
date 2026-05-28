@@ -45,8 +45,8 @@ export default function ProfileSettingsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/onboarding', {
-        method: 'POST',
+      const res = await fetch('/api/auth/profile', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nickname: nickname.trim(),

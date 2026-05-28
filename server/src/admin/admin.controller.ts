@@ -174,7 +174,9 @@ export class AdminController {
         orderBy: { createdAt: 'desc' },
         skip: (p - 1) * l,
         take: l,
-        include: { _count: { select: { children: true, payments: true } } },
+        include: {
+          _count: { select: { groupMemberships: true, payments: true } },
+        },
       }),
       this.prisma.user.count(),
     ]);
@@ -186,7 +188,9 @@ export class AdminController {
     return this.prisma.user.findUnique({
       where: { id },
       include: {
-        children: true,
+        groupMemberships: {
+          include: { group: { include: { children: true } } },
+        },
         payments: { orderBy: { createdAt: 'desc' }, take: 20 },
       },
     });

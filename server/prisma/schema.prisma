@@ -8,7 +8,6 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
-  kakaoId       String   @unique
   nickname      String?
   email         String?
   profileImage  String?
@@ -25,20 +24,45 @@ model User {
   thirdPartyAgreedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  children      Child[]
+  accounts      Account[]
   payments      Payment[]
   temperamentSubmissions TemperamentSubmission[]
   navSlots      NavSlot[]
   growthRecords GrowthRecord[]
   growthQuickButtons GrowthQuickButton[]
   physicalGrowths PhysicalGrowth[]
-  shareCode     ShareCode?
-  sharedAccess  SharedAccess[]     @relation("grantedAccess")
-  sharedBy      SharedAccess[]     @relation("sharedByUser")
   noticeReads   NoticeRead[]
   consentLogs   ConsentLog[]
+  // 그룹 멤버십 — 한 사용자가 여러 그룹에 속할 수 있음.
+  // 그룹은 아이를 함께 관리하는 단위 (배우자/조부모 등 공동 양육자).
+  groupMemberships GroupMember[]
+  // 본인이 owner인 그룹들. owner 탈퇴 시 다른 멤버에게 자동 이양된다.
+  ownedGroups   Group[]            @relation("groupOwner")
 
   @@map("users")
+}
+
+enum AuthProvider {
+  KAKAO
+  GOOGLE
+  NAVER
+  APPLE
+}
+
+// 소셜 로그인 연결 — 한 user가 여러 provider를 가질 수 있도록 분리.
+// (provider, providerId)는 SNS 측 식별자로 글로벌 유니크.
+model Account {
+  id         String       @id @default(uuid())
+  userId     String
+  provider   AuthProvider
+  providerId String
+  createdAt  DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@map("accounts")
 }
 
 enum ConsentType {
@@ -298,7 +322,9 @@ model PaymentEvent {
 
 model Child {
   id            String   @id @default(uuid())
-  userId        String
+  // 아이는 그룹에 속한다. 그룹의 모든 멤버가 동등하게 접근 가능.
+  // 그룹의 마지막 멤버가 탈퇴하면 그룹과 함께 cascade 삭제.
+  groupId       String
   name          String
   gender        String
   birthDate     DateTime @db.Date
@@ -306,12 +332,12 @@ model Child {
   profileImage  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group         Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   payments      Payment[]
   growthRecords GrowthRecord[]
   physicalGrowths PhysicalGrowth[]
-  sharedAccess  SharedAccess[]
 
+  @@index([groupId])
   @@map("children")
 }
 
@@ -337,7 +363,9 @@ enum GrowthRecordType {
 
 model GrowthRecord {
   id        String           @id @default(uuid())
-  userId    String
+  // 작성자(createdBy 역할). 탈퇴 시 SetNull → "(탈퇴한 회원)"으로 표시.
+  // 권한 체크는 child.group 멤버십으로 함.
+  userId    String?
   childId   String
   type      GrowthRecordType
   startAt   DateTime
@@ -349,8 +377,8 @@ model GrowthRecord {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  child Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, startAt])
   @@index([userId, startAt])
@@ -403,37 +431,43 @@ model GrowthQuickButton {
   @@map("growth_quick_buttons")
 }
 
-model ShareCode {
+// 아이를 공동 양육하는 단위. 회원가입 시 1인 그룹 자동 생성.
+// 한 사용자가 여러 그룹에 속할 수 있다 (친정/시댁 등).
+// owner는 추방·코드 재발급 권한을 가지며, owner 탈퇴 시 가장 먼저 합류한 멤버에게 자동 이양된다.
+model Group {
   id        String   @id @default(uuid())
-  userId    String   @unique
+  ownerId   String
   code      String   @unique
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // NoAction: owner 탈퇴 전에 코드 레벨에서 명시적으로 다른 멤버로 이양해야 함.
+  // (이양 실패 시 FK 제약 위반 → user 삭제 거부 → 데이터 보호)
+  owner    User          @relation("groupOwner", fields: [ownerId], references: [id], onDelete: NoAction)
+  members  GroupMember[]
+  children Child[]
 
-  @@map("share_codes")
+  @@index([ownerId])
+  @@map("groups")
 }
 
-model SharedAccess {
-  id           String   @id @default(uuid())
-  childId      String
-  grantedToId  String
-  sharedById   String
-  role         String   @default("editor")  // 'editor' | 'viewer'
-  createdAt    DateTime @default(now())
+model GroupMember {
+  id       String   @id @default(uuid())
+  groupId  String
+  userId   String
+  joinedAt DateTime @default(now())
 
-  child     Child @relation(fields: [childId], references: [id], onDelete: Cascade)
-  grantedTo User  @relation("grantedAccess", fields: [grantedToId], references: [id], onDelete: Cascade)
-  sharedBy  User  @relation("sharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([childId, grantedToId])
-  @@index([grantedToId])
-  @@map("shared_access")
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
 }
 
 model PhysicalGrowth {
   id              String   @id @default(uuid())
-  userId          String
+  // 작성자(createdBy 역할). 탈퇴 시 SetNull. 권한 체크는 child.group 기준.
+  userId          String?
   childId         String
   measuredAt      DateTime @db.Date
   heightCm        Float?
@@ -443,8 +477,8 @@ model PhysicalGrowth {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  child Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, measuredAt])
   @@map("physical_growths")

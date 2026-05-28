@@ -5,6 +5,7 @@ import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 import HomeHeaderActions from "@/components/HomeHeaderActions";
 import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
+import BusinessInfo from "@/components/BusinessInfo";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -65,7 +66,7 @@ export default function HomePage() {
         className="flex-1 px-6"
         style={{
           paddingTop: 24,
-          paddingBottom: 'var(--bottom-nav-space)',
+          paddingBottom: 24,
         }}
       >
         <HomeHeroCard />
@@ -112,6 +113,8 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+
+      <BusinessInfo />
     </div>
   );
 }

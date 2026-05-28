@@ -15,7 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { GrowthRecordsModule } from './growth-records/growth-records.module';
 import { GrowthQuickButtonsModule } from './growth-quick-buttons/growth-quick-buttons.module';
 import { NursingRoomsModule } from './nursing-rooms/nursing-rooms.module';
-import { SharesModule } from './shares/shares.module';
+import { GroupsModule } from './groups/groups.module';
 import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
 import { TestsModule } from './tests/tests.module';
 
@@ -35,7 +35,7 @@ import { TestsModule } from './tests/tests.module';
     GrowthRecordsModule,
     GrowthQuickButtonsModule,
     NursingRoomsModule,
-    SharesModule,
+    GroupsModule,
     PhysicalGrowthModule,
     TestsModule,
   ],

@@ -6,9 +6,15 @@ import Link from 'next/link';
 import BottomSheet from '@/components/BottomSheet';
 import FormInput from '@/components/FormInput';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
-import { useAuth } from '@/hooks/useAuth';
 import { calcChildAge, toKstYmd } from '@/lib/childAge';
 import { palette } from '@/lib/colors';
+
+type SignupProfile = {
+  provider: 'KAKAO' | 'GOOGLE' | 'NAVER' | 'APPLE';
+  nickname: string | null;
+  email: string | null;
+  profileImage: string | null;
+};
 
 type ParentRole =
   | 'mom'
@@ -57,7 +63,8 @@ function formatBirthDate(d: string): string {
 
 export default function OnboardingClient() {
   const router = useRouter();
-  const { user, isLoaded, isAuthenticated, refresh } = useAuth();
+  const [profile, setProfile] = useState<SignupProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const [nickname, setNickname] = useState('');
   const [parentRole, setParentRole] = useState<ParentRole>('');
@@ -80,14 +87,41 @@ export default function OnboardingClient() {
   const [draftDatePickerOpen, setDraftDatePickerOpen] = useState(false);
   const [draftDueDatePickerOpen, setDraftDueDatePickerOpen] = useState(false);
 
-  // 카카오 닉네임 자동 기입
+  // signup_token에서 카카오 프로필 가져오기. 없으면 /로 돌려보냄.
   useEffect(() => {
-    if (!isLoaded) return;
-    if (isAuthenticated && user?.nickname && !nickname) {
-      setNickname(user.nickname);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isAuthenticated, user]);
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/signup-token', { cache: 'no-store' });
+        const data = await res.json();
+        if (!data?.profile) {
+          router.replace('/');
+          return;
+        }
+        setProfile(data.profile as SignupProfile);
+        if (data.profile.nickname) {
+          setNickname((prev) => prev || data.profile.nickname);
+        }
+      } catch {
+        router.replace('/');
+      } finally {
+        setProfileLoaded(true);
+      }
+    })();
+  }, [router]);
+
+  // 회원가입 페이지에서 뒤로가기 → 홈으로 라우팅.
+  // 더미 history entry를 한 칸 쌓아두고 popstate를 가로채서 SPA 이동시키면,
+  // hard reload 없이 RootLayout이 유지되어 splash가 다시 뜨지 않는다.
+  useEffect(() => {
+    window.history.pushState({ onboardingGuard: true }, '');
+    const onPopState = () => {
+      router.replace('/home');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [router]);
 
   const allAgreed = TERMS.every((t) => agree[t.key]);
   const requiredAgreed = TERMS.filter((t) => t.required).every((t) => agree[t.key]);
@@ -132,7 +166,7 @@ export default function OnboardingClient() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    if (!isAuthenticated) {
+    if (!profile) {
       router.push('/');
       return;
     }
@@ -140,7 +174,8 @@ export default function OnboardingClient() {
     setError(null);
 
     try {
-      const res = await fetch('/api/auth/onboarding', {
+      // 이 시점에 백엔드에서 user가 처음으로 DB에 생성됨.
+      const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,15 +199,14 @@ export default function OnboardingClient() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error || '가입 처리 중 오류가 발생했어요.');
       }
-      await refresh();
-      router.replace('/home');
+      window.location.replace('/home');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '오류가 발생했어요.');
       setSubmitting(false);
     }
   };
 
-  if (!isLoaded) {
+  if (!profileLoaded) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-dvh">
         <p className="text-sm text-gray-400">로딩 중...</p>
@@ -200,7 +234,7 @@ export default function OnboardingClient() {
         <section>
           <p className="text-xs font-medium text-gray-500 mb-[8px]">이메일</p>
           <FormInput
-            value={user?.email || ''}
+            value={profile?.email || ''}
             placeholder="이메일이 등록되지 않았어요"
             disabled
             readOnly
@@ -415,7 +449,7 @@ export default function OnboardingClient() {
             color: canSubmit ? '#fff' : palette.gray400,
           }}
         >
-          {submitting ? '저장 중...' : '저장'}
+          {submitting ? '회원가입 중...' : '회원가입'}
         </button>
       </div>
 

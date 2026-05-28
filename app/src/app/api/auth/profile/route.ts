@@ -3,20 +3,21 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
-export async function POST(request: NextRequest) {
+// 가입 이후 프로필(닉네임/관계 등) 수정.
+export async function PATCH(request: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const res = await fetch(`${API_URL}/auth/onboarding`, {
-    method: 'POST',
+  const res = await fetch(`${API_URL}/auth/profile`, {
+    method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }

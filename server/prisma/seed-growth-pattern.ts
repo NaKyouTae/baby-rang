@@ -244,15 +244,20 @@ async function seedForChild(childId: string, userId: string) {
 }
 
 async function main() {
+  // 작성자는 그룹의 owner로 가정. 그룹 모델 도입 후 child는 userId 대신 groupId만 가짐.
   const children = await prisma.child.findMany({
-    select: { id: true, userId: true, name: true },
+    select: {
+      id: true,
+      name: true,
+      group: { select: { ownerId: true } },
+    },
   });
   if (children.length === 0) {
     console.log('등록된 아기가 없습니다. 먼저 아기를 등록해 주세요.');
     return;
   }
   for (const c of children) {
-    const n = await seedForChild(c.id, c.userId);
+    const n = await seedForChild(c.id, c.group.ownerId);
     console.log(`✓ ${c.name} (${c.id}) — ${n}건 생성`);
   }
 }

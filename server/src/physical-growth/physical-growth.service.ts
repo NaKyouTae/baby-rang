@@ -4,22 +4,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChildrenService } from '../children/children.service';
 
 @Injectable()
 export class PhysicalGrowthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private children: ChildrenService,
+  ) {}
 
-  private async assertChildAccess(userId: string, childId: string) {
-    const isOwner = await this.prisma.child.findFirst({
-      where: { id: childId, userId },
-      select: { id: true },
-    });
-    if (isOwner) return;
-
-    const hasAccess = await this.prisma.sharedAccess.findUnique({
-      where: { childId_grantedToId: { childId, grantedToId: userId } },
-    });
-    if (!hasAccess) throw new NotFoundException('아기를 찾을 수 없습니다.');
+  private assertChildAccess(userId: string, childId: string) {
+    return this.children.assertAccess(userId, childId);
   }
 
   async findAll(userId: string, childId: string) {

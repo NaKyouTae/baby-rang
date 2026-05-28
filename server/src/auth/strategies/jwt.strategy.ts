@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -16,7 +16,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string }) {
+  async validate(payload: { sub?: string; type?: string }) {
+    // signup_token으로는 보호된 라우트를 호출할 수 없게 차단.
+    if (payload?.type === 'signup' || !payload?.sub) {
+      throw new UnauthorizedException();
+    }
     return this.prisma.user.findUnique({
       where: { id: payload.sub },
     });

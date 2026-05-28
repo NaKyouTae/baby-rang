@@ -3,20 +3,19 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
-/** 공유 나가기 (특정 접근 삭제) */
 export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  _req: Request,
+  ctx: { params: Promise<{ groupId: string }> },
 ) {
-  const { id } = await params;
+  const { groupId } = await ctx.params;
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${API_URL}/shares/access/${id}`, {
+  const res = await fetch(`${API_URL}/groups/${groupId}/me`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }

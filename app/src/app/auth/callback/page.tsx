@@ -7,13 +7,27 @@ function AuthCallback() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    if (token) {
+    const accessToken = searchParams.get("token");
+    const signupToken = searchParams.get("signupToken");
+
+    if (signupToken) {
+      (async () => {
+        await fetch("/api/auth/signup-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: signupToken }),
+        });
+        window.location.replace("/onboarding");
+      })();
+      return;
+    }
+
+    if (accessToken) {
       (async () => {
         await fetch("/api/auth/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token: accessToken }),
         });
         try {
           const res = await fetch("/api/auth/token", { cache: "no-store" });
@@ -27,9 +41,10 @@ function AuthCallback() {
         }
         window.location.replace("/home");
       })();
-    } else {
-      window.location.replace("/");
+      return;
     }
+
+    window.location.replace("/");
   }, [searchParams]);
 
   return (

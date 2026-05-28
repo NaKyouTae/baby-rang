@@ -3,16 +3,22 @@ import { NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
-/** 공유 코드 재발급 */
-export async function PATCH() {
+export async function DELETE(
+  _req: Request,
+  ctx: { params: Promise<{ groupId: string; userId: string }> },
+) {
+  const { groupId, userId } = await ctx.params;
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${API_URL}/shares/regenerate`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
+  const res = await fetch(
+    `${API_URL}/groups/${groupId}/members/${userId}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  const data = await res.json().catch(() => ({}));
   return NextResponse.json(data, { status: res.status });
 }

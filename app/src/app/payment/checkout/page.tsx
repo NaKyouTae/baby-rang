@@ -134,6 +134,19 @@ function CheckoutContent() {
       >
         {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
       </button>
+
+      <p className="mt-2 text-center text-xs text-neutral-500">
+        결제 전{' '}
+        <a
+          href="/refund"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          환불정책
+        </a>
+        을 확인해 주세요.
+      </p>
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
+import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,7 +34,7 @@ const ROLE_ICONS: Record<string, string> = {
   other: '/icon-other.svg',
 };
 
-interface SharedUser {
+interface GroupMemberUser {
   id: string;
   nickname: string | null;
   email: string | null;
@@ -41,25 +42,37 @@ interface SharedUser {
   parentRole: string | null;
 }
 
-interface ShareMember {
-  user: SharedUser;
-  children: { id: string; name: string }[];
-  accessIds?: string[];
+interface GroupMember {
+  userId: string;
+  joinedAt: string;
+  isOwner: boolean;
+  user: GroupMemberUser;
 }
 
-interface MyShareData {
+interface GroupChild {
+  id: string;
+  name: string;
+}
+
+interface Group {
+  id: string;
   code: string;
-  members: ShareMember[];
+  isOwner: boolean;
+  ownerId: string;
+  members: GroupMember[];
+  children: GroupChild[];
 }
 
 type Tab = 'mine' | 'received';
 
-function MemberCard({
+function MemberRow({
   member,
+  canRemove,
   onRemove,
 }: {
-  member: ShareMember;
-  onRemove: () => void;
+  member: GroupMember;
+  canRemove: boolean;
+  onRemove?: () => void;
 }) {
   const role = member.user.parentRole ?? 'other';
   const roleLabel = ROLE_LABELS[role];
@@ -72,98 +85,204 @@ function MemberCard({
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white overflow-hidden"
         style={{ border: `1px solid ${palette.teal}` }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={iconSrc} alt={roleLabel ?? ''} width={24} height={24} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-[16px] font-medium text-black truncate">{member.user.nickname ?? '사용자'}</p>
+          <p className="text-[16px] font-medium text-black truncate">
+            {member.user.nickname ?? '사용자'}
+          </p>
           {roleLabel && (
             <span
-              className="shrink-0 rounded-sm px-1.5 h-4 inline-flex items-center text-xs font-medium"
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
               style={{ backgroundColor: badge.bg, color: badge.text }}
             >
               {roleLabel}
             </span>
           )}
+          {member.isOwner && (
+            <span
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{ backgroundColor: '#0000000A', color: '#000' }}
+            >
+              소유자
+            </span>
+          )}
         </div>
-        <p className="text-xs font-normal text-gray-500 truncate mt-1.5">
-          {member.children.map((c) => c.name).join(', ')}{member.user.email ? ` / ${member.user.email}` : ''}
-        </p>
+        {member.user.email && (
+          <p className="text-xs text-gray-500 truncate">{member.user.email}</p>
+        )}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="shrink-0"
-        aria-label="삭제"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+      {canRemove && onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="내보내기"
+          className="shrink-0 text-gray-400 active:text-gray-600 p-1"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
     </li>
   );
 }
 
+function GroupCard({
+  group,
+  meId,
+  onCopy,
+  onShare,
+  onRemoveMember,
+  onLeave,
+  copied,
+}: {
+  group: Group;
+  meId: string;
+  onCopy: (code: string) => void;
+  onShare: (code: string) => void;
+  onRemoveMember: (groupId: string, target: GroupMember) => void;
+  onLeave: (group: Group) => void;
+  copied: boolean;
+}) {
+  const otherMembers = group.members.filter((m) => m.userId !== meId);
+  const owner = group.members.find((m) => m.userId === group.ownerId);
+  const childrenLabel = group.children.length
+    ? group.children.map((c) => c.name).join(', ')
+    : '아이 없음';
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-4">
+      {/* 그룹 헤더: 아이 이름 + nav */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-black">{childrenLabel}</p>
+        {!group.isOwner && owner && (
+          <span className="text-xs text-gray-500">
+            소유자: {owner.user.nickname ?? '사용자'}
+          </span>
+        )}
+      </div>
+
+      {/* 공유 코드 */}
+      <input
+        type="text"
+        value={group.code}
+        disabled
+        className="w-full h-[44px] rounded-lg border border-gray-200 bg-gray-100 px-4 text-center text-sm font-medium text-black tracking-[0.25em]"
+      />
+      <div className="flex gap-2.5 mt-2.5">
+        <button
+          type="button"
+          onClick={() => onCopy(group.code)}
+          className="flex-1 h-8 rounded bg-gray-400 text-xs font-semibold text-white active:bg-gray-500"
+        >
+          {copied ? '복사됨!' : '코드 복사'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onShare(group.code)}
+          className="flex-1 h-8 rounded bg-gray-400 text-xs font-semibold text-white active:bg-gray-500"
+        >
+          코드 공유
+        </button>
+      </div>
+
+      {/* 멤버 목록 */}
+      {otherMembers.length > 0 ? (
+        <ul className="mt-4 space-y-2">
+          {otherMembers.map((member) => (
+            <MemberRow
+              key={member.userId}
+              member={member}
+              canRemove={group.isOwner}
+              onRemove={
+                group.isOwner
+                  ? () => onRemoveMember(group.id, member)
+                  : undefined
+              }
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-xs text-gray-500 text-center">
+          {group.isOwner
+            ? '함께할 사람에게 코드를 공유해 보세요.'
+            : '다른 멤버가 없어요.'}
+        </p>
+      )}
+
+      {/* 본인 액션 */}
+      <button
+        type="button"
+        onClick={() => onLeave(group)}
+        className="mt-4 w-full h-8 rounded border border-gray-200 text-xs font-medium text-gray-600 active:bg-gray-50"
+      >
+        {group.isOwner ? '그룹 닫기' : '그룹에서 나가기'}
+      </button>
+    </div>
+  );
+}
+
 export default function SharingPage() {
+  const { user } = useAuth();
+  const meId = user?.id ?? '';
   const [tab, setTab] = useState<Tab>('mine');
-  const [myShare, setMyShare] = useState<MyShareData | null>(null);
-  const [sharedWithMe, setSharedWithMe] = useState<ShareMember[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 코드 입력
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [joining, setJoining] = useState(false);
 
-  // 멤버 삭제 확인
-  const [removeMemberTarget, setRemoveMemberTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<
+    { groupId: string; userId: string; name: string } | null
+  >(null);
+  const [leaveTarget, setLeaveTarget] = useState<Group | null>(null);
 
-  // 공유 나가기 확인
-  const [leaveTarget, setLeaveTarget] = useState<{ accessIds: string[]; name: string } | null>(null);
-
-  // 코드 복사 피드백
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [myRes, sharedRes] = await Promise.all([
-        fetch('/api/shares'),
-        fetch('/api/shares/joined'),
-      ]);
-      if (myRes.ok) setMyShare(await myRes.json());
-      if (sharedRes.ok) setSharedWithMe(await sharedRes.json());
+      const res = await fetch('/api/groups', { cache: 'no-store' });
+      if (res.ok) setGroups((await res.json()) as Group[]);
     } catch {
-      // ignore
+      /* ignore */
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const handleCopyCode = async () => {
-    if (!myShare?.code) return;
+  const handleCopyCode = async (code: string) => {
     try {
-      await navigator.clipboard.writeText(myShare.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
     } catch {
-      // fallback
+      /* ignore */
     }
   };
 
-  const handleShareCode = async () => {
-    if (!myShare?.code) return;
+  const handleShareCode = async (code: string) => {
     const shareData = {
       title: '아기랑 기록 공유',
-      text: `아기랑에서 기록을 함께 볼 수 있어요.\n공유 코드: ${myShare.code}`,
+      text: `아기랑에서 기록을 함께 볼 수 있어요.\n공유 코드: ${code}`,
     };
     if (navigator.share) {
-      try { await navigator.share(shareData); } catch { /* cancelled */ }
+      try {
+        await navigator.share(shareData);
+      } catch {
+        /* cancelled */
+      }
     } else {
-      await handleCopyCode();
+      await handleCopyCode(code);
     }
   };
 
@@ -172,7 +291,7 @@ export default function SharingPage() {
     setJoining(true);
     setJoinError('');
     try {
-      const res = await fetch('/api/shares/join', {
+      const res = await fetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: joinCode.trim().toUpperCase() }),
@@ -193,35 +312,38 @@ export default function SharingPage() {
   };
 
   const handleRemoveMember = async () => {
-    if (!removeMemberTarget) return;
-    const res = await fetch(`/api/shares/members/${removeMemberTarget.userId}`, { method: 'DELETE' });
+    if (!removeTarget) return;
+    const res = await fetch(
+      `/api/groups/${removeTarget.groupId}/members/${removeTarget.userId}`,
+      { method: 'DELETE' },
+    );
     if (res.ok) {
-      setRemoveMemberTarget(null);
+      setRemoveTarget(null);
       await fetchData();
     }
   };
 
   const handleLeave = async () => {
     if (!leaveTarget) return;
-    const results = await Promise.all(
-      leaveTarget.accessIds.map((id) =>
-        fetch(`/api/shares/access/${id}`, { method: 'DELETE' }),
-      ),
-    );
-    if (results.every((r) => r.ok)) {
+    const res = await fetch(`/api/groups/${leaveTarget.id}/me`, {
+      method: 'DELETE',
+    });
+    if (res.ok) {
       setLeaveTarget(null);
       await fetchData();
     }
   };
 
+  const myGroups = groups.filter((g) => g.isOwner);
+  const receivedGroups = groups.filter((g) => !g.isOwner);
+  const currentGroups = tab === 'mine' ? myGroups : receivedGroups;
+
   return (
     <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
-      {/* 헤더 */}
       <div className="bg-white">
         <PageHeader title="기록 공유" variant="back" />
       </div>
 
-      {/* 탭 */}
       <div className="flex bg-white">
         {(['mine', 'received'] as Tab[]).map((t) => (
           <button
@@ -234,101 +356,73 @@ export default function SharingPage() {
                 : 'text-gray-400 border-b border-gray-200'
             }`}
           >
-            {t === 'mine' ? '내 공유' : '받은 공유'}
+            {t === 'mine' ? '내 그룹' : '참여한 그룹'}
           </button>
         ))}
       </div>
 
-      <div className="flex-1 px-5 pt-6 pb-8">
+      <div className="flex-1 px-5 pt-6 pb-8 space-y-3">
         {loading ? (
           <div className="space-y-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-24 rounded-2xl bg-white animate-pulse" />
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="h-40 rounded-lg bg-white border border-gray-100 animate-pulse"
+              />
             ))}
           </div>
         ) : tab === 'mine' ? (
-          /* ───── 내 공유 탭 ───── */
           <>
-            {/* 공유 코드 */}
-            {myShare && (
-              <div>
-                <input
-                  type="text"
-                  value={myShare.code}
-                  disabled
-                  className="w-full h-[44px] rounded-lg border border-gray-200 bg-gray-100 px-4 text-center text-sm font-medium text-black tracking-[0.25em]"
+            {myGroups.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-medium text-black">
+                  내 그룹이 없어요.
+                </p>
+                <p className="text-xs font-normal text-gray-500 mt-1">
+                  회원가입 시 자동으로 만들어진 그룹이 보여야 해요.
+                </p>
+              </div>
+            ) : (
+              myGroups.map((g) => (
+                <GroupCard
+                  key={g.id}
+                  group={g}
+                  meId={meId}
+                  onCopy={handleCopyCode}
+                  onShare={handleShareCode}
+                  onRemoveMember={(groupId, member) =>
+                    setRemoveTarget({
+                      groupId,
+                      userId: member.userId,
+                      name: member.user.nickname ?? '사용자',
+                    })
+                  }
+                  onLeave={(g) => setLeaveTarget(g)}
+                  copied={copiedCode === g.code}
                 />
-                <div className="flex gap-2.5 mt-2.5">
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="flex-1 h-8 rounded bg-gray-400 text-xs font-semibold text-white active:bg-gray-500"
-                  >
-                    {copied ? '복사됨!' : '코드 복사'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShareCode}
-                    className="flex-1 h-8 rounded bg-gray-400 text-xs font-semibold text-white active:bg-gray-500"
-                  >
-                    코드 공유
-                  </button>
-                </div>
-              </div>
+              ))
             )}
-
-            {/* 카카오 배너 */}
-            {myShare && (
-              <div className="mt-6 -mx-5 flex justify-center">
-                <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
-              </div>
-            )}
-
-            {/* 멤버 목록 */}
-            {myShare && myShare.members.length > 0 && (
-              <ul className="mt-6 space-y-2.5">
-                {myShare.members.map((member) => (
-                  <MemberCard
-                    key={member.user.id}
-                    member={member}
-                    onRemove={() => setRemoveMemberTarget({ userId: member.user.id, name: member.user.nickname ?? '사용자' })}
-                  />
-                ))}
-              </ul>
-            )}
-
-            {/* 빈 상태 */}
-            {myShare && myShare.members.length === 0 && (
-              <div className="mt-6 rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-2.5">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3" />
-                    <circle cx="6" cy="12" r="3" />
-                    <circle cx="18" cy="19" r="3" />
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-black">공유한 기록이 없어요.</p>
-                <p className="text-xs font-normal text-gray-500 mt-1">함께 관리하고 싶은 사람에게 코드를 공유해 보세요.</p>
-              </div>
-            )}
+            <div className="mt-6 -mx-5 flex justify-center">
+              <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
+            </div>
           </>
         ) : (
-          /* ───── 받은 공유 탭 ───── */
           <>
-            {/* 코드 입력 */}
-            <div>
+            <div className="mb-4">
               <input
                 type="text"
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                onChange={(e) =>
+                  setJoinCode(e.target.value.toUpperCase().slice(0, 6))
+                }
                 placeholder="공유 받은 코드를 입력해 주세요."
                 maxLength={6}
                 className="w-full h-[44px] rounded-lg border border-gray-200 bg-white px-4 text-center text-sm font-medium text-black tracking-[0.25em] placeholder:tracking-normal placeholder:text-gray-400 placeholder:font-normal focus:outline-none"
               />
               {joinError && (
-                <p className="mt-1 text-center text-xs text-red-500">{joinError}</p>
+                <p className="mt-1 text-center text-xs text-red-500">
+                  {joinError}
+                </p>
               )}
               <button
                 type="button"
@@ -340,74 +434,70 @@ export default function SharingPage() {
               </button>
             </div>
 
-            {/* 카카오 배너 */}
+            {receivedGroups.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-medium text-black">
+                  참여한 그룹이 없어요.
+                </p>
+                <p className="text-xs font-normal text-gray-500 mt-1">
+                  공유 코드를 입력하면 함께 관리할 수 있어요.
+                </p>
+              </div>
+            ) : (
+              receivedGroups.map((g) => (
+                <GroupCard
+                  key={g.id}
+                  group={g}
+                  meId={meId}
+                  onCopy={handleCopyCode}
+                  onShare={handleShareCode}
+                  onRemoveMember={() => {}}
+                  onLeave={(g) => setLeaveTarget(g)}
+                  copied={copiedCode === g.code}
+                />
+              ))
+            )}
             <div className="mt-6 -mx-5 flex justify-center">
               <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
             </div>
-
-            {sharedWithMe.length === 0 ? (
-              <div className="mt-6 rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-2.5">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3" />
-                    <circle cx="6" cy="12" r="3" />
-                    <circle cx="18" cy="19" r="3" />
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-black">공유 받은 기록이 없어요.</p>
-                <p className="text-xs font-normal text-gray-500 mt-1">공유 코드를 입력하면 기록을 함께 관리할 수 있어요.</p>
-              </div>
-            ) : (
-              <ul className="mt-6 space-y-2.5">
-                {sharedWithMe.map((item) => (
-                  <MemberCard
-                    key={item.user.id}
-                    member={item}
-                    onRemove={() => setLeaveTarget({ accessIds: item.accessIds ?? [], name: item.user.nickname ?? '사용자' })}
-                  />
-                ))}
-              </ul>
-            )}
           </>
         )}
       </div>
 
-      {/* 멤버 내보내기 확인 */}
       <ConfirmModal
-        open={!!removeMemberTarget}
-        icon={
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </div>
-        }
-        title="공유 해제하기"
-        description={`공유를 중단하시겠어요?\n언제든 다시 연결 가능해요.`}
-        confirmLabel="해제하기"
+        open={!!removeTarget}
+        title="멤버 내보내기"
+        description={`${removeTarget?.name ?? '사용자'}님을 그룹에서 내보내시겠어요?\n언제든 다시 초대할 수 있어요.`}
+        confirmLabel="내보내기"
         cancelLabel="취소"
-        onClose={() => setRemoveMemberTarget(null)}
+        variant="danger"
+        onClose={() => setRemoveTarget(null)}
         onConfirm={handleRemoveMember}
       />
 
-      {/* 공유 해제 확인 */}
       <ConfirmModal
         open={!!leaveTarget}
-        icon={
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </div>
+        title={
+          leaveTarget?.isOwner && leaveTarget?.members.length === 1
+            ? '그룹을 닫을까요?'
+            : leaveTarget?.isOwner
+              ? '그룹에서 나가시겠어요?'
+              : '그룹에서 나가시겠어요?'
         }
-        title="공유 해제하기"
-        description={`공유를 중단하시겠어요?\n언제든 다시 연결 가능해요.`}
-        confirmLabel="해제하기"
+        description={
+          leaveTarget?.isOwner && leaveTarget?.members.length === 1
+            ? '마지막 멤버가 나가면 그룹의 모든 아이와 기록이\n영구 삭제됩니다.'
+            : leaveTarget?.isOwner
+              ? '소유자가 나가면 가장 일찍 합류한 멤버에게\n자동으로 소유권이 넘어가요.'
+              : '나가면 이 그룹의 아이와 기록을 더 이상 볼 수 없어요.'
+        }
+        confirmLabel={
+          leaveTarget?.isOwner && leaveTarget?.members.length === 1
+            ? '그룹 닫기'
+            : '나가기'
+        }
         cancelLabel="취소"
+        variant="danger"
         onClose={() => setLeaveTarget(null)}
         onConfirm={handleLeave}
       />
