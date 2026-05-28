@@ -34,9 +34,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-[hsl(212_25%_97%)]">
       <Card className="w-full max-w-sm p-8">
         <CardHeader className="p-0 mb-6 items-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground font-bold text-xl shadow-md">
-            아
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/header-logo.png" alt="아기랑" width={48} height={48} className="mb-3" />
           <CardTitle className="text-xl">아기랑 어드민</CardTitle>
           <CardDescription>관리자 로그인</CardDescription>
         </CardHeader>
