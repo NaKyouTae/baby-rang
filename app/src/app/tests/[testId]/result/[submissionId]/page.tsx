@@ -7,7 +7,7 @@ import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
-const TEMPERAMENT_PRICE = 4900;
+const TEMPERAMENT_PRICE = 990;
 import type { TestResult } from '@/lib/api';
 import ResultCover from '../../_components/ResultCover';
 import DimensionBar from '../../_components/DimensionBar';

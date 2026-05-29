@@ -19,7 +19,7 @@ function CheckoutContent() {
 
   const productType = (search.get('productType') ?? 'TEMPERAMENT_REPORT') as ProductType;
   const productName = search.get('productName') ?? '기질 검사 상세 리포트';
-  const amount = Number(search.get('amount') ?? '4900');
+  const amount = Number(search.get('amount') ?? '990');
   const childId = search.get('childId') ?? undefined;
   const redirectTo = search.get('redirectTo') ?? '/home';
   const productMetaRaw = search.get('productMeta');

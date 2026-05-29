@@ -317,7 +317,8 @@
       "Bash(echo \"---exit $?\")",
       "Bash(createdb baby-rang-shadow *)",
       "Bash(PGPASSWORD='Skrbxo123!@#' psql -h localhost -U postgres -c 'CREATE DATABASE \"baby-rang-shadow\";')",
-      "Bash(pnpm --filter app exec eslint src/components/SplashProvider.tsx)"
+      "Bash(pnpm --filter app exec eslint src/components/SplashProvider.tsx)",
+      "Bash(grep -iE \"4900|4,900|TEMPERAMENT.*PRICE|PRICE.*TEMPERAMENT|=\\\\s*[0-9]{3,5}\\\\s*;|amount\\\\s*[<>=!]+\\\\s*[0-9]\")"
     ],
     "additionalDirectories": [
       "/tmp",
