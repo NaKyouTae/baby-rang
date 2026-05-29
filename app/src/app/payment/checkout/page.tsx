@@ -97,57 +97,67 @@ function CheckoutContent() {
   };
 
   return (
-    <main className="flex min-h-dvh w-full flex-col gap-4 bg-white p-4">
-      <header className="flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-neutral-500"
-          type="button"
-        >
-          ← 뒤로
-        </button>
-        <h1 className="text-base font-semibold">결제하기</h1>
-        <span className="w-10" />
-      </header>
-
-      <section className="rounded-2xl border border-neutral-200 p-4">
-        <p className="text-xs text-neutral-500">상품</p>
-        <p className="mt-1 text-sm font-medium">{productName}</p>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-neutral-500">결제 금액</span>
-          <span className="text-lg font-bold">{amount.toLocaleString()}원</span>
-        </div>
-      </section>
-
-      <div id="toss-payment-methods" />
-      <div id="toss-agreement" />
-
-      {error && (
-        <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</p>
-      )}
-
-      <p className="mt-2 text-center text-xs text-neutral-500">
-        결제 전{' '}
-        <a
-          href="/refund"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-        >
-          환불정책
-        </a>
-        을 확인해 주세요.
-      </p>
-
-      <button
-        type="button"
-        onClick={handlePay}
-        disabled={!ready || loading}
-        className="mt-2 h-12 w-full rounded-xl bg-black text-sm font-semibold text-white disabled:opacity-50"
+    <>
+      <main
+        className="flex min-h-dvh w-full flex-col gap-4 bg-white p-4"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 120px)' }}
       >
-        {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
-      </button>
-    </main>
+        <header className="flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="text-sm text-neutral-500"
+            type="button"
+          >
+            ← 뒤로
+          </button>
+          <h1 className="text-base font-semibold">결제하기</h1>
+          <span className="w-10" />
+        </header>
+
+        <section className="rounded-2xl border border-neutral-200 p-4">
+          <p className="text-xs text-neutral-500">상품</p>
+          <p className="mt-1 text-sm font-medium">{productName}</p>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-xs text-neutral-500">결제 금액</span>
+            <span className="text-lg font-bold">{amount.toLocaleString()}원</span>
+          </div>
+        </section>
+
+        <div id="toss-payment-methods" />
+        <div id="toss-agreement" />
+
+        {error && (
+          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</p>
+        )}
+      </main>
+
+      <div
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white px-4 pt-3"
+        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 12px)' }}
+      >
+        <p className="mb-2 text-center text-xs text-neutral-500">
+          결제 전{' '}
+          <a
+            href="/refund"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            환불정책
+          </a>
+          을 확인해 주세요.
+        </p>
+
+        <button
+          type="button"
+          onClick={handlePay}
+          disabled={!ready || loading}
+          className="h-12 w-full rounded-xl bg-black text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
+        </button>
+      </div>
+    </>
   );
 }
 
