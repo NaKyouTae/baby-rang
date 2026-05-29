@@ -126,15 +126,6 @@ function CheckoutContent() {
         <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</p>
       )}
 
-      <button
-        type="button"
-        onClick={handlePay}
-        disabled={!ready || loading}
-        className="mt-2 h-12 w-full rounded-xl bg-black text-sm font-semibold text-white disabled:opacity-50"
-      >
-        {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
-      </button>
-
       <p className="mt-2 text-center text-xs text-neutral-500">
         결제 전{' '}
         <a
@@ -147,6 +138,15 @@ function CheckoutContent() {
         </a>
         을 확인해 주세요.
       </p>
+
+      <button
+        type="button"
+        onClick={handlePay}
+        disabled={!ready || loading}
+        className="mt-2 h-12 w-full rounded-xl bg-black text-sm font-semibold text-white disabled:opacity-50"
+      >
+        {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
+      </button>
     </main>
   );
 }

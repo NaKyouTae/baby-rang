@@ -191,11 +191,13 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
   const isHomeActive = pathname === HOME_HREF || pathname === "/";
 
   // 테스트 시작/진행/결과, 데이터 가져오기, 메뉴 페이지, 온보딩,
+  // 결제(체크아웃/성공/실패) 페이지,
   // 약관/정책 하위 상세 페이지(이용약관·개인정보·환불·3자제공·마케팅·동의관리)에서는 하단 네비 숨김
   const hideNav =
     /^\/tests\/[^/]+$/.test(pathname ?? "") ||
     /^\/tests\/[^/]+\/test\/[^/]+$/.test(pathname ?? "") ||
     /^\/tests\/[^/]+\/result\/[^/]+$/.test(pathname ?? "") ||
+    /^\/payment\//.test(pathname ?? "") ||
     /^\/settings\/(terms|privacy|refund|third-party|marketing|consents)$/.test(
       pathname ?? "",
     ) ||
