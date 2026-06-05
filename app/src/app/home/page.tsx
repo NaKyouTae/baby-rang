@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 import HomeHeaderActions from "@/components/HomeHeaderActions";
-import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 import BusinessInfo from "@/components/BusinessInfo";
 
 export const metadata: Metadata = {
@@ -47,7 +46,7 @@ const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursing
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       {/* 홈 헤더 */}
       <header
         className="sticky top-0 z-30 bg-white flex items-center justify-between px-6 shrink-0"
@@ -95,10 +94,6 @@ export default function HomePage() {
               })}
             </div>
           </section>
-
-          <div className="mt-6 -mx-6 flex justify-center">
-            <KakaoAdBanner unit="DAN-go0noPJx8cIt6SU7" />
-          </div>
 
           <div className="mt-6">
             <HomeWeatherStrip />

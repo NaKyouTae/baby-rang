@@ -33,7 +33,9 @@
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --bottom-nav-gap: 24px;
-  --bottom-nav-space: 104px;
+  --bottom-nav-height: 64px;
+  --bottom-ad-banner-height: 50px;
+  --bottom-nav-space: calc(var(--bottom-nav-height) + var(--bottom-ad-banner-height) + var(--safe-area-bottom));
 }
 
 body {

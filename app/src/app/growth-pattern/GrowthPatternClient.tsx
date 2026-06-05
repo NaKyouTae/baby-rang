@@ -7,7 +7,6 @@ import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { calcChildAge } from '@/lib/childAge';
 import {
   MENU_TYPES,
@@ -41,19 +40,6 @@ const TYPE_CHART_COLOR: Record<GrowthType, string> = {
 };
 
 const STORAGE_KEY = 'growth-pattern:selectedTypes';
-
-const DEFAULT_QUICK_TYPES: GrowthType[] = [
-  'FORMULA',
-  'BREASTFEEDING',
-  'PUMPED_FEEDING',
-  'PUMPING',
-  'BABY_FOOD',
-  'SLEEP',
-  'BATH',
-  'MEDICATION',
-  'DIAPER',
-  'TEMPERATURE',
-];
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -248,28 +234,6 @@ export default function GrowthPatternClient() {
       ]),
   );
   const [typesLoaded, setTypesLoaded] = useState(false);
-  const [quickTypes, setQuickTypes] = useState<GrowthType[]>(DEFAULT_QUICK_TYPES);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/growth-quick-buttons');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        const saved: GrowthType[] = ((data.types ?? []) as GrowthType[]).filter(
-          (t) => (MENU_TYPES as string[]).includes(t),
-        );
-        if (saved.length > 0) setQuickTypes(saved);
-      } catch {
-        /* noop */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (isLoaded && children.length > 0 && !selectedChild) {
@@ -424,7 +388,7 @@ export default function GrowthPatternClient() {
     : 0;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-white pb-[112px] overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-white pb-[calc(var(--bottom-nav-space)+24px)] overflow-hidden">
       <PageHeader title="패턴" variant="back" />
       <div className="px-6 flex flex-col flex-1 min-h-0">
         {noChild ? (
@@ -464,7 +428,7 @@ export default function GrowthPatternClient() {
         {/* 카테고리 필터 — 사용자별 저장 순서 */}
         <div className="mt-4 -mx-6">
           <div className="flex gap-[10px] overflow-x-auto scrollbar-hide pb-1 px-6">
-            {quickTypes.map((t) => {
+            {MENU_TYPES.map((t) => {
               const cfg = TYPE_CONFIG[t];
               const style = CATEGORY_STYLE[t];
               const active = selectedTypes.has(t);
@@ -657,10 +621,6 @@ export default function GrowthPatternClient() {
           </div>
         </div>
       </div>
-
-      <section className="mt-6 flex justify-center shrink-0">
-        <KakaoAdBanner unit="DAN-P9dlZp9cPFgYuYgZ" />
-      </section>
 
       <WheelDatePickerModal
         open={datePickerOpen}

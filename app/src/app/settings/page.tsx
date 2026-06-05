@@ -11,8 +11,8 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 import PageHeader from "@/components/PageHeader";
-import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 import BusinessInfo from "@/components/BusinessInfo";
+import { useConsents, type OptionalConsentKey } from "@/hooks/useConsents";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -25,6 +25,7 @@ interface MenuItem {
   icon: React.ReactNode;
   requireAuth?: boolean;
   showDot?: boolean;
+  toggleConsent?: OptionalConsentKey;
 }
 
 const ROLE_ICONS: Record<string, string> = {
@@ -146,17 +147,6 @@ const MENU_SECTIONS: MenuSection[] = [
     title: "약관/정책",
     items: [
       {
-        label: "동의 관리",
-        href: "/settings/consents",
-        requireAuth: true,
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M2.66675 4.66665C2.66675 3.93027 3.2637 3.33331 4.00008 3.33331H12.0001C12.7365 3.33331 13.3334 3.93027 13.3334 4.66665V11.3333C13.3334 12.0697 12.7365 12.6666 12.0001 12.6666H4.00008C3.2637 12.6666 2.66675 12.0697 2.66675 11.3333V4.66665Z" stroke="black"/>
-            <path d="M5.33325 7.99998L7.33325 9.99998L10.6666 6.66665" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        ),
-      },
-      {
         label: "이용약관",
         href: "/settings/terms",
         icon: (
@@ -197,6 +187,7 @@ const MENU_SECTIONS: MenuSection[] = [
       {
         label: "개인정보 제3자 제공 동의",
         href: "/settings/third-party",
+        toggleConsent: "thirdParty",
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M11.3333 5.33331C12.4379 5.33331 13.3333 4.43788 13.3333 3.33331C13.3333 2.22874 12.4379 1.33331 11.3333 1.33331C10.2287 1.33331 9.33325 2.22874 9.33325 3.33331C9.33325 4.43788 10.2287 5.33331 11.3333 5.33331Z" stroke="black"/>
@@ -209,6 +200,7 @@ const MENU_SECTIONS: MenuSection[] = [
       {
         label: "마케팅 정보 수신 동의",
         href: "/settings/marketing",
+        toggleConsent: "marketing",
         icon: (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M3.33325 6.66665C3.33325 5.42897 3.82492 4.24199 4.69968 3.36682C5.57463 2.49165 6.76152 1.99998 7.99963 1.99998C9.23774 1.99998 10.4246 2.49165 11.2996 3.36682C12.1745 4.24199 12.6663 5.42897 12.6663 6.66665C12.6663 9.65198 13.2914 11.3826 13.8425 12.3333H2.15692C2.70801 11.3826 3.33325 9.65265 3.33325 6.66665Z" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
@@ -231,6 +223,7 @@ export default function SettingsPage() {
   const [locationPerm, setLocationPerm] = useState<'granted' | 'denied' | 'prompt' | null>(null);
   const [locationGuideOpen, setLocationGuideOpen] = useState(false);
   const [hasUnreadNotice, setHasUnreadNotice] = useState(false);
+  const { consents, updating, setConsent } = useConsents();
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -268,6 +261,53 @@ export default function SettingsPage() {
   const renderMenuItem = (item: MenuItem) => {
     const className =
       "flex items-center gap-2 px-6 h-[32px] active:bg-gray-50 transition-colors";
+
+    // 토글 가능한 동의 항목: 로그인 상태일 때 토글 표시, 행 클릭은 상세 이동
+    if (item.toggleConsent && isAuthenticated && consents) {
+      const consentKey = item.toggleConsent;
+      const agreed = consents[consentKey].agreed;
+      const isUpdating = updating === consentKey;
+      const handleToggleClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isUpdating) return;
+        void setConsent(consentKey, !agreed).catch(() => {});
+      };
+      return (
+        <div key={item.href} className={className} style={{ position: "relative" }}>
+          <Link
+            href={item.href}
+            className="flex items-center gap-2 flex-1 min-w-0 h-full active:opacity-70"
+          >
+            <span className="flex shrink-0 items-center justify-center">
+              {item.icon}
+            </span>
+            <span className="flex-1 text-left text-[16px] font-medium text-black truncate">
+              {item.label}
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={handleToggleClick}
+            disabled={isUpdating}
+            aria-label={`${item.label} ${agreed ? "동의 철회" : "동의"}`}
+            className="shrink-0 disabled:opacity-60"
+          >
+            <span
+              className="relative inline-flex h-[24px] w-[44px] items-center rounded-full transition-colors duration-200"
+              style={{ backgroundColor: agreed ? palette.teal : palette.gray300 }}
+            >
+              <span
+                className={`inline-block h-[20px] w-[20px] transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  agreed ? "translate-x-[22px]" : "translate-x-[2px]"
+                }`}
+              />
+            </span>
+          </button>
+        </div>
+      );
+    }
+
     const inner = (
       <>
         <span className="flex shrink-0 items-center justify-center">
@@ -309,7 +349,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       {locationGuide && (
         <ConfirmModal
           open={locationGuideOpen}
@@ -332,7 +372,7 @@ export default function SettingsPage() {
       {/* 헤더 */}
       <PageHeader title="마이페이지" variant="close" onAction={() => router.push('/home')} />
 
-      <div className="pb-8">
+      <div>
         {/* 사용자 프로필 */}
         <section className="px-6 pt-5 pb-[24px]">
           {!isAuthLoaded ? (
@@ -403,11 +443,6 @@ export default function SettingsPage() {
           router={router}
         />
 
-        {/* 카카오 배너 */}
-        <section className="mb-[24px] flex justify-center">
-          <KakaoAdBanner unit="DAN-1WW9dvD0fELxhvgl" />
-        </section>
-
         {/* 권한 설정 */}
         {locationPerm !== null && (
           <section>
@@ -461,7 +496,7 @@ export default function SettingsPage() {
 
         {/* 로그아웃 / 회원탈퇴 */}
         {isAuthLoaded && isAuthenticated && (
-          <div className="mt-12 flex items-center justify-center gap-[24px] pb-4">
+          <div className="mt-12 flex items-center justify-center gap-[24px] pb-6">
             <button
               type="button"
               onClick={async () => {
@@ -492,16 +527,16 @@ export default function SettingsPage() {
         open={withdrawOpen}
         icon={
           <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M16 11.3333V17.3333" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M16 21.3333H16.0133" stroke="black" strokeWidth="2.66667" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14.0573 4.30933L2.86131 23.6667C2.62828 24.0703 2.50514 24.5278 2.50439 24.9938C2.50364 25.4598 2.62531 25.9177 2.85703 26.322C3.08875 26.7263 3.42239 27.0625 3.82475 27.2974C4.22711 27.5322 4.68404 27.6577 5.15065 27.6613H27.5426C28.0093 27.6577 28.4662 27.5322 28.8686 27.2974C29.2709 27.0625 29.6046 26.7263 29.8363 26.322C30.068 25.9177 30.1897 25.4598 30.1889 24.9938C30.1882 24.5278 30.0651 24.0703 29.832 23.6667L18.636 4.30933C18.3974 3.91671 18.0616 3.59217 17.6612 3.36705C17.2607 3.14193 16.8092 3.02368 16.3506 3.02368C15.892 3.02368 15.4405 3.14193 15.04 3.36705C14.6395 3.59217 14.3038 3.91671 14.0653 4.30933H14.0573Z" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 5a7 7 0 1 0 0 14" />
+              <polyline points="16 8 20 12 16 16" />
+              <line x1="20" y1="12" x2="9" y2="12" />
             </svg>
           </div>
         }
-        title={"정말 탈퇴하시겠어요?"}
+        title={"회원탈퇴하기"}
         description={
-          "탈퇴 시 우리 아기 정보, 검사 이력,\n결제 내역 등 모든 데이터가 삭제됩니다.\n삭제된 데이터는 복구할 수 없습니다."
+          "정말 탈퇴하시겠어요?\n탈퇴 시 모든 데이터가 삭제되며 복구할 수 없어요."
         }
         confirmLabel={withdrawing ? "처리 중..." : "탈퇴하기"}
         cancelLabel="취소"

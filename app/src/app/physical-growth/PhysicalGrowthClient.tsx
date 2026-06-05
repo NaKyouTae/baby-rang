@@ -11,7 +11,6 @@ import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import GrowthChart from './GrowthChart';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import type { MetricType, Gender } from './growthStandards';
 
 interface PhysicalGrowthRecord {
@@ -205,7 +204,7 @@ export default function PhysicalGrowthClient() {
   const noChild = !selected;
 
   return (
-    <main className="bg-white pb-32">
+    <main className="bg-white pb-[calc(var(--bottom-nav-space)+80px)]">
       {/* 헤더 */}
       <header className="sticky top-0 z-30 bg-white">
         <PageHeader title="성장" variant="back" />
@@ -221,10 +220,6 @@ export default function PhysicalGrowthClient() {
           )}
         </div>
       </header>
-
-      <section className="pt-2 flex justify-center">
-        <KakaoAdBanner unit="DAN-Fm093TsMO8DEkFC3" />
-      </section>
 
       {/* 성장도표 / 기록 탭 전환 */}
       <div className="px-5 mt-3">
@@ -442,7 +437,7 @@ export default function PhysicalGrowthClient() {
       {!showForm && (
         <div
           className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-5 pointer-events-none flex justify-end"
-          style={{ bottom: 'var(--bottom-nav-space)' }}
+          style={{ bottom: 'calc(var(--bottom-nav-space) + 24px)' }}
         >
           <button
             type="button"

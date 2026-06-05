@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { getPayments, type PaymentItem } from '@/lib/api';
 import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -61,10 +60,6 @@ export default function PaymentsPage() {
   return (
     <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="결제 내역" variant="back" />
-
-      <section className="pt-6 flex justify-center">
-        <KakaoAdBanner unit="DAN-hLIAtb5HrLIdg2FR" />
-      </section>
 
       <div className="px-5 pt-6">
         {loading ? (

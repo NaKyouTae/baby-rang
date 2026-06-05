@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { palette } from '@/lib/colors';
 
 type TestItem = {
@@ -106,9 +105,6 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
           </ul>
         )}
 
-        <div className="mt-auto pt-6 -mx-5 flex justify-center">
-          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
-        </div>
       </main>
     </div>
   );

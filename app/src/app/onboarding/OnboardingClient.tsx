@@ -78,8 +78,9 @@ export default function OnboardingClient() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 아기 추가 BottomSheet 상태
+  // 아기 추가/수정 BottomSheet 상태
   const [addChildOpen, setAddChildOpen] = useState(false);
+  const [editChildKey, setEditChildKey] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftGender, setDraftGender] = useState<Gender>('male');
   const [draftBirthDate, setDraftBirthDate] = useState('');
@@ -135,33 +136,64 @@ export default function OnboardingClient() {
   const handleToggleTerm = (key: TermKey) =>
     setAgree((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const removeChild = (key: string) =>
-    setChildren((prev) => prev.filter((c) => c.key !== key));
-
   const resetDraftChild = () => {
     setDraftName('');
     setDraftGender('male');
     setDraftBirthDate('');
     setDraftDueDate('');
   };
-  const openAddChild = () => {
+  const closeChildSheet = () => {
+    setAddChildOpen(false);
+    setEditChildKey(null);
     resetDraftChild();
+  };
+  const openAddChild = () => {
+    setEditChildKey(null);
+    resetDraftChild();
+    setAddChildOpen(true);
+  };
+  const openEditChild = (child: ChildDraft) => {
+    setEditChildKey(child.key);
+    setDraftName(child.name);
+    setDraftGender(child.gender);
+    setDraftBirthDate(child.birthDate);
+    setDraftDueDate(child.dueDate);
     setAddChildOpen(true);
   };
   const saveDraftChild = () => {
     if (!draftName.trim() || !draftBirthDate) return;
-    setChildren((prev) => [
-      ...prev,
-      {
-        key: newKey(),
-        name: draftName.trim(),
-        gender: draftGender,
-        birthDate: draftBirthDate,
-        dueDate: draftDueDate,
-      },
-    ]);
-    setAddChildOpen(false);
-    resetDraftChild();
+    if (editChildKey) {
+      setChildren((prev) =>
+        prev.map((c) =>
+          c.key === editChildKey
+            ? {
+                ...c,
+                name: draftName.trim(),
+                gender: draftGender,
+                birthDate: draftBirthDate,
+                dueDate: draftDueDate,
+              }
+            : c,
+        ),
+      );
+    } else {
+      setChildren((prev) => [
+        ...prev,
+        {
+          key: newKey(),
+          name: draftName.trim(),
+          gender: draftGender,
+          birthDate: draftBirthDate,
+          dueDate: draftDueDate,
+        },
+      ]);
+    }
+    closeChildSheet();
+  };
+  const deleteEditChild = () => {
+    if (!editChildKey) return;
+    setChildren((prev) => prev.filter((c) => c.key !== editChildKey));
+    closeChildSheet();
   };
 
   const handleSubmit = async () => {
@@ -219,7 +251,7 @@ export default function OnboardingClient() {
   return (
     <div
       className="flex flex-col bg-white"
-      style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 120px)' }}
+      style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 100px)' }}
     >
       {/* 헤더 */}
       <header
@@ -309,31 +341,14 @@ export default function OnboardingClient() {
               {children.map((c) => {
                 const { days, months, extraDays } = calcChildAge(c.birthDate);
                 return (
-                  <div
+                  <button
                     key={c.key}
-                    className="relative rounded-[8px] border border-gray-200 bg-gray-100 p-3 flex flex-col items-center justify-center"
+                    type="button"
+                    onClick={() => openEditChild(c)}
+                    aria-label={`${c.name} 정보 수정`}
+                    className="relative rounded-[8px] border border-gray-200 bg-gray-100 p-3 flex flex-col items-center justify-center active:bg-gray-200 transition-colors"
                     style={{ minHeight: 132 }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => removeChild(c.key)}
-                      aria-label={`${c.name} 삭제`}
-                      className="absolute top-1.5 right-1.5 p-1 text-gray-300 active:text-gray-500"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
                     <div
                       className="w-[44px] h-[44px] rounded-full border flex items-center justify-center bg-white"
                       style={{ borderColor: palette.teal }}
@@ -357,7 +372,7 @@ export default function OnboardingClient() {
                         {months}개월 {extraDays}일
                       </span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
               <button
@@ -453,15 +468,35 @@ export default function OnboardingClient() {
         </button>
       </div>
 
-      {/* 아기 추가 BottomSheet */}
+      {/* 아기 추가/수정 BottomSheet */}
       <BottomSheet
         open={addChildOpen}
-        onClose={() => setAddChildOpen(false)}
+        onClose={closeChildSheet}
         variant="sheet"
         ariaLabel="아기 추가하기"
       >
-        <div className="px-6 pt-5">
-          <h2 className="text-[16px] font-medium text-black text-center">아기 추가하기</h2>
+        <div className="px-6 pt-5 pb-2 flex items-center justify-between">
+          <h2 className="text-[18px] font-bold text-black">아기 추가하기</h2>
+          <button
+            type="button"
+            onClick={closeChildSheet}
+            aria-label="닫기"
+            className="flex h-9 w-9 items-center justify-center -mr-2"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="black"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
         <div className="px-6 pt-4 space-y-[20px]">
           <section>
@@ -487,18 +522,16 @@ export default function OnboardingClient() {
                     key={g}
                     type="button"
                     onClick={() => setDraftGender(g)}
-                    className={`min-w-[64px] h-[32px] rounded-[20px] text-xs border transition-colors ${
+                    className={`w-[45px] h-[28px] rounded-[20px] text-xs border transition-colors flex items-center justify-center ${
                       active
                         ? 'font-medium text-white border-transparent'
                         : 'font-normal bg-white border-gray-200 text-gray-400'
                     }`}
-                    style={{
-                      paddingLeft: 14,
-                      paddingRight: 14,
-                      ...(active
+                    style={
+                      active
                         ? { backgroundColor: palette.teal, borderColor: palette.teal }
-                        : {}),
-                    }}
+                        : undefined
+                    }
                   >
                     {g === 'male' ? '남아' : '여아'}
                   </button>
@@ -537,24 +570,27 @@ export default function OnboardingClient() {
           </section>
         </div>
         <div
-          className="flex gap-2 px-6 pt-5"
+          className="px-6 pt-5 flex gap-2"
           style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
         >
-          <button
-            type="button"
-            onClick={() => setAddChildOpen(false)}
-            className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
-          >
-            취소
-          </button>
+          {editChildKey && (
+            <button
+              type="button"
+              onClick={deleteEditChild}
+              className="flex-1 h-14 rounded-[4px] bg-gray-100 text-[14px] font-semibold active:bg-gray-200"
+              style={{ color: palette.gray600 }}
+            >
+              삭제
+            </button>
+          )}
           <button
             type="button"
             onClick={saveDraftChild}
             disabled={!canSaveDraft}
-            className="flex-1 h-12 rounded-[8px] text-white text-sm font-semibold disabled:opacity-40"
+            className={`${editChildKey ? 'flex-1' : 'w-full'} h-14 rounded-[4px] text-white text-base font-semibold disabled:opacity-40`}
             style={{ backgroundColor: palette.teal }}
           >
-            추가
+            {editChildKey ? '저장' : '추가하기'}
           </button>
         </div>
       </BottomSheet>

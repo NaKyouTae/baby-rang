@@ -20,7 +20,6 @@ import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 const SWIPE_DELETE_WIDTH = 59;
 const SWIPE_OPEN_THRESHOLD = 30;
@@ -993,18 +992,6 @@ export default function GrowthRecordPage() {
           </div>
         )}
       </main>
-
-      {/* 하단 네비게이션 펄 top에서 24px 위 카카오 배너 */}
-      {/* nav pill top = mb-6(24) + pill height(64) = 88px from viewport bottom */}
-      {/* banner bottom = 88 + 24(gap) = 112px from viewport bottom */}
-      <div
-        className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 pointer-events-none"
-        style={{ bottom: "112px" }}
-      >
-        <div className="pointer-events-auto w-full">
-          <KakaoAdBanner unit="DAN-Vht4xa76meLzjAM0" />
-        </div>
-      </div>
 
       {sheetType && selectedChild && (
         <EntrySheet

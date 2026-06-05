@@ -5,10 +5,10 @@ export default function BusinessInfo() {
     <footer
       style={{
         backgroundColor: palette.gray100,
-        paddingTop: 24,
+        paddingTop: 16,
         paddingLeft: 24,
         paddingRight: 24,
-        paddingBottom: "calc(24px + var(--bottom-nav-space))",
+        paddingBottom: 16,
       }}
     >
       <p
@@ -28,7 +28,6 @@ export default function BusinessInfo() {
           고객센터 :{" "}
           <a
             href="mailto:spectrum.mesh@gmail.com"
-            className="underline"
             style={{ color: palette.gray500 }}
           >
             spectrum.mesh@gmail.com

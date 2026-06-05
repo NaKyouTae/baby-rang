@@ -7,7 +7,6 @@ import { TYPE_CONFIG, GrowthType } from "@/app/growth-record/types";
 import { palette } from "@/lib/colors";
 import PageHeader from "@/components/PageHeader";
 import ChildSelector from "@/components/ChildSelector";
-import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
 
 /* ── 한글 라벨 → GrowthType 매핑 ── */
 const LABEL_TO_TYPE: Record<string, GrowthType> = {
@@ -356,9 +355,6 @@ export default function ImportDataPage() {
           >
             파일 선택
           </button>
-          <div className="mt-4 -mx-5 flex justify-center">
-            <KakaoAdBanner unit="DAN-oNJpw1bBpF0bNFcK" />
-          </div>
         </div>
 
         {/* 결과 또는 미리보기 */}

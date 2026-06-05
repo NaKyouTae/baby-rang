@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { type ReactNode } from 'react';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { palette } from '@/lib/colors';
 import type { TestInfo } from './types';
 
@@ -115,12 +114,9 @@ export default function TestStartShell({
         {middleSlot && <div className="w-full max-w-xs mb-5">{middleSlot}</div>}
       </main>
 
-      {/* Bottom CTA + 배너: 배너 하단을 화면 하단 24px, 버튼은 배너 위 24px */}
+      {/* Bottom CTA */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none">
-        <div className="pointer-events-auto mb-6 px-5">{bottomSlot}</div>
-        <div className="pointer-events-auto flex justify-center">
-          <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" />
-        </div>
+        <div className="pointer-events-auto px-5">{bottomSlot}</div>
       </div>
     </>
   );

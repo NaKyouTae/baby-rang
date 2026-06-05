@@ -577,7 +577,7 @@ function NursingRoomContent() {
           <div
             className="absolute left-6 right-6 bg-white rounded-lg shadow-lg z-10 flex flex-col overflow-hidden animate-slide-up"
             style={{
-              bottom: "calc(var(--bottom-nav-gap) + 56px + 10px)",
+              bottom: "calc(var(--bottom-nav-space) + 10px)",
               maxHeight: "60dvh",
             }}
           >
@@ -687,7 +687,7 @@ function NursingRoomContent() {
         <button
           onClick={() => fetchUserLocation({ panTo: true, showToast: true })}
           className="absolute right-6 flex items-center justify-center bg-white text-gray-900 w-8 h-8 rounded-full shadow-lg active:scale-95 transition-transform z-10"
-          style={{ bottom: "calc(var(--bottom-nav-gap) + 72px)" }}
+          style={{ bottom: "calc(var(--bottom-nav-space) + 24px)" }}
           aria-label="내 위치 갱신"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -703,7 +703,7 @@ function NursingRoomContent() {
         <button
           onClick={() => setShowReport(true)}
           className="absolute left-6 flex items-center gap-1.5 bg-primary-500 text-white text-[12px] font-medium h-8 px-3 py-2.5 rounded-2xl shadow-lg active:scale-95 transition-transform z-10"
-          style={{ bottom: "calc(var(--bottom-nav-gap) + 72px)" }}
+          style={{ bottom: "calc(var(--bottom-nav-space) + 24px)" }}
           aria-label="수유실 제보하기"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { calcChildAge } from '@/lib/childAge';
 
 // 월령 계산 (KST 기준, 공통 함수 사용)
@@ -184,7 +183,7 @@ export default function SleepGoldenTimeClient() {
     <>
       <PageHeader title="수면추천" variant="back" />
 
-      <main className="flex flex-col gap-[24px] px-5 pt-1 pb-[var(--bottom-nav-space)]">
+      <main className="flex flex-col gap-[24px] px-5 pt-1 pb-[calc(var(--bottom-nav-space)+24px)]">
         {/* 아기 정보 카드 — 자동 선택, 다중 등록 시 드롭다운으로 전환 */}
         {effectiveChild ? (
           <ChildSelector
@@ -258,10 +257,6 @@ export default function SleepGoldenTimeClient() {
             />
           </div>
         </section>
-
-        <div className="-mx-5 flex justify-center">
-          <KakaoAdBanner unit="DAN-R24cGE36FOCEgdQH" />
-        </div>
 
         {/* 월령 수면 TIP */}
         <section className="bg-[#FFCC00]/5 rounded-lg p-3">

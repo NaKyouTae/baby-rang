@@ -54,9 +54,11 @@ export default function HistoryPage() {
     <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
       <PageHeader title="테스트 이력" variant="back" />
 
-      <div className="mt-6 px-6">
-        <BannerCarousel />
-      </div>
+      {(loading || items.length > 0) && (
+        <div className="mt-6 px-6">
+          <BannerCarousel />
+        </div>
+      )}
 
       <div className="mt-6 px-6">
         {loading ? (
@@ -98,8 +100,7 @@ export default function HistoryPage() {
             </Link>
           </div>
         ) : (
-          <>
-            <ul className="space-y-3">
+          <ul className="space-y-3">
             {items.map((item) => (
               <li key={item.submissionId}>
                 <Link
@@ -137,8 +138,7 @@ export default function HistoryPage() {
                 </Link>
               </li>
             ))}
-            </ul>
-          </>
+          </ul>
         )}
       </div>
     </div>

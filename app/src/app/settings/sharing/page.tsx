@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 
@@ -402,9 +401,6 @@ export default function SharingPage() {
                 />
               ))
             )}
-            <div className="mt-6 -mx-5 flex justify-center">
-              <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
-            </div>
           </>
         ) : (
           <>
@@ -457,9 +453,6 @@ export default function SharingPage() {
                 />
               ))
             )}
-            <div className="mt-6 -mx-5 flex justify-center">
-              <KakaoAdBanner unit="DAN-ZJf6vw34eSf8TvMt" />
-            </div>
           </>
         )}
       </div>

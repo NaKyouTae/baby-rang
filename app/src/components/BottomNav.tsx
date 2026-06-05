@@ -9,6 +9,9 @@ import { ALL_MENU_IDS, DEFAULT_NAV_SLOTS, MENU_CATALOG, type MenuId } from "./me
 import { useLoginPrompt } from "./LoginPromptProvider";
 import { HomeNavIcon, AddNavIcon } from "./nav-icons";
 import { palette } from "@/lib/colors";
+import KakaoAdBanner from "./ads/KakaoAdBanner";
+
+const BOTTOM_AD_UNIT = "DAN-go0noPJx8cIt6SU7";
 
 const DEFAULT_SLOTS = DEFAULT_NAV_SLOTS;
 const LONG_PRESS_MS = 500;
@@ -37,7 +40,13 @@ function sanitize(arr: unknown): (MenuId | null)[] {
   return mapped.slice(0, SLOT_COUNT);
 }
 
-export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | null)[] } = {}) {
+export default function BottomNav({
+  initialSlots,
+  showAdBanner = true,
+}: {
+  initialSlots?: (MenuId | null)[];
+  showAdBanner?: boolean;
+} = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const { openLoginPrompt } = useLoginPrompt();
@@ -198,7 +207,7 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     /^\/tests\/[^/]+\/test\/[^/]+$/.test(pathname ?? "") ||
     /^\/tests\/[^/]+\/result\/[^/]+$/.test(pathname ?? "") ||
     /^\/payment\//.test(pathname ?? "") ||
-    /^\/settings\/(terms|privacy|refund|third-party|marketing|consents)$/.test(
+    /^\/settings\/(terms|privacy|refund|third-party|marketing)$/.test(
       pathname ?? "",
     ) ||
     pathname === "/settings/import-data" ||
@@ -210,58 +219,68 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
     <>
       <nav
         data-bottom-nav-root
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 pointer-events-none"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white border-t border-gray-200"
+        style={{ paddingBottom: "var(--safe-area-bottom)" }}
       >
-        <div className="mx-6 mb-6 pointer-events-auto">
-          {editMode && (
-            <div className="flex justify-center" style={{ marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                className="px-4 rounded-[4px] bg-gray-900 text-white text-[12px] font-semibold"
-                style={{ height: 24 }}
-              >
-                저장
-              </button>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center h-[64px] bg-white/90 backdrop-blur-xl rounded-[40px] shadow-[0_0_20px_rgba(0,0,0,0.04)] overflow-visible">
-            {/* HOME */}
-            <Link
-              href={HOME_HREF}
-              className="flex flex-col items-center justify-center gap-1 flex-1 h-[64px]"
-              onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
+        {editMode && (
+          <div className="flex justify-center py-2 border-b border-gray-100">
+            <button
+              type="button"
+              onClick={() => setEditMode(false)}
+              className="px-4 rounded-[4px] bg-gray-900 text-white text-[12px] font-semibold"
+              style={{ height: 24 }}
             >
-              <HomeNavIcon active={isHomeActive} />
-              <span className={`text-[10px] ${isHomeActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>홈</span>
-            </Link>
-
-            {/* CUSTOM SLOTS — framer-motion Reorder */}
-            <Reorder.Group
-              axis="x"
-              values={slots}
-              onReorder={handleReorder}
-              as="div"
-              className="flex items-center flex-[4]"
-            >
-              {slots.map((slot, index) => (
-                <ReorderSlot
-                  key={slot.id}
-                  slot={slot}
-                  editMode={editMode}
-                  pathname={pathname}
-                  onPointerDown={onSlotPointerDown}
-                  onPointerCancel={clearLongPress}
-                  onClickSlot={handleSlotClick(index)}
-                  onRemove={() => removeSlot(index)}
-                  onDragStart={() => { dragStartedRef.current = true; }}
-                  onDragEnd={() => { setTimeout(() => { dragStartedRef.current = false; }, 0); }}
-                />
-              ))}
-            </Reorder.Group>
-
+              저장
+            </button>
           </div>
+        )}
+
+        {showAdBanner && (
+          <div
+            className="w-full flex justify-center"
+            style={{ height: "var(--bottom-ad-banner-height)" }}
+          >
+            <KakaoAdBanner unit={BOTTOM_AD_UNIT} />
+          </div>
+        )}
+
+        <div
+          className="flex items-center justify-center"
+          style={{ height: "var(--bottom-nav-height)" }}
+        >
+          {/* HOME */}
+          <Link
+            href={HOME_HREF}
+            className="flex flex-col items-center justify-center gap-1 flex-1 h-full"
+            onClick={(e) => { if (editMode) { e.preventDefault(); setEditMode(false); } }}
+          >
+            <HomeNavIcon active={isHomeActive} />
+            <span className={`text-[10px] ${isHomeActive ? "text-primary-500 font-bold" : "text-black font-medium"}`}>홈</span>
+          </Link>
+
+          {/* CUSTOM SLOTS — framer-motion Reorder */}
+          <Reorder.Group
+            axis="x"
+            values={slots}
+            onReorder={handleReorder}
+            as="div"
+            className="flex items-center flex-[4] h-full"
+          >
+            {slots.map((slot, index) => (
+              <ReorderSlot
+                key={slot.id}
+                slot={slot}
+                editMode={editMode}
+                pathname={pathname}
+                onPointerDown={onSlotPointerDown}
+                onPointerCancel={clearLongPress}
+                onClickSlot={handleSlotClick(index)}
+                onRemove={() => removeSlot(index)}
+                onDragStart={() => { dragStartedRef.current = true; }}
+                onDragEnd={() => { setTimeout(() => { dragStartedRef.current = false; }, 0); }}
+              />
+            ))}
+          </Reorder.Group>
         </div>
       </nav>
 
@@ -271,7 +290,10 @@ export default function BottomNav({ initialSlots }: { initialSlots?: (MenuId | n
           data-nav-picker
           className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[51] pointer-events-none"
         >
-          <div className="mx-6 mb-[calc(max(min(var(--safe-area-bottom),34px),24px)+74px)] pointer-events-auto">
+          <div
+            className="mx-6 pointer-events-auto"
+            style={{ marginBottom: "calc(var(--bottom-nav-space) + 8px)" }}
+          >
             <div
               className="bg-white rounded-lg p-[10px] shadow-[0_0_20px_rgba(0,0,0,0.08)]"
               onClick={(e) => e.stopPropagation()}
@@ -354,7 +376,7 @@ function ReorderSlot({
       onClick={onClickSlot}
     >
       <motion.div
-        className={`flex flex-col items-center justify-center gap-1 h-[64px] cursor-pointer`}
+        className={`flex flex-col items-center justify-center gap-1 h-full cursor-pointer`}
         animate={
           editMode && menuId !== null
             ? { rotate: [0, -2, 2, -2, 0], transition: { duration: 0.4, repeat: Infinity, repeatDelay: 0.1 } }

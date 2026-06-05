@@ -139,7 +139,7 @@ export default function ProfileSettingsPage() {
       </main>
 
       {/* 하단 고정 저장 버튼 — BottomNav 위 24px 간격 */}
-      <div className="fixed bottom-[calc(var(--safe-area-bottom)+112px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
+      <div className="fixed bottom-[calc(var(--bottom-nav-space)+24px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
         <button
           onClick={handleSave}
           disabled={!canSubmit}

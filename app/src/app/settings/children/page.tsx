@@ -91,7 +91,7 @@ export default function ChildrenSettingsPage() {
 
       {/* 우측 하단 + 플로팅 버튼 — 하단 네비 위 24px */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none"
-        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 64px + 24px + 24px)' }}
+        style={{ paddingBottom: 'calc(var(--bottom-nav-space) + 24px)' }}
       >
         <div className="flex justify-end px-6 pointer-events-auto">
           <button

@@ -7,7 +7,6 @@ import WonderWeeksCalendar, { type WonderWeeksCalendarHandle } from './_componen
 import ChildSelector from '@/components/ChildSelector';
 import NoChildCard from '@/components/NoChildCard';
 import PageHeader from '@/components/PageHeader';
-import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 
 export default function WonderWeeksClient() {
   return (
@@ -40,7 +39,7 @@ function WonderWeeksContent() {
   return (
     <div className="flex flex-col bg-white">
       <PageHeader title="원더윅스" variant="back" />
-      <div className="flex flex-col px-6 pb-[68px]">
+      <div className="flex flex-col px-6 pb-[calc(var(--bottom-nav-space)+80px)]">
         <div ref={topRef} />
         <div className="pt-6 pb-6">
           {noChild ? (
@@ -52,11 +51,6 @@ function WonderWeeksContent() {
               onSelect={selectChild}
             />
           )}
-        </div>
-
-        {/* 카카오 배너 */}
-        <div className="pb-6 -mx-6 flex justify-center">
-          <KakaoAdBanner unit="DAN-h3a1xEldDr1zxYca" />
         </div>
 
         {noChild ? (
@@ -87,7 +81,7 @@ function WonderWeeksContent() {
       {!noChild && (
         <div
           className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
-          style={{ bottom: '104px' }}
+          style={{ bottom: 'calc(var(--bottom-nav-space) + 24px)' }}
         >
           <div className="flex justify-between items-center">
             <button
