@@ -103,6 +103,9 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  // 아기랑은 다크모드를 지원하지 않는다. OS/브라우저/WebView 가 다크모드를
+  // 자동 적용해 색이 깨지는 것을 막기 위해 라이트로 고정한다. (globals.css :root 의 color-scheme 와 한 쌍)
+  colorScheme: "light",
 };
 
 export default function RootLayout({

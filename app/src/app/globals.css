@@ -28,6 +28,10 @@
 }
 
 :root {
+  /* 아기랑은 다크모드 미지원 — 라이트로 고정 (layout.tsx viewport.colorScheme 와 한 쌍).
+     브라우저 폼 컨트롤/스크롤바 등 네이티브 UI 까지 라이트로 강제한다. */
+  color-scheme: light;
+
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
