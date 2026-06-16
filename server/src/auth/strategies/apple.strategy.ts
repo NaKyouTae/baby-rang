@@ -13,6 +13,20 @@ interface AppleProfile {
   email?: string;
 }
 
+// .p8 개인키를 올바른 PKCS8 PEM 으로 정규화한다.
+// 환경변수(Cloudtype 등)에 넣는 방식이 제각각이라 — 한 줄 + \n 이스케이프,
+// 줄바꿈 없음, 따옴표 감싸짐 등 — base64 본문만 추출해 64자 단위로 재조립한다.
+// (줄바꿈이 깨지면 jsonwebtoken 이 "must be an asymmetric key" 로 ES256 서명 실패)
+function normalizeApplePrivateKey(raw: string): string {
+  const base64 = raw
+    .replace(/\\n/g, '\n') // \n 이스케이프 복원
+    .replace(/-----BEGIN [^-]+-----/, '')
+    .replace(/-----END [^-]+-----/, '')
+    .replace(/[^A-Za-z0-9+/=]/g, ''); // 본문 외 문자(공백·따옴표·% 등) 제거
+  const body = base64.match(/.{1,64}/g)?.join('\n') ?? base64;
+  return `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`;
+}
+
 @Injectable()
 export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
   constructor(
@@ -24,10 +38,10 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
       clientID: configService.get('APPLE_CLIENT_ID')!,
       teamID: configService.get('APPLE_TEAM_ID')!,
       keyID: configService.get('APPLE_KEY_ID')!,
-      // .p8 개인키 내용. 환경변수에 한 줄로 넣을 때 \n 이스케이프를 복원한다.
-      key: configService
-        .get<string>('APPLE_PRIVATE_KEY')!
-        .replace(/\\n/g, '\n'),
+      // .p8 개인키 내용. 입력 형식과 무관하게 올바른 PEM 으로 정규화.
+      key: normalizeApplePrivateKey(
+        configService.get<string>('APPLE_PRIVATE_KEY')!,
+      ),
       callbackURL: configService.get('APPLE_CALLBACK_URL')!,
       scope: ['name', 'email'],
     });

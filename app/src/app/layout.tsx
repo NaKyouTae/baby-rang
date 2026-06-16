@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
-import AdSenseScript from "@/components/ads/AdSenseScript";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
@@ -232,7 +231,6 @@ export default function RootLayout({
         />
         {/* iOS PWA / 홈 화면 추가 시 흰 화면 대신 보여줄 splash 이미지 */}
         <link rel="apple-touch-startup-image" href="/splash.png" />
-        {/* Google AdSense — AdSenseScript 컴포넌트가 클라이언트에서 동적 로드하므로 여기서는 제거 */}
         {/* Google Analytics (gtag.js) — next/script afterInteractive로 hydration mismatch 방지 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-WEH6C2JJB9"
@@ -279,7 +277,6 @@ export default function RootLayout({
             <SplashProvider>
               {children}
             </SplashProvider>
-            <AdSenseScript />
           </div>
           <BottomNavServer />
         </LoginPromptProvider>
