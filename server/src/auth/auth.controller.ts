@@ -46,6 +46,31 @@ export class AuthController {
     );
   }
 
+  @Get('apple')
+  @UseGuards(AuthGuard('apple'))
+  appleLogin() {
+    // Apple 로그인 페이지로 리다이렉트
+  }
+
+  // Apple 은 name/email scope 요청 시 form_post 로 콜백하므로 POST.
+  @Post('apple/callback')
+  @UseGuards(AuthGuard('apple'))
+  appleCallback(@Req() req, @Res() res: Response) {
+    const result = req.user as OAuthResult;
+    const clientUrl =
+      this.configService.get('CLIENT_URL') || 'http://localhost:3000';
+
+    if (result.kind === 'existing') {
+      const { accessToken } = this.authService.generateToken(result.userId);
+      return res.redirect(`${clientUrl}/auth/callback?token=${accessToken}`);
+    }
+
+    const signupToken = this.authService.generateSignupToken(result.profile);
+    return res.redirect(
+      `${clientUrl}/auth/callback?signupToken=${signupToken}`,
+    );
+  }
+
   // signup_token으로 소셜 프로필 미리보기 (온보딩 화면에 이메일 등 표시용).
   @Post('signup/context')
   signupContext(@Body() body: { signupToken: string }) {
