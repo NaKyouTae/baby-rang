@@ -36,13 +36,13 @@ export class AuthController {
 
     if (result.kind === 'existing') {
       const { accessToken } = this.authService.generateToken(result.userId);
-      return res.redirect(`${clientUrl}/auth/callback?token=${accessToken}`);
+      return res.redirect(`${clientUrl}/api/auth/session?token=${accessToken}`);
     }
 
     // 신규: user를 만들지 않고 signup_token만 발급. 회원가입 버튼 클릭 시점에 user 생성.
     const signupToken = this.authService.generateSignupToken(result.profile);
     return res.redirect(
-      `${clientUrl}/auth/callback?signupToken=${signupToken}`,
+      `${clientUrl}/api/auth/session?signupToken=${signupToken}`,
     );
   }
 
@@ -62,12 +62,12 @@ export class AuthController {
 
     if (result.kind === 'existing') {
       const { accessToken } = this.authService.generateToken(result.userId);
-      return res.redirect(`${clientUrl}/auth/callback?token=${accessToken}`);
+      return res.redirect(`${clientUrl}/api/auth/session?token=${accessToken}`);
     }
 
     const signupToken = this.authService.generateSignupToken(result.profile);
     return res.redirect(
-      `${clientUrl}/auth/callback?signupToken=${signupToken}`,
+      `${clientUrl}/api/auth/session?signupToken=${signupToken}`,
     );
   }
 

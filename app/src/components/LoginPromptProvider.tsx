@@ -47,11 +47,13 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: testUsername, password: testPassword }),
       });
-      if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.accessToken) {
         setTestError('아이디 또는 비밀번호가 올바르지 않습니다.');
         return;
       }
-      window.location.href = '/home';
+      // 쿠키는 session 라우트가 navigation 응답으로 설정 (WKWebView 영속화 대응)
+      window.location.href = `/api/auth/session?token=${encodeURIComponent(data.accessToken)}`;
     } catch {
       setTestError('로그인 중 오류가 발생했어요.');
     } finally {

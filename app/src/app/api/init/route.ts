@@ -15,14 +15,17 @@ export async function GET() {
     });
   }
 
-  // Vercel Function 내부에서 백엔드 API 병렬 호출
+  // Vercel Function 내부에서 백엔드 API 병렬 호출.
+  // 미국→한국 백엔드 지연/콜드스타트로 매달리지 않도록 3초 타임아웃.
   const [authRes, childrenRes] = await Promise.all([
     fetch(`${API_URL}/auth/profile`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
     }).catch(() => null),
     fetch(`${API_URL}/children`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(3000),
     }).catch(() => null),
   ]);
 
