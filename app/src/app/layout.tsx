@@ -269,18 +269,28 @@ export default function RootLayout({
         <ViewportHeightSetter />
         <DebugViewport />
         <LoginPromptProvider>
-          <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
-            {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
-            <div
-              aria-hidden
-              className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
-              style={{ height: 'var(--safe-area-top)' }}
-            />
-            <SplashProvider>
-              {children}
-            </SplashProvider>
+          {/* 앱 셸: 실제 보이는 화면(screen.height)에 맞춰, 뷰포트 중앙에 배치한다.
+              iPad 등에서 WebView 뷰포트가 화면보다 커서 화면이 그 가운데만 보여줄 때,
+              위/아래 fixed 요소(헤더·하단 네비)가 화면 밖으로 잘리는 문제를 해결한다.
+              translate(-50%,-50%) 의 transform 이 fixed 자식들의 컨테이닝 블록이 되어
+              헤더·네비가 이 셸(=보이는 영역) 기준으로 앵커링된다. */}
+          <div
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[430px] overflow-hidden"
+            style={{ height: 'var(--app-h, 100dvh)' }}
+          >
+            <div className="relative w-full h-full overflow-y-auto overscroll-contain">
+              {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
+              <div
+                aria-hidden
+                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
+                style={{ height: 'var(--safe-area-top)' }}
+              />
+              <SplashProvider>
+                {children}
+              </SplashProvider>
+            </div>
+            <BottomNavServer />
           </div>
-          <BottomNavServer />
         </LoginPromptProvider>
       </body>
     </html>
