@@ -3,7 +3,6 @@ import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
-import DebugViewport from "@/components/DebugViewport";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 
@@ -267,37 +266,19 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
-        <DebugViewport />
         <LoginPromptProvider>
-          {/* 앱 셸: 실제 "보이는 영역(visualViewport)"에 정확히 맞춰 배치한다.
-              - top/left/width/height 를 visualViewport 값으로 고정 → iPad 호환 모드에서
-                layout viewport 가 보이는 창과 어긋나도 셸은 항상 보이는 영역과 일치.
-              - transform(translateZ) 으로 fixed 자식들의 컨테이닝 블록이 되어,
-                헤더(top:0)·하단 네비(bottom:0)가 이 셸(=보이는 영역) 기준으로 앵커링 → 안 잘림.
-              값은 ViewportHeightSetter 가 JS 로 채운다(SSR 폴백: 전체 뷰포트). */}
-          <div
-            className="fixed overflow-hidden"
-            style={{
-              top: 'var(--vv-top, 0px)',
-              left: 'var(--vv-left, 0px)',
-              width: 'var(--vv-width, 100%)',
-              height: 'var(--vv-height, calc(var(--vh, 1vh) * 100))',
-              transform: 'translateZ(0)',
-            }}
-          >
-            <div className="relative mx-auto w-full max-w-[430px] h-full overflow-y-auto overscroll-contain">
-              {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
-              <div
-                aria-hidden
-                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
-                style={{ height: 'var(--safe-area-top)' }}
-              />
-              <SplashProvider>
-                {children}
-              </SplashProvider>
-            </div>
-            <BottomNavServer />
+          <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
+            {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
+            <div
+              aria-hidden
+              className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
+              style={{ height: 'var(--safe-area-top)' }}
+            />
+            <SplashProvider>
+              {children}
+            </SplashProvider>
           </div>
+          <BottomNavServer />
         </LoginPromptProvider>
       </body>
     </html>

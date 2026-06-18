@@ -19,10 +19,15 @@ struct BabyRangApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                // safe area 밖(상태바/홈 인디케이터 영역)은 흰색으로 채운다.
+                Color.white.ignoresSafeArea()
+
+                // WebView 는 safe area 에 맞춘다(.ignoresSafeArea 제거).
+                // iPad 호환 모드에서 WebView 가 시스템 UI 영역까지 늘어나
+                // 상단 헤더·하단 네비가 화면 밖으로 잘리던 문제를 해결한다.
                 WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!) {
                     isWebViewLoaded = true
                 }
-                .ignoresSafeArea()
 
                 SplashView()
                     .ignoresSafeArea()
