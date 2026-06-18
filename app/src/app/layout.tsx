@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
+import DebugViewport from "@/components/DebugViewport";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 
@@ -266,6 +267,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
+        <DebugViewport />
         <LoginPromptProvider>
           <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
             {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
