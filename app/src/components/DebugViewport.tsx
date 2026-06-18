@@ -11,14 +11,27 @@ export default function DebugViewport() {
   useEffect(() => {
     function update() {
       const vv = window.visualViewport;
+      // env(safe-area-inset-*) 실제 px 값 측정 (probe 엘리먼트로)
+      const probe = document.createElement("div");
+      probe.style.cssText =
+        "position:fixed;top:0;left:0;visibility:hidden;" +
+        "padding-top:env(safe-area-inset-top);" +
+        "padding-bottom:env(safe-area-inset-bottom);";
+      document.body.appendChild(probe);
+      const cs = getComputedStyle(probe);
+      const sat = parseFloat(cs.paddingTop) || 0;
+      const sab = parseFloat(cs.paddingBottom) || 0;
+      document.body.removeChild(probe);
+
       setInfo(
         [
-          `DBG v4`,
+          `DBG v5`,
           `innerH=${Math.round(window.innerHeight)}`,
           `vvH=${vv ? Math.round(vv.height) : "x"}`,
-          `vvT=${vv ? Math.round(vv.offsetTop) : "x"}`,
+          `screenH=${window.screen.height}`,
+          `clientH=${document.documentElement.clientHeight}`,
+          `SAT=${Math.round(sat)} SAB=${Math.round(sab)}`,
           `vvScale=${vv ? vv.scale.toFixed(2) : "x"}`,
-          `dpr=${window.devicePixelRatio}`,
         ].join(" "),
       );
     }
