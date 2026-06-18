@@ -39,7 +39,7 @@
   --bottom-nav-gap: 24px;
   --bottom-nav-height: 64px;
   --bottom-ad-banner-height: 50px;
-  --bottom-nav-space: calc(var(--bottom-nav-height) + var(--bottom-ad-banner-height) + var(--safe-area-bottom));
+  --bottom-nav-space: calc(var(--bottom-nav-height) + var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 16px));
 }
 
 body {
