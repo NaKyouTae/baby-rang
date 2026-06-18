@@ -267,18 +267,27 @@ export default function RootLayout({
         />
         <ViewportHeightSetter />
         <LoginPromptProvider>
-          <div className="relative w-full max-w-[430px] h-screen-safe overflow-y-auto overscroll-contain">
-            {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
-            <div
-              aria-hidden
-              className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
-              style={{ height: 'var(--safe-area-top)' }}
-            />
-            <SplashProvider>
-              {children}
-            </SplashProvider>
+          {/* 앱 셸: position:fixed + transform 으로 fixed 자식들의 컨테이닝 블록이 되고,
+              높이를 실제 보이는 영역(dvh)으로 고정한다. iPad 호환 모드에서 layout viewport 가
+              화면보다 커서 fixed bottom:0 하단 네비가 잘리던 문제를, 자식 fixed 요소들이
+              이 셸(=보이는 영역) 기준으로 앵커링되도록 하여 해결한다. */}
+          <div
+            className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] overflow-hidden"
+            style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+          >
+            <div className="relative w-full h-full overflow-y-auto overscroll-contain">
+              {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
+              <div
+                aria-hidden
+                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
+                style={{ height: 'var(--safe-area-top)' }}
+              />
+              <SplashProvider>
+                {children}
+              </SplashProvider>
+            </div>
+            <BottomNavServer />
           </div>
-          <BottomNavServer />
         </LoginPromptProvider>
       </body>
     </html>
