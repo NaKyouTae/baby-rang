@@ -267,15 +267,23 @@ export default function RootLayout({
         />
         <ViewportHeightSetter />
         <LoginPromptProvider>
-          {/* 앱 셸: position:fixed + transform 으로 fixed 자식들의 컨테이닝 블록이 되고,
-              높이를 실제 보이는 영역(dvh)으로 고정한다. iPad 호환 모드에서 layout viewport 가
-              화면보다 커서 fixed bottom:0 하단 네비가 잘리던 문제를, 자식 fixed 요소들이
-              이 셸(=보이는 영역) 기준으로 앵커링되도록 하여 해결한다. */}
+          {/* 앱 셸: 실제 "보이는 영역(visualViewport)"에 정확히 맞춰 배치한다.
+              - top/left/width/height 를 visualViewport 값으로 고정 → iPad 호환 모드에서
+                layout viewport 가 보이는 창과 어긋나도 셸은 항상 보이는 영역과 일치.
+              - transform(translateZ) 으로 fixed 자식들의 컨테이닝 블록이 되어,
+                헤더(top:0)·하단 네비(bottom:0)가 이 셸(=보이는 영역) 기준으로 앵커링 → 안 잘림.
+              값은 ViewportHeightSetter 가 JS 로 채운다(SSR 폴백: 전체 뷰포트). */}
           <div
-            className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] overflow-hidden"
-            style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+            className="fixed overflow-hidden"
+            style={{
+              top: 'var(--vv-top, 0px)',
+              left: 'var(--vv-left, 0px)',
+              width: 'var(--vv-width, 100%)',
+              height: 'var(--vv-height, calc(var(--vh, 1vh) * 100))',
+              transform: 'translateZ(0)',
+            }}
           >
-            <div className="relative w-full h-full overflow-y-auto overscroll-contain">
+            <div className="relative mx-auto w-full max-w-[430px] h-full overflow-y-auto overscroll-contain">
               {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
               <div
                 aria-hidden

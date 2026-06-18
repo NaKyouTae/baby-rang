@@ -13,9 +13,19 @@ import { useEffect } from "react";
 export default function ViewportHeightSetter() {
   useEffect(() => {
     function setViewportVars() {
-      const visibleHeight = window.visualViewport?.height ?? window.innerHeight;
+      const vv = window.visualViewport;
+      const visibleHeight = vv?.height ?? window.innerHeight;
       const vh = visibleHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
+      const root = document.documentElement.style;
+      root.setProperty("--vh", `${vh}px`);
+
+      // visualViewport 의 실제 보이는 영역(위치+크기)을 변수로 내보낸다.
+      // iPad 호환 모드에서 layout viewport 가 보이는 창과 어긋나(offset·크기 차이)
+      // fixed 헤더/네비가 잘리는 문제를, 앱 셸을 이 보이는 영역에 정확히 맞춰 해결한다.
+      root.setProperty("--vv-top", `${vv?.offsetTop ?? 0}px`);
+      root.setProperty("--vv-left", `${vv?.offsetLeft ?? 0}px`);
+      root.setProperty("--vv-width", `${vv?.width ?? window.innerWidth}px`);
+      root.setProperty("--vv-height", `${visibleHeight}px`);
 
       // Android Chrome 홈화면 추가(standalone)에서는
       // 브라우저 하단 UI가 없는데도 inset이 남는 경우가 있어 0으로 보정.
@@ -36,11 +46,13 @@ export default function ViewportHeightSetter() {
     window.addEventListener("resize", setViewportVars);
     standaloneMq.addEventListener("change", setViewportVars);
     window.visualViewport?.addEventListener("resize", setViewportVars);
+    window.visualViewport?.addEventListener("scroll", setViewportVars);
 
     return () => {
       window.removeEventListener("resize", setViewportVars);
       standaloneMq.removeEventListener("change", setViewportVars);
       window.visualViewport?.removeEventListener("resize", setViewportVars);
+      window.visualViewport?.removeEventListener("scroll", setViewportVars);
     };
   }, []);
 
