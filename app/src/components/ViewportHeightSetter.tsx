@@ -14,14 +14,19 @@ export default function ViewportHeightSetter() {
   useEffect(() => {
     function setViewportVars() {
       const vv = window.visualViewport;
-      const visibleHeight = vv?.height ?? window.innerHeight;
+      const vvHeight = vv?.height ?? window.innerHeight;
+      const screenH = window.screen.height;
+      // iPad 호환 모드: WebView 뷰포트(vvHeight, innerHeight)가 실제 화면(screen.height)보다
+      // 크게 잡혀, 콘텐츠가 화면보다 길게 배치되고 하단 네비/헤더가 화면 밖으로 잘린다.
+      // (예: screen.height=667 인데 innerHeight=812) visualViewport 도 812 로 거짓 보고하므로,
+      // screen.height 가 더 작을 때는 그 값을 실제 보이는 높이로 사용한다.
+      const visibleHeight =
+        screenH && screenH < vvHeight ? screenH : vvHeight;
       const vh = visibleHeight * 0.01;
       const root = document.documentElement.style;
       root.setProperty("--vh", `${vh}px`);
 
-      // visualViewport 의 실제 보이는 영역(위치+크기)을 변수로 내보낸다.
-      // iPad 호환 모드에서 layout viewport 가 보이는 창과 어긋나(offset·크기 차이)
-      // fixed 헤더/네비가 잘리는 문제를, 앱 셸을 이 보이는 영역에 정확히 맞춰 해결한다.
+      // 앱 셸을 실제 보이는 영역에 맞추기 위한 변수.
       root.setProperty("--vv-top", `${vv?.offsetTop ?? 0}px`);
       root.setProperty("--vv-left", `${vv?.offsetLeft ?? 0}px`);
       root.setProperty("--vv-width", `${vv?.width ?? window.innerWidth}px`);

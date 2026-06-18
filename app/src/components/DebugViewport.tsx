@@ -23,15 +23,17 @@ export default function DebugViewport() {
       const sab = parseFloat(cs.paddingBottom) || 0;
       document.body.removeChild(probe);
 
+      const vvHeight = vv?.height ?? window.innerHeight;
+      const screenH = window.screen.height;
+      const useH = screenH && screenH < vvHeight ? screenH : vvHeight;
       setInfo(
         [
-          `DBG v5`,
+          `DBG v6`,
           `innerH=${Math.round(window.innerHeight)}`,
-          `vvH=${vv ? Math.round(vv.height) : "x"}`,
-          `screenH=${window.screen.height}`,
-          `clientH=${document.documentElement.clientHeight}`,
+          `vvH=${Math.round(vvHeight)}`,
+          `screenH=${screenH}`,
+          `useH=${Math.round(useH)}`,
           `SAT=${Math.round(sat)} SAB=${Math.round(sab)}`,
-          `vvScale=${vv ? vv.scale.toFixed(2) : "x"}`,
         ].join(" "),
       );
     }
