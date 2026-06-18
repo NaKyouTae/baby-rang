@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-// [임시 디버그] iPad 잘림 진단용. visualViewport 값을 화면에 표시한다.
-// 이게 화면에 보이면 = 최신 웹이 로드됨(WKWebView 캐시 아님).
+// [임시 디버그] iPad 잘림 진단용 눈금자.
+// 화면 좌측에 fixed 로 50px 간격 눈금을 그린다. 보이는 가장 큰 숫자 = 실제 보이는 높이.
 // 진단 끝나면 layout.tsx 에서 제거할 것.
 export default function DebugViewport() {
   const [info, setInfo] = useState("측정 중...");
@@ -11,64 +11,68 @@ export default function DebugViewport() {
   useEffect(() => {
     function update() {
       const vv = window.visualViewport;
-      // env(safe-area-inset-*) 실제 px 값 측정 (probe 엘리먼트로)
-      const probe = document.createElement("div");
-      probe.style.cssText =
-        "position:fixed;top:0;left:0;visibility:hidden;" +
-        "padding-top:env(safe-area-inset-top);" +
-        "padding-bottom:env(safe-area-inset-bottom);";
-      document.body.appendChild(probe);
-      const cs = getComputedStyle(probe);
-      const sat = parseFloat(cs.paddingTop) || 0;
-      const sab = parseFloat(cs.paddingBottom) || 0;
-      document.body.removeChild(probe);
-
-      const vvHeight = vv?.height ?? window.innerHeight;
-      const screenH = window.screen.height;
-      const useH = screenH && screenH < vvHeight ? screenH : vvHeight;
       setInfo(
-        [
-          `DBG v6`,
-          `innerH=${Math.round(window.innerHeight)}`,
-          `vvH=${Math.round(vvHeight)}`,
-          `screenH=${screenH}`,
-          `useH=${Math.round(useH)}`,
-          `SAT=${Math.round(sat)} SAB=${Math.round(sab)}`,
-        ].join(" "),
+        `innerH=${Math.round(window.innerHeight)} vvH=${
+          vv ? Math.round(vv.height) : "x"
+        } screenH=${window.screen.height} availH=${window.screen.availHeight}`,
       );
     }
     update();
     window.visualViewport?.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("scroll", update);
     window.addEventListener("resize", update);
     return () => {
       window.visualViewport?.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
   }, []);
 
+  // 0~900px, 50px 간격 눈금
+  const ticks = Array.from({ length: 19 }, (_, i) => i * 50);
+
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 99999,
-        background: "rgba(220,0,0,0.95)",
-        color: "#fff",
-        fontSize: 13,
-        lineHeight: "18px",
-        padding: "10px 14px",
-        borderRadius: 8,
-        maxWidth: "90%",
-        fontFamily: "monospace",
-        textAlign: "center",
-        pointerEvents: "none",
-      }}
-    >
-      {info}
-    </div>
+    <>
+      {/* 값 표시 (중앙) */}
+      <div
+        style={{
+          position: "fixed",
+          top: "40%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 99999,
+          background: "rgba(220,0,0,0.95)",
+          color: "#fff",
+          fontSize: 12,
+          padding: "8px 12px",
+          borderRadius: 8,
+          fontFamily: "monospace",
+          textAlign: "center",
+          pointerEvents: "none",
+          maxWidth: "92%",
+        }}
+      >
+        DBG-RULER {info}
+      </div>
+      {/* 눈금자: fixed, 뷰포트 기준. 보이는 가장 큰 숫자가 실제 보이는 높이 */}
+      {ticks.map((y) => (
+        <div
+          key={y}
+          style={{
+            position: "fixed",
+            top: `${y}px`,
+            left: 0,
+            zIndex: 99998,
+            background: y % 100 === 0 ? "rgba(0,120,255,0.9)" : "rgba(0,120,255,0.5)",
+            color: "#fff",
+            fontSize: 10,
+            lineHeight: "12px",
+            padding: "0 4px",
+            fontFamily: "monospace",
+            pointerEvents: "none",
+          }}
+        >
+          {y}
+        </div>
+      ))}
+    </>
   );
 }
