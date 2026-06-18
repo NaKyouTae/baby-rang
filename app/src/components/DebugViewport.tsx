@@ -13,7 +13,7 @@ export default function DebugViewport() {
       const vv = window.visualViewport;
       setInfo(
         [
-          `DBG v3`,
+          `DBG v4`,
           `innerH=${Math.round(window.innerHeight)}`,
           `vvH=${vv ? Math.round(vv.height) : "x"}`,
           `vvT=${vv ? Math.round(vv.offsetTop) : "x"}`,
@@ -37,15 +37,17 @@ export default function DebugViewport() {
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
         zIndex: 99999,
-        background: "rgba(220,0,0,0.9)",
+        background: "rgba(220,0,0,0.95)",
         color: "#fff",
-        fontSize: 11,
-        lineHeight: "16px",
-        padding: "2px 6px",
+        fontSize: 13,
+        lineHeight: "18px",
+        padding: "10px 14px",
+        borderRadius: 8,
+        maxWidth: "90%",
         fontFamily: "monospace",
         textAlign: "center",
         pointerEvents: "none",
