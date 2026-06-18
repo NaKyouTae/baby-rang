@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Reorder, motion } from "framer-motion";
 import { ALL_MENU_IDS, DEFAULT_NAV_SLOTS, MENU_CATALOG, type MenuId } from "./menuCatalog";
@@ -59,6 +59,15 @@ export default function BottomNav({
 
   const dragStartedRef = useRef(false);
   const longPressTimer = useRef<number | null>(null);
+
+  // 광고 미노출(no-fill) 시 배너 높이를 0으로 접어 흰 여백 제거.
+  // --bottom-nav-space 도 같은 변수를 쓰므로 콘텐츠 하단 패딩까지 함께 줄어듦.
+  const handleAdFilled = useCallback((filled: boolean) => {
+    document.documentElement.style.setProperty(
+      "--bottom-ad-banner-height",
+      filled ? "50px" : "0px",
+    );
+  }, []);
 
   // If parent provided initialSlots (SSR), skip client fetch entirely.
   useEffect(() => {
@@ -238,9 +247,9 @@ export default function BottomNav({
         {showAdBanner && (
           <div
             className="w-full flex justify-center"
-            style={{ height: "var(--bottom-ad-banner-height)" }}
+            style={{ height: "var(--bottom-ad-banner-height)", overflow: "hidden" }}
           >
-            <KakaoAdBanner unit={BOTTOM_AD_UNIT} />
+            <KakaoAdBanner unit={BOTTOM_AD_UNIT} onFilledChange={handleAdFilled} />
           </div>
         )}
 

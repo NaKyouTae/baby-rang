@@ -60,7 +60,20 @@ export default function AccountDeletionPage() {
         </section>
 
         <section>
-          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>3. 삭제되는 데이터</h2>
+          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>3. 계정은 유지하고 데이터만 삭제하기</h2>
+          <p>
+            회원 탈퇴를 하지 않고도 앱에서 직접 데이터의 일부 또는 전체를 삭제할 수 있습니다.
+          </p>
+          <ul className="list-disc pl-5 mt-2 space-y-1">
+            <li>각 기록 화면(성장·수유·수면 등)에서 개별 기록을 선택해 삭제할 수 있습니다.</li>
+            <li>설정 &gt; 아이 정보 관리에서 등록한 아이 정보를 삭제할 수 있습니다.</li>
+            <li>특정 데이터의 일괄 삭제가 필요한 경우 spectrum.mesh@gmail.com으로 요청해 주세요.</li>
+          </ul>
+          <p className="mt-2">삭제된 데이터는 즉시 파기되며 복구할 수 없습니다.</p>
+        </section>
+
+        <section>
+          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>4. 삭제되는 데이터</h2>
           <p>탈퇴 시 다음 데이터가 지체 없이 파기됩니다.</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>계정 정보: 이메일 주소, 소셜 로그인 식별자, 닉네임, 프로필 이미지</li>
@@ -71,7 +84,7 @@ export default function AccountDeletionPage() {
         </section>
 
         <section>
-          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>4. 법령에 따라 보관되는 데이터 및 기간</h2>
+          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>5. 법령에 따라 보관되는 데이터 및 기간</h2>
           <p>
             관련 법령에 따라 아래 정보는 탈퇴 후에도 정해진 기간 동안 보관된 뒤 파기됩니다.
           </p>
