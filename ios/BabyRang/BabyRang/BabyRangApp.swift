@@ -19,10 +19,17 @@ struct BabyRangApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                // safe area 밖(상태바/홈 인디케이터 영역)은 흰색으로 채운다.
+                Color.white.ignoresSafeArea()
+
+                // WebView 는 safe area 에 맞춘다(.ignoresSafeArea 제거).
+                // .ignoresSafeArea() 가 있으면 WebView 가 시스템 UI 영역까지 늘어나
+                // 뷰포트(innerHeight)가 실제 보이는 화면보다 커지고, 그 결과
+                // fixed bottom:0 하단 네비가 화면 아래로 밀려나 안 보였다.
+                // safe area 에 맞추면 WebView 뷰포트 = 실제 보이는 영역이 되어 네비가 보인다.
                 WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!) {
                     isWebViewLoaded = true
                 }
-                .ignoresSafeArea()
 
                 SplashView()
                     .ignoresSafeArea()
