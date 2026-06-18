@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
+import DebugViewport from "@/components/DebugViewport";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 
@@ -266,6 +267,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
+        <DebugViewport />
         <LoginPromptProvider>
           {/* 앱 셸: 실제 "보이는 영역(visualViewport)"에 정확히 맞춰 배치한다.
               - top/left/width/height 를 visualViewport 값으로 고정 → iPad 호환 모드에서
