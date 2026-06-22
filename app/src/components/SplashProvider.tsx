@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePlatform } from "@/hooks/usePlatform";
 
 // 네이티브 splash 배경색과 동일하게 맞춰 두 화면이 자연스럽게 이어지도록 한다.
@@ -45,36 +46,51 @@ export default function SplashProvider({
     };
   }, [show]);
 
+  // 앱 셸(layout.tsx)은 translate(-50%,-50%) transform 을 가지므로 그 안에 fixed 로 두면
+  // splash 의 inset:0 이 셸 박스(max-w 430px · --app-h)에 갇혀, 화면 전체를 덮는
+  // 네이티브 splash 가 사라지는 순간 작은 박스로 "축소"되는 것처럼 보였다.
+  // 포털로 document.body 에 직접 렌더해 transform 컨테이닝 블록에서 벗어나면
+  // inset:0 이 실제 WebView 뷰포트 전체를 덮어 네이티브 splash 와 영역이 일치한다.
+  // show 는 platform 판정(클라이언트 useEffect) 이후에만 true 가 되므로
+  // 이 시점엔 document 가 항상 존재한다. (SSR/web 에선 show=false → 포털 미생성)
+  const overlay =
+    show && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            aria-hidden
+            style={{
+              position: "fixed",
+              inset: 0,
+              width: "100vw",
+              height: "100dvh",
+              zIndex: 2000,
+              backgroundColor: SPLASH_BG,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              touchAction: "none",
+              overscrollBehavior: "none",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/splash.png"
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <>
-      {show && (
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 200,
-            backgroundColor: SPLASH_BG,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            touchAction: "none",
-            overscrollBehavior: "none",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/splash.png"
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        </div>
-      )}
+      {overlay}
       {children}
     </>
   );
