@@ -268,7 +268,10 @@ export default function GrowthPatternClient() {
 
   useEffect(() => {
     if (!selectedChild) return;
-    const from = shiftDate(selectedDate, -6);
+    // 좌측(가장 오래된) 컬럼의 새벽 시간대에 자정을 넘긴 전날 기록이 표시되도록
+    // 표시 범위(-6)보다 하루 더 앞당겨 페치한다. 추가된 하루는 컬럼으로 노출되지 않고
+    // forward spill 을 통해 dates[0] 새벽 영역만 채운다.
+    const from = shiftDate(selectedDate, -7);
     const to = selectedDate;
     setLoading(true);
     let cancelled = false;
