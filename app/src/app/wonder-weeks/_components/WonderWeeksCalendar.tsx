@@ -183,7 +183,7 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
   return (
     <div>
       {/* 모든 달 연속 표시 */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {months.map(({ year, month, leapMap, activeLeaps }) => {
           const daysInMonth = getDaysInMonth(year, month);
           const firstDay = getFirstDayOfMonth(year, month);

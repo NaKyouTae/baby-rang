@@ -25,7 +25,7 @@ export default function AccountDeletionPage() {
         </h1>
       </header>
 
-      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-6" style={{ color: palette.gray500 }}>
+      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
         <section>
           <p>
             본 페이지는 모바일 애플리케이션 &quot;아기랑&quot;(개발자: 스펙트럼)의 계정 및 데이터 삭제

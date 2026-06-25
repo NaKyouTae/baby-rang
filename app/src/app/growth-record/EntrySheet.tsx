@@ -729,11 +729,15 @@ export default function EntrySheet({
                   onClick={() => setShowDurationPicker(true)}
                   className="flex-1 min-w-0 px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
                 >
-                  {durationMinutes() > 0 ? (
-                    <span className="text-app-black">{durationMinutes()}</span>
-                  ) : (
-                    <span className="text-gray-400">0</span>
-                  )}
+                  {(() => {
+                    const mins = durationMinutes();
+                    return (
+                      <span className={mins > 0 ? 'text-app-black' : 'text-gray-400'}>
+                        {mins}
+                        <span className="ml-0.5 text-gray-400">분</span>
+                      </span>
+                    );
+                  })()}
                 </button>
                 <button
                   type="button"

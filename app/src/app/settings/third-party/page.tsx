@@ -12,7 +12,7 @@ export default function SettingsThirdPartyPage() {
       <PageHeader title="개인정보 제3자 제공 동의" variant="back" />
 
       <article
-        className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-6"
+        className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4"
         style={{ color: palette.gray500 }}
       >
         <p

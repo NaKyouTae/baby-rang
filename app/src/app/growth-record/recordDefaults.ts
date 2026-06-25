@@ -1,6 +1,7 @@
 const BABYFOOD_UNIT_KEY = 'baby-rang:settings:babyfood-default-unit';
 const DIAPER_KIND_KEY = 'baby-rang:settings:diaper-default-kind';
 const SLEEP_NIGHT_RANGE_KEY = 'baby-rang:settings:sleep-night-range';
+const QUICK_TYPES_KEY = 'baby-rang:settings:quick-types';
 
 export type BabyFoodUnit = 'ml' | 'g';
 export type DiaperKind = 'PEE' | 'POO' | 'BOTH';
@@ -74,6 +75,25 @@ export function getSleepNightRange(): SleepNightRange {
 
 export function setSleepNightRange(range: SleepNightRange) {
   safeWrite(SLEEP_NIGHT_RANGE_KEY, JSON.stringify(range));
+}
+
+/** 기록 빠른 버튼(quick types) 마지막 저장값 캐시 — 메뉴 진입 시 깜빡임 방지 */
+export function getCachedQuickTypes(): string[] | null {
+  const raw = safeRead(QUICK_TYPES_KEY);
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr) && arr.every((x) => typeof x === 'string')) {
+      return arr as string[];
+    }
+  } catch {
+    /* noop */
+  }
+  return null;
+}
+
+export function setCachedQuickTypes(types: string[]) {
+  safeWrite(QUICK_TYPES_KEY, JSON.stringify(types));
 }
 
 export function hhmmToMinutes(hhmm: string): number {

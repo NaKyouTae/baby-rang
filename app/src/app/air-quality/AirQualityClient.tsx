@@ -214,7 +214,7 @@ export default function AirQualityClient() {
         )}
 
         {weather && air && !loading && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {/* 실시간 대기질 */}
             <section>
               <div className="flex items-center justify-between mb-2.5 gap-3">
@@ -248,7 +248,7 @@ export default function AirQualityClient() {
             </section>
 
             {/* 날씨 strip */}
-            <section className="rounded-lg border border-gray-200 bg-white p-4 mt-3 h-[68px]">
+            <section className="rounded-lg border border-gray-200 bg-white p-4 h-[68px]">
               <div className="flex items-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -287,7 +287,7 @@ export default function AirQualityClient() {
 
             {/* 시간별 예보 */}
             {hourly.length > 0 && (
-              <section className="mt-3">
+              <section>
                 <h2 className="text-[14px] font-semibold text-black mb-2.5">시간별 예보</h2>
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
                   <div className="flex">
@@ -361,7 +361,7 @@ export default function AirQualityClient() {
 
             {/* 일별 예보 */}
             {daily.length > 0 && (
-              <section className="mt-3">
+              <section>
                 <h2 className="text-[14px] font-semibold text-black mb-2.5">일별 예보</h2>
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
                   <div className="flex">
@@ -447,7 +447,7 @@ export default function AirQualityClient() {
             )}
 
             {/* 대기질 기준 (WHO) */}
-            <section className="mt-3">
+            <section>
               <div className="flex items-center justify-between mb-2.5 gap-3">
                 <h2 className="text-[14px] font-semibold text-black shrink-0">대기질 기준</h2>
               </div>

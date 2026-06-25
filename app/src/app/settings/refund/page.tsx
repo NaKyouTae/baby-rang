@@ -32,7 +32,7 @@ export default function SettingsRefundPage() {
         </h1>
       </header>
 
-      <article className="py-6 text-[14px] leading-relaxed text-gray-700 space-y-6">
+      <article className="py-6 text-[14px] leading-relaxed text-gray-700 space-y-4">
         <p className="text-xs text-gray-400">시행일자: 2026년 4월 8일</p>
 
         <section>

@@ -496,7 +496,7 @@ export default function SettingsPage() {
 
         {/* 로그아웃 / 회원탈퇴 */}
         {isAuthLoaded && isAuthenticated && (
-          <div className="mt-12 flex items-center justify-center gap-[24px] pb-6">
+          <div className="mt-12 flex items-center justify-center gap-[16px] pb-6">
             <button
               type="button"
               onClick={async () => {

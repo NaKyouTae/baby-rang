@@ -264,7 +264,7 @@ export default function OnboardingClient() {
         <h1 className="text-[16px] font-medium text-black">회원가입</h1>
       </header>
 
-      <main className="flex-1 px-6 pt-2 space-y-[24px]">
+      <main className="flex-1 px-6 pt-2 space-y-[16px]">
         {/* 이메일 */}
         <section>
           <p className="text-xs font-medium text-gray-500 mb-[8px]">이메일</p>

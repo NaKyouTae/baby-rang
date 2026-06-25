@@ -10,25 +10,15 @@ interface Props {
   onSelect: (child: Child) => void;
 }
 
-function Avatar({ child, size = 40, iconSize = 24 }: { child: Child; size?: number; iconSize?: number }) {
-  const style = { width: size, height: size };
-  if (child.profileImage) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={child.profileImage}
-        alt={child.name}
-        className="rounded-full object-cover bg-white border border-[#3078C9] shrink-0"
-        style={style}
-      />
-    );
-  }
+function ChildInfo({ child }: { child: Child }) {
+  const { days, months, extraDays } = calcChildAge(child.birthDate);
   return (
-    <div
-      className="rounded-full bg-white border border-[#3078C9] shrink-0 flex items-center justify-center leading-[1]"
-      style={style}
-    >
-      <img src={child.gender === 'female' ? '/icon-girl.svg' : '/icon-boy.svg'} alt={child.gender === 'female' ? '여아' : '남아'} width={iconSize} height={iconSize} />
+    <div className="flex items-center justify-center gap-1.5">
+      <span className="text-[16px] font-medium text-black truncate">{child.name}</span>
+      <span className="text-[12px] font-medium text-white bg-[#3078C9] px-1 py-0.5 rounded-[2px] leading-none">
+        D+{days}
+      </span>
+      <span className="text-[12px] font-normal text-black">{months}개월 {extraDays}일</span>
     </div>
   );
 }
@@ -50,29 +40,18 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
 
   if (!selected) return null;
 
-  const { days, months, extraDays } = calcChildAge(selected.birthDate);
-
   return (
     <div className="relative" ref={ref}>
-      {/* 선택된 아기 프로필 카드 — 풀 width */}
+      {/* 선택된 아기 프로필 카드 — 풀 width, 중앙 정렬 */}
       <button
         type="button"
         onClick={() => children.length > 1 && setOpen((v) => !v)}
-        className="w-full flex items-center gap-[10px] bg-gray-100 rounded-lg px-4 py-3 border border-gray-200 active:bg-gray-200 transition-colors"
+        className="w-full relative flex items-center justify-center h-10 bg-gray-100 rounded-lg px-10 border border-gray-200 active:bg-gray-200 transition-colors"
       >
-        <Avatar child={selected} size={40} iconSize={24} />
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-[16px] font-medium text-black truncate">{selected.name}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <span className="text-[12px] font-medium text-white bg-[#3078C9] px-1 py-0.5 rounded-[2px] leading-none">
-              D+{days}
-            </span>
-            <span className="text-[12px] font-normal text-black">{months}개월 {extraDays}일</span>
-          </div>
-        </div>
+        <ChildInfo child={selected} />
         {children.length > 1 && (
           <svg
-            className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+            className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -82,12 +61,11 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
         )}
       </button>
 
-      {/* 드롭다운 */}
+      {/* 드롭다운 — 선택 카드와 8px 간격 */}
       {open && (
         <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-100 z-50 overflow-hidden">
           {children.map((c) => {
             const isSelected = c.id === selected.id;
-            const age = calcChildAge(c.birthDate);
             return (
               <button
                 key={c.id}
@@ -96,20 +74,11 @@ export default function ChildSelector({ children, selected, onSelect }: Props) {
                   onSelect(c);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-[10px] px-4 py-3 transition-colors ${
+                className={`w-full flex items-center justify-center h-10 px-10 transition-colors ${
                   isSelected ? 'bg-gray-200' : 'bg-white active:bg-gray-100'
                 }`}
               >
-                <Avatar child={c} size={40} iconSize={24} />
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-[16px] font-medium text-black truncate">{c.name}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[12px] font-medium text-white bg-[#3078C9] px-1 py-0.5 rounded-[2px] leading-none">
-                      D+{age.days}
-                    </span>
-                    <span className="text-[12px] font-normal text-black">{age.months}개월 {age.extraDays}일</span>
-                  </div>
-                </div>
+                <ChildInfo child={c} />
               </button>
             );
           })}

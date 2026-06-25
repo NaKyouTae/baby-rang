@@ -25,7 +25,7 @@ export default function SupportPage() {
         </h1>
       </header>
 
-      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-6" style={{ color: palette.gray500 }}>
+      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
         <section>
           <p>
             아기랑을 이용해 주셔서 감사합니다. 서비스 이용 중 궁금한 점이나 불편한 점이 있으시면

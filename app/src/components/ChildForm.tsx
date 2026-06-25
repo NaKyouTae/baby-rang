@@ -53,7 +53,7 @@ export default function ChildForm({
 
   return (
     <>
-      <main className="flex-1 px-6 pt-4 space-y-[24px]">
+      <main className="flex-1 px-6 pt-4 space-y-[16px]">
         {/* 이름(닉네임) */}
         <section>
           <p className="text-xs font-medium text-gray-500 mb-[8px]">

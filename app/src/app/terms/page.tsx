@@ -25,7 +25,7 @@ export default function TermsPage() {
         </h1>
       </header>
 
-      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-6" style={{ color: palette.gray500 }}>
+      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
         <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 4월 8일</p>
 
         <section>

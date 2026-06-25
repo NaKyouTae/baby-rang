@@ -62,7 +62,7 @@ export default function HomePage() {
       </header>
 
       <main
-        className="flex-1 px-6"
+        className="flex-1 px-6 flex flex-col gap-4"
         style={{
           paddingTop: 24,
           paddingBottom: 24,
@@ -70,7 +70,7 @@ export default function HomePage() {
       >
         <HomeHeroCard />
 
-        <div className="mt-6">
+        <div className="flex flex-col gap-4">
           {/* 퀵 메뉴 */}
           <section>
             <div className="flex justify-between">
@@ -95,15 +95,15 @@ export default function HomePage() {
             </div>
           </section>
 
-          <div className="mt-6">
+          <div>
             <HomeWeatherStrip />
           </div>
 
-          <div className="mt-6">
+          <div>
             <BannerCarousel />
           </div>
 
-          <div className="mt-6">
+          <div>
             <NearbyNursingRoomsStrip />
           </div>
         </div>

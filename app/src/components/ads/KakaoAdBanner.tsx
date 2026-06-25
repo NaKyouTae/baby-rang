@@ -22,6 +22,15 @@ const DEFAULT_WIDTH = 320;
 // 카카오 광고 응답이 이 시간 내에 안 오면 no-fill 로 간주하고 영역을 접는다.
 const FILL_TIMEOUT_MS = 4000;
 
+const KAKAO_SDK_SRC = "//t1.kakaocdn.net/kas/static/ba.min.js";
+
+// 진단용 로그. 디바이스/원격 콘솔에서 "[KakaoAd]" 로 필터링해 광고 누락 원인을 추적한다.
+// 운영 안정화 후 제거 예정.
+const adLog = (unit: string, msg: string, extra?: Record<string, unknown>) => {
+  const t = typeof performance !== "undefined" ? Math.round(performance.now()) : 0;
+  console.log(`[KakaoAd ${unit}] +${t}ms ${msg}`, extra ?? "");
+};
+
 type WindowWithCallbacks = Window & Record<string, (() => void) | undefined>;
 
 /**
@@ -48,7 +57,9 @@ export default function KakaoAdBanner({
     const win = window as unknown as WindowWithCallbacks;
     let filled = false;
     const report = (next: boolean) => {
+      if (filled === next) return;
       filled = next;
+      adLog(unit, next ? "✅ FILLED (iframe 주입됨)" : "❌ NO-FILL → 영역 접힘");
       onFilledChange?.(next);
     };
 
@@ -57,9 +68,23 @@ export default function KakaoAdBanner({
       Math.min(window.innerWidth || DEFAULT_WIDTH, APP_MAX_WIDTH);
     ins.setAttribute("data-ad-width", String(w));
 
+    // SPA 재마운트 진단: ba.min.js 가 이미 로드돼 있으면 새 <ins> 를 다시 스캔하지
+    // 않아 광고가 안 채워지는 흔한 케이스. 스크립트 존재 여부/네트워크 상태를 함께 본다.
+    const sdkAlready = !!document.querySelector(`script[src="${KAKAO_SDK_SRC}"]`);
+    adLog(unit, "effect 시작", {
+      width: w,
+      online: typeof navigator !== "undefined" ? navigator.onLine : "n/a",
+      sdkAlreadyLoaded: sdkAlready,
+      visibility: typeof document !== "undefined" ? document.visibilityState : "n/a",
+      insConnected: ins.isConnected,
+    });
+
     // no-fill 콜백 등록 (카카오가 광고를 못 채우면 호출).
     const failName = `__kakaoAdFail_${unit.replace(/[^a-zA-Z0-9]/g, "")}`;
-    win[failName] = () => report(false);
+    win[failName] = () => {
+      adLog(unit, "data-ad-onfail 콜백 호출됨 (카카오가 no-fill 응답)");
+      report(false);
+    };
     ins.setAttribute("data-ad-onfail", failName);
 
     // 채움 감지: ins 안에 iframe 이 주입되면 광고가 들어온 것.
@@ -73,15 +98,26 @@ export default function KakaoAdBanner({
 
     // 타임아웃 폴백: 아직 안 채워졌으면 접는다.
     const timer = window.setTimeout(() => {
-      if (!filled) report(false);
+      if (!filled) {
+        adLog(unit, `⏱️ ${FILL_TIMEOUT_MS}ms 타임아웃 — 응답 없음(no-fail/no-fill)`, {
+          hasIframe: !!ins.querySelector("iframe"),
+          insHTMLLength: ins.innerHTML.length,
+          insDisplay: ins.style.display,
+        });
+        report(false);
+      }
     }, FILL_TIMEOUT_MS);
 
     const script = document.createElement("script");
     script.async = true;
-    script.src = "//t1.kakaocdn.net/kas/static/ba.min.js";
+    script.src = KAKAO_SDK_SRC;
+    script.onload = () => adLog(unit, "SDK onload (ba.min.js 로드 완료)");
+    script.onerror = () =>
+      adLog(unit, "🚫 SDK onerror — ba.min.js 로드 실패(네트워크/차단)");
     document.body.appendChild(script);
 
     return () => {
+      adLog(unit, "cleanup (언마운트/의존성 변경)", { filled });
       observer.disconnect();
       window.clearTimeout(timer);
       delete win[failName];

@@ -183,7 +183,7 @@ export default function SleepGoldenTimeClient() {
     <>
       <PageHeader title="수면추천" variant="back" />
 
-      <main className="flex flex-col gap-[24px] px-5 pt-1 pb-[calc(var(--bottom-nav-space)+24px)]">
+      <main className="flex flex-col gap-[16px] px-5 pt-1 pb-[calc(var(--bottom-nav-space)+24px)]">
         {/* 아기 정보 카드 — 자동 선택, 다중 등록 시 드롭다운으로 전환 */}
         {effectiveChild ? (
           <ChildSelector

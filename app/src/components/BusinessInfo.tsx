@@ -8,7 +8,7 @@ export default function BusinessInfo() {
         paddingTop: 16,
         paddingLeft: 24,
         paddingRight: 24,
-        paddingBottom: 16,
+        paddingBottom: 32,
       }}
     >
       <p

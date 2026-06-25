@@ -16,6 +16,7 @@ import {
 } from './types';
 import EntrySheet from './EntrySheet';
 import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
+import { getCachedQuickTypes, setCachedQuickTypes } from './recordDefaults';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -232,20 +233,25 @@ function formatDuration(mins: number): string {
   return `${h}시간 ${m}분`;
 }
 
-function computeDayStats(records: GrowthRecord[], date: string) {
-  let sleepMin = 0;
+function computeDayStats(records: GrowthRecord[]) {
+  // 해(낮잠): 수면의 낮잠(NAP) 타입 시작-종료 시간 합산
+  // 달(밤잠): 수면의 밤잠(NIGHT) 타입 시작~(종료 시간 또는 현재 시간)까지 경과 시간
+  let napMin = 0;
+  let nightMin = 0;
   let formulaMl = 0;
   let pumpedMl = 0;
   let otherFeedingMl = 0;
   let breastMin = 0;
+  const now = Date.now();
   for (const r of records) {
-    if (r.type === 'SLEEP' && r.endAt) {
-      sleepMin += Math.max(
-        0,
-        Math.round(
-          (new Date(r.endAt).getTime() - new Date(r.startAt).getTime()) / 60000,
-        ),
-      );
+    if (r.type === 'SLEEP') {
+      const kind = (r.data as Record<string, unknown> | null)?.kind;
+      const start = new Date(r.startAt).getTime();
+      // 종료 시간이 있으면 종료까지만, 없으면(진행 중) 현재 시간까지
+      const end = r.endAt ? new Date(r.endAt).getTime() : now;
+      const mins = Math.max(0, Math.round((end - start) / 60000));
+      if (kind === 'NIGHT') nightMin += mins;
+      else napMin += mins;
     }
     if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') {
       const ml = Number((r.data as Record<string, unknown>)?.amountMl);
@@ -264,17 +270,8 @@ function computeDayStats(records: GrowthRecord[], date: string) {
       breastMin += left + right + Math.round((leftS + rightS) / 60);
     }
   }
-  const today = todayString();
-  let dayLengthMin: number;
-  if (date === today) {
-    const now = new Date();
-    dayLengthMin = now.getHours() * 60 + now.getMinutes();
-  } else {
-    dayLengthMin = 24 * 60;
-  }
-  const awakeMin = Math.max(0, dayLengthMin - sleepMin);
   const feedingMl = formulaMl + pumpedMl + otherFeedingMl;
-  return { sleepMin, awakeMin, feedingMl, formulaMl, pumpedMl, breastMin };
+  return { napMin, nightMin, feedingMl, formulaMl, pumpedMl, breastMin };
 }
 
 function findLatestByTypes(
@@ -312,7 +309,12 @@ export default function GrowthRecordPage() {
   const [cursor, setCursor] = useState<string>(todayString());
   const [hasMore, setHasMore] = useState(true);
   const [earliestDate, setEarliestDate] = useState<string | null>(null);
-  const [quickTypes, setQuickTypes] = useState<GrowthType[]>(DEFAULT_QUICK_TYPES);
+  const [quickTypes, setQuickTypes] = useState<GrowthType[]>(() => {
+    const cached = getCachedQuickTypes()?.filter(
+      (t) => (MENU_TYPES as string[]).includes(t),
+    ) as GrowthType[] | undefined;
+    return cached && cached.length > 0 ? cached : DEFAULT_QUICK_TYPES;
+  });
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
@@ -423,7 +425,9 @@ export default function GrowthRecordPage() {
           const saved: GrowthType[] = (data.quickButtons ?? []).filter(
             (t: GrowthType) => (MENU_TYPES as string[]).includes(t),
           );
-          setQuickTypes(saved.length > 0 ? saved : DEFAULT_QUICK_TYPES);
+          const nextQuick = saved.length > 0 ? saved : DEFAULT_QUICK_TYPES;
+          setQuickTypes(nextQuick);
+          setCachedQuickTypes(nextQuick);
           const earliest = data.earliestDate ?? null;
           setEarliestDate(earliest);
           const allRecords: GrowthRecord[] = data.records ?? [];
@@ -554,6 +558,7 @@ export default function GrowthRecordPage() {
 
   const persistQuick = useCallback(async (next: GrowthType[]) => {
     setQuickTypes(next);
+    setCachedQuickTypes(next);
     try {
       await fetch('/api/growth-quick-buttons', {
         method: 'PUT',
@@ -623,13 +628,19 @@ export default function GrowthRecordPage() {
 
   return (
     <div className="flex flex-col bg-white px-6">
-      {/* 상단 헤더: PageHeader + 자식 선택 + 카테고리 + 마지막 기록 카드 */}
+      {/* 상단 고정 바 */}
       <div
         ref={titleBarRef}
         className="sticky top-0 z-30 bg-white -mx-6"
       >
         <PageHeader title="기록" variant="back" />
-        <div className="px-6 pb-3 pt-6">
+      </div>
+
+      {/* 기록 메뉴 전체: 프로필 · 카테고리 · 지표 · 기록 리스트 (하나의 div, gap 16px) */}
+      <main
+        className="flex-1 flex flex-col gap-4 pt-2"
+        style={{ paddingBottom: "186px" }}
+      >
         {noChild ? (
           <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
         ) : (
@@ -641,7 +652,7 @@ export default function GrowthRecordPage() {
         )}
 
         {/* 카테고리 가로 스크롤 */}
-        <div data-quick-bar-root className="-mx-6 mt-3">
+        <div data-quick-bar-root className="-mx-6">
           <div
             className="overflow-x-auto no-scrollbar pl-6 pr-6"
             style={{
@@ -745,23 +756,17 @@ export default function GrowthRecordPage() {
             </div>
           );
           return (
-            <div className="flex items-stretch gap-[10px] mt-[10px]">
+            <div className="flex items-stretch gap-[10px]">
               <Item label="마지막 수유" rec={lastFeed} />
               <Item label="마지막 수면" rec={lastSleep} />
               <Item label="마지막 기저귀" rec={lastDiaper} />
             </div>
           );
         })()}
-        </div>
-      </div>
 
-      {/* 타임라인 - 날짜별 세로 나열 + 무한 스크롤 */}
-      <main
-        className="flex-1"
-        style={{ paddingBottom: "186px" }}
-      >
+        {/* 기록 리스트 (날짜 구분 + 통계 유지) */}
         {noChild ? (
-          <div className="mt-[24px] rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
+          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -785,7 +790,7 @@ export default function GrowthRecordPage() {
         ) : initialLoading && sortedDays.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 && !hasMore ? (
-          <div className="mt-[24px] rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
+          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -810,9 +815,9 @@ export default function GrowthRecordPage() {
             {loadingMore ? '이전 기록을 불러오는 중...' : '이전 기록을 찾는 중...'}
           </div>
         ) : (
-          <div className="mt-[24px] rounded-[8px] border border-gray-200 bg-white">
+          <div className="rounded-[8px] border border-gray-200 bg-white">
             {sortedDays.map((group) => {
-              const stats = computeDayStats(group.records, group.date);
+              const stats = computeDayStats(group.records);
               const isToday = group.date === today;
               const dDay = selectedChild?.birthDate
                 ? dayOfLife(selectedChild.birthDate, group.date)
@@ -843,12 +848,12 @@ export default function GrowthRecordPage() {
                       <span className="flex items-center gap-[2px]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/icon-stat-awake.svg" alt="" width={16} height={16} aria-hidden="true" />
-                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.awakeMin)}</span>
+                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.napMin)}</span>
                       </span>
                       <span className="flex items-center gap-[2px]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
-                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.sleepMin)}</span>
+                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.nightMin)}</span>
                       </span>
                       {stats.feedingMl > 0 || stats.breastMin > 0 ? (
                         <span className="flex items-center gap-[2px]">

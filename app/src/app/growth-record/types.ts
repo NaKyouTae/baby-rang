@@ -350,17 +350,21 @@ export function summarizeRecord(r: GrowthRecord): string {
       );
       break;
   }
-  if (cfg.hasEnd && r.endAt) {
-    const mins = Math.round(
-      (new Date(r.endAt).getTime() - new Date(r.startAt).getTime()) / 60000,
-    );
-    if (mins > 0) {
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      if (h === 0) parts.push(`${m}분`);
-      else if (m === 0) parts.push(`${h}시간`);
-      else parts.push(`${h}시간 ${m}분`);
-    }
+  if (cfg.hasEnd) {
+    // 최초 입력 시 종료 시간이 없을 수 있음 → 경과 시간 0분으로 표시
+    const mins = r.endAt
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(r.endAt).getTime() - new Date(r.startAt).getTime()) / 60000,
+          ),
+        )
+      : 0;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) parts.push(`${m}분`);
+    else if (m === 0) parts.push(`${h}시간`);
+    else parts.push(`${h}시간 ${m}분`);
   }
   return parts.join(' · ');
 }

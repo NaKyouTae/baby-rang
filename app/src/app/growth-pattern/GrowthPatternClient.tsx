@@ -40,6 +40,17 @@ const TYPE_CHART_COLOR: Record<GrowthType, string> = {
 };
 
 const STORAGE_KEY = 'growth-pattern:selectedTypes';
+const VIEW_MODE_KEY = 'growth-pattern:viewMode';
+
+// 마지막으로 본 일/주 탭을 동기적으로 읽어 첫 렌더부터 반영(깜박임 방지)
+function readStoredViewMode(): 'day' | 'week' {
+  if (typeof window === 'undefined') return 'day';
+  try {
+    const raw = localStorage.getItem(VIEW_MODE_KEY);
+    if (raw === 'day' || raw === 'week') return raw;
+  } catch {}
+  return 'day';
+}
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -215,7 +226,7 @@ export default function GrowthPatternClient() {
   const { children, isLoaded } = useChildren();
   const { openLoginPrompt } = useLoginPrompt();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [viewMode, setViewMode] = useState<'day' | 'week'>(readStoredViewMode);
   const todayStr = toDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [days, setDays] = useState<Record<string, GrowthRecord[]>>({});
@@ -265,6 +276,13 @@ export default function GrowthPatternClient() {
       );
     } catch {}
   }, [selectedTypes, typesLoaded]);
+
+  // 마지막으로 선택한 일/주 탭을 저장 → 다음 진입 시 첫 탭으로 복원
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, viewMode);
+    } catch {}
+  }, [viewMode]);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -393,7 +411,7 @@ export default function GrowthPatternClient() {
   return (
     <div className="flex flex-col h-[100dvh] bg-white pb-[calc(var(--bottom-nav-space)+24px)] overflow-hidden">
       <PageHeader title="패턴" variant="back" />
-      <div className="px-6 flex flex-col flex-1 min-h-0">
+      <div className="px-6 flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
         {noChild ? (
           <NoChildCard loginMessage="로그인하고 우리 아기의 하루 리듬을 확인하세요." />
         ) : (
@@ -405,11 +423,11 @@ export default function GrowthPatternClient() {
         )}
 
         {/* 일/주 토글 */}
-        <div className="mt-4 bg-gray-100 rounded-lg p-1 flex">
+        <div className="bg-gray-100 rounded-lg p-1 flex">
           <button
             type="button"
             onClick={() => setViewMode('day')}
-            className={`flex-1 py-2 rounded-md text-[14px] font-medium text-black transition-colors ${
+            className={`flex-1 h-[30px] flex items-center justify-center rounded-md text-[14px] font-medium text-black transition-colors ${
               viewMode === 'day' ? 'bg-white' : ''
             }`}
             aria-pressed={viewMode === 'day'}
@@ -419,7 +437,7 @@ export default function GrowthPatternClient() {
           <button
             type="button"
             onClick={() => setViewMode('week')}
-            className={`flex-1 py-2 rounded-md text-[14px] font-medium text-black transition-colors ${
+            className={`flex-1 h-[30px] flex items-center justify-center rounded-md text-[14px] font-medium text-black transition-colors ${
               viewMode === 'week' ? 'bg-white' : ''
             }`}
             aria-pressed={viewMode === 'week'}
@@ -429,7 +447,7 @@ export default function GrowthPatternClient() {
         </div>
 
         {/* 카테고리 필터 — 사용자별 저장 순서 */}
-        <div className="mt-4 -mx-6">
+        <div className="-mx-6">
           <div className="flex gap-[10px] overflow-x-auto scrollbar-hide pb-1 px-6">
             {MENU_TYPES.map((t) => {
               const cfg = TYPE_CONFIG[t];
@@ -477,8 +495,8 @@ export default function GrowthPatternClient() {
           </div>
         </div>
 
-        {/* 차트 카드 */}
-        <div className="mt-4 mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col flex-1 min-h-0">
+        {/* 차트 카드 — 전체 영역 고정 높이 423px */}
+        <div className="mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[423px] shrink-0">
           <div className="py-3 px-4 shrink-0">
             <div className="flex items-center justify-center">
               <button
@@ -605,7 +623,7 @@ export default function GrowthPatternClient() {
             )}
           </div>
 
-          <div className="border-t border-gray-100 px-4 pt-3 pb-3 flex-1 min-h-0 flex">
+          <div className="border-t border-gray-100 px-4 pt-3 pb-3 flex-1 min-h-0 overflow-y-auto flex">
             {viewMode === 'day' ? (
               <DonutChart
                 records={dayRecords}
