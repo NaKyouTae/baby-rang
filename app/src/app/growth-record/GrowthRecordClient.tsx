@@ -923,15 +923,22 @@ export default function GrowthRecordPage() {
                             }}
                             className="w-full text-left flex items-start px-4 py-3 active:bg-gray-50"
                           >
-                            <span
-                              className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums shrink-0 mt-0.5"
-                              style={{
-                                height: 16,
-                                backgroundColor: catStyle.bg,
-                                color: catStyle.border,
-                              }}
-                            >
-                              {formatTime24(r.startAt)}
+                            <span className="flex flex-col items-center shrink-0 mt-0.5">
+                              <span
+                                className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums"
+                                style={{
+                                  height: 16,
+                                  backgroundColor: catStyle.bg,
+                                  color: catStyle.border,
+                                }}
+                              >
+                                {formatTime24(r.startAt)}
+                              </span>
+                              {r.endAt && (
+                                <span className="mt-[2px] text-[10px] font-normal text-gray-400 tabular-nums">
+                                  ~ {formatTime24(r.endAt)}
+                                </span>
+                              )}
                             </span>
                             <span
                               className="ml-[24px] mt-[7px] rounded-full shrink-0"

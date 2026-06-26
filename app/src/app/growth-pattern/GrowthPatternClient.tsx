@@ -170,32 +170,36 @@ function formatDuration(mins: number): string {
 }
 
 interface DayStats {
-  awakeMin: number;
-  sleepMin: number;
+  napMin: number;
+  nightMin: number;
   feedingMl: number;
   formulaMl: number;
   pumpedMl: number;
   breastMin: number;
 }
 
-function computeDayStats(records: GrowthRecord[], dateStr: string, todayStr: string): DayStats {
-  let sleepMin = 0;
+// 기록(growth-record) 메뉴의 일자별 요약과 동일한 집계 로직을 사용한다.
+// 해(낮잠 NAP) / 달(밤잠 NIGHT) / 젖병(수유) 값을 기록 메뉴와 일치시킨다.
+function computeDayStats(records: GrowthRecord[]): DayStats {
+  let napMin = 0;
+  let nightMin = 0;
   let formulaMl = 0;
   let pumpedMl = 0;
   let otherFeedingMl = 0;
   let breastMin = 0;
+  const now = Date.now();
   for (const r of records) {
-    const data = (r.data ?? {}) as Record<string, unknown>;
-    if (r.type === 'SLEEP' && r.endAt) {
-      sleepMin += Math.max(
-        0,
-        Math.round(
-          (new Date(r.endAt).getTime() - new Date(r.startAt).getTime()) / 60000,
-        ),
-      );
+    if (r.type === 'SLEEP') {
+      const kind = (r.data as Record<string, unknown> | null)?.kind;
+      const start = new Date(r.startAt).getTime();
+      // 종료 시간이 있으면 종료까지만, 없으면(진행 중) 현재 시간까지
+      const end = r.endAt ? new Date(r.endAt).getTime() : now;
+      const mins = Math.max(0, Math.round((end - start) / 60000));
+      if (kind === 'NIGHT') nightMin += mins;
+      else napMin += mins;
     }
     if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') {
-      const ml = Number(data.amountMl);
+      const ml = Number((r.data as Record<string, unknown>)?.amountMl);
       if (!Number.isNaN(ml)) {
         if (r.type === 'FORMULA') formulaMl += ml;
         else if (r.type === 'PUMPED_FEEDING') pumpedMl += ml;
@@ -203,6 +207,7 @@ function computeDayStats(records: GrowthRecord[], dateStr: string, todayStr: str
       }
     }
     if (r.type === 'BREASTFEEDING') {
+      const data = (r.data ?? {}) as Record<string, unknown>;
       const left = Number(data.leftMin) || 0;
       const leftS = Number(data.leftSec) || 0;
       const right = Number(data.rightMin) || 0;
@@ -210,16 +215,8 @@ function computeDayStats(records: GrowthRecord[], dateStr: string, todayStr: str
       breastMin += left + right + Math.round((leftS + rightS) / 60);
     }
   }
-  let dayLengthMin: number;
-  if (dateStr === todayStr) {
-    const now = new Date();
-    dayLengthMin = now.getHours() * 60 + now.getMinutes();
-  } else {
-    dayLengthMin = 24 * 60;
-  }
-  const awakeMin = Math.max(0, dayLengthMin - sleepMin);
   const feedingMl = formulaMl + pumpedMl + otherFeedingMl;
-  return { sleepMin, awakeMin, feedingMl, formulaMl, pumpedMl, breastMin };
+  return { napMin, nightMin, feedingMl, formulaMl, pumpedMl, breastMin };
 }
 
 export default function GrowthPatternClient() {
@@ -361,14 +358,18 @@ export default function GrowthPatternClient() {
   );
 
   // 요약은 합성 전 원본 데이터 기반 (실제 측정값 표시)
+  // days[selectedDate] 에는 자정을 넘겨 spill 된 전날 기록도 포함되므로,
+  // 기록 메뉴와 동일하게 "시작일이 선택일인" 기록만 집계한다.
   const stats = useMemo(
     () =>
       computeDayStats(
-        (days[selectedDate] ?? []).filter((r) => selectedTypes.has(r.type)),
-        selectedDate,
-        todayStr,
+        (days[selectedDate] ?? []).filter(
+          (r) =>
+            selectedTypes.has(r.type) &&
+            toDateStr(new Date(r.startAt)) === selectedDate,
+        ),
       ),
-    [days, selectedDate, selectedTypes, todayStr],
+    [days, selectedDate, selectedTypes],
   );
 
   const toggleType = (t: GrowthType) => {
@@ -561,7 +562,7 @@ export default function GrowthPatternClient() {
                     aria-hidden="true"
                   />
                   <span className="text-[10px] font-medium text-black">
-                    {formatDuration(stats.awakeMin)}
+                    {formatDuration(stats.napMin)}
                   </span>
                 </span>
                 <span className="flex items-center gap-[2px]">
@@ -574,7 +575,7 @@ export default function GrowthPatternClient() {
                     aria-hidden="true"
                   />
                   <span className="text-[10px] font-medium text-black">
-                    {formatDuration(stats.sleepMin)}
+                    {formatDuration(stats.nightMin)}
                   </span>
                 </span>
                 {(stats.feedingMl > 0 || stats.breastMin > 0) && (
