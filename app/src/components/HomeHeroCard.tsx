@@ -460,7 +460,7 @@ export default function HomeHeroCard() {
           <div className="h-[32px] flex items-center"><div className="w-56 h-5 rounded bg-gray-200 animate-pulse" /></div>
         </div>
         {/* 프로필 카드 스켈레톤 */}
-        <div className="pt-4">
+        <div>
           <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-200" />
@@ -495,7 +495,7 @@ export default function HomeHeroCard() {
             육아 동반자 아기랑과 함께해요.
           </div>
         </div>
-        <div className="pt-4">
+        <div>
           <EmptyProfileCard
             ctaLabel="로그인하고 시작하기"
             onClick={() => openLoginPrompt('로그인하고 우리 아기 맞춤 정보를 확인하세요.')}
@@ -512,7 +512,7 @@ export default function HomeHeroCard() {
     return (
       <>
         <WelcomeHeader nickname={user?.nickname} />
-        <div className="pt-4">
+        <div>
           <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-200" />
@@ -546,7 +546,7 @@ export default function HomeHeroCard() {
             첫 아기를 등록해 보세요.
           </div>
         </div>
-        <div className="pt-4">
+        <div>
           <EmptyProfileCard href="/settings/children" ctaLabel="아기 추가하기" />
         </div>
       </>
@@ -556,7 +556,7 @@ export default function HomeHeroCard() {
   return (
     <>
       <WelcomeHeader nickname={user?.nickname} />
-      <div className="pt-4">
+      <div>
         <ChildrenCarousel children={children} onActiveChange={setActiveChildIdx} />
       </div>
     </>

@@ -61,13 +61,7 @@ export default function HomePage() {
         <HomeHeaderActions />
       </header>
 
-      <main
-        className="flex-1 px-6 flex flex-col gap-4"
-        style={{
-          paddingTop: 24,
-          paddingBottom: 24,
-        }}
-      >
+      <main className="flex-1 px-6 pt-2 pb-4 flex flex-col gap-4">
         <HomeHeroCard />
 
         <div className="flex flex-col gap-4">
