@@ -94,7 +94,16 @@ function WonderWeeksContent() {
             </button>
             <button
               type="button"
-              onClick={() => topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              onClick={() => {
+                // 실제 스크롤은 앱 셸의 컨테이너에서 일어나므로 해당 컨테이너를 직접 맨 위로 이동.
+                // (WebView 에서 nested scroll 컨테이너에 scrollIntoView 는 동작이 불안정함)
+                const scroller = document.getElementById('app-scroll-container');
+                if (scroller) {
+                  scroller.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
               className="pointer-events-auto w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.1)] active:scale-95 transition-transform"
               aria-label="맨 위로 이동"
             >

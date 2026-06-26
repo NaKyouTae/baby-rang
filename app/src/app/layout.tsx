@@ -276,7 +276,7 @@ export default function RootLayout({
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[430px] overflow-hidden"
             style={{ height: 'var(--app-h, 100dvh)' }}
           >
-            <div className="relative w-full h-full overflow-y-auto overscroll-contain">
+            <div id="app-scroll-container" className="relative w-full h-full overflow-y-auto overscroll-contain">
               {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
               <div
                 aria-hidden

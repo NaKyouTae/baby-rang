@@ -63,6 +63,8 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '🍼',
     color: 'bg-amber-50 text-amber-600',
     hasEnd: true,
+    showDuration: true,
+    showEndPicker: true,
     fields: [{ key: 'amountMl', label: '먹은 양', kind: 'number', unit: 'ml' }],
   },
   BREASTFEEDING: {

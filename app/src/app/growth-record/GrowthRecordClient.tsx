@@ -934,11 +934,13 @@ export default function GrowthRecordPage() {
                               >
                                 {formatTime24(r.startAt)}
                               </span>
-                              {r.endAt && (
-                                <span className="mt-[2px] text-[10px] font-normal text-gray-400 tabular-nums">
-                                  ~ {formatTime24(r.endAt)}
-                                </span>
-                              )}
+                              {r.endAt &&
+                                new Date(r.endAt).getTime() !==
+                                  new Date(r.startAt).getTime() && (
+                                  <span className="mt-[2px] text-[10px] font-normal text-gray-400 tabular-nums">
+                                    ~ {formatTime24(r.endAt)}
+                                  </span>
+                                )}
                             </span>
                             <span
                               className="ml-[24px] mt-[7px] rounded-full shrink-0"
