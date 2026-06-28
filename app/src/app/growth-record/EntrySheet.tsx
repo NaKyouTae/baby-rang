@@ -245,6 +245,42 @@ export default function EntrySheet({
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  // 먹은 양(수유류 amountMl / 이유식 amount)을 입력받는 타입에서, 최근 먹은 양 5개를 빠른 입력 링크로 제공
+  const usesAmountField = useMemo(
+    () =>
+      type === 'PUMPING' ||
+      cfg.fields.some((f) => f.key === 'amountMl' || f.key === 'amount'),
+    [type, cfg.fields],
+  );
+  const [recentAmounts, setRecentAmounts] = useState<
+    { value: number; unit: string }[]
+  >([]);
+
+  useEffect(() => {
+    if (!usesAmountField || !childId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/growth-records/recent-amounts?childId=${encodeURIComponent(childId)}&type=${encodeURIComponent(type)}`,
+        );
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          amounts?: { value: number; unit: string }[];
+        };
+        if (!cancelled && Array.isArray(json.amounts)) {
+          setRecentAmounts(json.amounts);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [usesAmountField, childId, type]);
+
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showDurationPicker, setShowDurationPicker] = useState(false);
@@ -600,6 +636,35 @@ export default function EntrySheet({
     );
   }
 
+  // 입력칸 아래에 최근 먹은 양을 링크형 칩으로 노출 — 클릭 시 해당 값(+단위) 자동 입력
+  function renderRecentAmounts(fieldKey: string) {
+    if (recentAmounts.length === 0) return null;
+    // 표시는 값 내림차순(원본 배열은 최신순 유지 → 피커 기본값에 사용)
+    const sorted = [...recentAmounts].sort((a, b) => b.value - a.value);
+    const hasUnits = !!cfg.fields.find((f) => f.key === fieldKey)?.units?.length;
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        {sorted.map((a) => (
+          <button
+            key={`${a.value}-${a.unit}`}
+            type="button"
+            onClick={() => {
+              setData((prev) => ({ ...prev, [fieldKey]: String(a.value) }));
+              // 단위가 있는 필드(이유식)는 기록 당시 단위까지 함께 반영
+              if (hasUnits) {
+                setSelectedUnits((prev) => ({ ...prev, [fieldKey]: a.unit }));
+              }
+            }}
+            className="text-xs font-medium text-primary-500 underline underline-offset-2 active:opacity-60 tabular-nums"
+          >
+            {a.value}
+            {a.unit}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   function renderFieldHeader(f: FieldDef) {
     const showUnitInHeader = !f.units && !!f.unit;
     const mode = getSettingsModeFor(f.key);
@@ -895,6 +960,7 @@ export default function EntrySheet({
                   <div>
                     {renderFieldHeader(amountMlField)}
                     {renderNumberField(amountMlField)}
+                    {renderRecentAmounts('amountMl')}
                   </div>
                 )}
               </>
@@ -941,7 +1007,11 @@ export default function EntrySheet({
                     ))}
                   </div>
                 ) : f.kind === 'number' ? (
-                  renderNumberField(f)
+                  <>
+                    {renderNumberField(f)}
+                    {(f.key === 'amountMl' || f.key === 'amount') &&
+                      renderRecentAmounts(f.key)}
+                  </>
                 ) : (
                   <input
                     type="text"
@@ -1000,6 +1070,12 @@ export default function EntrySheet({
         let current: number = r.min;
         if (raw !== undefined && raw !== '') {
           current = Number(raw);
+        } else if (
+          (pickerField.key === 'amountMl' || pickerField.key === 'amount') &&
+          recentAmounts.length > 0
+        ) {
+          // 먹은 양: 입력값이 없으면 가장 최근 먹은 양을 기본 선택값으로 연다
+          current = recentAmounts[0].value;
         } else if (pickerField.placeholder) {
           const parsed = Number(pickerField.placeholder);
           if (!Number.isNaN(parsed) && parsed >= r.min && parsed <= r.max) {

@@ -103,6 +103,41 @@ export class GrowthRecordsService {
     });
   }
 
+  // 먹은 양 빠른 입력용 — 해당 타입의 최근 기록에서 중복 제거한 먹은 양 N개.
+  // 수유류(분유/유축수유/우유/물)는 amountMl(ml 고정), 이유식은 amount(+amountUnit: ml/g).
+  async recentAmounts(
+    userId: string,
+    childId: string,
+    type: string,
+    limit = 5,
+  ) {
+    await this.assertChildAccess(userId, childId);
+    const t = this.validateType(type);
+    // 날짜 구간이 아니라 "최근 기록"에서 가져온다(먹은 양이 오래 전 기록에만 있을 수 있음).
+    const records = await this.prisma.growthRecord.findMany({
+      where: { childId, type: t },
+      orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
+      select: { data: true },
+    });
+    const isBabyFood = t === 'BABY_FOOD';
+    const seen = new Set<string>();
+    const amounts: { value: number; unit: string }[] = [];
+    for (const r of records) {
+      const d = r.data as Record<string, unknown> | null;
+      const value = Number(isBabyFood ? d?.amount : d?.amountMl);
+      if (!Number.isFinite(value) || value <= 0) continue;
+      const unit =
+        isBabyFood && typeof d?.amountUnit === 'string' ? d.amountUnit : 'ml';
+      const key = `${value}|${unit}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      amounts.push({ value, unit });
+      if (amounts.length >= limit) break;
+    }
+    return { amounts };
+  }
+
   async findByDate(userId: string, childId: string, date: string) {
     await this.assertChildAccess(userId, childId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {

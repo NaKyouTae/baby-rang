@@ -108,19 +108,22 @@ export default function WheelPickerModal({
           {title}
         </div>
       )}
-      <div className="relative bg-white px-5 pt-4">
-        <div
-          className="pointer-events-none absolute left-5 right-5 top-1/2 -translate-y-1/2 bg-gray-100 rounded-[8px]"
-          style={{ height: ITEM_H }}
-        />
-        <div
-          ref={ref}
-          onScroll={onScroll}
-          className="overflow-y-auto scrollbar-hide relative"
-          style={{ height: HEIGHT, scrollBehavior: 'auto' }}
-        >
-          <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
-            {items.map((v, i) => {
+      <div className="bg-white px-5 pt-4">
+        {/* 인디케이터 기준 컨테이너 = 스크롤 영역과 동일 높이(패딩 제외)로 두어
+            선택 박스 중앙과 선택된 숫자 중앙이 정확히 일치하도록 한다. */}
+        <div className="relative" style={{ height: HEIGHT }}>
+          <div
+            className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-gray-100 rounded-[8px]"
+            style={{ height: ITEM_H }}
+          />
+          <div
+            ref={ref}
+            onScroll={onScroll}
+            className="overflow-y-auto scrollbar-hide relative"
+            style={{ height: HEIGHT, scrollBehavior: 'auto' }}
+          >
+            <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
+              {items.map((v, i) => {
               const selected = i === selectedIdx;
               return (
                 <div
@@ -136,6 +139,7 @@ export default function WheelPickerModal({
                 </div>
               );
             })}
+            </div>
           </div>
         </div>
       </div>

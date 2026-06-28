@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useChildren, type Child } from '@/hooks/useChildren';
+import { useSelectedChild } from '@/hooks/useChildren';
 import ChildSelector from '@/components/ChildSelector';
 import PageHeader from '@/components/PageHeader';
 import { calcChildAge } from '@/lib/childAge';
@@ -119,16 +119,15 @@ const WHITE_NOISE_SOUNDS = [
 ];
 
 export default function SleepGoldenTimeClient() {
-  const { children, isLoaded } = useChildren();
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const [manualMonths, setManualMonths] = useState<number | null>(null);
   const [period, setPeriod] = useState<'AM' | 'PM'>('AM');
   const [hour12, setHour12] = useState<number>(7);
   const [minute, setMinute] = useState<number>(0);
   const [selectedSound, setSelectedSound] = useState<string>('wind');
 
-  // 등록된 첫 번째 아기를 자동 선택해 별도 선택 화면 없이 바로 상세를 보여줌
-  const effectiveChild = selectedChild ?? children[0] ?? null;
+  // 전역으로 유지되는 선택 아이 사용(없으면 훅이 첫 아이로 폴백)
+  const effectiveChild = selectedChild;
 
   const calculatedMonths = effectiveChild
     ? getAgeInMonths(effectiveChild.birthDate)
@@ -189,7 +188,7 @@ export default function SleepGoldenTimeClient() {
           <ChildSelector
             children={children}
             selected={effectiveChild}
-            onSelect={setSelectedChild}
+            onSelect={selectChild}
           />
         ) : null}
 

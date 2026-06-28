@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useChildren, type Child } from '@/hooks/useChildren';
+import { useSelectedChild, type Child } from '@/hooks/useChildren';
 import BottomSheet from '@/components/BottomSheet';
 import ChildSelector from '@/components/ChildSelector';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -67,9 +67,13 @@ function resolveGender(child: Child): Gender {
 }
 
 export default function PhysicalGrowthClient() {
-  const { children: childList, isLoaded } = useChildren();
+  const {
+    children: childList,
+    isLoaded,
+    selectedChild: selected,
+    selectChild: setSelected,
+  } = useSelectedChild();
   const { openLoginPrompt } = useLoginPrompt();
-  const [selected, setSelected] = useState<Child | null>(null);
   const [records, setRecords] = useState<PhysicalGrowthRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -103,12 +107,6 @@ export default function PhysicalGrowthClient() {
       document.body.style.overflow = original;
     };
   }, [showForm]);
-
-  useEffect(() => {
-    if (isLoaded && childList.length > 0 && !selected) {
-      setSelected(childList[0]);
-    }
-  }, [isLoaded, childList, selected]);
 
   const fetchRecords = useCallback(async () => {
     if (!selected) return;
@@ -200,6 +198,8 @@ export default function PhysicalGrowthClient() {
       // ignore
     }
   };
+
+  if (!isLoaded) return null;
 
   const noChild = !selected;
 

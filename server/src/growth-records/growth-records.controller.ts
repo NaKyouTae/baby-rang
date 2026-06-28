@@ -38,6 +38,15 @@ export class GrowthRecordsController {
     return this.service.earliestDate(req.user.id, childId);
   }
 
+  @Get('recent-amounts')
+  recentAmounts(
+    @Req() req,
+    @Query('childId') childId: string,
+    @Query('type') type: string,
+  ) {
+    return this.service.recentAmounts(req.user.id, childId, type);
+  }
+
   @Get('range')
   range(
     @Req() req,

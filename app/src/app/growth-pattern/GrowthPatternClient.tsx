@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useChildren, type Child } from '@/hooks/useChildren';
+import { useSelectedChild } from '@/hooks/useChildren';
 import NoChildCard from '@/components/NoChildCard';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import ChildSelector from '@/components/ChildSelector';
@@ -89,8 +89,8 @@ function clipToDay(
 }
 
 /**
- * endAt 이 없는 기록에 시각화용 합성(endAt) 을 부여한다.
- * - 기본 지속시간: 10분
+ * endAt 이 없거나 지속시간이 0(이하)인 기록에 시각화용 합성(endAt) 을 부여한다.
+ * - 기본 지속시간: 10분 (endAt==startAt 인 0분 기록도 10분으로 간주)
  * - 같은 startAt 에 2개 있으면 각 5분, 3개 있으면 각 3분(N개면 각 ⌊10/N⌋분)으로 순차 분할
  * - 그룹의 합성 종료가 다음 그룹의 startAt 을 넘으면 다음 startAt 까지로 잘라낸다.
  */
@@ -98,7 +98,10 @@ function withSyntheticEnd(records: GrowthRecord[]): GrowthRecord[] {
   const withEnd: GrowthRecord[] = [];
   const withoutEnd: GrowthRecord[] = [];
   for (const r of records) {
-    if (r.endAt) withEnd.push(r);
+    // endAt 이 있어도 startAt 보다 크지 않으면(0분 이하) 합성 처리 대상으로 본다.
+    const hasRealDuration =
+      r.endAt && new Date(r.endAt).getTime() > new Date(r.startAt).getTime();
+    if (hasRealDuration) withEnd.push(r);
     else withoutEnd.push(r);
   }
   withoutEnd.sort(
@@ -220,9 +223,8 @@ function computeDayStats(records: GrowthRecord[]): DayStats {
 }
 
 export default function GrowthPatternClient() {
-  const { children, isLoaded } = useChildren();
+  const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const { openLoginPrompt } = useLoginPrompt();
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week'>(readStoredViewMode);
   const todayStr = toDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
@@ -242,12 +244,6 @@ export default function GrowthPatternClient() {
       ]),
   );
   const [typesLoaded, setTypesLoaded] = useState(false);
-
-  useEffect(() => {
-    if (isLoaded && children.length > 0 && !selectedChild) {
-      setSelectedChild(children[0]);
-    }
-  }, [isLoaded, children, selectedChild]);
 
   useEffect(() => {
     try {
@@ -419,7 +415,7 @@ export default function GrowthPatternClient() {
           <ChildSelector
             children={children}
             selected={selectedChild}
-            onSelect={setSelectedChild}
+            onSelect={selectChild}
           />
         )}
 
