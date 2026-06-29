@@ -75,12 +75,6 @@ function getLeapStatus(birthDate: Date, today: Date): LeapStatus {
   return { current, next };
 }
 
-function todayStr() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 interface TodayStats {
   feedingCount: number;
   sleepMinutes: number;
@@ -99,7 +93,9 @@ const EMPTY_STATS: TodayStats = {
   lastDiaperAt: null,
 };
 
-function computeStats(records: GrowthRecord[]): TodayStats {
+// 카운트/수면시간은 "오늘"(todayYmd, KST) 기록만 집계하고,
+// 마지막 기록 시각(lastXAt)은 날짜와 무관하게 전체 기록에서 가장 최근값을 사용한다.
+function computeStats(records: GrowthRecord[], todayYmd: string): TodayStats {
   let feedingCount = 0;
   let sleepMinutes = 0;
   let diaperCount = 0;
@@ -109,16 +105,17 @@ function computeStats(records: GrowthRecord[]): TodayStats {
   const pickLater = (a: string | null, b: string) =>
     !a || new Date(b).getTime() > new Date(a).getTime() ? b : a;
   for (const r of records) {
+    const isToday = toKstYmd(r.startAt) === todayYmd;
     if (
       r.type === 'FORMULA' ||
       r.type === 'BREASTFEEDING' ||
       r.type === 'PUMPED_FEEDING' ||
       r.type === 'MILK'
     ) {
-      feedingCount += 1;
+      if (isToday) feedingCount += 1;
       lastFeedingAt = pickLater(lastFeedingAt, r.endAt ?? r.startAt);
     } else if (r.type === 'SLEEP') {
-      if (r.endAt) {
+      if (isToday && r.endAt) {
         sleepMinutes += Math.max(
           0,
           Math.round(
@@ -129,7 +126,7 @@ function computeStats(records: GrowthRecord[]): TodayStats {
       }
       lastSleepAt = pickLater(lastSleepAt, r.endAt ?? r.startAt);
     } else if (r.type === 'DIAPER') {
-      diaperCount += 1;
+      if (isToday) diaperCount += 1;
       lastDiaperAt = pickLater(lastDiaperAt, r.startAt);
     }
   }
@@ -177,11 +174,13 @@ function ChildHeroCard({
 
   useEffect(() => {
     let cancel = false;
-    const t = todayStr();
-    const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${t}&to=${t}`;
+    const today = todayKstYmd();
+    // 최근 90일 범위를 가져와서 마지막 기록(오늘 이전 포함) 경과 시간을 계산한다.
+    const from = todayKstYmd(new Date(Date.now() - 90 * 86_400_000));
+    const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${from}&to=${today}`;
     cachedFetch<GrowthRecord[]>(url, 30_000)
       .then((data) => {
-        if (!cancel) setStats(computeStats(data ?? []));
+        if (!cancel) setStats(computeStats(data ?? [], today));
       })
       .catch(() => {
         if (!cancel) setStats(EMPTY_STATS);
