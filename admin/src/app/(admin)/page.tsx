@@ -1,7 +1,7 @@
 import { adminFetch } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
-import { Users, Baby, Image, CreditCard, Banknote } from "lucide-react";
+import { Users, Baby, Image, CreditCard, Banknote, User, UserPlus } from "lucide-react";
 
 type Stats = {
   users: number;
@@ -9,6 +9,9 @@ type Stats = {
   banners: number;
   payments: { paid: number; total: number };
   revenue: number;
+  moms: number;
+  dads: number;
+  weekSignups: number;
 };
 
 export default async function DashboardPage() {
@@ -23,6 +26,24 @@ export default async function DashboardPage() {
       value: stats?.users ?? "-",
       icon: Users,
       tone: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "이번주 가입",
+      value: stats?.weekSignups ?? "-",
+      icon: UserPlus,
+      tone: "bg-teal-50 text-teal-600",
+    },
+    {
+      label: "엄마",
+      value: stats?.moms ?? "-",
+      icon: User,
+      tone: "bg-rose-50 text-rose-600",
+    },
+    {
+      label: "아빠",
+      value: stats?.dads ?? "-",
+      icon: User,
+      tone: "bg-sky-50 text-sky-600",
     },
     {
       label: "등록된 아기",

@@ -143,24 +143,44 @@ export class AdminController {
   // ===== Dashboard =====
   @Get('stats')
   async stats() {
-    const [users, children, banners, paymentsPaid, paymentsTotal, sumAgg] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.child.count(),
-        this.prisma.banner.count(),
-        this.prisma.payment.count({ where: { status: 'PAID' } }),
-        this.prisma.payment.count(),
-        this.prisma.payment.aggregate({
-          _sum: { amount: true },
-          where: { status: 'PAID' },
-        }),
-      ]);
+    // 이번 주 시작(월요일 00:00, 서버 로컬 기준)
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+    const [
+      users,
+      children,
+      banners,
+      paymentsPaid,
+      paymentsTotal,
+      sumAgg,
+      moms,
+      dads,
+      weekSignups,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.child.count(),
+      this.prisma.banner.count(),
+      this.prisma.payment.count({ where: { status: 'PAID' } }),
+      this.prisma.payment.count(),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: 'PAID' },
+      }),
+      this.prisma.user.count({ where: { parentRole: 'mom' } }),
+      this.prisma.user.count({ where: { parentRole: 'dad' } }),
+      this.prisma.user.count({ where: { createdAt: { gte: weekStart } } }),
+    ]);
     return {
       users,
       children,
       banners,
       payments: { paid: paymentsPaid, total: paymentsTotal },
       revenue: sumAgg._sum.amount ?? 0,
+      moms,
+      dads,
+      weekSignups,
     };
   }
 

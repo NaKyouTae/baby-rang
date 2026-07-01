@@ -143,11 +143,13 @@ export default function UsersClient({
         if (!res.ok) throw new Error(`불러오기 실패 (${res.status})`);
         return res.json();
       })
-      .then((data: UserDetail) => {
-        if (!cancelled) setDetail(data);
+      .then((data: UserDetail | null) => {
+        if (cancelled) return;
+        if (!data || !data.id) throw new Error("사용자 정보를 찾을 수 없습니다.");
+        setDetail(data);
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message ?? "오류가 발생했습니다.");
+        if (!cancelled) setError(e?.message ?? "오류가 발생했습니다.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -157,16 +159,18 @@ export default function UsersClient({
     };
   }, [selectedId]);
 
+  // 백엔드 응답 형태가 달라도 크래시하지 않도록 방어적으로 파생
+  const accounts = detail?.accounts ?? [];
+  const memberships = detail?.groupMemberships ?? [];
+  const payments = detail?.payments ?? [];
   // 그룹 전체의 아기(중복 제거)
-  const children = detail
-    ? Array.from(
-        new Map(
-          detail.groupMemberships
-            .flatMap((m) => m.group.children)
-            .map((c) => [c.id, c]),
-        ).values(),
-      )
-    : [];
+  const children = Array.from(
+    new Map(
+      memberships
+        .flatMap((m) => m?.group?.children ?? [])
+        .map((c) => [c.id, c]),
+    ).values(),
+  );
 
   return (
     <>
@@ -298,11 +302,11 @@ export default function UsersClient({
 
             {/* 소셜 로그인 */}
             <Section title="소셜 로그인">
-              {detail.accounts.length === 0 ? (
+              {accounts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">연결된 계정이 없습니다.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {detail.accounts.map((a, i) => (
+                  {accounts.map((a, i) => (
                     <Badge key={i} variant="secondary">
                       {PROVIDER_LABELS[a.provider] ?? a.provider}
                     </Badge>
@@ -349,12 +353,12 @@ export default function UsersClient({
             </Section>
 
             {/* 결제 내역 */}
-            <Section title={`결제 내역 (${detail.payments.length})`}>
-              {detail.payments.length === 0 ? (
+            <Section title={`결제 내역 (${payments.length})`}>
+              {payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">결제 내역이 없습니다.</p>
               ) : (
                 <div className="space-y-2">
-                  {detail.payments.map((p) => {
+                  {payments.map((p) => {
                     const st = PAYMENT_STATUS[p.status] ?? {
                       label: p.status,
                       variant: "secondary" as const,
