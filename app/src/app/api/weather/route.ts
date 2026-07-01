@@ -329,6 +329,28 @@ async function safeJson(res: Response, label: string) {
   }
 }
 
+// data.go.kr(공공데이터포털)은 종종 수 초씩 지연되므로 upstream마다 타임아웃을 건다.
+// 타임아웃/에러 시 null을 반환해, Promise.all이 통째로 실패하지 않고 나머지로 렌더되게 함.
+const UPSTREAM_TIMEOUT_MS = 3500;
+
+async function tfetchJson(
+  url: string,
+  label: string,
+  ms = UPSTREAM_TIMEOUT_MS,
+) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    return await safeJson(res, label);
+  } catch {
+    console.error(`[weather] ${label} fetch 실패/타임아웃 (${ms}ms)`);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface HourlyForecast {
   fcstDate: string; // YYYYMMDD
   fcstTime: string;
@@ -433,31 +455,37 @@ function skyPtyLabel(sky: string | undefined, pty: string | undefined): string |
 
 async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
   const { nx, ny, base_date, base_time, fcst, vilage, midFcTime, sidoName, midLandRegId, midTaRegId, dustRegion, searchDate } = ctx;
-  const [weatherRes, fcstRes, airRes, vilageRes, midLandRes, midTaRes, dustRes] = await Promise.all([
-    fetch(
+  const [weatherData, fcstData, airData, vilageData, midLandData, midTaData, dustData] = await Promise.all([
+    tfetchJson(
       `${KMA_BASE}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`,
+      "기상청 초단기실황",
     ),
-    fetch(
+    tfetchJson(
       `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=100&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
+      "기상청 초단기예보",
     ),
-    fetch(
+    tfetchJson(
       `${AIR_SIDO}?serviceKey=${API_KEY}&returnType=json&sidoName=${encodeURIComponent(sidoName)}&ver=1.3&numOfRows=100&pageNo=1`,
+      "에어코리아 시도별",
     ),
-    fetch(
+    tfetchJson(
       `${KMA_VILAGE}?serviceKey=${API_KEY}&numOfRows=1000&pageNo=1&dataType=JSON&base_date=${vilage.base_date}&base_time=${vilage.base_time}&nx=${nx}&ny=${ny}`,
+      "기상청 단기예보",
     ),
-    fetch(
+    tfetchJson(
       `${KMA_MID_LAND}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&regId=${midLandRegId}&tmFc=${midFcTime}`,
+      "기상청 중기육상예보",
     ),
-    fetch(
+    tfetchJson(
       `${KMA_MID_TA}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&regId=${midTaRegId}&tmFc=${midFcTime}`,
+      "기상청 중기기온예보",
     ),
-    fetch(
+    tfetchJson(
       `${AIR_DUST_FRCST}?serviceKey=${API_KEY}&returnType=json&searchDate=${searchDate}&numOfRows=100&pageNo=1`,
+      "에어코리아 대기질 예보",
     ),
   ]);
 
-  const weatherData = await safeJson(weatherRes, "기상청 초단기실황");
   const weatherItems: WeatherItem[] = weatherData?.response?.body?.items?.item ?? [];
   const weather: Record<string, string> = {};
   for (const item of weatherItems) {
@@ -466,7 +494,6 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
     }
   }
 
-  const fcstData = await safeJson(fcstRes, "기상청 초단기예보");
   const fcstItems: WeatherItem[] = fcstData?.response?.body?.items?.item ?? [];
   const fcstMap: Record<string, string> = {};
   for (const item of fcstItems) {
@@ -475,7 +502,6 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
     }
   }
 
-  const airData = await safeJson(airRes, "에어코리아 시도별");
   const airItems: AirItem[] = airData?.response?.body?.items ?? [];
   let air: AirItem = {};
   for (const item of airItems) {
@@ -489,7 +515,6 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
   const pty = weather["PTY"] ?? fcstMap["PTY"] ?? "0";
 
   // 단기예보(VilageFcst): 시간별 예보(다음 24시간) + D+0~D+2의 TMN/TMX, SKY/PTY 추출
-  const vilageData = await safeJson(vilageRes, "기상청 단기예보");
   const vilageItems: WeatherItem[] = vilageData?.response?.body?.items?.item ?? [];
 
   // 시간별로 그룹핑
@@ -535,15 +560,12 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
     }));
 
   // 중기육상예보(MidLandFcst): D+3~D+7의 sky 추출
-  const midLandData = await safeJson(midLandRes, "기상청 중기육상예보");
   const midLandRow = midLandData?.response?.body?.items?.item?.[0] ?? {};
 
   // 중기기온예보(MidTa): D+3~D+7의 min/max temp 추출
-  const midTaData = await safeJson(midTaRes, "기상청 중기기온예보");
   const midTaRow = midTaData?.response?.body?.items?.item?.[0] ?? {};
 
   // 대기질 예보(MinuDustFrcstDspth): D+0~D+2의 PM10/PM2.5 등급 추출
-  const dustData = await safeJson(dustRes, "에어코리아 대기질 예보");
   const dustItems: DustForecastItem[] = dustData?.response?.body?.items ?? [];
   const dustByDate = new Map<string, { pm10?: string; pm25?: string }>();
   for (const item of dustItems) {
@@ -636,6 +658,101 @@ async function fetchWeatherData(ctx: FetchCtx): Promise<WeatherResult | null> {
   };
 }
 
+// 홈 스트립(HomeWeatherStrip)이 실제로 쓰는 값만 담는 경량 응답
+interface LiteResult {
+  weather: { temperature: string | null; sky: string; pty: string };
+  air: {
+    pm10: string | null;
+    pm25: string | null;
+    pm10Grade: string | null;
+    pm25Grade: string | null;
+    stationName: string;
+  };
+}
+
+// 홈 전용: 필요한 3개 API(초단기실황·초단기예보·미세먼지)만 호출.
+// 상세 페이지용 무거운 예보 4종(단기예보 numOfRows=1000, 중기예보 등)은 부르지 않아 체감 속도가 크게 빨라진다.
+async function fetchLiteData(ctx: FetchCtx): Promise<LiteResult | null> {
+  const { nx, ny, base_date, base_time, fcst, sidoName } = ctx;
+  const [weatherData, fcstData, airData] = await Promise.all([
+    tfetchJson(
+      `${KMA_BASE}?serviceKey=${API_KEY}&numOfRows=10&pageNo=1&dataType=JSON&base_date=${base_date}&base_time=${base_time}&nx=${nx}&ny=${ny}`,
+      "기상청 초단기실황",
+    ),
+    tfetchJson(
+      `${KMA_FCST_BASE}?serviceKey=${API_KEY}&numOfRows=100&pageNo=1&dataType=JSON&base_date=${fcst.base_date}&base_time=${fcst.base_time}&nx=${nx}&ny=${ny}`,
+      "기상청 초단기예보",
+    ),
+    tfetchJson(
+      `${AIR_SIDO}?serviceKey=${API_KEY}&returnType=json&sidoName=${encodeURIComponent(sidoName)}&ver=1.3&numOfRows=100&pageNo=1`,
+      "에어코리아 시도별",
+    ),
+  ]);
+
+  const weatherItems: WeatherItem[] = weatherData?.response?.body?.items?.item ?? [];
+  const weather: Record<string, string> = {};
+  for (const item of weatherItems) {
+    if (item.obsrValue !== undefined) weather[item.category] = item.obsrValue;
+  }
+
+  const fcstItems: WeatherItem[] = fcstData?.response?.body?.items?.item ?? [];
+  const fcstMap: Record<string, string> = {};
+  for (const item of fcstItems) {
+    if (item.fcstValue !== undefined && !fcstMap[item.category]) {
+      fcstMap[item.category] = item.fcstValue;
+    }
+  }
+
+  const airItems: AirItem[] = airData?.response?.body?.items ?? [];
+  let air: AirItem = {};
+  for (const item of airItems) {
+    if (item.pm10Value && item.pm10Value !== "-" && item.pm25Value && item.pm25Value !== "-") {
+      air = item;
+      break;
+    }
+  }
+
+  // 3개 전부 실패면 데이터 없음
+  if (weatherItems.length === 0 && fcstItems.length === 0 && airItems.length === 0) {
+    return null;
+  }
+
+  return {
+    weather: {
+      temperature: weather["T1H"] ?? null,
+      sky: fcstMap["SKY"] ?? "",
+      pty: weather["PTY"] ?? fcstMap["PTY"] ?? "0",
+    },
+    air: {
+      pm10: air.pm10Value ?? null,
+      pm25: air.pm25Value ?? null,
+      pm10Grade: air.pm10Grade ?? null,
+      pm25Grade: air.pm25Grade ?? null,
+      stationName: air.stationName ?? "",
+    },
+  };
+}
+
+// full 캐시(상위 집합)에서 경량 응답 추출
+function liteFromFull(full: WeatherResult): LiteResult {
+  return {
+    weather: {
+      temperature: full.weather.temperature,
+      sky: full.weather.sky,
+      pty: full.weather.pty,
+    },
+    air: {
+      pm10: full.air.pm10,
+      pm25: full.air.pm25,
+      pm10Grade: full.air.pm10Grade,
+      pm25Grade: full.air.pm25Grade,
+      stationName: full.air.stationName,
+    },
+  };
+}
+
+const CACHE_HEADERS_BASE = "public, s-maxage=600, stale-while-revalidate=1800";
+
 export async function GET(req: Request) {
   if (!API_KEY) {
     return NextResponse.json({ error: "DATA_GO_KR_API_KEY is not set" }, { status: 500 });
@@ -674,6 +791,50 @@ export async function GET(req: Request) {
     vilage.base_date, vilage.base_time,
     midFcTime, sidoName, dustRegion, searchDate,
   ].join(",");
+
+  // ===== 홈 전용 경량 모드 (mode=lite): 필요한 3개 API만 =====
+  if (searchParams.get("mode") === "lite") {
+    const liteKey = `${cacheKey}|lite`;
+    // full 캐시(상위 집합)가 fresh하면 그대로 재사용
+    const fullFresh = getFreshCache(cacheKey) as WeatherResult | null;
+    if (fullFresh) {
+      return NextResponse.json(liteFromFull(fullFresh), {
+        headers: { "Cache-Control": CACHE_HEADERS_BASE, "X-Cache": "HIT-FULL" },
+      });
+    }
+    const liteFresh = getFreshCache(liteKey);
+    if (liteFresh) {
+      return NextResponse.json(liteFresh, {
+        headers: { "Cache-Control": CACHE_HEADERS_BASE, "X-Cache": "HIT" },
+      });
+    }
+    const liteStale = getStaleCache(liteKey);
+    if (liteStale) {
+      if (!refreshing.has(liteKey)) {
+        refreshing.add(liteKey);
+        fetchLiteData(ctx)
+          .then((result) => { if (result) setCache(liteKey, result); })
+          .catch(() => {})
+          .finally(() => refreshing.delete(liteKey));
+      }
+      return NextResponse.json(liteStale, {
+        headers: { "Cache-Control": CACHE_HEADERS_BASE, "X-Cache": "STALE" },
+      });
+    }
+    try {
+      const result = await fetchLiteData(ctx);
+      if (result) {
+        setCache(liteKey, result);
+        return NextResponse.json(result, {
+          headers: { "Cache-Control": CACHE_HEADERS_BASE, "X-Cache": "MISS" },
+        });
+      }
+      return NextResponse.json({ error: "no data from upstream" }, { status: 502 });
+    } catch (e) {
+      console.error("[weather] lite fetch failed", e);
+      return NextResponse.json({ error: "fetch failed" }, { status: 502 });
+    }
+  }
 
   // 1) fresh 캐시가 있으면 즉시 반환
   const fresh = getFreshCache(cacheKey);

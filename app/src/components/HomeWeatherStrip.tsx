@@ -56,7 +56,7 @@ export default function HomeWeatherStrip() {
         async (pos) => {
           const { latitude, longitude } = pos.coords;
           try {
-            const res = await fetch(`/api/weather?lat=${latitude}&lng=${longitude}`);
+            const res = await fetch(`/api/weather?lat=${latitude}&lng=${longitude}&mode=lite`);
             if (res.ok) {
               const json = await res.json();
               setData(json);
