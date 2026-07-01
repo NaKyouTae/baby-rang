@@ -16,7 +16,11 @@ import {
 } from './types';
 import EntrySheet from './EntrySheet';
 import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
-import { getCachedQuickTypes, setCachedQuickTypes } from './recordDefaults';
+import {
+  getCachedQuickTypes,
+  setCachedQuickTypes,
+  buildDefaultRecordData,
+} from './recordDefaults';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -520,6 +524,31 @@ export default function GrowthRecordPage() {
     }
   }, [selectedChild]);
 
+  // 카테고리(기록 항목) 클릭 시 바텀시트 없이 기본값으로 기록 즉시 생성
+  const createQuickRecord = useCallback(
+    async (type: GrowthType) => {
+      if (!selectedChild) return;
+      const now = new Date();
+      const cfg = TYPE_CONFIG[type];
+      const fd = new FormData();
+      fd.append('childId', selectedChild.id);
+      fd.append('type', type);
+      fd.append('startAt', now.toISOString());
+      if (cfg.showEndPicker) {
+        fd.append('endAt', now.toISOString());
+      }
+      fd.append('memo', '');
+      fd.append('data', JSON.stringify(buildDefaultRecordData(type)));
+      fd.append('keepImageUrls', JSON.stringify([]));
+      const res = await fetch('/api/growth-records', {
+        method: 'POST',
+        body: fd,
+      });
+      if (res.ok) reload();
+    },
+    [selectedChild, reload],
+  );
+
   const deleteRecord = useCallback(
     async (id: string) => {
       const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
@@ -676,8 +705,7 @@ export default function GrowthRecordPage() {
                         openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.');
                         return;
                       }
-                      setEditing(null);
-                      setSheetType(t);
+                      createQuickRecord(t);
                     }}
                     className="flex flex-col items-center gap-[4px] shrink-0"
                   >

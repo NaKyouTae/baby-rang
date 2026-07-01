@@ -1,3 +1,5 @@
+import { GrowthType, TYPE_CONFIG } from './types';
+
 const BABYFOOD_UNIT_KEY = 'baby-rang:settings:babyfood-default-unit';
 const DIAPER_KIND_KEY = 'baby-rang:settings:diaper-default-kind';
 const SLEEP_NIGHT_RANGE_KEY = 'baby-rang:settings:sleep-night-range';
@@ -113,4 +115,37 @@ export function isWithinNightRange(
   if (start === end) return false;
   if (start < end) return now >= start && now < end;
   return now >= start || now < end;
+}
+
+/**
+ * 빠른 버튼으로 기록을 즉시 생성할 때 저장할 기본 data(JSON) 값.
+ * EntrySheet를 새 기록으로 열고 곧바로 저장했을 때와 동일한 결과를 만든다.
+ * (숫자/텍스트 필드는 값이 없으면 저장에서 생략되므로 여기서도 제외)
+ */
+export function buildDefaultRecordData(type: GrowthType): Record<string, unknown> {
+  if (type === 'PUMPING') {
+    return { pumpingMode: 'LR', volumeMode: 'LR' };
+  }
+
+  const cfg = TYPE_CONFIG[type];
+  const data: Record<string, unknown> = {};
+  const now = new Date();
+
+  cfg.fields.forEach((f) => {
+    if (type === 'SLEEP' && f.key === 'kind') {
+      data.kind = isWithinNightRange(now.getHours(), now.getMinutes())
+        ? 'NIGHT'
+        : 'NAP';
+      return;
+    }
+    if (type === 'DIAPER' && f.key === 'kind') {
+      data.kind = getDiaperDefaultKind();
+      return;
+    }
+    if (f.kind === 'segmented' && f.options && f.options.length > 0) {
+      data[f.key] = f.options[0].value;
+    }
+  });
+
+  return data;
 }
