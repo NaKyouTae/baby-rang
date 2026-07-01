@@ -331,6 +331,11 @@ export default function GrowthRecordPage() {
   const loadingRef = useRef(false);
   const titleBarRef = useRef<HTMLDivElement | null>(null);
   const [titleBarH, setTitleBarH] = useState(84);
+  // 당겨서 새로고침(pull-to-refresh)
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStartYRef = useRef<number | null>(null);
+  const pullDistanceRef = useRef(0);
 
   useEffect(() => {
     const el = titleBarRef.current;
@@ -629,6 +634,81 @@ export default function GrowthRecordPage() {
     return () => observer.disconnect();
   }, [loadMore]);
 
+  // 당겨서 새로고침: 스크롤 최상단에서 아래로 당기면 기록 리스트 재조회
+  useEffect(() => {
+    if (!selectedChild) return;
+    const THRESHOLD = 64; // 이 이상 당기면 새로고침 실행
+    const MAX = 96; // 최대 당김 거리
+    const RESIST = 0.5; // 당김 저항(고무줄 느낌)
+    const setDist = (d: number) => {
+      pullDistanceRef.current = d;
+      setPullDistance(d);
+    };
+    const overlayOpen = () =>
+      sheetType !== null ||
+      editing !== null ||
+      showAddQuick ||
+      showDatePicker ||
+      deleteTarget !== null;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (refreshing || overlayOpen()) return;
+      if (window.scrollY > 0 || pullDistanceRef.current !== 0) return;
+      if (e.touches.length !== 1) return;
+      pullStartYRef.current = e.touches[0].clientY;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (pullStartYRef.current === null) return;
+      if (window.scrollY > 0) {
+        pullStartYRef.current = null;
+        setDist(0);
+        return;
+      }
+      const dy = e.touches[0].clientY - pullStartYRef.current;
+      if (dy <= 0) {
+        setDist(0);
+        return;
+      }
+      // 위로 당기는 동안 브라우저 기본 새로고침/바운스 방지
+      e.preventDefault();
+      setDist(Math.min(MAX, dy * RESIST));
+    };
+    const onTouchEnd = () => {
+      if (pullStartYRef.current === null) return;
+      pullStartYRef.current = null;
+      if (pullDistanceRef.current >= THRESHOLD) {
+        setRefreshing(true);
+        setDist(THRESHOLD);
+        Promise.resolve(reload()).finally(() => {
+          setRefreshing(false);
+          setDist(0);
+        });
+      } else {
+        setDist(0);
+      }
+    };
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [
+    selectedChild,
+    refreshing,
+    reload,
+    sheetType,
+    editing,
+    showAddQuick,
+    showDatePicker,
+    deleteTarget,
+  ]);
+
   const sortedDays = useMemo(
     () =>
       days.map((g) => ({
@@ -655,8 +735,35 @@ export default function GrowthRecordPage() {
   const noChild = !selectedChild;
   const today = todayString();
 
+  const pullProgress = Math.min(1, pullDistance / 64);
+
   return (
-    <div className="flex flex-col bg-white px-6">
+    <div className="relative flex flex-col bg-white px-6">
+      {/* 당겨서 새로고침 인디케이터 */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 top-0 z-40 flex justify-center"
+        style={{
+          transform: `translateY(${Math.max(0, pullDistance - 28)}px)`,
+          opacity: refreshing || pullDistance > 0 ? 1 : 0,
+          transition:
+            refreshing || pullDistance === 0 ? 'transform 0.3s ease, opacity 0.2s ease' : 'none',
+        }}
+        aria-hidden={!refreshing}
+      >
+        <div className="mt-2 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md">
+          <span
+            className={`block h-4 w-4 rounded-full border-2 border-gray-200 border-t-primary-500 ${
+              refreshing ? 'animate-spin' : ''
+            }`}
+            style={
+              refreshing
+                ? undefined
+                : { transform: `rotate(${pullProgress * 270}deg)`, opacity: 0.4 + pullProgress * 0.6 }
+            }
+          />
+        </div>
+      </div>
+
       {/* 상단 고정 바 */}
       <div
         ref={titleBarRef}
@@ -668,7 +775,12 @@ export default function GrowthRecordPage() {
       {/* 기록 메뉴 전체: 프로필 · 카테고리 · 지표 · 기록 리스트 (하나의 div, gap 16px) */}
       <main
         className="flex-1 flex flex-col gap-4 pt-2"
-        style={{ paddingBottom: "186px" }}
+        style={{
+          paddingBottom: "186px",
+          transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
+          transition:
+            refreshing || pullDistance === 0 ? 'transform 0.3s ease' : 'none',
+        }}
       >
         {noChild ? (
           <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
