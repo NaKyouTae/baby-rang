@@ -738,32 +738,7 @@ export default function GrowthRecordPage() {
   const pullProgress = Math.min(1, pullDistance / 64);
 
   return (
-    <div className="relative flex flex-col bg-white px-6">
-      {/* 당겨서 새로고침 인디케이터 */}
-      <div
-        className="pointer-events-none absolute left-0 right-0 top-0 z-40 flex justify-center"
-        style={{
-          transform: `translateY(${Math.max(0, pullDistance - 28)}px)`,
-          opacity: refreshing || pullDistance > 0 ? 1 : 0,
-          transition:
-            refreshing || pullDistance === 0 ? 'transform 0.3s ease, opacity 0.2s ease' : 'none',
-        }}
-        aria-hidden={!refreshing}
-      >
-        <div className="mt-2 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md">
-          <span
-            className={`block h-4 w-4 rounded-full border-2 border-gray-200 border-t-primary-500 ${
-              refreshing ? 'animate-spin' : ''
-            }`}
-            style={
-              refreshing
-                ? undefined
-                : { transform: `rotate(${pullProgress * 270}deg)`, opacity: 0.4 + pullProgress * 0.6 }
-            }
-          />
-        </div>
-      </div>
-
+    <div className="flex flex-col bg-white px-6">
       {/* 상단 고정 바 */}
       <div
         ref={titleBarRef}
@@ -772,15 +747,52 @@ export default function GrowthRecordPage() {
         <PageHeader title="기록" variant="back" />
       </div>
 
+      {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}
+      <div
+        className="flex items-center justify-center overflow-hidden"
+        style={{
+          height: refreshing ? 44 : pullDistance,
+          transition:
+            refreshing || pullDistance === 0 ? 'height 0.3s ease' : 'none',
+        }}
+        aria-hidden={!refreshing && pullDistance === 0}
+      >
+        <div
+          className="flex items-center gap-1.5 text-gray-400"
+          style={{ opacity: refreshing ? 1 : pullProgress }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{
+              transform: `rotate(${pullProgress >= 1 || refreshing ? 180 : 0}deg)`,
+              transition: 'transform 0.2s ease',
+            }}
+          >
+            <path
+              d="M12 5v14M12 19l-6-6M12 19l6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-xs whitespace-nowrap">
+            {refreshing
+              ? '새로고침 중...'
+              : pullProgress >= 1
+                ? '놓으면 새로고침'
+                : '아래로 당겨 새로고침'}
+          </span>
+        </div>
+      </div>
+
       {/* 기록 메뉴 전체: 프로필 · 카테고리 · 지표 · 기록 리스트 (하나의 div, gap 16px) */}
       <main
         className="flex-1 flex flex-col gap-4 pt-2"
-        style={{
-          paddingBottom: "186px",
-          transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
-          transition:
-            refreshing || pullDistance === 0 ? 'transform 0.3s ease' : 'none',
-        }}
+        style={{ paddingBottom: "186px" }}
       >
         {noChild ? (
           <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
