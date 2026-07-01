@@ -138,25 +138,29 @@ function SwipeableRow({
         isLast ? 'border-b-0' : ''
       }`}
     >
-      <button
-        type="button"
-        data-swipe-delete
-        onClick={onDelete}
-        aria-label="삭제"
-        tabIndex={open ? 0 : -1}
-        style={{ width: SWIPE_DELETE_WIDTH }}
-        className="absolute top-0 right-0 bottom-0 bg-red-500 active:bg-red-600 flex items-center justify-center"
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/icon-trash.svg"
-          alt=""
-          width={24}
-          height={24}
-          aria-hidden="true"
-          style={{ filter: 'brightness(0) invert(1)' }}
-        />
-      </button>
+      {/* 삭제 버튼은 열림/드래그 중일 때만 렌더 — 닫힘 상태에서 앞쪽 컨텐츠의
+          translateX 레이어 경계로 빨간 라인이 비치는 현상 방지 */}
+      {(open || dragging) && (
+        <button
+          type="button"
+          data-swipe-delete
+          onClick={onDelete}
+          aria-label="삭제"
+          tabIndex={open ? 0 : -1}
+          style={{ width: SWIPE_DELETE_WIDTH }}
+          className="absolute top-0 right-0 bottom-0 bg-red-500 active:bg-red-600 flex items-center justify-center"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon-trash.svg"
+            alt=""
+            width={24}
+            height={24}
+            aria-hidden="true"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
+        </button>
+      )}
       <div
         className={`relative bg-white select-none ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
         style={{
@@ -319,7 +323,6 @@ export default function GrowthRecordPage() {
     ) as GrowthType[] | undefined;
     return cached && cached.length > 0 ? cached : DEFAULT_QUICK_TYPES;
   });
-  const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
@@ -415,7 +418,6 @@ export default function GrowthRecordPage() {
     if (!selectedChild) return;
     let cancelled = false;
     const init = async () => {
-      setInitialLoading(true);
       setDays([]);
       setHasMore(true);
       const today = todayString();
@@ -455,7 +457,6 @@ export default function GrowthRecordPage() {
           const nextCursor = shiftDate(from, -1);
           setCursor(nextCursor);
           if (!earliest || nextCursor < earliest) setHasMore(false);
-          setInitialLoading(false);
           return;
         }
       } catch {
@@ -483,7 +484,6 @@ export default function GrowthRecordPage() {
       const nextCursor = shiftDate(targets[targets.length - 1], -1);
       setCursor(nextCursor);
       if (!earliest || nextCursor < earliest) setHasMore(false);
-      setInitialLoading(false);
     };
     init();
     return () => {
@@ -491,41 +491,36 @@ export default function GrowthRecordPage() {
     };
   }, [selectedChild, fetchDay]);
 
+  // 리프레시/갱신 — 기존 리스트를 유지한 채 새 데이터가 도착하면 교체한다.
+  // (리스트를 비우거나 로딩 화면을 띄우지 않고 조용히 갱신)
   const reload = useCallback(async (fromDate?: string) => {
     if (!selectedChild) return;
-    setDays([]);
-    setHasMore(true);
-    setInitialLoading(true);
     const start = fromDate ?? todayString();
     const from = shiftDate(start, -(PAGE_SIZE - 1));
     const to = start;
-    try {
-      const res = await fetch(
-        `/api/growth-records/page-init?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const earliest: string | null = data.earliestDate ?? null;
-        setEarliestDate(earliest);
-        const allRecords: GrowthRecord[] = data.records ?? [];
-        const dateMap = new Map<string, GrowthRecord[]>();
-        for (const r of allRecords) {
-          const dt = new Date(r.startAt);
-          const pad = (n: number) => String(n).padStart(2, '0');
-          const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-          if (!dateMap.has(d)) dateMap.set(d, []);
-          dateMap.get(d)!.push(r);
-        }
-        const grouped = Array.from(dateMap.entries())
-          .map(([date, recs]) => ({ date, records: recs }))
-          .sort((a, b) => b.date.localeCompare(a.date));
-        setDays(grouped);
-        const nextCursor = shiftDate(from, -1);
-        setCursor(nextCursor);
-        if (!earliest || nextCursor < earliest) setHasMore(false);
+    const res = await fetch(
+      `/api/growth-records/page-init?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const earliest: string | null = data.earliestDate ?? null;
+      setEarliestDate(earliest);
+      const allRecords: GrowthRecord[] = data.records ?? [];
+      const dateMap = new Map<string, GrowthRecord[]>();
+      for (const r of allRecords) {
+        const dt = new Date(r.startAt);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+        if (!dateMap.has(d)) dateMap.set(d, []);
+        dateMap.get(d)!.push(r);
       }
-    } finally {
-      setInitialLoading(false);
+      const grouped = Array.from(dateMap.entries())
+        .map(([date, recs]) => ({ date, records: recs }))
+        .sort((a, b) => b.date.localeCompare(a.date));
+      setDays(grouped);
+      const nextCursor = shiftDate(from, -1);
+      setCursor(nextCursor);
+      setHasMore(!(!earliest || nextCursor < earliest));
     }
   }, [selectedChild]);
 
@@ -939,8 +934,6 @@ export default function GrowthRecordPage() {
               데이터 가져오기
             </button>
           </div>
-        ) : initialLoading && sortedDays.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
         ) : sortedDays.length === 0 && !hasMore ? (
           <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
@@ -963,9 +956,8 @@ export default function GrowthRecordPage() {
             </Link>
           </div>
         ) : sortedDays.length === 0 ? (
-          <div ref={sentinelRef} className="py-16 text-center text-sm text-gray-400">
-            {loadingMore ? '이전 기록을 불러오는 중...' : '이전 기록을 찾는 중...'}
-          </div>
+          // 로딩 문구 없이 백필용 sentinel만 유지 (관찰되면 loadMore 트리거)
+          <div ref={sentinelRef} className="py-16" />
         ) : (
           <div className="rounded-[8px] border border-gray-200 bg-white">
             {sortedDays.map((group) => {
