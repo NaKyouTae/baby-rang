@@ -188,6 +188,10 @@ export class AdminController {
     return this.prisma.user.findUnique({
       where: { id },
       include: {
+        accounts: {
+          select: { provider: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
         groupMemberships: {
           include: { group: { include: { children: true } } },
         },
