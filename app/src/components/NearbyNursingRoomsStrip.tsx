@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { cachedFetch } from "@/hooks/appCache";
+import { cachedFetch, getSharedPosition } from "@/hooks/appCache";
 import { palette } from "@/lib/colors";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -50,21 +50,23 @@ export default function NearbyNursingRoomsStrip() {
       return;
     }
     setLocStatus("loading");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    // 공유 위치(날씨 스트립과 1회 요청 공유) — 캐시된 좌표가 있으면 즉시 반환
+    getSharedPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 })
+      .then(({ lat, lng }) => {
+        setUserLoc({ lat, lng });
         setLocStatus("granted");
-      },
-      (err) => {
-        if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+      })
+      .catch((err: unknown) => {
+        if (
+          err instanceof GeolocationPositionError &&
+          err.code === GeolocationPositionError.PERMISSION_DENIED
+        ) {
           setLocStatus("denied");
         } else {
           // TIMEOUT or POSITION_UNAVAILABLE — 권한은 있지만 위치를 못 잡은 경우
           setLocStatus("unavailable");
         }
-      },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
-    );
+      });
   };
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function NearbyNursingRoomsStrip() {
 
   useEffect(() => {
     let cancelled = false;
-    const TTL = 3 * 60_000; // 3분 캐시
+    const TTL = 30 * 60_000; // 30분 캐시 (수유실 데이터는 거의 안 바뀜)
     (async () => {
       try {
         const [reportedData, publicData] = await Promise.all([

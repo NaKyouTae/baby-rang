@@ -61,16 +61,17 @@ export class NursingRoomsService {
       throw new BadRequestException('Kakao REST API 키가 설정되지 않았습니다.');
     }
 
-    // 1) 주소 검색 (유사 검색 허용)
-    const addrRes = await fetch(
-      `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&analyze_type=similar&size=10`,
-      { headers: { Authorization: `KakaoAK ${apiKey}` } },
-    );
-    // 2) 키워드 검색 (건물명/상호명)
-    const kwRes = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&size=10`,
-      { headers: { Authorization: `KakaoAK ${apiKey}` } },
-    );
+    // 1) 주소 검색(유사 허용) + 2) 키워드 검색(건물명/상호명) — 독립적이므로 병렬 호출(RTT 절반)
+    const [addrRes, kwRes] = await Promise.all([
+      fetch(
+        `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&analyze_type=similar&size=10`,
+        { headers: { Authorization: `KakaoAK ${apiKey}` } },
+      ),
+      fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}&size=10`,
+        { headers: { Authorization: `KakaoAK ${apiKey}` } },
+      ),
+    ]);
 
     if (!addrRes.ok) {
       const text = await addrRes.text().catch(() => '');
@@ -170,6 +171,7 @@ export class NursingRoomsService {
     return this.prisma.nursingRoomReport.findMany({
       where: { status: 'APPROVED' },
       orderBy: { createdAt: 'desc' },
+      take: 1000,
     });
   }
 }

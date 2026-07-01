@@ -439,6 +439,8 @@ export class PaymentsService {
         orderBy: { createdAt: 'desc' },
         take,
         skip,
+        // 목록에선 불필요한 대용량 JSON(건당 수~수십KB) 제외
+        omit: { rawRequest: true, rawResponse: true, metadata: true },
         include: { events: { orderBy: { createdAt: 'asc' } } },
       }),
       this.prisma.payment.count({ where }),

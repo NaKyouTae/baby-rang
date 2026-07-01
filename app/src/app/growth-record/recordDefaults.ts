@@ -1,9 +1,10 @@
-import { GrowthType, TYPE_CONFIG } from './types';
+import { GrowthType, GrowthRecord, TYPE_CONFIG } from './types';
 
 const BABYFOOD_UNIT_KEY = 'baby-rang:settings:babyfood-default-unit';
 const DIAPER_KIND_KEY = 'baby-rang:settings:diaper-default-kind';
 const SLEEP_NIGHT_RANGE_KEY = 'baby-rang:settings:sleep-night-range';
 const QUICK_TYPES_KEY = 'baby-rang:settings:quick-types';
+const DAYS_CACHE_PREFIX = 'baby-rang:cache:growth-days:';
 
 export type BabyFoodUnit = 'ml' | 'g';
 export type DiaperKind = 'PEE' | 'POO' | 'BOTH';
@@ -96,6 +97,38 @@ export function getCachedQuickTypes(): string[] | null {
 
 export function setCachedQuickTypes(types: string[]) {
   safeWrite(QUICK_TYPES_KEY, JSON.stringify(types));
+}
+
+export interface CachedDayGroup {
+  date: string;
+  records: GrowthRecord[];
+}
+
+/** 기록 리스트 첫 페이지 캐시(아이별) — 메뉴 진입 시 깜빡임 방지 */
+export function getCachedDays(childId: string): CachedDayGroup[] | null {
+  const raw = safeRead(DAYS_CACHE_PREFIX + childId);
+  if (!raw) return null;
+  try {
+    const arr = JSON.parse(raw);
+    if (
+      Array.isArray(arr) &&
+      arr.every(
+        (g) =>
+          g &&
+          typeof g.date === 'string' &&
+          Array.isArray((g as CachedDayGroup).records),
+      )
+    ) {
+      return arr as CachedDayGroup[];
+    }
+  } catch {
+    /* noop */
+  }
+  return null;
+}
+
+export function setCachedDays(childId: string, days: CachedDayGroup[]) {
+  safeWrite(DAYS_CACHE_PREFIX + childId, JSON.stringify(days));
 }
 
 export function hhmmToMinutes(hhmm: string): number {

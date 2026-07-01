@@ -178,7 +178,7 @@ function ChildHeroCard({
     // 최근 90일 범위를 가져와서 마지막 기록(오늘 이전 포함) 경과 시간을 계산한다.
     const from = todayKstYmd(new Date(Date.now() - 90 * 86_400_000));
     const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${from}&to=${today}`;
-    cachedFetch<GrowthRecord[]>(url, 30_000)
+    cachedFetch<GrowthRecord[]>(url, 5 * 60_000)
       .then((data) => {
         if (!cancel) setStats(computeStats(data ?? [], today));
       })

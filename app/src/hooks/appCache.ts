@@ -89,3 +89,49 @@ export function invalidateCache(urlPrefix: string) {
     if (key.startsWith(urlPrefix)) fetchCache.delete(key);
   }
 }
+
+// --- Shared geolocation ---
+// 여러 컴포넌트(날씨/주변 수유실)가 각자 getCurrentPosition을 호출하면
+// WKWebView에서 권한 프롬프트가 중복되고 지연이 배가된다.
+// 좌표를 모듈 레벨에 캐시하고 진행 중 요청을 공유(dedupe)해 위치 요청을 1회로 합친다.
+interface SharedPosition {
+  lat: number;
+  lng: number;
+  ts: number;
+}
+let cachedPosition: SharedPosition | null = null;
+let inflightPosition: Promise<SharedPosition> | null = null;
+const GEO_TTL = 5 * 60_000; // 5분
+
+export function getSharedPosition(opts?: PositionOptions): Promise<SharedPosition> {
+  const now = Date.now();
+  if (cachedPosition && now - cachedPosition.ts < GEO_TTL) {
+    return Promise.resolve(cachedPosition);
+  }
+  if (inflightPosition) return inflightPosition;
+
+  const p = new Promise<SharedPosition>((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('geolocation unsupported'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        cachedPosition = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          ts: Date.now(),
+        };
+        resolve(cachedPosition);
+      },
+      (err) => reject(err),
+      opts ?? { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    );
+  });
+  inflightPosition = p;
+  // 성공/실패 후 in-flight 해제(실패 시 다음 호출이 재시도 가능)
+  p.finally(() => {
+    if (inflightPosition === p) inflightPosition = null;
+  }).catch(() => {});
+  return p;
+}

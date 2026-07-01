@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
 import { useAuth } from '@/hooks/useAuth';
+import { refreshChildrenCache } from '@/hooks/useChildren';
 import { palette } from '@/lib/colors';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -298,7 +299,9 @@ export default function SharingPage() {
       if (res.ok) {
         setJoinCode('');
         setJoinError('');
-        await fetchData();
+        // 그룹 참여로 접근 가능한 아이가 늘어났으므로 전역 children 캐시를 갱신한다.
+        // (재로그인 없이 기록/패턴 페이지에서 바로 프로필이 보이도록)
+        await Promise.all([fetchData(), refreshChildrenCache()]);
       } else {
         const data = await res.json().catch(() => ({}));
         setJoinError(data.message || '공유 코드를 확인해주세요.');
@@ -329,7 +332,8 @@ export default function SharingPage() {
     });
     if (res.ok) {
       setLeaveTarget(null);
-      await fetchData();
+      // 그룹 탈퇴로 접근 가능한 아이가 줄었을 수 있으므로 캐시도 갱신한다.
+      await Promise.all([fetchData(), refreshChildrenCache()]);
     }
   };
 

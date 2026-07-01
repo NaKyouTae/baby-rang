@@ -19,6 +19,8 @@ import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
 import {
   getCachedQuickTypes,
   setCachedQuickTypes,
+  getCachedDays,
+  setCachedDays,
   buildDefaultRecordData,
 } from './recordDefaults';
 import ChildSelector from '@/components/ChildSelector';
@@ -313,7 +315,10 @@ type DayGroup = { date: string; records: GrowthRecord[] };
 export default function GrowthRecordPage() {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const { openLoginPrompt } = useLoginPrompt();
-  const [days, setDays] = useState<DayGroup[]>([]);
+  // 진입 즉시 이전에 캐시된 리스트를 그려 깜빡임(빈 화면)을 방지한다.
+  const [days, setDays] = useState<DayGroup[]>(() =>
+    selectedChild ? (getCachedDays(selectedChild.id) ?? []) : [],
+  );
   const [cursor, setCursor] = useState<string>(todayString());
   const [hasMore, setHasMore] = useState(true);
   const [earliestDate, setEarliestDate] = useState<string | null>(null);
@@ -418,7 +423,9 @@ export default function GrowthRecordPage() {
     if (!selectedChild) return;
     let cancelled = false;
     const init = async () => {
-      setDays([]);
+      // 아이 전환/진입 시 리스트를 비우지 않고, 해당 아이의 캐시를 먼저 보여준다.
+      // (캐시가 없을 때만 빈 배열 — 새 데이터가 도착하면 조용히 교체)
+      setDays(getCachedDays(selectedChild.id) ?? []);
       setHasMore(true);
       const today = todayString();
       const targets: string[] = [];
@@ -454,6 +461,7 @@ export default function GrowthRecordPage() {
             .map((d) => ({ date: d, records: dateMap.get(d) ?? [] }))
             .filter((g) => g.records.length > 0);
           setDays(grouped);
+          setCachedDays(selectedChild.id, grouped);
           const nextCursor = shiftDate(from, -1);
           setCursor(nextCursor);
           if (!earliest || nextCursor < earliest) setHasMore(false);
@@ -481,6 +489,7 @@ export default function GrowthRecordPage() {
       setEarliestDate(earliest);
       const next = results.filter((g) => g.records.length > 0);
       setDays(next);
+      setCachedDays(selectedChild.id, next);
       const nextCursor = shiftDate(targets[targets.length - 1], -1);
       setCursor(nextCursor);
       if (!earliest || nextCursor < earliest) setHasMore(false);
@@ -518,6 +527,7 @@ export default function GrowthRecordPage() {
         .map(([date, recs]) => ({ date, records: recs }))
         .sort((a, b) => b.date.localeCompare(a.date));
       setDays(grouped);
+      setCachedDays(selectedChild.id, grouped);
       const nextCursor = shiftDate(from, -1);
       setCursor(nextCursor);
       setHasMore(!(!earliest || nextCursor < earliest));
@@ -553,15 +563,17 @@ export default function GrowthRecordPage() {
     async (id: string) => {
       const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        setDays((prev) =>
-          prev
+        setDays((prev) => {
+          const next = prev
             .map((g) => ({ ...g, records: g.records.filter((r) => r.id !== id) }))
-            .filter((g) => g.records.length > 0),
-        );
+            .filter((g) => g.records.length > 0);
+          if (selectedChild) setCachedDays(selectedChild.id, next);
+          return next;
+        });
         setSwipedRowId(null);
       }
     },
-    [],
+    [selectedChild],
   );
 
   // 스와이프 열린 행 — 다른 곳(다른 행 포함)을 탭/클릭하거나 스크롤 시 닫기

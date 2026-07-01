@@ -22,6 +22,7 @@ export class PhysicalGrowthService {
     return this.prisma.physicalGrowth.findMany({
       where: { childId },
       orderBy: { measuredAt: 'desc' },
+      take: 500, // 성장 측정은 드물어 500이면 수년치 — 무제한 스캔 방지
     });
   }
 

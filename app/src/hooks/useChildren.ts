@@ -42,6 +42,23 @@ function normalizeChildren(data: (Child & { birthDate: string })[]): Child[] {
     .sort((a, b) => b.birthDate.localeCompare(a.birthDate));
 }
 
+/**
+ * 접근 가능한 아이 목록이 바뀌는 동작(그룹 참여/탈퇴 등) 이후 전역 children 캐시를
+ * 강제로 재조회한다. setChildrenCache 가 childListeners 로 브로드캐스트하므로,
+ * 마운트된 모든 useChildren 소비자(기록/패턴 페이지 등)가 즉시 갱신된다.
+ */
+export async function refreshChildrenCache(): Promise<void> {
+  try {
+    const res = await fetch('/api/children', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      setChildrenCache(normalizeChildren(data));
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function useChildren() {
   const { isAuthenticated, isLoaded: authLoaded } = useAuth();
   const { requireLogin } = useLoginPrompt();

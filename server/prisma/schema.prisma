@@ -200,6 +200,8 @@ model TemperamentSubmission {
   result  TemperamentResult?
 
   @@index([userId, createdAt])
+  // getHistory: userId + status 필터 + completedAt 정렬 최적화
+  @@index([userId, status, completedAt])
   @@map("temperament_submissions")
 }
 
@@ -382,6 +384,8 @@ model GrowthRecord {
 
   @@index([childId, startAt])
   @@index([userId, startAt])
+  // recentAmounts: childId + type 필터 + startAt 정렬 최적화
+  @@index([childId, type, startAt])
   @@map("growth_records")
 }
 
@@ -480,6 +484,7 @@ model PhysicalGrowth {
   user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
   child Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  @@index([childId, measuredAt])
+  // measuredAt desc 정렬(findAll)에 맞춘 내림차순 인덱스
+  @@index([childId, measuredAt(sort: Desc)])
   @@map("physical_growths")
 }

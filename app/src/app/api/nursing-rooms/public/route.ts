@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 // sooyusil.com 오픈 API 프록시 (DB 저장 없이 단순 중계)
 // https://sooyusil.com/home/39.htm
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 interface SooyusilRoom {
   roomNo?: string;
@@ -39,8 +38,9 @@ export async function GET(req: Request) {
   }
 
   try {
+    // 외부 sooyusil.com 호출을 1시간 revalidate로 캐시 (매 요청 외부 호출 방지)
     const res = await fetch(`https://sooyusil.com/api/nursingRoomJSON.do?${params.toString()}`, {
-      cache: "no-store",
+      next: { revalidate: 3600 },
     });
     if (!res.ok) {
       return NextResponse.json({ rooms: [], message: `upstream ${res.status}` }, { status: 502 });

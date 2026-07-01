@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { gradeColor, gradeLabel, whoGradePm10, whoGradePm25 } from "@/lib/airQualityGrade";
+import { getSharedPosition } from "@/hooks/appCache";
 
 interface WeatherAirData {
   weather: {
@@ -52,11 +53,11 @@ export default function HomeWeatherStrip() {
     }
 
     const tryFetch = () => {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude } = pos.coords;
+      // 공유 위치(다른 홈 컴포넌트와 1회 요청 공유)
+      getSharedPosition({ enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 })
+        .then(async ({ lat, lng }) => {
           try {
-            const res = await fetch(`/api/weather?lat=${latitude}&lng=${longitude}&mode=lite`);
+            const res = await fetch(`/api/weather?lat=${lat}&lng=${lng}&mode=lite`);
             if (res.ok) {
               const json = await res.json();
               setData(json);
@@ -66,10 +67,8 @@ export default function HomeWeatherStrip() {
           } finally {
             setLoading(false);
           }
-        },
-        () => setLoading(false),
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 },
-      );
+        })
+        .catch(() => setLoading(false));
     };
 
     // 권한 상태 먼저 확인

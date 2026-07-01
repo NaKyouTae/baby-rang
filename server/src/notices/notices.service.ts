@@ -9,6 +9,7 @@ export class NoticesService {
     return this.prisma.notice.findMany({
       where: { isPublished: true },
       orderBy: [{ isPinned: 'desc' }, { publishedAt: 'desc' }],
+      take: 100,
     });
   }
 
@@ -35,15 +36,13 @@ export class NoticesService {
   }
 
   async hasUnread(userId: string): Promise<boolean> {
-    const totalPublished = await this.prisma.notice.count({
-      where: { isPublished: true },
-    });
-    const totalRead = await this.prisma.noticeRead.count({
-      where: {
-        userId,
-        notice: { isPublished: true },
-      },
-    });
+    // 독립적인 두 COUNT를 병렬 실행 (홈 진입마다 호출됨)
+    const [totalPublished, totalRead] = await Promise.all([
+      this.prisma.notice.count({ where: { isPublished: true } }),
+      this.prisma.noticeRead.count({
+        where: { userId, notice: { isPublished: true } },
+      }),
+    ]);
     return totalRead < totalPublished;
   }
 }

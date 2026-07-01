@@ -100,6 +100,7 @@ export class GrowthRecordsService {
         startAt: { gte: start, lt: end },
       },
       orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
+      take: 2000, // 정상 사용(30~90일)엔 넉넉, 병적으로 넓은 범위만 방어
     });
   }
 
@@ -151,6 +152,7 @@ export class GrowthRecordsService {
         startAt: { gte: start, lt: end },
       },
       orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
+      take: 200, // 하루치 — 200이면 충분
     });
   }
 
@@ -174,11 +176,10 @@ export class GrowthRecordsService {
     if (!input.startAt) throw new BadRequestException('startAt is required');
 
     const limited = (files ?? []).slice(0, 5);
-    const uploaded: string[] = [];
-    for (const file of limited) {
-      const url = await this.storage.upload(file, 'growth-records');
-      uploaded.push(url);
-    }
+    // 이미지 업로드를 병렬 처리 (Promise.all은 순서 보존 → uploaded[0]이 대표 이미지)
+    const uploaded = await Promise.all(
+      limited.map((file) => this.storage.upload(file, 'growth-records')),
+    );
 
     return this.prisma.growthRecord.create({
       data: {
@@ -228,15 +229,17 @@ export class GrowthRecordsService {
 
       const previousUrls = this.mergedExistingUrls(existing);
       const removed = previousUrls.filter((u) => !keepUrls.includes(u));
-      for (const url of removed) {
-        await this.storage.delete(url).catch(() => {});
-      }
-
-      const uploaded: string[] = [];
-      for (const file of (files ?? []).slice(0, 5)) {
-        const url = await this.storage.upload(file, 'growth-records');
-        uploaded.push(url);
-      }
+      // 삭제(순서 무관)와 업로드(순서 보존)를 각각 병렬 처리
+      const [, uploaded] = await Promise.all([
+        Promise.all(
+          removed.map((url) => this.storage.delete(url).catch(() => {})),
+        ),
+        Promise.all(
+          (files ?? [])
+            .slice(0, 5)
+            .map((file) => this.storage.upload(file, 'growth-records')),
+        ),
+      ]);
 
       nextUrls = [...keepUrls, ...uploaded].slice(0, 5);
     }
@@ -270,7 +273,9 @@ export class GrowthRecordsService {
     if (!existing) throw new NotFoundException('기록을 찾을 수 없습니다.');
     await this.assertChildAccess(userId, existing.childId);
     const urls = this.mergedExistingUrls(existing);
-    for (const url of urls) await this.storage.delete(url).catch(() => {});
+    await Promise.all(
+      urls.map((url) => this.storage.delete(url).catch(() => {})),
+    );
     await this.prisma.growthRecord.delete({ where: { id } });
     return { ok: true };
   }
