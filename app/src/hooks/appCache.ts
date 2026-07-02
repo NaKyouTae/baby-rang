@@ -6,6 +6,28 @@
 
 import type { AuthUser } from './useAuth';
 
+// --- localStorage 지속 (콜드 스타트 stale-while-revalidate용) ---
+const AUTH_LS_KEY = 'baby-rang:auth';
+const CHILDREN_LS_KEY = 'baby-rang:children';
+
+function lsRead<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function lsWrite(key: string, val: unknown) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(val));
+  } catch {
+    /* ignore */
+  }
+}
+
 // --- Auth ---
 export let cachedAuth: boolean | null = null;
 export let cachedUser: AuthUser | null = null;
@@ -14,6 +36,7 @@ export const authListeners = new Set<(v: boolean, u: AuthUser | null) => void>()
 export function setAuthCache(v: boolean, u: AuthUser | null) {
   cachedAuth = v;
   cachedUser = u;
+  lsWrite(AUTH_LS_KEY, { authenticated: v, user: u });
   authListeners.forEach((l) => l(v, u));
 }
 
@@ -33,7 +56,42 @@ export const childListeners = new Set<(children: ChildData[]) => void>();
 export function setChildrenCache(children: ChildData[]) {
   cachedChildren = children;
   childrenCacheLoaded = true;
+  lsWrite(CHILDREN_LS_KEY, children);
   childListeners.forEach((l) => l(children));
+}
+
+// 로그아웃/탈퇴 시 지속 캐시를 비워 재로그인 시 stale 상태 플래시를 방지한다.
+export function clearAuthCaches() {
+  cachedAuth = false;
+  cachedUser = null;
+  cachedChildren = [];
+  childrenCacheLoaded = true;
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(AUTH_LS_KEY);
+      window.localStorage.removeItem(CHILDREN_LS_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  authListeners.forEach((l) => l(false, null));
+  childListeners.forEach((l) => l([]));
+}
+
+// 콜드 스타트 시 localStorage 캐시를 즉시 메모리 캐시로 복원(1회).
+// import 시점이 아니라 클라이언트 mount 후 호출해 SSR 하이드레이션 불일치를 피한다.
+let storageHydrated = false;
+export function hydrateFromStorage() {
+  if (storageHydrated || typeof window === 'undefined') return;
+  storageHydrated = true;
+  const a = lsRead<{ authenticated: boolean; user: AuthUser | null }>(AUTH_LS_KEY);
+  if (a && typeof a.authenticated === 'boolean') {
+    setAuthCache(a.authenticated, a.user ?? null);
+  }
+  const c = lsRead<ChildData[]>(CHILDREN_LS_KEY);
+  if (Array.isArray(c)) {
+    setChildrenCache(c);
+  }
 }
 
 // --- Selected Child (persisted) ---
@@ -102,6 +160,25 @@ interface SharedPosition {
 let cachedPosition: SharedPosition | null = null;
 let inflightPosition: Promise<SharedPosition> | null = null;
 const GEO_TTL = 5 * 60_000; // 5분
+const GEO_LS_KEY = 'geo_last'; // 마지막 좌표(세션 넘어 재사용)
+
+// 마지막으로 확보한 좌표(메모리 → localStorage 순). 홈 화면이 위치 확정을 기다리지 않고
+// 즉시 날씨/미세먼지/주변 수유실을 조회하도록 하는 용도. (fresh 좌표는 뒤이어 갱신)
+export function getLastKnownPosition(): { lat: number; lng: number } | null {
+  if (cachedPosition) return { lat: cachedPosition.lat, lng: cachedPosition.lng };
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(GEO_LS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (typeof p?.lat === 'number' && typeof p?.lng === 'number') {
+      return { lat: p.lat, lng: p.lng };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 export function getSharedPosition(opts?: PositionOptions): Promise<SharedPosition> {
   const now = Date.now();
@@ -122,10 +199,19 @@ export function getSharedPosition(opts?: PositionOptions): Promise<SharedPositio
           lng: pos.coords.longitude,
           ts: Date.now(),
         };
+        // 다음 앱 실행에서 즉시 사용하도록 영속화
+        try {
+          window.localStorage.setItem(
+            GEO_LS_KEY,
+            JSON.stringify({ lat: cachedPosition.lat, lng: cachedPosition.lng, ts: cachedPosition.ts }),
+          );
+        } catch {
+          /* ignore */
+        }
         resolve(cachedPosition);
       },
       (err) => reject(err),
-      opts ?? { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+      opts ?? { enableHighAccuracy: false, timeout: 4000, maximumAge: 600_000 },
     );
   });
   inflightPosition = p;

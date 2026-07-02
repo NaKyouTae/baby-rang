@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { cachedFetch, getSharedPosition } from "@/hooks/appCache";
+import { cachedFetch, getSharedPosition, getLastKnownPosition } from "@/hooks/appCache";
 import { palette } from "@/lib/colors";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -49,14 +49,22 @@ export default function NearbyNursingRoomsStrip() {
       setLocStatus("unsupported");
       return;
     }
-    setLocStatus("loading");
-    // 공유 위치(날씨 스트립과 1회 요청 공유) — 캐시된 좌표가 있으면 즉시 반환
-    getSharedPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 })
+    // 1) 마지막 좌표가 있으면 위치 확정을 기다리지 않고 즉시 표시 (9초 대기 제거)
+    const last = getLastKnownPosition();
+    if (last) {
+      setUserLoc(last);
+      setLocStatus("granted");
+    } else {
+      setLocStatus("loading");
+    }
+    // 2) 최신 좌표를 확보해 갱신 (날씨 스트립과 요청 1회 공유)
+    getSharedPosition({ enableHighAccuracy: true, timeout: 6000, maximumAge: 600_000 })
       .then(({ lat, lng }) => {
         setUserLoc({ lat, lng });
         setLocStatus("granted");
       })
       .catch((err: unknown) => {
+        if (last) return; // 이미 마지막 좌표로 표시 중 → 상태 유지
         if (
           err instanceof GeolocationPositionError &&
           err.code === GeolocationPositionError.PERMISSION_DENIED
@@ -70,19 +78,9 @@ export default function NearbyNursingRoomsStrip() {
   };
 
   useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.permissions) {
-      requestLocation(); // eslint-disable-line react-hooks/set-state-in-effect -- geolocation API read
-      return;
-    }
-    // WKWebView에서는 앱이 위치를 허용해도 permissions API가 "prompt"를 반환할 수 있으므로
-    // "prompt" 상태에서도 getCurrentPosition을 호출해야 네이티브 델리게이트가 작동함
-    navigator.permissions.query({ name: "geolocation" }).then((status) => {
-      if (status.state === "denied") {
-        setLocStatus("denied");
-      } else {
-        requestLocation(); // "granted" 또는 "prompt" → 직접 요청
-      }
-    });
+    // getCurrentPosition을 직접 호출해야 WKWebView 네이티브 델리게이트가 동작하므로
+    // permissions.query 게이트 없이 바로 요청한다(날씨 스트립과 dedupe되어 프롬프트 1회).
+    requestLocation(); // eslint-disable-line react-hooks/set-state-in-effect -- geolocation API read
   }, []);
 
   useEffect(() => {

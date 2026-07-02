@@ -9,6 +9,7 @@ import {
   childrenCacheLoaded,
   childListeners,
   setChildrenCache,
+  hydrateFromStorage,
   selectedChildId as storedSelectedChildId,
   selectedChildListeners,
   setSelectedChildId,
@@ -102,6 +103,12 @@ export function useChildren() {
       setIsLoaded(true);
     };
     childListeners.add(l);
+    // 콜드 스타트 SWR: localStorage 캐시 복원 후 즉시 반영(스켈레톤 없이 렌더)
+    hydrateFromStorage();
+    if (cachedChildren !== null) {
+      setChildren(cachedChildren as Child[]);
+      setIsLoaded(true);
+    }
     return () => { childListeners.delete(l); };
   }, []);
 

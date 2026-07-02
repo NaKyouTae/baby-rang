@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useChildren, type Child } from "@/hooks/useChildren";
 import { calcChildAge } from "@/lib/childAge";
 import { useAuth } from "@/hooks/useAuth";
+import { clearAuthCaches } from "@/hooks/appCache";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
@@ -501,6 +502,7 @@ export default function SettingsPage() {
               type="button"
               onClick={async () => {
                 await fetch("/api/auth/logout", { method: "POST" });
+                clearAuthCaches(); // 지속 캐시 비우기(재로그인 시 stale 방지)
                 window.location.href = "/home";
               }}
               className="text-[12px] font-normal" style={{ color: palette.gray500 }}
@@ -549,6 +551,7 @@ export default function SettingsPage() {
           try {
             const res = await fetch("/api/auth/withdraw", { method: "POST" });
             if (res.ok) {
+              clearAuthCaches(); // 지속 캐시 비우기
               window.location.href = "/home";
             } else {
               alert("탈퇴 처리 중 오류가 발생했어요.\n잠시 후 다시 시도해주세요.");

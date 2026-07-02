@@ -7,6 +7,7 @@ import {
   authListeners,
   setAuthCache,
   setChildrenCache,
+  hydrateFromStorage,
 } from './appCache';
 import type { ChildData } from './appCache';
 
@@ -34,6 +35,9 @@ function normalizeChildren(data: (ChildData & { birthDate: string })[]): ChildDa
 function slideSession() {
   fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store' }).catch(() => {});
 }
+
+// 앱 로드당 /api/init 재검증을 1회만 수행하기 위한 플래그(모듈 전역, 새로고침 시 초기화)
+let bootstrapStarted = false;
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(cachedAuth ?? false);
@@ -67,43 +71,57 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
-    if (cachedAuth === null) {
-      // 첫 로드: /api/init BFF로 auth + children 한 번에 가져오기
-      (async () => {
-        try {
-          const res = await fetch('/api/init', { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            const v = !!data.authenticated;
-            const u = (data.user as AuthUser | null) ?? null;
-            setAuthCache(v, u);
-            setIsAuthenticated(v);
-            setUser(u);
-            setIsLoaded(true);
-            // children이 배열일 때만 캐시. null(조회 실패/타임아웃)이면 캐시하지 않아
-            // useChildren이 스스로 재조회하게 둔다 → "아이 없음" 오표시 방지.
-            if (Array.isArray(data.children)) {
-              setChildrenCache(normalizeChildren(data.children));
-            }
-            // 로그인 확인되면 세션 슬라이드(무한 로그인)
-            if (v && u) slideSession();
-            // 인증은 유지됐지만 프로필이 일시 실패(user null)면 잠시 뒤 재조회로 자가 복구
-            else if (v && !u) setTimeout(() => { refresh(); }, 1200);
-            return;
-          }
-        } catch {
-          /* fallback */
-        }
-        // init 실패 시 기존 방식 fallback
-        await refresh();
-      })();
-    }
     const l = (v: boolean, u: AuthUser | null) => {
       setIsAuthenticated(v);
       setUser(u);
       setIsLoaded(true);
     };
     authListeners.add(l);
+
+    // 콜드 스타트 SWR: localStorage 캐시를 즉시 복원해 스켈레톤 없이 렌더
+    hydrateFromStorage();
+    if (cachedAuth !== null) {
+      setIsAuthenticated(cachedAuth);
+      setUser(cachedUser);
+      setIsLoaded(true);
+    }
+
+    // 앱 로드당 1회 백그라운드 재검증(/api/init). 캐시가 있으면 UI는 이미 그려진 상태라
+    // 네트워크가 느려도(콜드 init) 스켈레톤이 보이지 않는다.
+    if (!bootstrapStarted) {
+      bootstrapStarted = true;
+      (async () => {
+        try {
+          const res = await fetch('/api/init', { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated === false) {
+              // 토큰 실제 무효 → 진짜 로그아웃
+              setAuthCache(false, null);
+              setIsAuthenticated(false);
+              setUser(null);
+            } else {
+              // 일시 실패(user null)면 기존 값 유지(SWR — 캐시 다운그레이드 방지)
+              const u = (data.user as AuthUser | null) ?? cachedUser;
+              setAuthCache(true, u);
+              setIsAuthenticated(true);
+              setUser(u);
+              if (u) slideSession();
+              else setTimeout(() => { refresh(); }, 1200);
+            }
+            setIsLoaded(true);
+            // children은 배열일 때만 갱신(실패=null이면 기존 캐시 유지)
+            if (Array.isArray(data.children)) {
+              setChildrenCache(normalizeChildren(data.children));
+            }
+            return;
+          }
+        } catch {
+          /* fallback */
+        }
+        await refresh();
+      })();
+    }
 
     // bfcache 복원(뒤로가기) / 탭 포커스 복귀 시 인증 상태 재동기화
     const onPageShow = (e: PageTransitionEvent) => {

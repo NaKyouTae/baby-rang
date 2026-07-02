@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { gradeColor, gradeLabel, whoGradePm10, whoGradePm25 } from "@/lib/airQualityGrade";
-import { getSharedPosition } from "@/hooks/appCache";
+import { getSharedPosition, getLastKnownPosition } from "@/hooks/appCache";
 
 interface WeatherAirData {
   weather: {
@@ -51,37 +51,42 @@ export default function HomeWeatherStrip() {
       setLoading(false);
       return;
     }
+    let cancelled = false;
+    let lastKey = "";
 
-    const tryFetch = () => {
-      // 공유 위치(다른 홈 컴포넌트와 1회 요청 공유)
-      getSharedPosition({ enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 })
-        .then(async ({ lat, lng }) => {
-          try {
-            const res = await fetch(`/api/weather?lat=${lat}&lng=${lng}&mode=lite`);
-            if (res.ok) {
-              const json = await res.json();
-              setData(json);
-            }
-          } catch {
-            // silently fail
-          } finally {
-            setLoading(false);
-          }
-        })
-        .catch(() => setLoading(false));
+    const fetchWeather = async (lat: number, lng: number) => {
+      const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+      if (key === lastKey) return; // 같은 위치면 재요청 생략
+      lastKey = key;
+      try {
+        const res = await fetch(`/api/weather?lat=${lat}&lng=${lng}&mode=lite`);
+        if (res.ok) {
+          const json = await res.json();
+          if (!cancelled) setData(json);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
 
-    // 권한 상태 먼저 확인
-    // WKWebView에서는 앱이 위치를 허용해도 permissions API가 "prompt"를 반환할 수 있으므로
-    // "prompt" 상태에서도 getCurrentPosition을 호출해야 네이티브 델리게이트가 작동함
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
-        if (result.state === "denied") setLoading(false);
-        else tryFetch(); // "granted" 또는 "prompt" → 직접 요청
+    // 1) 마지막 좌표가 있으면 위치 확정을 기다리지 않고 즉시 조회 (9초 대기 제거)
+    const last = getLastKnownPosition();
+    if (last) fetchWeather(last.lat, last.lng);
+
+    // 2) 최신 좌표를 확보해 갱신 (권한 프롬프트 포함). 실패해도 last로 이미 표시됨.
+    getSharedPosition({ enableHighAccuracy: false, timeout: 4000, maximumAge: 600000 })
+      .then(({ lat, lng }) => {
+        if (!cancelled) fetchWeather(lat, lng);
+      })
+      .catch(() => {
+        if (!last && !cancelled) setLoading(false);
       });
-    } else {
-      tryFetch();
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!data && !loading) return null;
