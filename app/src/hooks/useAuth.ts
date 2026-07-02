@@ -30,6 +30,11 @@ function normalizeChildren(data: (ChildData & { birthDate: string })[]): ChildDa
     .sort((a, b) => b.birthDate.localeCompare(a.birthDate));
 }
 
+// 세션 슬라이딩: 새 토큰으로 쿠키 만료를 계속 연장 (fire-and-forget → 무한 로그인)
+function slideSession() {
+  fetch('/api/auth/refresh', { method: 'POST', cache: 'no-store' }).catch(() => {});
+}
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(cachedAuth ?? false);
   const [user, setUser] = useState<AuthUser | null>(cachedUser);
@@ -40,14 +45,22 @@ export function useAuth() {
       const res = await fetch('/api/auth/token', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        const v = !!data.authenticated;
-        const u = (data.user as AuthUser | null) ?? null;
-        setAuthCache(v, u);
-        setIsAuthenticated(v);
-        setUser(u);
+        if (data.authenticated === false) {
+          // 토큰이 실제로 무효 → 진짜 로그아웃
+          setAuthCache(false, null);
+          setIsAuthenticated(false);
+          setUser(null);
+        } else {
+          // 로그인 유지. 일시 실패(stale)면 user를 null로 덮지 않고 기존 값 유지.
+          const u = (data.user as AuthUser | null) ?? cachedUser;
+          setAuthCache(true, u);
+          setIsAuthenticated(true);
+          setUser(u);
+          if (u) slideSession();
+        }
       }
     } catch {
-      /* ignore */
+      /* 네트워크 실패 — 기존 상태 유지 */
     } finally {
       setIsLoaded(true);
     }
@@ -67,8 +80,15 @@ export function useAuth() {
             setIsAuthenticated(v);
             setUser(u);
             setIsLoaded(true);
-            // children 캐시도 동시에 세팅
-            setChildrenCache(normalizeChildren(data.children ?? []));
+            // children이 배열일 때만 캐시. null(조회 실패/타임아웃)이면 캐시하지 않아
+            // useChildren이 스스로 재조회하게 둔다 → "아이 없음" 오표시 방지.
+            if (Array.isArray(data.children)) {
+              setChildrenCache(normalizeChildren(data.children));
+            }
+            // 로그인 확인되면 세션 슬라이드(무한 로그인)
+            if (v && u) slideSession();
+            // 인증은 유지됐지만 프로필이 일시 실패(user null)면 잠시 뒤 재조회로 자가 복구
+            else if (v && !u) setTimeout(() => { refresh(); }, 1200);
             return;
           }
         } catch {

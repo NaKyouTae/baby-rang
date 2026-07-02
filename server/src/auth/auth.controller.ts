@@ -121,6 +121,13 @@ export class AuthController {
     return req.user;
   }
 
+  // 슬라이딩 세션: 유효한 토큰 소지자에게 새 토큰을 재발급 → 활동 중이면 만료 없이 갱신.
+  @Post('refresh')
+  @UseGuards(AuthGuard('jwt'))
+  refresh(@Req() req) {
+    return this.authService.generateToken(req.user.id);
+  }
+
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
   updateProfile(

@@ -33,7 +33,7 @@ export function GET(request: NextRequest) {
       httpOnly: true,
       secure,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7일
+      maxAge: 60 * 60 * 24 * 180, // 180일 (슬라이딩 세션으로 계속 연장)
       path: '/',
     });
     // 가입 완료/로그인 시점이므로 잔여 signup_token 정리.

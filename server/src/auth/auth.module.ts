@@ -16,7 +16,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get('JWT_SECRET'),
-        signOptions: { expiresIn: config.get('JWT_EXPIRES_IN', '7d') },
+        // 긴 수명 + 클라이언트 슬라이딩 재발급(/auth/refresh)으로 "무한 로그인" 구현
+        signOptions: { expiresIn: config.get('JWT_EXPIRES_IN', '180d') },
       }),
     }),
   ],

@@ -14,14 +14,21 @@ export async function GET() {
     const res = await fetch(`${API_URL}/auth/profile`, {
       headers: { Authorization: `Bearer ${token.value}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(8000),
     });
+    // 401/403 → 토큰 실제 무효(진짜 로그아웃)
+    if (res.status === 401 || res.status === 403) {
+      return NextResponse.json({ authenticated: false, user: null });
+    }
+    // 그 외 실패(5xx/타임아웃 등) → 세션 유지, 일시적 실패로 표시(user는 null로 덮지 않도록 stale)
     if (!res.ok) {
-      return NextResponse.json({ authenticated: true, user: null });
+      return NextResponse.json({ authenticated: true, user: null, stale: true });
     }
     const user = await res.json();
     return NextResponse.json({ authenticated: true, user });
   } catch {
-    return NextResponse.json({ authenticated: true, user: null });
+    // 네트워크/타임아웃 — 로그인 유지, 일시 실패
+    return NextResponse.json({ authenticated: true, user: null, stale: true });
   }
 }
 
@@ -33,7 +40,7 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7일
+    maxAge: 60 * 60 * 24 * 180, // 180일 (슬라이딩 세션으로 계속 연장)
     path: "/",
   });
 

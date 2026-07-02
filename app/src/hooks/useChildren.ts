@@ -72,19 +72,28 @@ export function useChildren() {
       setIsLoaded(true);
       return;
     }
-    try {
-      const res = await fetch('/api/children');
-      if (res.ok) {
-        const data = await res.json();
-        const sorted = normalizeChildren(data);
-        setChildrenCache(sorted);
-        setChildren(sorted);
+    // 일시적 실패(콜드스타트/네트워크)로 "아이 없음"이 캐시되지 않도록 재시도.
+    // 성공(200) 응답일 때만 캐시하며, 빈 배열도 실제 200이면 정상 반영한다.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/children', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const sorted = normalizeChildren(data);
+          setChildrenCache(sorted);
+          setChildren(sorted);
+          setIsLoaded(true);
+          return;
+        }
+        // 인증 문제는 재시도해도 소용없음 → 중단
+        if (res.status === 401 || res.status === 403) break;
+      } catch {
+        /* 네트워크 실패 → 재시도 */
       }
-    } catch {
-      // ignore
-    } finally {
-      setIsLoaded(true);
+      await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
     }
+    // 모든 시도 실패 — 캐시를 남기지 않아(오염 방지) 다음 트리거에 재조회한다.
+    setIsLoaded(true);
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -106,6 +115,21 @@ export function useChildren() {
     }
     fetchChildren();
   }, [fetchChildren, authLoaded]);
+
+  // 앞선 조회가 실패해 캐시가 비어있으면(=null), 탭 복귀 시 다시 시도해 자가 복구한다.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        isAuthenticated &&
+        cachedChildren === null
+      ) {
+        fetchChildren();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [isAuthenticated, fetchChildren]);
 
   const addChild = useCallback(
     async (name: string, gender: string, birthDate: string, profileImage?: File, dueDate?: string) => {
