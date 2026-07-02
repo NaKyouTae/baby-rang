@@ -47,6 +47,11 @@ export class GrowthRecordsController {
     return this.service.recentAmounts(req.user.id, childId, type);
   }
 
+  @Get('widget-summary')
+  widgetSummary(@Req() req, @Query('childId') childId?: string) {
+    return this.service.widgetSummary(req.user.id, childId);
+  }
+
   @Get('range')
   range(
     @Req() req,

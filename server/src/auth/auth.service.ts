@@ -104,6 +104,20 @@ export class AuthService {
     };
   }
 
+  // 홈 화면 위젯 전용 장수명 토큰.
+  // 위젯은 앱과 별개 프로세스라 httpOnly 쿠키에 접근할 수 없으므로,
+  // 앱이 이 토큰을 네이티브(App Group / SharedPreferences)에 저장해두고
+  // 위젯이 백그라운드에서 직접 API를 호출할 때 Bearer로 사용한다.
+  // type:'widget'으로 표시해 일반 세션 토큰과 구분(향후 스코프 제한 여지).
+  generateWidgetToken(userId: string) {
+    return {
+      widgetToken: this.jwtService.sign(
+        { sub: userId, type: 'widget' },
+        { expiresIn: '365d' },
+      ),
+    };
+  }
+
   generateSignupToken(profile: OAuthProfile): string {
     const payload: SignupTokenPayload = {
       type: 'signup',

@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import CoreLocation
+import WidgetKit
 
 struct WebView: UIViewRepresentable {
     let url: URL
@@ -21,6 +22,9 @@ struct WebView: UIViewRepresentable {
         // openSettings 메시지 핸들러 등록
         let contentController = configuration.userContentController
         contentController.add(context.coordinator, name: "openSettings")
+        // 홈 화면 위젯용 토큰/설정 저장 핸들러
+        contentController.add(context.coordinator, name: "saveWidgetData")
+        contentController.add(context.coordinator, name: "clearWidgetData")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -66,6 +70,17 @@ struct WebView: UIViewRepresentable {
                         UIApplication.shared.open(url)
                     }
                 }
+            } else if message.name == "saveWidgetData" {
+                // 웹이 { widgetToken, apiBaseUrl }을 넘겨줌 → App Group 저장 후 위젯 갱신
+                guard let body = message.body as? [String: Any],
+                      let token = body["widgetToken"] as? String,
+                      let apiBase = body["apiBaseUrl"] as? String else { return }
+                WidgetShared.save(token: token, apiBase: apiBase)
+                WidgetCenter.shared.reloadAllTimelines()
+            } else if message.name == "clearWidgetData" {
+                // 로그아웃 시 위젯 데이터 제거
+                WidgetShared.clear()
+                WidgetCenter.shared.reloadAllTimelines()
             }
         }
 

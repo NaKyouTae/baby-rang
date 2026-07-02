@@ -85,6 +85,59 @@ export class GrowthRecordsService {
     return { date: `${y}-${m}-${d}` };
   }
 
+  // 홈 화면 위젯용 요약 — 아이 정보 + 마지막 수유/수면/기저귀 "시각".
+  // 상대시간("3시간 22분 전")은 기기에서 계산하므로 절대 시각만 내려준다.
+  // (새로고침 사이에도 위젯의 경과시간 표시가 자연스럽게 흘러감)
+  // childId 미지정 시 사용자가 접근 가능한 첫 아이를 사용.
+  async widgetSummary(userId: string, childId?: string) {
+    let child: { id: string; name: string; birthDate: Date } | null;
+    if (childId) {
+      await this.assertChildAccess(userId, childId);
+      child = await this.prisma.child.findUnique({
+        where: { id: childId },
+        select: { id: true, name: true, birthDate: true },
+      });
+    } else {
+      const all = await this.children.findAll(userId);
+      child = all[0]
+        ? { id: all[0].id, name: all[0].name, birthDate: all[0].birthDate }
+        : null;
+    }
+    if (!child) return null;
+
+    const FEEDING_TYPES: GrowthRecordType[] = [
+      'BREASTFEEDING',
+      'FORMULA',
+      'PUMPED_FEEDING',
+      'MILK',
+    ];
+    const latest = (where: Prisma.GrowthRecordWhereInput) =>
+      this.prisma.growthRecord.findFirst({
+        where: { childId: child.id, ...where },
+        orderBy: { startAt: 'desc' },
+        select: { startAt: true },
+      });
+
+    const [feeding, sleep, diaper] = await Promise.all([
+      latest({ type: { in: FEEDING_TYPES } }),
+      latest({ type: 'SLEEP' }),
+      latest({ type: 'DIAPER' }),
+    ]);
+
+    // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
+    const b = child.birthDate;
+    const birthDate = `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, '0')}-${String(b.getUTCDate()).padStart(2, '0')}`;
+
+    return {
+      childId: child.id,
+      childName: child.name,
+      birthDate,
+      lastFeedingAt: feeding?.startAt ?? null,
+      lastSleepAt: sleep?.startAt ?? null,
+      lastDiaperAt: diaper?.startAt ?? null,
+    };
+  }
+
   async findByRange(userId: string, childId: string, from: string, to: string) {
     await this.assertChildAccess(userId, childId);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {

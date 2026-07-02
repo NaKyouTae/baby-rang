@@ -128,6 +128,14 @@ export class AuthController {
     return this.authService.generateToken(req.user.id);
   }
 
+  // 홈 화면 위젯 전용 토큰 발급. 앱(웹뷰)이 로그인 상태에서 호출해
+  // 네이티브에 저장한 뒤 위젯이 직접 API 호출에 사용한다.
+  @Post('widget-token')
+  @UseGuards(AuthGuard('jwt'))
+  widgetToken(@Req() req) {
+    return this.authService.generateWidgetToken(req.user.id);
+  }
+
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
   updateProfile(

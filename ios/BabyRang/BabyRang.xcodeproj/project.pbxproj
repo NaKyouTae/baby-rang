@@ -6,8 +6,42 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		6E6BF6AE2FF64F6C00521308 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E6BF6AD2FF64F6C00521308 /* WidgetKit.framework */; };
+		6E6BF6B02FF64F6C00521308 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E6BF6AF2FF64F6C00521308 /* SwiftUI.framework */; };
+		6E6BF6BD2FF64F6E00521308 /* BabyRangWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6E6BF6AB2FF64F6C00521308 /* BabyRangWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		6E6BF6BB2FF64F6E00521308 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6E47E1F32F88E6A600AEEA6B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6E6BF6AA2FF64F6C00521308;
+			remoteInfo = BabyRangWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6E6BF6C22FF64F6E00521308 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6E6BF6BD2FF64F6E00521308 /* BabyRangWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		6E47E1FB2F88E6A600AEEA6B /* BabyRang.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BabyRang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E6BF6AB2FF64F6C00521308 /* BabyRangWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BabyRangWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E6BF6AD2FF64F6C00521308 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		6E6BF6AF2FF64F6C00521308 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		6E6BF6C42FF652F100521308 /* BabyRangWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BabyRangWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -17,6 +51,13 @@
 				Info.plist,
 			);
 			target = 6E47E1FA2F88E6A600AEEA6B /* BabyRang */;
+		};
+		6E6BF6C12FF64F6E00521308 /* Exceptions for "BabyRangWidget" folder in "BabyRangWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 6E6BF6AA2FF64F6C00521308 /* BabyRangWidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -29,6 +70,14 @@
 			path = BabyRang;
 			sourceTree = "<group>";
 		};
+		6E6BF6B12FF64F6C00521308 /* BabyRangWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				6E6BF6C12FF64F6E00521308 /* Exceptions for "BabyRangWidget" folder in "BabyRangWidgetExtension" target */,
+			);
+			path = BabyRangWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,13 +88,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6E6BF6A82FF64F6C00521308 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E6BF6B02FF64F6C00521308 /* SwiftUI.framework in Frameworks */,
+				6E6BF6AE2FF64F6C00521308 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		6E47E1F22F88E6A600AEEA6B = {
 			isa = PBXGroup;
 			children = (
+				6E6BF6C42FF652F100521308 /* BabyRangWidgetExtension.entitlements */,
 				6E47E1FD2F88E6A600AEEA6B /* BabyRang */,
+				6E6BF6B12FF64F6C00521308 /* BabyRangWidget */,
+				6E6BF6AC2FF64F6C00521308 /* Frameworks */,
 				6E47E1FC2F88E6A600AEEA6B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,8 +115,18 @@
 			isa = PBXGroup;
 			children = (
 				6E47E1FB2F88E6A600AEEA6B /* BabyRang.app */,
+				6E6BF6AB2FF64F6C00521308 /* BabyRangWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		6E6BF6AC2FF64F6C00521308 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6E6BF6AD2FF64F6C00521308 /* WidgetKit.framework */,
+				6E6BF6AF2FF64F6C00521308 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -68,10 +139,12 @@
 				6E47E1F72F88E6A600AEEA6B /* Sources */,
 				6E47E1F82F88E6A600AEEA6B /* Frameworks */,
 				6E47E1F92F88E6A600AEEA6B /* Resources */,
+				6E6BF6C22FF64F6E00521308 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				6E6BF6BC2FF64F6E00521308 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				6E47E1FD2F88E6A600AEEA6B /* BabyRang */,
@@ -83,6 +156,28 @@
 			productReference = 6E47E1FB2F88E6A600AEEA6B /* BabyRang.app */;
 			productType = "com.apple.product-type.application";
 		};
+		6E6BF6AA2FF64F6C00521308 /* BabyRangWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E6BF6BE2FF64F6E00521308 /* Build configuration list for PBXNativeTarget "BabyRangWidgetExtension" */;
+			buildPhases = (
+				6E6BF6A72FF64F6C00521308 /* Sources */,
+				6E6BF6A82FF64F6C00521308 /* Frameworks */,
+				6E6BF6A92FF64F6C00521308 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				6E6BF6B12FF64F6C00521308 /* BabyRangWidget */,
+			);
+			name = BabyRangWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BabyRangWidgetExtension;
+			productReference = 6E6BF6AB2FF64F6C00521308 /* BabyRangWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -90,11 +185,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2640;
+				LastSwiftUpdateCheck = 2660;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					6E47E1FA2F88E6A600AEEA6B = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					6E6BF6AA2FF64F6C00521308 = {
+						CreatedOnToolsVersion = 26.6;
 					};
 				};
 			};
@@ -114,12 +212,20 @@
 			projectRoot = "";
 			targets = (
 				6E47E1FA2F88E6A600AEEA6B /* BabyRang */,
+				6E6BF6AA2FF64F6C00521308 /* BabyRangWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		6E47E1F92F88E6A600AEEA6B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6E6BF6A92FF64F6C00521308 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -136,7 +242,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		6E6BF6A72FF64F6C00521308 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6E6BF6BC2FF64F6E00521308 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6E6BF6AA2FF64F6C00521308 /* BabyRangWidgetExtension */;
+			targetProxy = 6E6BF6BB2FF64F6E00521308 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		6E47E2042F88E6A700AEEA6B /* Debug */ = {
@@ -266,6 +387,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = BabyRang/BabyRang.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 43599V7UL7;
@@ -304,6 +426,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = BabyRang/BabyRang.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 43599V7UL7;
@@ -335,6 +458,70 @@
 			};
 			name = Release;
 		};
+		6E6BF6BF2FF64F6E00521308 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BabyRangWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 43599V7UL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BabyRangWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BabyRangWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang.BabyRangWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6E6BF6C02FF64F6E00521308 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = BabyRangWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = 43599V7UL7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BabyRangWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BabyRangWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang.BabyRangWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -352,6 +539,15 @@
 			buildConfigurations = (
 				6E47E2072F88E6A700AEEA6B /* Debug */,
 				6E47E2082F88E6A700AEEA6B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6E6BF6BE2FF64F6E00521308 /* Build configuration list for PBXNativeTarget "BabyRangWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E6BF6BF2FF64F6E00521308 /* Debug */,
+				6E6BF6C02FF64F6E00521308 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
