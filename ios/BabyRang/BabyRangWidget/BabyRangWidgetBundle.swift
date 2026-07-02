@@ -11,6 +11,7 @@ import SwiftUI
 @main
 struct BabyRangWidgetBundle: WidgetBundle {
     var body: some Widget {
-        BabyRangWidget()
+        BabyRangWidget()       // 홈 화면 (탭 페이징)
+        BabyRangLockWidget()   // 잠금화면 (아이 선택 구성형)
     }
 }

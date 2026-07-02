@@ -12,6 +12,7 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - App Group 공유 저장소 (앱의 WidgetShared.swift와 키/그룹ID 동일하게 유지)
 
@@ -20,6 +21,30 @@ private enum WidgetStore {
     private static var defaults: UserDefaults? { UserDefaults(suiteName: appGroupId) }
     static var token: String? { defaults?.string(forKey: "widget.token") }
     static var apiBase: String? { defaults?.string(forKey: "widget.apiBase") }
+
+    // 탭-페이징 상태: 현재 선택된 아이 + 전체 아이 순서(다음 아이 계산용)
+    static var selectedChildId: String? {
+        get { defaults?.string(forKey: "widget.selectedChildId") }
+        set { defaults?.set(newValue, forKey: "widget.selectedChildId") }
+    }
+    static var childOrder: [String] {
+        get { defaults?.stringArray(forKey: "widget.childOrder") ?? [] }
+        set { defaults?.set(newValue, forKey: "widget.childOrder") }
+    }
+}
+
+// MARK: - 탭 시 다음 아이로 넘기는 App Intent (iOS 17+)
+
+struct NextChildIntent: AppIntent {
+    static var title: LocalizedStringResource = "다음 아이 보기"
+    func perform() async throws -> some IntentResult {
+        let order = WidgetStore.childOrder
+        guard order.count > 1 else { return .result() }
+        let current = WidgetStore.selectedChildId ?? order.first
+        let idx = current.flatMap { order.firstIndex(of: $0) } ?? 0
+        WidgetStore.selectedChildId = order[(idx + 1) % order.count]
+        return .result()   // perform 완료 후 WidgetKit이 타임라인을 자동 갱신
+    }
 }
 
 // MARK: - Model
@@ -30,6 +55,8 @@ struct BabySummary {
     var lastFeedingAt: Date?
     var lastSleepAt: Date?
     var lastDiaperAt: Date?
+    var pageIndex: Int = 0
+    var pageCount: Int = 1
 }
 
 struct BabyEntry: TimelineEntry {
@@ -45,20 +72,35 @@ enum EntryState {
 
 // MARK: - API
 
+private struct ChildDTO: Decodable {
+    let id: String
+    let name: String
+}
+
 private struct SummaryDTO: Decodable {
+    let childId: String
     let childName: String
     let birthDate: String?      // YYYY-MM-DD
     let lastFeedingAt: String?
     let lastSleepAt: String?
     let lastDiaperAt: String?
+    let children: [ChildDTO]?   // 구버전 백엔드 호환 — 없으면 단일 아이로 동작
 }
 
 private enum WidgetAPI {
-    static func fetchSummary() async -> EntryState {
+    // childIdOverride: 잠금화면(구성형)은 인텐트로 지정된 아이,
+    // 없으면 홈(탭 페이징)의 저장된 선택 아이 사용.
+    static func fetchSummary(childIdOverride: String? = nil) async -> EntryState {
         guard let token = WidgetStore.token,
               let base = WidgetStore.apiBase,
-              let url = URL(string: "\(base)/growth-records/widget-summary")
+              var comps = URLComponents(string: "\(base)/growth-records/widget-summary")
         else { return .loggedOut }
+
+        let cid = childIdOverride ?? WidgetStore.selectedChildId
+        if let cid {
+            comps.queryItems = [URLQueryItem(name: "childId", value: cid)]
+        }
+        guard let url = comps.url else { return .loggedOut }
 
         var req = URLRequest(url: url)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -72,18 +114,45 @@ private enum WidgetAPI {
             }
             // 아이가 없으면 백엔드가 null 반환 → 빈 body
             if data.isEmpty || (String(data: data, encoding: .utf8) == "null") {
+                WidgetStore.childOrder = []
                 return .noChild
             }
             let dto = try JSONDecoder().decode(SummaryDTO.self, from: data)
+            // 다음-아이 계산을 위해 순서 저장, 현재 아이의 페이지 인덱스 계산
+            let order = (dto.children ?? []).map { $0.id }
+            WidgetStore.childOrder = order
+            let idx = order.firstIndex(of: dto.childId) ?? 0
             return .summary(BabySummary(
                 childName: dto.childName,
                 birthDate: parseDate(dto.birthDate),
                 lastFeedingAt: parseISO(dto.lastFeedingAt),
                 lastSleepAt: parseISO(dto.lastSleepAt),
-                lastDiaperAt: parseISO(dto.lastDiaperAt)
+                lastDiaperAt: parseISO(dto.lastDiaperAt),
+                pageIndex: idx,
+                pageCount: max(order.count, 1)
             ))
         } catch {
             return .loggedOut
+        }
+    }
+
+    // 아이 목록만 조회 (잠금화면 구성형 위젯의 아이 선택지용)
+    static func fetchChildren() async -> [ChildDTO] {
+        guard let token = WidgetStore.token,
+              let base = WidgetStore.apiBase,
+              let url = URL(string: "\(base)/growth-records/widget-summary")
+        else { return [] }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.timeoutInterval = 15
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            if let http = resp as? HTTPURLResponse, http.statusCode != 200 { return [] }
+            if data.isEmpty || String(data: data, encoding: .utf8) == "null" { return [] }
+            return try JSONDecoder().decode(SummaryDTO.self, from: data).children ?? []
+        } catch {
+            return []
         }
     }
 
@@ -106,6 +175,40 @@ private enum WidgetAPI {
         f.timeZone = TimeZone(identifier: "Asia/Seoul")
         return f.date(from: s)
     }
+}
+
+// MARK: - 아이 선택 (잠금화면 구성형 위젯용, App Intents)
+
+struct ChildEntity: AppEntity {
+    let id: String
+    let name: String
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "아이"
+    static var defaultQuery = ChildQuery()
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(name)") }
+}
+
+struct ChildQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [ChildEntity] {
+        let all = await WidgetAPI.fetchChildren()
+        return all
+            .filter { identifiers.contains($0.id) }
+            .map { ChildEntity(id: $0.id, name: $0.name) }
+    }
+    func suggestedEntities() async throws -> [ChildEntity] {
+        await WidgetAPI.fetchChildren().map { ChildEntity(id: $0.id, name: $0.name) }
+    }
+    func defaultResult() async -> ChildEntity? {
+        try? await suggestedEntities().first
+    }
+}
+
+struct SelectChildIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "아이 선택"
+    static var description = IntentDescription("위젯에 표시할 아이를 선택합니다.")
+
+    @Parameter(title: "아이")
+    var child: ChildEntity?
 }
 
 // MARK: - Timeline Provider
@@ -160,23 +263,22 @@ private func ddayText(_ birth: Date?, now: Date) -> String {
     return "D+\(days)"
 }
 
-// 잠금화면 등 좁은 공간용 — 가장 큰 단위 하나만("3시간", "1일", "45분")
-private func agoShort(_ date: Date?, now: Date) -> String {
-    guard let date else { return "–" }
-    let s = max(0, Int(now.timeIntervalSince(date)))
-    let days = s / 86400
-    let hours = (s % 86400) / 3600
-    let mins = (s % 3600) / 60
-    if days > 0 { return "\(days)일" }
-    if hours > 0 { return "\(hours)시간" }
-    return "\(mins)분"
-}
-
 // MARK: - View
+
+// 아기랑 브랜드 팔레트 (globals.css / colors.ts 기준)
+private extension Color {
+    static let brand = Color(red: 48 / 255, green: 120 / 255, blue: 201 / 255)   // #3078C9
+    static let ink   = Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255)     // #121212
+    static let sub   = Color(red: 128 / 255, green: 137 / 255, blue: 145 / 255)  // #808991
+}
 
 struct BabyRangWidgetEntryView: View {
     @Environment(\.widgetFamily) private var family
     var entry: BabyEntry
+
+    // 홈 위젯 값/라벨 폰트 — 작은 위젯은 긴 값("11시간 54분 전")도 잘리지 않게 작게,
+    // 미디엄은 넓으니 크게. 세 행은 항상 같은 크기.
+    private var homeFontSize: CGFloat { family == .systemMedium ? 15 : 12 }
 
     @ViewBuilder
     var body: some View {
@@ -186,91 +288,141 @@ struct BabyRangWidgetEntryView: View {
         case .noChild:
             statusText("아이 등록 필요")
         case .summary(let s):
-            switch family {
-            case .accessoryInline:      inlineView(s)
-            case .accessoryCircular:    circularView(s)
-            case .accessoryRectangular: rectangularView(s)
-            default:                    content(s)   // 홈 화면(systemSmall/Medium)
+            if family == .accessoryRectangular {
+                rectangularView(s)   // 잠금화면
+            } else {
+                content(s)           // 홈 화면(systemSmall/Medium)
             }
         }
     }
 
-    // 상태 메시지 — 홈/잠금화면 공통(계열에 따라 크기만 다름)
     @ViewBuilder
     private func statusText(_ text: String) -> some View {
-        switch family {
-        case .accessoryInline, .accessoryCircular, .accessoryRectangular:
+        if family == .accessoryRectangular {
             Text(text).font(.caption2)
-        default:
+        } else {
             centered(text)
         }
     }
 
-    // MARK: 잠금화면 — 가로 사각형(3줄): 이름/디데이 + 수유·수면·기저귀 한 줄
+    // MARK: 잠금화면 — 가로 사각형: 헤더(이름·디데이) + 수유/수면/기저귀 세로 나열
     private func rectangularView(_ s: BabySummary) -> some View {
         let now = entry.date
         return VStack(alignment: .leading, spacing: 2) {
-            Text("\(s.childName) \(ddayText(s.birthDate, now: now))")
-                .font(.caption.weight(.semibold)).lineLimit(1)
-            Text("🍼\(agoShort(s.lastFeedingAt, now: now)) 😴\(agoShort(s.lastSleepAt, now: now)) 💩\(agoShort(s.lastDiaperAt, now: now))")
-                .font(.caption2).lineLimit(1)
+            HStack(spacing: 4) {
+                Text(s.childName)
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Text(ddayText(s.birthDate, now: now))
+                    .font(.caption2.weight(.semibold))
+            }
+            lockRow("수유", agoText(s.lastFeedingAt, now: now))
+            lockRow("수면", agoText(s.lastSleepAt, now: now))
+            lockRow("대변", agoText(s.lastDiaperAt, now: now))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    // MARK: 잠금화면 — 원형: 마지막 수유 경과(가장 자주 보는 값)
-    private func circularView(_ s: BabySummary) -> some View {
-        let now = entry.date
-        return VStack(spacing: 0) {
-            Text("🍼").font(.caption2)
-            Text(agoShort(s.lastFeedingAt, now: now)).font(.caption2.weight(.semibold))
+    // 잠금화면은 단색 렌더링 — 색 지정 없이 시스템 틴트에 맡긴다.
+    private func lockRow(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label).font(.caption2)
+            Spacer(minLength: 4)
+            Text(value)
+                .font(.caption2.weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
         }
-    }
-
-    // MARK: 잠금화면 — 인라인(한 줄): 마지막 수유
-    private func inlineView(_ s: BabySummary) -> some View {
-        Text("🍼 \(agoShort(s.lastFeedingAt, now: entry.date)) 전")
     }
 
     private func centered(_ text: String) -> some View {
         VStack {
-            Text("아기랑").font(.caption2).foregroundStyle(.secondary)
+            Text("아기랑").font(.caption2).foregroundStyle(Color.sub)
             Spacer()
-            Text(text).font(.footnote).foregroundStyle(.secondary)
+            Text(text).font(.footnote).foregroundStyle(Color.sub)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: 홈 화면 — 심플 & 브랜드 컬러, 정중앙 로고 워터마크
     private func content(_ s: BabySummary) -> some View {
         let now = entry.date
-        return VStack(alignment: .leading, spacing: 8) {
-            // 아이 이름 / 디데이
-            HStack(spacing: 6) {
-                Text(s.childName)
-                    .font(.subheadline.weight(.bold))
-                    .lineLimit(1)
-                Text(ddayText(s.birthDate, now: now))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Capsule().fill(Color.accentColor))
+        return ZStack {
+            // 정중앙 로고 워터마크 (아주 옅게 — 텍스트 가독성 유지)
+            Image("WidgetLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 116, height: 116)
+                .opacity(0.20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 0) {
+                // 헤더: 이름 + 디데이 (세로 중앙 정렬)
+                HStack(alignment: .center, spacing: 6) {
+                    Text(s.childName)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(Color.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer(minLength: 4)
+                    Text(ddayText(s.birthDate, now: now))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.brand)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Capsule().fill(Color.brand.opacity(0.12)))
+                }
+                Spacer(minLength: 10)
+                // 값 텍스트는 모두 동일 고정 크기(자동축소 없음)
+                VStack(spacing: 10) {
+                    row("수유", agoText(s.lastFeedingAt, now: now))
+                    row("수면", agoText(s.lastSleepAt, now: now))
+                    row("대변", agoText(s.lastDiaperAt, now: now))
+                }
+                // 아이가 여러 명이면 하단에 페이지 점 + 다음 버튼(탭)
+                if s.pageCount > 1 {
+                    Spacer(minLength: 6)
+                    pageFooter(s)
+                }
             }
-            Divider()
-            row("🍼", "수유", agoText(s.lastFeedingAt, now: now))
-            row("😴", "수면", agoText(s.lastSleepAt, now: now))
-            row("💩", "기저귀", agoText(s.lastDiaperAt, now: now))
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func row(_ emoji: String, _ label: String, _ value: String) -> some View {
+    // 여러 아이 페이징 — 점 인디케이터 + 탭하면 다음 아이(App Intent)
+    private func pageFooter(_ s: BabySummary) -> some View {
         HStack(spacing: 6) {
-            Text(emoji).font(.footnote)
-            Text(label).font(.footnote).foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                ForEach(0..<s.pageCount, id: \.self) { i in
+                    Circle()
+                        .fill(i == s.pageIndex ? Color.brand : Color.brand.opacity(0.25))
+                        .frame(width: 5, height: 5)
+                }
+            }
             Spacer()
-            Text(value).font(.footnote.weight(.medium))
+            Button(intent: NextChildIntent()) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.brand)
+                    .padding(5)
+                    .background(Circle().fill(Color.brand.opacity(0.12)))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: homeFontSize))
+                .foregroundStyle(Color.sub)
+            Spacer(minLength: 2)
+            Text(value)
+                .font(.system(size: homeFontSize, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Color.ink)
+                .lineLimit(1)
         }
     }
 }
@@ -291,12 +443,50 @@ struct BabyRangWidget: Widget {
             }
         }
         .configurationDisplayName("아기랑 요약")
-        .description("마지막 수유·수면·기저귀 시간을 보여줍니다.")
-        .supportedFamilies([
-            .systemSmall, .systemMedium,          // 홈 화면
-            .accessoryRectangular,                // 잠금화면 — 가로 사각형(권장)
-            .accessoryInline,                     // 잠금화면 — 시계 위 한 줄
-            .accessoryCircular,                   // 잠금화면 — 원형
-        ])
+        .description("마지막 수유·수면·대변 시간을 보여줍니다. (아이 여러 명이면 탭으로 전환)")
+        .supportedFamilies([.systemSmall, .systemMedium])   // 홈 화면 (탭 페이징)
+    }
+}
+
+// MARK: - 잠금화면 위젯 (구성형 — 인스턴스마다 아이 선택, 여러 개 등록 가능)
+
+struct LockProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> BabyEntry {
+        BabyEntry(date: Date(), state: .summary(BabySummary(
+            childName: "우리 아기", birthDate: Date(),
+            lastFeedingAt: Date().addingTimeInterval(-3600),
+            lastSleepAt: Date().addingTimeInterval(-1800),
+            lastDiaperAt: Date().addingTimeInterval(-7200))))
+    }
+
+    func snapshot(for configuration: SelectChildIntent, in context: Context) async -> BabyEntry {
+        let state = await WidgetAPI.fetchSummary(childIdOverride: configuration.child?.id)
+        return BabyEntry(date: Date(), state: state)
+    }
+
+    func timeline(for configuration: SelectChildIntent, in context: Context) async -> Timeline<BabyEntry> {
+        let state = await WidgetAPI.fetchSummary(childIdOverride: configuration.child?.id)
+        let now = Date()
+        let next = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+        return Timeline(entries: [BabyEntry(date: now, state: state)], policy: .after(next))
+    }
+}
+
+struct BabyRangLockWidget: Widget {
+    let kind = "BabyRangLockWidget"
+
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: kind, intent: SelectChildIntent.self, provider: LockProvider()) { entry in
+            if #available(iOS 17.0, *) {
+                BabyRangWidgetEntryView(entry: entry)
+                    .containerBackground(.background, for: .widget)
+            } else {
+                BabyRangWidgetEntryView(entry: entry)
+                    .padding()
+            }
+        }
+        .configurationDisplayName("아기랑 (잠금화면)")
+        .description("아이별 마지막 수유·수면·대변 시간. 위젯을 길게 눌러 아이를 선택하세요.")
+        .supportedFamilies([.accessoryRectangular])
     }
 }

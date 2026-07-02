@@ -85,25 +85,16 @@ export class GrowthRecordsService {
     return { date: `${y}-${m}-${d}` };
   }
 
-  // 홈 화면 위젯용 요약 — 아이 정보 + 마지막 수유/수면/기저귀 "시각".
+  // 홈 화면 위젯용 요약 — 선택된 아이 정보 + 마지막 수유/수면/대변 "시각" + 전체 아이 목록.
   // 상대시간("3시간 22분 전")은 기기에서 계산하므로 절대 시각만 내려준다.
-  // (새로고침 사이에도 위젯의 경과시간 표시가 자연스럽게 흘러감)
-  // childId 미지정 시 사용자가 접근 가능한 첫 아이를 사용.
+  // childId 미지정(또는 삭제된 아이)이면 첫 아이로 폴백.
+  // children 목록은 위젯의 탭-페이징(다음 아이로 넘기기)에 사용.
   async widgetSummary(userId: string, childId?: string) {
-    let child: { id: string; name: string; birthDate: Date } | null;
-    if (childId) {
-      await this.assertChildAccess(userId, childId);
-      child = await this.prisma.child.findUnique({
-        where: { id: childId },
-        select: { id: true, name: true, birthDate: true },
-      });
-    } else {
-      const all = await this.children.findAll(userId);
-      child = all[0]
-        ? { id: all[0].id, name: all[0].name, birthDate: all[0].birthDate }
-        : null;
-    }
-    if (!child) return null;
+    const all = await this.children.findAll(userId);
+    if (all.length === 0) return null;
+
+    // 요청된 아이가 접근 가능 목록에 있으면 그 아이, 아니면 첫 아이.
+    const selected = (childId && all.find((c) => c.id === childId)) || all[0];
 
     const FEEDING_TYPES: GrowthRecordType[] = [
       'BREASTFEEDING',
@@ -113,7 +104,7 @@ export class GrowthRecordsService {
     ];
     const latest = (where: Prisma.GrowthRecordWhereInput) =>
       this.prisma.growthRecord.findFirst({
-        where: { childId: child.id, ...where },
+        where: { childId: selected.id, ...where },
         orderBy: { startAt: 'desc' },
         select: { startAt: true },
       });
@@ -125,16 +116,18 @@ export class GrowthRecordsService {
     ]);
 
     // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
-    const b = child.birthDate;
+    const b = selected.birthDate;
     const birthDate = `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, '0')}-${String(b.getUTCDate()).padStart(2, '0')}`;
 
     return {
-      childId: child.id,
-      childName: child.name,
+      childId: selected.id,
+      childName: selected.name,
       birthDate,
       lastFeedingAt: feeding?.startAt ?? null,
       lastSleepAt: sleep?.startAt ?? null,
       lastDiaperAt: diaper?.startAt ?? null,
+      // 전체 아이 목록(순서 고정) — 위젯 페이징용
+      children: all.map((c) => ({ id: c.id, name: c.name })),
     };
   }
 
