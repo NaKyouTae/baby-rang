@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import EmptyProfileCard from '@/components/EmptyProfileCard';
-import { cachedFetch } from '@/hooks/appCache';
+import { cachedFetch, invalidateCache } from '@/hooks/appCache';
+import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import {
   calcChildAge,
   kstYmdToLocalMidnight,
@@ -172,23 +173,31 @@ function ChildHeroCard({
   const [stats, setStats] = useState<TodayStats | null>(null);
   const { days, months, extraDays } = calcChildAge(child.birthDate);
 
+  // force=true면 캐시를 무효화하고 최신 기록으로 다시 계산한다(포그라운드 복귀용).
+  const loadStats = useCallback(
+    async (force = false) => {
+      const today = todayKstYmd();
+      // 최근 90일 범위를 가져와서 마지막 기록(오늘 이전 포함) 경과 시간을 계산한다.
+      const from = todayKstYmd(new Date(Date.now() - 90 * 86_400_000));
+      const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${from}&to=${today}`;
+      if (force) invalidateCache(url);
+      try {
+        const data = await cachedFetch<GrowthRecord[]>(url, 5 * 60_000);
+        setStats(computeStats(data ?? [], today));
+      } catch {
+        setStats(EMPTY_STATS);
+      }
+    },
+    [child.id],
+  );
+
   useEffect(() => {
-    let cancel = false;
-    const today = todayKstYmd();
-    // 최근 90일 범위를 가져와서 마지막 기록(오늘 이전 포함) 경과 시간을 계산한다.
-    const from = todayKstYmd(new Date(Date.now() - 90 * 86_400_000));
-    const url = `/api/growth-records/range?childId=${encodeURIComponent(child.id)}&from=${from}&to=${today}`;
-    cachedFetch<GrowthRecord[]>(url, 5 * 60_000)
-      .then((data) => {
-        if (!cancel) setStats(computeStats(data ?? [], today));
-      })
-      .catch(() => {
-        if (!cancel) setStats(EMPTY_STATS);
-      });
-    return () => {
-      cancel = true;
-    };
-  }, [child.id]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cachedFetch may resolve from cache synchronously
+    loadStats();
+  }, [loadStats]);
+
+  // 앱 포그라운드 복귀 시 오늘 기록 요약을 최신으로 갱신한다.
+  useRefreshOnForeground(() => loadStats(true));
 
   const ageLabel = months > 0 ? `${months}개월 ${extraDays}일` : `${days}일`;
 

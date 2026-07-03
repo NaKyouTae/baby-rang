@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cachedFetch, getSharedPosition, getLastKnownPosition } from "@/hooks/appCache";
+import { useRefreshOnForeground } from "@/hooks/useRefreshOnForeground";
 import { palette } from "@/lib/colors";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -82,6 +83,11 @@ export default function NearbyNursingRoomsStrip() {
     // permissions.query 게이트 없이 바로 요청한다(날씨 스트립과 dedupe되어 프롬프트 1회).
     requestLocation(); // eslint-disable-line react-hooks/set-state-in-effect -- geolocation API read
   }, []);
+
+  // 앱 포그라운드 복귀 시 현재 위치를 다시 확보해 가까운 수유실 순서를 갱신한다.
+  useRefreshOnForeground(() => {
+    if (locStatus !== "denied" && locStatus !== "unsupported") requestLocation();
+  });
 
   useEffect(() => {
     let cancelled = false;

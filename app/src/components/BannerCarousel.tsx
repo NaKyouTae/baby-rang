@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { cachedFetch } from "@/hooks/appCache";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { cachedFetch, invalidateCache } from "@/hooks/appCache";
+import { useRefreshOnForeground } from "@/hooks/useRefreshOnForeground";
 
 export type Banner = {
   id: string;
@@ -18,11 +19,23 @@ export default function BannerCarousel() {
   const [index, setIndex] = useState(0);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    cachedFetch<{ banners: Banner[] }>("/api/banners", 5 * 60_000)
-      .then((d) => setBanners((d.banners ?? []).filter((b) => !!b.imageUrl)))
-      .catch(() => setBanners([]));
+  const loadBanners = useCallback(async (force = false) => {
+    if (force) invalidateCache("/api/banners");
+    try {
+      const d = await cachedFetch<{ banners: Banner[] }>("/api/banners", 5 * 60_000);
+      setBanners((d.banners ?? []).filter((b) => !!b.imageUrl));
+    } catch {
+      setBanners([]);
+    }
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cachedFetch may resolve from cache synchronously
+    loadBanners();
+  }, [loadBanners]);
+
+  // 앱 포그라운드 복귀 시 배너를 다시 불러온다.
+  useRefreshOnForeground(() => loadBanners(true));
 
   useEffect(() => {
     if (!banners || banners.length <= 1) return;

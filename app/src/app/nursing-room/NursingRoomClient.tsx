@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReportSheet, { NursingRoomReport } from "./ReportSheet";
+import { useRefreshOnForeground } from "@/hooks/useRefreshOnForeground";
 import { palette } from "@/lib/colors";
 
 interface NursingRoom {
@@ -191,6 +192,9 @@ function NursingRoomContent() {
   useEffect(() => {
     loadRooms();
   }, []);
+
+  // 앱 포그라운드 복귀 시 수유실 목록을 다시 불러온다(새로 승인된 제보 반영).
+  useRefreshOnForeground(loadRooms);
 
   // 홈에서 넘어온 경우: 지도 포커스는 즉시, 카드는 API 데이터 로드 후 표시
   // 1) 지도 포커스 (좌표가 있으면 즉시 이동)

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useSelectedChild, type Child } from '@/hooks/useChildren';
+import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import BottomSheet from '@/components/BottomSheet';
 import ChildSelector from '@/components/ChildSelector';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -129,6 +130,9 @@ export default function PhysicalGrowthClient() {
   useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
+
+  // 앱 포그라운드 복귀 시 현재 아이의 기록을 다시 불러온다.
+  useRefreshOnForeground(fetchRecords, { enabled: !!selected });
 
   const resetForm = () => {
     setMeasuredAt(todayString());

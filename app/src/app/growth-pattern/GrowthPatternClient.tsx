@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelectedChild } from '@/hooks/useChildren';
+import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import NoChildCard from '@/components/NoChildCard';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import ChildSelector from '@/components/ChildSelector';
@@ -277,65 +278,66 @@ export default function GrowthPatternClient() {
     } catch {}
   }, [viewMode]);
 
-  useEffect(() => {
+  // 최신 요청만 반영하기 위한 요청 식별자(빠른 날짜 전환 시 stale 응답 무시).
+  const reqIdRef = useRef(0);
+  const loadRecords = useCallback(async () => {
     if (!selectedChild) return;
     // 좌측(가장 오래된) 컬럼의 새벽 시간대에 자정을 넘긴 전날 기록이 표시되도록
     // 표시 범위(-6)보다 하루 더 앞당겨 페치한다. 추가된 하루는 컬럼으로 노출되지 않고
     // forward spill 을 통해 dates[0] 새벽 영역만 채운다.
     const from = shiftDate(selectedDate, -7);
     const to = selectedDate;
+    const myId = ++reqIdRef.current;
     setLoading(true);
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/growth-records/range?childId=${selectedChild.id}&from=${from}&to=${to}`,
-        );
-        if (!res.ok) {
-          if (!cancelled) {
-            setDays({});
-            setLoading(false);
-          }
-          return;
-        }
-        const data = (await res.json()) as GrowthRecord[];
-        const map: Record<string, GrowthRecord[]> = {};
-        for (const r of data) {
-          const sMs = new Date(r.startAt).getTime();
-          const eMs = r.endAt ? new Date(r.endAt).getTime() : sMs;
-          const startKey = toDateStr(new Date(sMs));
-          (map[startKey] ||= []).push(r);
-          if (eMs > sMs) {
-            const endKey = toDateStr(new Date(eMs));
-            if (endKey !== startKey) {
-              let cursor = sMs;
-              for (let i = 0; i < 7; i++) {
-                const cur = new Date(cursor);
-                cur.setHours(24, 0, 0, 0);
-                if (cur.getTime() >= eMs) break;
-                const key = toDateStr(cur);
-                if (key !== startKey) (map[key] ||= []).push(r);
-                cursor = cur.getTime();
-                if (key === endKey) break;
-              }
+    try {
+      const res = await fetch(
+        `/api/growth-records/range?childId=${selectedChild.id}&from=${from}&to=${to}`,
+      );
+      if (reqIdRef.current !== myId) return;
+      if (!res.ok) {
+        setDays({});
+        setLoading(false);
+        return;
+      }
+      const data = (await res.json()) as GrowthRecord[];
+      if (reqIdRef.current !== myId) return;
+      const map: Record<string, GrowthRecord[]> = {};
+      for (const r of data) {
+        const sMs = new Date(r.startAt).getTime();
+        const eMs = r.endAt ? new Date(r.endAt).getTime() : sMs;
+        const startKey = toDateStr(new Date(sMs));
+        (map[startKey] ||= []).push(r);
+        if (eMs > sMs) {
+          const endKey = toDateStr(new Date(eMs));
+          if (endKey !== startKey) {
+            let cursor = sMs;
+            for (let i = 0; i < 7; i++) {
+              const cur = new Date(cursor);
+              cur.setHours(24, 0, 0, 0);
+              if (cur.getTime() >= eMs) break;
+              const key = toDateStr(cur);
+              if (key !== startKey) (map[key] ||= []).push(r);
+              cursor = cur.getTime();
+              if (key === endKey) break;
             }
           }
         }
-        if (!cancelled) {
-          setDays(map);
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setDays({});
-          setLoading(false);
-        }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setDays(map);
+      setLoading(false);
+    } catch {
+      if (reqIdRef.current !== myId) return;
+      setDays({});
+      setLoading(false);
+    }
   }, [selectedChild, selectedDate]);
+
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  // 앱 포그라운드 복귀 시 현재 범위의 기록을 다시 불러온다.
+  useRefreshOnForeground(loadRecords, { enabled: !!selectedChild });
 
   const dates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => shiftDate(selectedDate, -(6 - i))),

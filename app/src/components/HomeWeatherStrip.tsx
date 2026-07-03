@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gradeColor, gradeLabel, whoGradePm10, whoGradePm25 } from "@/lib/airQualityGrade";
 import { getSharedPosition, getLastKnownPosition } from "@/hooks/appCache";
+import { useRefreshOnForeground } from "@/hooks/useRefreshOnForeground";
 
 interface WeatherAirData {
   weather: {
@@ -45,49 +46,55 @@ function getSkyLabel(sky: string, pty: string) {
 export default function HomeWeatherStrip() {
   const [data, setData] = useState<WeatherAirData | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastKeyRef = useRef("");
 
-  useEffect(() => {
+  // force=true면 같은 위치라도 재조회한다(포그라운드 복귀 시 최신값 갱신용).
+  const loadWeather = useCallback(async (force = false) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setLoading(false);
       return;
     }
-    let cancelled = false;
-    let lastKey = "";
 
     const fetchWeather = async (lat: number, lng: number) => {
       const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
-      if (key === lastKey) return; // 같은 위치면 재요청 생략
-      lastKey = key;
+      if (!force && key === lastKeyRef.current) return; // 같은 위치면 재요청 생략
+      lastKeyRef.current = key;
       try {
         const res = await fetch(`/api/weather?lat=${lat}&lng=${lng}&mode=lite`);
         if (res.ok) {
           const json = await res.json();
-          if (!cancelled) setData(json);
+          setData(json);
         }
       } catch {
         // silently fail
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     };
 
     // 1) 마지막 좌표가 있으면 위치 확정을 기다리지 않고 즉시 조회 (9초 대기 제거)
     const last = getLastKnownPosition();
-    if (last) fetchWeather(last.lat, last.lng);
+    if (last && !force) fetchWeather(last.lat, last.lng);
 
     // 2) 최신 좌표를 확보해 갱신 (권한 프롬프트 포함). 실패해도 last로 이미 표시됨.
-    getSharedPosition({ enableHighAccuracy: false, timeout: 4000, maximumAge: 600000 })
-      .then(({ lat, lng }) => {
-        if (!cancelled) fetchWeather(lat, lng);
-      })
-      .catch(() => {
-        if (!last && !cancelled) setLoading(false);
+    try {
+      const { lat, lng } = await getSharedPosition({
+        enableHighAccuracy: false,
+        timeout: 4000,
+        maximumAge: 600000,
       });
-
-    return () => {
-      cancelled = true;
-    };
+      fetchWeather(lat, lng);
+    } catch {
+      if (!last) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadWeather();
+  }, [loadWeather]);
+
+  // 앱 포그라운드 복귀 시 날씨/미세먼지를 다시 조회한다.
+  useRefreshOnForeground(() => loadWeather(true));
 
   if (!data && !loading) return null;
 

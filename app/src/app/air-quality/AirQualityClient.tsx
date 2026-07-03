@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useRefreshOnForeground } from "@/hooks/useRefreshOnForeground";
 import { openLocationSettings } from "@/lib/openLocationSettings";
 import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
@@ -152,6 +153,11 @@ export default function AirQualityClient() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 앱 포그라운드 복귀 시 날씨/미세먼지를 다시 조회한다(위치 권한이 이미 있을 때만).
+  useRefreshOnForeground(() => {
+    if (locStatus === "granted") requestLocation();
+  });
 
   const pm10WhoGrade = whoGradePm10(air?.pm10 ?? null);
   const pm25WhoGrade = whoGradePm25(air?.pm25 ?? null);
