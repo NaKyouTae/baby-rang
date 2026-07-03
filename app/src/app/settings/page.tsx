@@ -145,6 +145,23 @@ const MENU_SECTIONS: MenuSection[] = [
     ],
   },
   {
+    title: "이용 안내",
+    items: [
+      {
+        label: "위젯 사용 방법",
+        href: "/settings/widget-guide",
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1.75" y="1.75" width="5.5" height="5.5" rx="1.5" stroke="black"/>
+            <rect x="8.75" y="1.75" width="5.5" height="5.5" rx="1.5" stroke="black"/>
+            <rect x="1.75" y="8.75" width="5.5" height="5.5" rx="1.5" stroke="black"/>
+            <rect x="8.75" y="8.75" width="5.5" height="5.5" rx="1.5" stroke="black"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
     title: "약관/정책",
     items: [
       {
@@ -521,6 +538,9 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
+
+        {/* 비로그인 시: 마지막 메뉴와 사업자정보 사이 여백 (로그인 시엔 위 로그아웃 블록이 대신 채움) */}
+        {isAuthLoaded && !isAuthenticated && <div className="h-[48px]" />}
       </div>
 
       <BusinessInfo />
