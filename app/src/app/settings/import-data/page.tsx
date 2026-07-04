@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useChildren } from "@/hooks/useChildren";
 import { TYPE_CONFIG, GrowthType } from "@/app/growth-record/types";
 import { palette } from "@/lib/colors";
+import { reloadWidget } from "@/lib/widgetBridge";
 import PageHeader from "@/components/PageHeader";
 import ChildSelector from "@/components/ChildSelector";
 
@@ -305,6 +306,7 @@ export default function ImportDataPage() {
       if (res.ok) {
         const data = await res.json();
         setResult(data);
+        reloadWidget();
       } else {
         alert("가져오기 중 오류가 발생했어요.");
       }

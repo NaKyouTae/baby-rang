@@ -23,6 +23,7 @@ import {
   setCachedDays,
   buildDefaultRecordData,
 } from './recordDefaults';
+import { reloadWidget } from '@/lib/widgetBridge';
 import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -554,7 +555,10 @@ export default function GrowthRecordPage() {
         method: 'POST',
         body: fd,
       });
-      if (res.ok) reload();
+      if (res.ok) {
+        reloadWidget();
+        reload();
+      }
     },
     [selectedChild, reload],
   );
@@ -563,6 +567,7 @@ export default function GrowthRecordPage() {
     async (id: string) => {
       const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        reloadWidget();
         setDays((prev) => {
           const next = prev
             .map((g) => ({ ...g, records: g.records.filter((r) => r.id !== id) }))

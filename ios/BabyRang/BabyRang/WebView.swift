@@ -25,6 +25,8 @@ struct WebView: UIViewRepresentable {
         // 홈 화면 위젯용 토큰/설정 저장 핸들러
         contentController.add(context.coordinator, name: "saveWidgetData")
         contentController.add(context.coordinator, name: "clearWidgetData")
+        // 기록 저장/삭제 직후 위젯 즉시 갱신 요청
+        contentController.add(context.coordinator, name: "reloadWidget")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -80,6 +82,9 @@ struct WebView: UIViewRepresentable {
             } else if message.name == "clearWidgetData" {
                 // 로그아웃 시 위젯 데이터 제거
                 WidgetShared.clear()
+                WidgetCenter.shared.reloadAllTimelines()
+            } else if message.name == "reloadWidget" {
+                // 기록 저장/삭제 직후 웹이 요청 → 위젯 타임라인 즉시 갱신
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }

@@ -233,8 +233,8 @@ struct Provider: TimelineProvider {
         Task {
             let state = await WidgetAPI.fetchSummary()
             let now = Date()
-            // 15분마다 갱신 요청(iOS가 예산 내에서 조정). "~전" 표시는 그 사이에도 기기에서 흘러감.
-            let next = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+            // 5분마다 갱신 요청(iOS가 예산 내에서 조정 — 실제 간격은 더 길 수 있음).
+            let next = Calendar.current.date(byAdding: .minute, value: 5, to: now)!
             let timeline = Timeline(entries: [BabyEntry(date: now, state: state)], policy: .after(next))
             completion(timeline)
         }
@@ -467,7 +467,7 @@ struct LockProvider: AppIntentTimelineProvider {
     func timeline(for configuration: SelectChildIntent, in context: Context) async -> Timeline<BabyEntry> {
         let state = await WidgetAPI.fetchSummary(childIdOverride: configuration.child?.id)
         let now = Date()
-        let next = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+        let next = Calendar.current.date(byAdding: .minute, value: 5, to: now)!
         return Timeline(entries: [BabyEntry(date: now, state: state)], policy: .after(next))
     }
 }

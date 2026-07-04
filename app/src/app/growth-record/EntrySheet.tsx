@@ -17,6 +17,7 @@ import {
   getDiaperDefaultKind,
   isWithinNightRange,
 } from './recordDefaults';
+import { reloadWidget } from '@/lib/widgetBridge';
 
 function rangeFor(
   field: FieldDef,
@@ -442,6 +443,7 @@ export default function EntrySheet({
       const method = initial ? 'PATCH' : 'POST';
       const res = await fetch(url, { method, body: fd });
       if (res.ok) {
+        reloadWidget();
         onSaved();
         onClose();
       }
@@ -462,6 +464,7 @@ export default function EntrySheet({
       method: 'DELETE',
     });
     if (res.ok) {
+      reloadWidget();
       onSaved();
       onClose();
     }

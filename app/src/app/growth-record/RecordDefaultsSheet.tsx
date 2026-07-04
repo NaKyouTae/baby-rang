@@ -159,7 +159,10 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
           )}
         </div>
 
-        <div className="px-4 pt-2 pb-3 flex gap-[10px]">
+        <div
+          className="px-4 pt-2 flex gap-[10px]"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+        >
           <button
             type="button"
             onClick={onClose}
