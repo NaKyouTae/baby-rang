@@ -783,7 +783,7 @@ function WeekBarChart({
   selectedTypes: Set<GrowthType>;
   todayStr: string;
 }) {
-  const HOURS = [0, 3, 6, 9, 12, 15, 18, 21];
+  const HOURS = [0, 3, 6, 9, 12, 15, 18, 21, 24];
   const hasToday = dates.includes(todayStr);
   const now = new Date();
   const nowMinPct = ((now.getHours() * 60 + now.getMinutes()) / 1440) * 100;
@@ -793,12 +793,12 @@ function WeekBarChart({
       <div className="flex flex-1 min-h-0">
         {/* 차트 영역 — 7개 컬럼이 8px gap 으로 가용 폭을 균등 분할 */}
         <div className="flex-1 relative grid grid-cols-7 gap-2">
-          {/* 시간당 horizontal border — gray200 1px. 마지막 라벨(21)이 차트 하단에 오도록 균등 분할 위치에 그린다. */}
-          {HOURS.map((h, i) => (
+          {/* 시간당 horizontal border — gray200 1px. 막대와 동일한 24시간 스케일(h/24)로 배치. */}
+          {HOURS.map((h) => (
             <div
               key={h}
               className="absolute left-0 right-0 border-t border-gray-200 pointer-events-none z-[1]"
-              style={{ top: `${(i / (HOURS.length - 1)) * 100}%` }}
+              style={{ top: `${(h / 24) * 100}%` }}
             />
           ))}
           {dates.map((date) => (
@@ -841,21 +841,18 @@ function WeekBarChart({
         </div>
         {/* Y축 시간 레이블 — 각 라벨의 세로 중앙이 해당 border line 과 정확히 일치 (translateY -50%) */}
         <div className="relative w-4 ml-2">
-          {HOURS.map((h, i) => {
-            const ratio = i / (HOURS.length - 1);
-            return (
-              <div
-                key={h}
-                className="absolute right-0 text-[10px] font-normal text-gray-400 leading-none"
-                style={{
-                  top: `${ratio * 100}%`,
-                  transform: 'translateY(-50%)',
-                }}
-              >
-                {pad(h)}
-              </div>
-            );
-          })}
+          {HOURS.map((h) => (
+            <div
+              key={h}
+              className="absolute right-0 text-[10px] font-normal text-gray-400 leading-none"
+              style={{
+                top: `${(h / 24) * 100}%`,
+                transform: 'translateY(-50%)',
+              }}
+            >
+              {pad(h)}
+            </div>
+          ))}
         </div>
       </div>
       {/* X축 날짜 레이블 — 차트와 8px 간격 (mt-2), 컬럼과 동일하게 grid 로 정렬 */}
