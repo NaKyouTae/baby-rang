@@ -15,6 +15,7 @@ import PageHeader from "@/components/PageHeader";
 import BusinessInfo from "@/components/BusinessInfo";
 import { useConsents, type OptionalConsentKey } from "@/hooks/useConsents";
 import InitialScreenSheet from "@/components/InitialScreenSheet";
+import { resolveHomeTargetLabel } from "@/components/menuCatalog";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -236,6 +237,7 @@ export default function SettingsPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [initialScreenOpen, setInitialScreenOpen] = useState(false);
+  const [homeMenu, setHomeMenu] = useState<string | null>(null);
   const { children, isLoaded } = useChildren();
   const { isAuthenticated, user, isLoaded: isAuthLoaded } = useAuth();
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
@@ -258,6 +260,14 @@ export default function SettingsPage() {
     fetch('/api/notices/has-unread')
       .then((r) => r.json())
       .then((d) => setHasUnreadNotice(d.hasUnread === true))
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch('/api/screen-preference')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.home) setHomeMenu(d.home as string); })
       .catch(() => {});
   }, [isAuthenticated]);
 
@@ -517,6 +527,11 @@ export default function SettingsPage() {
               </svg>
             </span>
             <span className="flex-1 text-left text-[16px] font-medium text-black">초기 화면 설정</span>
+            {homeMenu && (
+              <span className="text-[14px] font-normal" style={{ color: palette.gray500 }}>
+                {resolveHomeTargetLabel(homeMenu)}
+              </span>
+            )}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -575,7 +590,10 @@ export default function SettingsPage() {
       <BusinessInfo />
 
       {initialScreenOpen && (
-        <InitialScreenSheet onClose={() => setInitialScreenOpen(false)} />
+        <InitialScreenSheet
+          onClose={() => setInitialScreenOpen(false)}
+          onSaved={(home) => setHomeMenu(home)}
+        />
       )}
 
       <ConfirmModal

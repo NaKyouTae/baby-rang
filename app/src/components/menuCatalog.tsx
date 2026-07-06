@@ -125,3 +125,10 @@ export function resolveHomeTargetHref(target: string): string {
   const item = MENU_CATALOG[target as MenuId];
   return item ? item.href : HOME_HREF;
 }
+
+// 초기 화면 설정값('home' | MenuId)을 표시용 라벨로 변환한다.
+export function resolveHomeTargetLabel(target: string): string {
+  if (target === "home") return "홈";
+  const item = MENU_CATALOG[target as MenuId];
+  return item ? item.label : "홈";
+}
