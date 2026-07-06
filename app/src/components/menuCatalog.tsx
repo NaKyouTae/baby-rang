@@ -103,3 +103,25 @@ export const HOME_QUICK_MENUS: MenuId[] = [
   "wonder-weeks",
   "sleep-golden-time",
 ];
+
+// 홈 경로 — 초기 화면 기본값.
+export const HOME_HREF = "/home";
+
+// 초기 화면(첫 진입) 설정에서 선택 가능한 메뉴 순서.
+// 기록 → 패턴 → 수유실 → 성장 → 원더윅스 → 수면추천 → 미세먼지
+export const INITIAL_SCREEN_MENUS: MenuId[] = [
+  "growth-record",
+  "growth-pattern",
+  "nursing-room",
+  "physical-growth",
+  "wonder-weeks",
+  "sleep-golden-time",
+  "air-quality",
+];
+
+// 초기 화면 설정값('home' | MenuId)을 실제 라우트 경로로 변환한다.
+export function resolveHomeTargetHref(target: string): string {
+  if (target === "home") return HOME_HREF;
+  const item = MENU_CATALOG[target as MenuId];
+  return item ? item.href : HOME_HREF;
+}

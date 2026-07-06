@@ -18,6 +18,7 @@ import { NursingRoomsModule } from './nursing-rooms/nursing-rooms.module';
 import { GroupsModule } from './groups/groups.module';
 import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
 import { TestsModule } from './tests/tests.module';
+import { ScreenPreferenceModule } from './screen-preference/screen-preference.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TestsModule } from './tests/tests.module';
     GroupsModule,
     PhysicalGrowthModule,
     TestsModule,
+    ScreenPreferenceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

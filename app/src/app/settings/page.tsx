@@ -14,6 +14,7 @@ import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocati
 import PageHeader from "@/components/PageHeader";
 import BusinessInfo from "@/components/BusinessInfo";
 import { useConsents, type OptionalConsentKey } from "@/hooks/useConsents";
+import InitialScreenSheet from "@/components/InitialScreenSheet";
 
 interface NativeBridgeWindow {
   webkit?: { messageHandlers?: { openSettings?: { postMessage: (msg: string) => void } } };
@@ -234,6 +235,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [initialScreenOpen, setInitialScreenOpen] = useState(false);
   const { children, isLoaded } = useChildren();
   const { isAuthenticated, user, isLoaded: isAuthLoaded } = useAuth();
   const { requireLogin, openLoginPrompt } = useLoginPrompt();
@@ -494,6 +496,33 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {/* 화면 설정 */}
+        <section className="mt-[24px]">
+          <h3 className="text-[12px] font-medium px-6 mb-[16px]" style={{ color: palette.gray500 }}>
+            화면 설정
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              if (!requireLogin('초기 화면을 설정하려면\n로그인이 필요해요.')) return;
+              setInitialScreenOpen(true);
+            }}
+            className="w-full flex items-center gap-2 px-6 h-[32px] active:bg-gray-50 transition-colors"
+          >
+            <span className="flex shrink-0 items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="3.5" y="1.5" width="9" height="13" rx="1.5" stroke="black" />
+                <path d="M6.33325 4H9.66659" stroke="black" strokeLinecap="round" />
+                <path d="M6 11.6667L8 9.66667L9.33333 11L11.3333 9" stroke="black" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="flex-1 text-left text-[16px] font-medium text-black">초기 화면 설정</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </section>
+
         {/* 메뉴 섹션들 */}
         {MENU_SECTIONS.map((section) => (
           <section key={section.title} className="mt-[24px]">
@@ -544,6 +573,10 @@ export default function SettingsPage() {
       </div>
 
       <BusinessInfo />
+
+      {initialScreenOpen && (
+        <InitialScreenSheet onClose={() => setInitialScreenOpen(false)} />
+      )}
 
       <ConfirmModal
         open={withdrawOpen}
