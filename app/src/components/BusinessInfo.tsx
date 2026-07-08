@@ -25,6 +25,12 @@ export default function BusinessInfo() {
         <li>사업자등록번호 : 244-20-02381</li>
         <li>사업장 주소 : 다산중앙로82번안길 166-46</li>
         <li>
+          연락처 :{" "}
+          <a href="tel:010-9109-2682" style={{ color: palette.gray500 }}>
+            010-9109-2682
+          </a>
+        </li>
+        <li>
           고객센터 :{" "}
           <a
             href="mailto:spectrum.mesh@gmail.com"
