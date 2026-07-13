@@ -22,8 +22,11 @@ export type UserRow = {
   profileImage: string | null;
   parentRole: string | null;
   createdAt: string;
+  lastActiveAt: string | null;
   _count: { groupMemberships: number; payments: number };
 };
+
+type ActivityItem = { kind: string; label: string; at: string };
 
 type Account = { provider: string; createdAt: string };
 type ChildRow = {
@@ -55,6 +58,7 @@ type UserDetail = UserRow & {
   privacyAgreedAt: string | null;
   marketingAgreedAt: string | null;
   thirdPartyAgreedAt: string | null;
+  recentActivity: ActivityItem[];
   accounts: Account[];
   groupMemberships: Membership[];
   payments: PaymentRow[];
@@ -106,6 +110,22 @@ function fmtDate(v: string | null | undefined) {
 
 function fmtDateTime(v: string | null | undefined) {
   return v ? new Date(v).toLocaleString() : "-";
+}
+
+// "3일 전"처럼 상대 시각으로 표기. 7일 이상은 날짜로.
+function fmtRelative(v: string | null | undefined) {
+  if (!v) return "활동 없음";
+  const then = new Date(v).getTime();
+  if (Number.isNaN(then)) return "-";
+  const diffMs = Date.now() - then;
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "방금 전";
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}일 전`;
+  return new Date(v).toLocaleDateString();
 }
 
 export default function UsersClient({
@@ -195,7 +215,7 @@ export default function UsersClient({
             <div className="mt-3 flex justify-between text-xs text-muted-foreground">
               <span>그룹 {u._count.groupMemberships}</span>
               <span>결제 {u._count.payments}</span>
-              <span>{fmtDate(u.createdAt)}</span>
+              <span>활동 {fmtRelative(u.lastActiveAt)}</span>
             </div>
           </Card>
         ))}
@@ -216,6 +236,7 @@ export default function UsersClient({
               <TableHead>역할</TableHead>
               <TableHead className="text-right">그룹</TableHead>
               <TableHead className="text-right">결제</TableHead>
+              <TableHead className="text-right">마지막 활동</TableHead>
               <TableHead className="text-right">가입일</TableHead>
             </TableRow>
           </TableHeader>
@@ -242,13 +263,16 @@ export default function UsersClient({
                 <TableCell className="text-right">{u._count.groupMemberships}</TableCell>
                 <TableCell className="text-right">{u._count.payments}</TableCell>
                 <TableCell className="text-right text-muted-foreground">
+                  {fmtRelative(u.lastActiveAt)}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">
                   {fmtDate(u.createdAt)}
                 </TableCell>
               </TableRow>
             ))}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   사용자가 없습니다.
                 </TableCell>
               </TableRow>
@@ -297,7 +321,43 @@ export default function UsersClient({
                 />
                 <Field label="가입일" value={fmtDateTime(detail.createdAt)} />
                 <Field label="온보딩" value={fmtDateTime(detail.onboardedAt)} />
+                <Field
+                  label="마지막 활동"
+                  value={
+                    detail.lastActiveAt ? (
+                      <>
+                        {fmtRelative(detail.lastActiveAt)}
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          ({fmtDateTime(detail.lastActiveAt)})
+                        </span>
+                      </>
+                    ) : (
+                      "활동 없음"
+                    )
+                  }
+                />
               </dl>
+            </Section>
+
+            {/* 최근 활동 */}
+            <Section title="최근 활동">
+              {(detail.recentActivity ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">최근 활동이 없습니다.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {detail.recentActivity.map((a, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                    >
+                      <span className="font-medium">{a.label}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {fmtRelative(a.at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Section>
 
             {/* 소셜 로그인 */}

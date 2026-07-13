@@ -79,6 +79,26 @@ function buildPreviewScores(
   return out;
 }
 
+const GROWTH_TYPE_LABELS: Record<string, string> = {
+  BREASTFEEDING: '모유수유',
+  FORMULA: '분유수유',
+  BABY_FOOD: '이유식',
+  SLEEP: '수면',
+  PUMPED_FEEDING: '유축수유',
+  PUMPING: '유축',
+  BATH: '목욕',
+  HOSPITAL: '병원',
+  TEMPERATURE: '체온',
+  MEDICATION: '투약',
+  DIAPER: '기저귀',
+  SNACK: '간식',
+  MILK: '우유',
+  WATER: '물',
+  PLAY: '놀이',
+  TUMMY_TIME: '터미타임',
+  ETC: '기타',
+};
+
 const VALID_TEST_TYPES: TestType[] = ['TEMPERAMENT', 'DEVELOPMENT', 'UNICORN'];
 const isValidTestType = (v: unknown): v is TestType =>
   typeof v === 'string' && (VALID_TEST_TYPES as string[]).includes(v);
@@ -200,12 +220,18 @@ export class AdminController {
       }),
       this.prisma.user.count(),
     ]);
-    return { items, total, page: p, limit: l };
+    // 실제 기록(성장기록/신체성장/기질검사/결제/공지열람) 기준 마지막 활동 시각
+    const lastActiveMap = await this.lastActivityMap(items.map((u) => u.id));
+    const withActivity = items.map((u) => ({
+      ...u,
+      lastActiveAt: lastActiveMap.get(u.id) ?? null,
+    }));
+    return { items: withActivity, total, page: p, limit: l };
   }
 
   @Get('users/:id')
   async userDetail(@Param('id') id: string) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
         accounts: {
@@ -218,6 +244,112 @@ export class AdminController {
         payments: { orderBy: { createdAt: 'desc' }, take: 20 },
       },
     });
+    if (!user) return null;
+    const [lastActiveMap, recentActivity] = await Promise.all([
+      this.lastActivityMap([id]),
+      this.recentActivity(id),
+    ]);
+    return {
+      ...user,
+      lastActiveAt: lastActiveMap.get(id) ?? null,
+      recentActivity,
+    };
+  }
+
+  // 여러 사용자의 "마지막 활동 시각"을 한 번에 조회한다.
+  // 앱 접속 시각을 따로 저장하지 않으므로, 사용자가 남긴 실제 기록들의
+  // 최신 타임스탬프를 활동 시각으로 본다.
+  private async lastActivityMap(userIds: string[]): Promise<Map<string, Date>> {
+    const map = new Map<string, Date>();
+    if (userIds.length === 0) return map;
+    const where = { userId: { in: userIds } };
+    const [growth, physical, temperament, payment, noticeRead] =
+      await Promise.all([
+        this.prisma.growthRecord.groupBy({
+          by: ['userId'],
+          where,
+          _max: { createdAt: true },
+        }),
+        this.prisma.physicalGrowth.groupBy({
+          by: ['userId'],
+          where,
+          _max: { createdAt: true },
+        }),
+        this.prisma.temperamentSubmission.groupBy({
+          by: ['userId'],
+          where,
+          _max: { createdAt: true },
+        }),
+        this.prisma.payment.groupBy({
+          by: ['userId'],
+          where,
+          _max: { requestedAt: true },
+        }),
+        this.prisma.noticeRead.groupBy({
+          by: ['userId'],
+          where,
+          _max: { readAt: true },
+        }),
+      ]);
+    const merge = <T extends { userId: string | null }>(
+      rows: T[],
+      pick: (r: T) => Date | null,
+    ) => {
+      for (const r of rows) {
+        const at = pick(r);
+        if (!r.userId || !at) continue;
+        const cur = map.get(r.userId);
+        if (!cur || at > cur) map.set(r.userId, at);
+      }
+    };
+    merge(growth, (r) => r._max.createdAt);
+    merge(physical, (r) => r._max.createdAt);
+    merge(temperament, (r) => r._max.createdAt);
+    merge(payment, (r) => r._max.requestedAt);
+    merge(noticeRead, (r) => r._max.readAt);
+    return map;
+  }
+
+  // 한 사용자의 최근 활동 타임라인 (최신순 상위 항목).
+  private async recentActivity(userId: string) {
+    const [growth, physical, temperament] = await Promise.all([
+      this.prisma.growthRecord.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: { id: true, type: true, createdAt: true },
+      }),
+      this.prisma.physicalGrowth.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: { id: true, createdAt: true },
+      }),
+      this.prisma.temperamentSubmission.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: { id: true, status: true, createdAt: true },
+      }),
+    ]);
+    const items: { kind: string; label: string; at: Date }[] = [
+      ...growth.map((g) => ({
+        kind: 'growth_record',
+        label: GROWTH_TYPE_LABELS[g.type] ?? '성장기록',
+        at: g.createdAt,
+      })),
+      ...physical.map((p) => ({
+        kind: 'physical_growth',
+        label: '신체성장 기록',
+        at: p.createdAt,
+      })),
+      ...temperament.map((t) => ({
+        kind: 'temperament',
+        label: t.status === 'COMPLETED' ? '기질검사 완료' : '기질검사 진행',
+        at: t.createdAt,
+      })),
+    ];
+    return items.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 10);
   }
 
   // ===== Payments =====
