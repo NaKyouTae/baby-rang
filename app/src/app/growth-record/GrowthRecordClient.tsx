@@ -253,6 +253,9 @@ function computeDayStats(records: GrowthRecord[]) {
   let pumpedMl = 0;
   let otherFeedingMl = 0;
   let breastMin = 0;
+  // 수유 기록 존재 여부 판별용 카운트(양이 0이어도 표시하기 위함)
+  let feedingCount = 0; // 젖병/모유 전체
+  let bottleCount = 0; // 분유/유축/우유 등 ml 기록
   const now = Date.now();
   for (const r of records) {
     if (r.type === 'SLEEP') {
@@ -265,6 +268,8 @@ function computeDayStats(records: GrowthRecord[]) {
       else napMin += mins;
     }
     if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') {
+      feedingCount += 1;
+      bottleCount += 1;
       const ml = Number((r.data as Record<string, unknown>)?.amountMl);
       if (!Number.isNaN(ml)) {
         if (r.type === 'FORMULA') formulaMl += ml;
@@ -273,6 +278,7 @@ function computeDayStats(records: GrowthRecord[]) {
       }
     }
     if (r.type === 'BREASTFEEDING') {
+      feedingCount += 1;
       const data = (r.data ?? {}) as Record<string, unknown>;
       const left = Number(data.leftMin) || 0;
       const leftS = Number(data.leftSec) || 0;
@@ -282,18 +288,30 @@ function computeDayStats(records: GrowthRecord[]) {
     }
   }
   const feedingMl = formulaMl + pumpedMl + otherFeedingMl;
-  return { napMin, nightMin, feedingMl, formulaMl, pumpedMl, breastMin };
+  return {
+    napMin,
+    nightMin,
+    feedingMl,
+    formulaMl,
+    pumpedMl,
+    breastMin,
+    feedingCount,
+    bottleCount,
+  };
 }
 
+// timeOf: 어떤 시각을 "마지막" 기준으로 삼을지 결정. 수유·기저귀는 시작(startAt),
+// 수면은 종료(endAt, 진행 중이면 startAt) 기준.
 function findLatestByTypes(
   days: { date: string; records: GrowthRecord[] }[],
   types: GrowthType[],
+  timeOf: (r: GrowthRecord) => string = (r) => r.startAt,
 ): GrowthRecord | null {
   let latest: GrowthRecord | null = null;
   for (const g of days) {
     for (const r of g.records) {
       if (!types.includes(r.type)) continue;
-      if (!latest || new Date(r.startAt).getTime() > new Date(latest.startAt).getTime()) {
+      if (!latest || new Date(timeOf(r)).getTime() > new Date(timeOf(latest)).getTime()) {
         latest = r;
       }
     }
@@ -902,28 +920,31 @@ export default function GrowthRecordPage() {
         {/* 마지막 기록 3종 카드 */}
         {(() => {
           const nowMs = Date.now();
-          const lastFeed = findLatestByTypes(sortedDays, FEEDING_TYPES);
-          const lastSleep = findLatestByTypes(sortedDays, ['SLEEP']);
-          const lastDiaper = findLatestByTypes(sortedDays, ['DIAPER']);
+          // 수유·기저귀는 시작 시각, 수면은 종료 시각(진행 중이면 시작) 기준
+          const startOf = (r: GrowthRecord) => r.startAt;
+          const sleepEndOf = (r: GrowthRecord) => r.endAt ?? r.startAt;
+          const lastFeed = findLatestByTypes(sortedDays, FEEDING_TYPES, startOf);
+          const lastSleep = findLatestByTypes(sortedDays, ['SLEEP'], sleepEndOf);
+          const lastDiaper = findLatestByTypes(sortedDays, ['DIAPER'], startOf);
           const Item = ({
             label,
-            rec,
+            time,
           }: {
             label: string;
-            rec: GrowthRecord | null;
+            time: string | null;
           }) => (
             <div className="flex-1 flex flex-col items-center justify-center gap-[6px] py-[10px] rounded-[4px] bg-gray-100 border border-gray-200">
               <p className="text-[10px] font-medium text-gray-500">{label}</p>
               <p className="text-[12px] font-semibold text-primary-500 tabular-nums">
-                {rec ? formatAgo(rec.startAt, nowMs) : '-'}
+                {time ? formatAgo(time, nowMs) : '-'}
               </p>
             </div>
           );
           return (
             <div className="flex items-stretch gap-[10px]">
-              <Item label="마지막 수유" rec={lastFeed} />
-              <Item label="마지막 수면" rec={lastSleep} />
-              <Item label="마지막 기저귀" rec={lastDiaper} />
+              <Item label="마지막 수유" time={lastFeed ? startOf(lastFeed) : null} />
+              <Item label="마지막 수면" time={lastSleep ? sleepEndOf(lastSleep) : null} />
+              <Item label="마지막 기저귀" time={lastDiaper ? startOf(lastDiaper) : null} />
             </div>
           );
         })()}
@@ -1016,12 +1037,12 @@ export default function GrowthRecordPage() {
                         <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
                         <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.nightMin)}</span>
                       </span>
-                      {stats.feedingMl > 0 || stats.breastMin > 0 ? (
+                      {stats.feedingCount > 0 ? (
                         <span className="flex items-center gap-[2px]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
                           <span className="text-[10px] font-medium text-gray-900">
-                            {stats.feedingMl > 0 ? `${stats.feedingMl}ml` : ''}
+                            {stats.bottleCount > 0 ? `${stats.feedingMl}ml` : ''}
                             {stats.formulaMl > 0 || stats.pumpedMl > 0 ? (
                               <>
                                 (
@@ -1037,7 +1058,7 @@ export default function GrowthRecordPage() {
                             ) : null}
                             {stats.breastMin > 0 ? (
                               <>
-                                {stats.feedingMl > 0 ? '+' : ''}
+                                {stats.bottleCount > 0 ? '+' : ''}
                                 <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
                               </>
                             ) : null}

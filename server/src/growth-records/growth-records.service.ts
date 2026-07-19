@@ -102,17 +102,34 @@ export class GrowthRecordsService {
       'PUMPED_FEEDING',
       'MILK',
     ];
-    const latest = (where: Prisma.GrowthRecordWhereInput) =>
+    // 수유·기저귀: 시작 시각 기준
+    const latestByStart = (where: Prisma.GrowthRecordWhereInput) =>
       this.prisma.growthRecord.findFirst({
         where: { childId: selected.id, ...where },
         orderBy: { startAt: 'desc' },
         select: { startAt: true },
       });
 
-    const [feeding, sleep, diaper] = await Promise.all([
-      latest({ type: { in: FEEDING_TYPES } }),
-      latest({ type: 'SLEEP' }),
-      latest({ type: 'DIAPER' }),
+    // 수면: 종료 시각 기준(진행 중이면 시작). 최근 수면 몇 건에서 endAt(없으면 startAt)이 가장 늦은 것.
+    const latestSleepEnd = async (): Promise<Date | null> => {
+      const rows = await this.prisma.growthRecord.findMany({
+        where: { childId: selected.id, type: 'SLEEP' },
+        orderBy: { startAt: 'desc' },
+        take: 20,
+        select: { startAt: true, endAt: true },
+      });
+      let best: Date | null = null;
+      for (const r of rows) {
+        const t = r.endAt ?? r.startAt;
+        if (!best || t.getTime() > best.getTime()) best = t;
+      }
+      return best;
+    };
+
+    const [feeding, sleepAt, diaper] = await Promise.all([
+      latestByStart({ type: { in: FEEDING_TYPES } }),
+      latestSleepEnd(),
+      latestByStart({ type: 'DIAPER' }),
     ]);
 
     // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
@@ -124,7 +141,7 @@ export class GrowthRecordsService {
       childName: selected.name,
       birthDate,
       lastFeedingAt: feeding?.startAt ?? null,
-      lastSleepAt: sleep?.startAt ?? null,
+      lastSleepAt: sleepAt ?? null,
       lastDiaperAt: diaper?.startAt ?? null,
       // 전체 아이 목록(순서 고정) — 위젯 페이징용
       children: all.map((c) => ({ id: c.id, name: c.name })),

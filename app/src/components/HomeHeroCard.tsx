@@ -114,7 +114,8 @@ function computeStats(records: GrowthRecord[], todayYmd: string): TodayStats {
       r.type === 'MILK'
     ) {
       if (isToday) feedingCount += 1;
-      lastFeedingAt = pickLater(lastFeedingAt, r.endAt ?? r.startAt);
+      // 마지막 수유는 시작 시각 기준
+      lastFeedingAt = pickLater(lastFeedingAt, r.startAt);
     } else if (r.type === 'SLEEP') {
       if (isToday && r.endAt) {
         sleepMinutes += Math.max(
@@ -125,9 +126,11 @@ function computeStats(records: GrowthRecord[], todayYmd: string): TodayStats {
           ),
         );
       }
+      // 마지막 수면은 종료 시각 기준(진행 중이면 시작)
       lastSleepAt = pickLater(lastSleepAt, r.endAt ?? r.startAt);
     } else if (r.type === 'DIAPER') {
       if (isToday) diaperCount += 1;
+      // 마지막 기저귀는 시작 시각 기준
       lastDiaperAt = pickLater(lastDiaperAt, r.startAt);
     }
   }
