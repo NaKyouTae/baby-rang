@@ -254,12 +254,22 @@ private func agoText(_ date: Date?, now: Date) -> String {
     return "\(mins)분 전"
 }
 
+// 앱(app/src/lib/childAge.ts)과 동일 규칙:
+// - KST(Asia/Seoul) 달력일 기준으로 비교
+// - 태어난 날이 1일째 → 출생일 당일 = D+1
+private let kstCalendar: Calendar = {
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = TimeZone(identifier: "Asia/Seoul") ?? cal.timeZone
+    return cal
+}()
+
 private func ddayText(_ birth: Date?, now: Date) -> String {
     guard let birth else { return "" }
-    let cal = Calendar(identifier: .gregorian)
+    let cal = kstCalendar
     let b = cal.startOfDay(for: birth)
     let n = cal.startOfDay(for: now)
-    let days = (cal.dateComponents([.day], from: b, to: n).day ?? 0)
+    let raw = cal.dateComponents([.day], from: b, to: n).day ?? 0
+    let days = max(1, raw + 1)
     return "D+\(days)"
 }
 
