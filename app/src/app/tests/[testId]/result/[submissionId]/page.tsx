@@ -27,12 +27,23 @@ export default function ResultPage() {
   const [initialMock] = useState(() =>
     getMockResult(searchParams.get('mock')),
   );
+  // 결제 리다이렉트로 진입했는지는 마운트 시점에 한 번만 확정한다.
+  // unlock 후 router.replace 로 쿼리를 지우기 때문에 searchParams 를 계속 읽으면 값이 사라진다.
+  const [paymentOrderId] = useState(() =>
+    searchParams.get('paymentStatus') === 'success'
+      ? searchParams.get('orderId')
+      : null,
+  );
   const [result, setResult] = useState<TestResult | null>(initialMock);
   const [loading, setLoading] = useState(initialMock === null);
   const unlockedRef = useRef(false);
 
   useEffect(() => {
     if (initialMock) return;
+    // 결제 직후 진입이면 아래 unlock 이펙트가 조회를 책임진다.
+    // 여기서 같이 조회하면 unlock 이전(isPaid=false) 응답이 2초 지연 뒤에 도착해
+    // 먼저 반영된 unlock 결과를 덮어쓰고, 상세 리포트가 잠긴 채로 보인다.
+    if (paymentOrderId) return;
 
     const minDelay = new Promise((r) => setTimeout(r, 2000));
     const fetchData = getResult(submissionId);
@@ -46,33 +57,39 @@ export default function ResultPage() {
         alert('결과를 불러올 수 없습니다.');
         setLoading(false);
       });
-  }, [submissionId, initialMock]);
+  }, [submissionId, initialMock, paymentOrderId]);
 
   // 결제 성공 리다이렉트 처리: ?paymentStatus=success&orderId=...
   useEffect(() => {
+    if (!paymentOrderId) return;
     if (unlockedRef.current) return;
-    if (searchParams.get('paymentStatus') !== 'success') return;
-    const orderId = searchParams.get('orderId');
-    if (!orderId) return;
     unlockedRef.current = true;
 
     (async () => {
       try {
-        await unlockResult(submissionId, orderId);
-        const updated = await getResult(submissionId);
-        setResult(updated);
-        router.replace(`/tests/${testId}/result/${submissionId}`);
+        await unlockResult(submissionId, paymentOrderId);
+        setResult(await getResult(submissionId));
       } catch {
         alert('결제 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        // unlock 에 실패해도 빈 화면 대신 무료 결과라도 보여준다.
+        const fallback = await getResult(submissionId).catch(() => null);
+        if (fallback) setResult(fallback);
+      } finally {
+        setLoading(false);
+        router.replace(`/tests/${testId}/result/${submissionId}`);
       }
     })();
-  }, [searchParams, submissionId, router]);
+  }, [paymentOrderId, submissionId, testId, router]);
 
   if (loading) {
     return (
       <main className="flex flex-col items-center justify-center min-h-dvh gap-4 gradient-page">
         <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-        <p className="text-sm text-gray-500">아기의 기질을 분석하고 있어요...</p>
+        <p className="text-sm text-gray-500">
+          {paymentOrderId
+            ? '결제 내역을 확인하고 있어요...'
+            : '아기의 기질을 분석하고 있어요...'}
+        </p>
         <p className="text-xs text-gray-300">잠시만 기다려 주세요.</p>
       </main>
     );

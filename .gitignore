@@ -30,3 +30,13 @@ app/node_modules/
 admin/.next/
 admin/out/
 admin/node_modules/
+
+# TWA (Android) — 빌드 캐시 및 산출물. AAB는 CI가 생성하므로 커밋하지 않는다.
+twa/.gradle/
+twa/build/
+twa/app/build/
+twa/local.properties
+twa/*.aab
+twa/*.apk
+twa/*.idsig
+twa/*.keystore

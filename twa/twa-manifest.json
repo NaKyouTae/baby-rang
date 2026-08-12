@@ -1,5 +1,5 @@
 {
-  "packageId": "kr.spectrify.baby_rang.twa",
+  "packageId": "kr.spectrify.baby_rang",
   "host": "baby-rang.spectrify.kr",
   "name": "아기랑",
   "launcherName": "아기랑",
@@ -20,8 +20,8 @@
     "path": "/Users/nakyutae/personal/프로젝트/아기랑/아기랑 - Google Play package/signing.keystore",
     "alias": "my-key-alias"
   },
-  "appVersionName": "1.0.1",
-  "appVersionCode": 5,
+  "appVersionName": "1.1.0",
+  "appVersionCode": 6,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://baby-rang.spectrify.kr/manifest.json",
@@ -40,5 +40,5 @@
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "displayOverride": [],
-  "appVersion": "1.0.1"
+  "appVersion": "1.1.0"
 }

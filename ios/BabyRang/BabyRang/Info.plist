@@ -9,5 +9,20 @@
 		<string>kakaokompassauth</string>
 		<string>kakaotalk</string>
 	</array>
+	<!-- 카드사 앱카드/ISP 인증 후 아기랑 앱으로 복귀할 때 사용하는 스킴.
+	     웹의 결제 요청(requestPayment)에서 card.appScheme 으로 동일한 값을 넘겨야 한다. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>kr.spectrify.baby-rang</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>babyrang</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

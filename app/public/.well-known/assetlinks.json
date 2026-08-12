@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "kr.spectrify.baby_rang.twa",
+      "package_name": "kr.spectrify.baby_rang",
       "sha256_cert_fingerprints": [
         "C2:7E:AD:92:86:50:48:ED:6E:80:0C:3F:58:0D:CC:F5:94:26:45:33:2C:95:FB:3F:52:74:DA:6A:99:D0:89:06"
       ]

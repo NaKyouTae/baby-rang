@@ -88,6 +88,10 @@ function CheckoutContent() {
         orderName: productName,
         successUrl: successUrl.toString(),
         failUrl: failUrl.toString(),
+        // 카드사 앱카드/ISP 인증을 마친 뒤 아기랑 iOS 앱으로 복귀시키는 스킴.
+        // 없으면 하나카드 등에서 "비정상적인 시도"로 인증이 끊긴다.
+        // iOS Info.plist 의 CFBundleURLSchemes 와 반드시 일치해야 한다.
+        card: { appScheme: 'babyrang://payment' },
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '결제 요청에 실패했습니다.';

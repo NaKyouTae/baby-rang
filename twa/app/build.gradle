@@ -20,8 +20,12 @@ plugins {
     id 'com.android.application'
 }
 
+// CI 서명용. 환경변수가 없으면(로컬 bubblewrap build) 서명 설정을 건너뛰고
+// 기존처럼 unsigned 번들을 만든 뒤 bubblewrap이 apksigner로 서명한다.
+def ciKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+
 def twaManifest = [
-    applicationId: 'kr.spectrify.baby_rang.twa',
+    applicationId: 'kr.spectrify.baby_rang',
     hostName: 'baby-rang.spectrify.kr', // The domain being opened in the TWA.
     launchUrl: '/home', // The start path for the TWA. Must be relative to the domain.
     name: '아기랑', // The application name.
@@ -52,13 +56,13 @@ def twaManifest = [
 
 android {
     compileSdkVersion 36
-    namespace "kr.spectrify.baby_rang.twa"
+    namespace "kr.spectrify.baby_rang"
     defaultConfig {
-        applicationId "kr.spectrify.baby_rang.twa"
+        applicationId "kr.spectrify.baby_rang"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 4
-        versionName "1.0.1"
+        versionCode 6
+        versionName "1.1.0"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -150,9 +154,22 @@ android {
 
         
     }
+    signingConfigs {
+        release {
+            if (ciKeystorePath) {
+                storeFile file(ciKeystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
+            if (ciKeystorePath) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {

@@ -1,0 +1,134 @@
+name: Android Release (TWA)
+
+# v* 태그를 밀면 AAB를 빌드해 Play 내부 테스트 트랙에 올린다.
+# 프로덕션 출시는 항상 Play Console에서 수동으로 승격(promote)한다.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      track:
+        description: '업로드할 Play 트랙'
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+
+jobs:
+  release:
+    name: AAB 빌드 및 Play 업로드
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: JDK 17 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK 설치
+        uses: android-actions/setup-android@v3
+
+      - name: SDK 구성요소 설치
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: 버전 확인 및 태그 일치 검증
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(node -p "require('./twa/twa-manifest.json').appVersionName")
+          VERSION_CODE=$(node -p "require('./twa/twa-manifest.json').appVersionCode")
+          PACKAGE_ID=$(node -p "require('./twa/twa-manifest.json').packageId")
+
+          # build.gradle과 twa-manifest.json이 어긋나면 엉뚱한 버전이 올라가므로 미리 막는다.
+          GRADLE_CODE=$(grep -oE 'versionCode [0-9]+' twa/app/build.gradle | head -1 | awk '{print $2}')
+          GRADLE_NAME=$(grep -oE 'versionName "[^"]+"' twa/app/build.gradle | head -1 | sed 's/.*"\(.*\)"/\1/')
+
+          if [ "$VERSION_CODE" != "$GRADLE_CODE" ] || [ "$VERSION_NAME" != "$GRADLE_NAME" ]; then
+            echo "::error::twa-manifest.json($VERSION_NAME/$VERSION_CODE)과 build.gradle($GRADLE_NAME/$GRADLE_CODE)의 버전이 다릅니다. pnpm version:patch 로 함께 올려주세요."
+            exit 1
+          fi
+
+          # 태그로 실행된 경우 태그 이름과 앱 버전이 같은지 확인한다.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$TAG_VERSION" != "$VERSION_NAME" ]; then
+              echo "::error::태그 v$TAG_VERSION 와 앱 버전 $VERSION_NAME 이 다릅니다. 버전 갱신 커밋이 태그에 포함됐는지 확인하세요."
+              exit 1
+            fi
+          fi
+
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "package=$PACKAGE_ID" >> "$GITHUB_OUTPUT"
+          echo "✅ $PACKAGE_ID $VERSION_NAME ($VERSION_CODE)"
+
+      - name: 키스토어 복원
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 시크릿이 비어 있습니다."
+            exit 1
+          fi
+          echo "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/signing.keystore"
+
+      - name: AAB 빌드
+        working-directory: twa
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/signing.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: 서명 확인
+        run: |
+          set -euo pipefail
+          AAB=twa/app/build/outputs/bundle/release/app-release.aab
+          # 서명되지 않은 번들이 Play에 올라가는 것을 막는다.
+          # jarsigner는 미서명이어도 종료코드 0을 반환하므로 출력 문자열로 판정한다.
+          if ! jarsigner -verify "$AAB" | grep -q 'jar verified'; then
+            echo "::error::AAB가 서명되지 않았습니다. 키스토어 시크릿을 확인하세요."
+            exit 1
+          fi
+          echo "✅ 서명된 AAB 확인"
+
+      - name: AAB 아티팩트 보관
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ steps.version.outputs.name }}
+          path: twa/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Play 트랙 업로드
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ steps.version.outputs.package }}
+          releaseFiles: twa/app/build/outputs/bundle/release/app-release.aab
+          track: ${{ inputs.track || 'internal' }}
+          releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
+          status: completed
+
+      - name: 요약
+        run: |
+          {
+            echo "### Android 릴리스 완료"
+            echo ""
+            echo "- 패키지: \`${{ steps.version.outputs.package }}\`"
+            echo "- 버전: **${{ steps.version.outputs.name }}** (versionCode ${{ steps.version.outputs.code }})"
+            echo "- 트랙: \`${{ inputs.track || 'internal' }}\`"
+            echo ""
+            echo "Play Console에서 비공개 테스트/프로덕션으로 승격하면 출시됩니다."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -11,6 +11,8 @@
  *   - 모든 워크스페이스 package.json version 갱신 (root/app/server/admin)
  *   - iOS MARKETING_VERSION(마케팅 버전) → 새 버전
  *   - iOS CURRENT_PROJECT_VERSION(빌드 번호) → +1
+ *   - TWA(Android) appVersionName/versionName → 새 버전
+ *   - TWA(Android) appVersionCode/versionCode → +1
  *   - VERSIONING.md 규칙 참고
  */
 const fs = require('fs');
@@ -31,6 +33,8 @@ const PKG_FILES = [
   'admin/package.json',
 ];
 const PBXPROJ = 'ios/BabyRang/BabyRang.xcodeproj/project.pbxproj';
+const TWA_MANIFEST = 'twa/twa-manifest.json';
+const TWA_GRADLE = 'twa/app/build.gradle';
 
 // 현재 버전 = 루트 package.json 기준
 const rootPkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -84,12 +88,39 @@ if (fs.existsSync(pbxPath)) {
   console.warn(`  ! iOS 프로젝트 파일을 찾지 못해 건너뜀: ${PBXPROJ}`);
 }
 
+// 3) TWA(Android): twa-manifest.json과 build.gradle의 버전을 함께 갱신.
+//    두 파일이 어긋나면 릴리스 워크플로가 빌드 전에 실패하므로 항상 같이 올린다.
+let nextTwaCode = null;
+const twaManifestPath = path.join(ROOT, TWA_MANIFEST);
+const twaGradlePath = path.join(ROOT, TWA_GRADLE);
+
+if (fs.existsSync(twaManifestPath) && fs.existsSync(twaGradlePath)) {
+  const twaManifest = JSON.parse(fs.readFileSync(twaManifestPath, 'utf8'));
+  nextTwaCode = Number(twaManifest.appVersionCode) + 1;
+
+  twaManifest.appVersionName = next;
+  twaManifest.appVersion = next;
+  twaManifest.appVersionCode = nextTwaCode;
+  fs.writeFileSync(twaManifestPath, `${JSON.stringify(twaManifest, null, 2)}\n`);
+
+  let gradle = fs.readFileSync(twaGradlePath, 'utf8');
+  gradle = gradle.replace(/versionCode \d+/, `versionCode ${nextTwaCode}`);
+  gradle = gradle.replace(/versionName "[^"]+"/, `versionName "${next}"`);
+  fs.writeFileSync(twaGradlePath, gradle);
+} else {
+  console.warn(`  ! TWA 프로젝트 파일을 찾지 못해 건너뜀: ${TWA_MANIFEST}`);
+}
+
 console.log(`\n✅ 버전 갱신: ${current} → ${next}  (${kind})`);
 console.log(`   package.json ×${PKG_FILES.length} → ${next}`);
 console.log(`   iOS MARKETING_VERSION → ${next}`);
 if (nextBuild != null) console.log(`   iOS CURRENT_PROJECT_VERSION(빌드번호) → ${nextBuild}`);
+if (nextTwaCode != null) {
+  console.log(`   TWA versionName → ${next}, versionCode → ${nextTwaCode}`);
+}
 console.log('\n다음 할 일:');
 console.log(`   1) CHANGELOG.md의 [Unreleased] 항목을 [${next}]로 정리`);
 console.log(`   2) git commit -am "chore: release v${next}"`);
 console.log(`   3) git tag v${next} && git push --tags`);
+console.log('      → Android 릴리스 워크플로가 자동 실행되어 Play 내부 테스트 트랙에 올라갑니다.');
 console.log('');
