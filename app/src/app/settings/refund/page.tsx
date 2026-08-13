@@ -15,7 +15,7 @@ export default function SettingsRefundPage() {
   )}`;
 
   return (
-    <div className="flex flex-col bg-white px-6 pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white px-6">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <button
           type="button"

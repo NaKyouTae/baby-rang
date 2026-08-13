@@ -342,7 +342,7 @@ export default function SharingPage() {
   const currentGroups = tab === 'mine' ? myGroups : receivedGroups;
 
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       <div className="bg-white">
         <PageHeader title="기록 공유" variant="back" />
       </div>

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function AccountDeletionPage() {
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)] px-6">
+    <div className="flex flex-col bg-white px-6">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
         <BackButton />
         <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">

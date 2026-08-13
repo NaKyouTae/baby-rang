@@ -6,6 +6,7 @@ import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import WidgetBridge from "@/components/WidgetBridge";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
+import GlobalFooter from "@/components/GlobalFooter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
 const SITE_NAME = "아기랑";
@@ -287,6 +288,8 @@ export default function RootLayout({
               />
               <SplashProvider>
                 {children}
+                {/* 사업자정보 푸터 — 카드사 심사 요건상 전 페이지 하단에 노출 */}
+                <GlobalFooter />
               </SplashProvider>
             </div>
             <BottomNavServer />

@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 import HomeHeaderActions from "@/components/HomeHeaderActions";
-import BusinessInfo from "@/components/BusinessInfo";
 import InitialScreenRedirect from "@/components/InitialScreenRedirect";
 
 export const metadata: Metadata = {
@@ -47,7 +46,7 @@ const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursing
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       {/* 초기 화면 설정에 따라 홈 첫 진입 시 지정 화면으로 이동 */}
       <InitialScreenRedirect />
       {/* 홈 헤더 */}
@@ -106,7 +105,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      <BusinessInfo />
     </div>
   );
 }

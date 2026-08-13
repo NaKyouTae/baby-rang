@@ -20,7 +20,7 @@ export default function EditChildPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       <PageHeader title="아기 수정하기" variant="close" />
       <ChildForm
         initialName={child.name}

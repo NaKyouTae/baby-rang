@@ -51,7 +51,7 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       <PageHeader title="테스트 이력" variant="back" />
 
       {(loading || items.length > 0) && (

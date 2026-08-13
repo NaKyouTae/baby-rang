@@ -10,7 +10,7 @@ export default function AddChildPage() {
   const { addChild } = useChildren();
 
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       <PageHeader title="아기 추가하기" variant="close" />
       <ChildForm
         onSubmit={async ({ name, gender, birthDate, dueDate }) => {

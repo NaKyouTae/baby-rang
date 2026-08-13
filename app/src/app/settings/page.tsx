@@ -12,7 +12,6 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { palette } from "@/lib/colors";
 import { openLocationSettings, getLocationSettingsGuide } from "@/lib/openLocationSettings";
 import PageHeader from "@/components/PageHeader";
-import BusinessInfo from "@/components/BusinessInfo";
 import { useConsents, type OptionalConsentKey } from "@/hooks/useConsents";
 import InitialScreenSheet from "@/components/InitialScreenSheet";
 import { resolveHomeTargetLabel } from "@/components/menuCatalog";
@@ -379,7 +378,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
+    <div className="flex flex-col bg-white">
       {locationGuide && (
         <ConfirmModal
           open={locationGuideOpen}
@@ -587,7 +586,6 @@ export default function SettingsPage() {
         {isAuthLoaded && !isAuthenticated && <div className="h-[48px]" />}
       </div>
 
-      <BusinessInfo />
 
       {initialScreenOpen && (
         <InitialScreenSheet
