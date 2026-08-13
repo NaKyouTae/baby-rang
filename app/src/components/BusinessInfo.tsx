@@ -9,6 +9,10 @@ export default function BusinessInfo() {
     <footer
       style={{
         backgroundColor: palette.gray100,
+        // 모든 페이지의 콘텐츠와 사업자정보 사이 최소 여백.
+        // 푸터는 layout.tsx 에서 전역으로 한 번만 렌더되므로, 페이지마다 하단 여백을
+        // 따로 넣지 않아도 되도록 여기서 책임진다. (페이지가 자체 하단 여백을 가지면 그만큼 더 벌어짐)
+        marginTop: 32,
         paddingTop: 16,
         paddingLeft: 24,
         paddingRight: 24,
