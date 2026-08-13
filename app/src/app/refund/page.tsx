@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import BackButton from '@/components/BackButton';
+import PageHeader from '@/components/PageHeader';
 
 export const metadata: Metadata = {
   title: '환불정책',
@@ -16,15 +16,10 @@ export const metadata: Metadata = {
 
 export default function RefundPage() {
   return (
-    <div className="flex flex-col bg-white px-6">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
-        <BackButton />
-        <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
-          환불정책
-        </h1>
-      </header>
+    <div className="flex flex-col bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 24px)' }}>
+      <PageHeader title="환불정책" variant="back" />
 
-      <article className="py-6 text-[14px] leading-relaxed text-gray-700 space-y-4">
+      <article className="px-5 pt-6 pb-[41px] text-[14px] leading-relaxed text-gray-700 space-y-4">
         <p className="text-xs text-gray-400">시행일자: 2026년 4월 8일</p>
 
         <section>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import BackButton from '@/components/BackButton';
+import PageHeader from '@/components/PageHeader';
 import { palette } from '@/lib/colors';
 
 export const metadata: Metadata = {
@@ -17,15 +17,10 @@ export const metadata: Metadata = {
 
 export default function AccountDeletionPage() {
   return (
-    <div className="flex flex-col bg-white px-6">
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 relative flex items-center h-14 px-2 pt-[var(--safe-area-top)] -mx-6">
-        <BackButton />
-        <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[15px] font-semibold text-gray-900">
-          계정 및 데이터 삭제
-        </h1>
-      </header>
+    <div className="flex flex-col bg-white" style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 24px)' }}>
+      <PageHeader title="계정 및 데이터 삭제" variant="back" />
 
-      <article className="py-6 text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
+      <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
         <section>
           <p>
             본 페이지는 모바일 애플리케이션 &quot;아기랑&quot;(개발자: 스펙트럼)의 계정 및 데이터 삭제
