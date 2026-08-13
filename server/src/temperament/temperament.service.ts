@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  GoneException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -43,6 +44,15 @@ const PREVIEW_FOCUS: Record<PrimaryType, string | null> = {
   balanced: null,
 };
 import { CreateSubmissionDto, SubmitAnswersDto, UnlockResultDto } from './dto';
+
+// 검사 결과 열람 가능 기간 — 검사 완료 시점부터 7일.
+export const RESULT_ACCESS_DAYS = 7;
+const RESULT_ACCESS_MS = RESULT_ACCESS_DAYS * 24 * 60 * 60 * 1000;
+
+// completedAt 이 비어 있는 예외 케이스는 결과 생성 시각으로 대체한다.
+function resultExpiresAt(completedAt: Date | null, fallback: Date) {
+  return new Date((completedAt ?? fallback).getTime() + RESULT_ACCESS_MS);
+}
 
 @Injectable()
 export class TemperamentService {
@@ -229,8 +239,16 @@ export class TemperamentService {
     if (submission.userId !== userId) throw new ForbiddenException();
 
     const r = submission.result;
+    const expiresAt = resultExpiresAt(submission.completedAt, r.createdAt);
+    if (Date.now() >= expiresAt.getTime()) {
+      throw new GoneException(
+        `결과 열람 기간(검사 후 ${RESULT_ACCESS_DAYS}일)이 지났습니다.`,
+      );
+    }
+
     return {
       resultId: r.id,
+      expiresAt: expiresAt.toISOString(),
       isPaid: r.isPaid,
       isReliable: r.isReliable,
       reliabilityMsg: r.reliabilityMsg,
@@ -255,6 +273,17 @@ export class TemperamentService {
       throw new NotFoundException('결과를 찾을 수 없습니다.');
     }
     if (submission.userId !== userId) throw new ForbiddenException();
+
+    // 열람 기간이 끝난 결과는 상세 리포트 해제도 막는다(볼 수 없는 리포트 구매 방지).
+    const expiresAt = resultExpiresAt(
+      submission.completedAt,
+      submission.result.createdAt,
+    );
+    if (Date.now() >= expiresAt.getTime()) {
+      throw new GoneException(
+        `결과 열람 기간(검사 후 ${RESULT_ACCESS_DAYS}일)이 지났습니다.`,
+      );
+    }
 
     const payment = await this.prisma.payment.findUnique({
       where: { orderId: dto.paymentId },
@@ -301,17 +330,23 @@ export class TemperamentService {
       }),
     ]);
 
+    const now = Date.now();
     return {
       items: items
         .filter((s) => s.result)
-        .map((s) => ({
-          submissionId: s.id,
-          resultId: s.result!.id,
-          primaryType: s.result!.primaryType,
-          primaryTypeLabel: s.result!.primaryTypeLabel,
-          isPaid: s.result!.isPaid,
-          completedAt: s.completedAt!.toISOString(),
-        })),
+        .map((s) => {
+          const expiresAt = resultExpiresAt(s.completedAt, s.result!.createdAt);
+          return {
+            submissionId: s.id,
+            resultId: s.result!.id,
+            primaryType: s.result!.primaryType,
+            primaryTypeLabel: s.result!.primaryTypeLabel,
+            isPaid: s.result!.isPaid,
+            completedAt: s.completedAt!.toISOString(),
+            expiresAt: expiresAt.toISOString(),
+            isExpired: now >= expiresAt.getTime(),
+          };
+        }),
       total,
       page,
       limit,

@@ -6,6 +6,11 @@ import { getHistory, type HistoryItem } from '@/lib/api';
 import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
 import BannerCarousel from '@/components/BannerCarousel';
+import {
+  RESULT_ACCESS_DAYS,
+  isResultExpired,
+  remainingAccessLabel,
+} from '@/lib/resultAccess';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -55,9 +60,14 @@ export default function HistoryPage() {
       <PageHeader title="테스트 이력" variant="back" />
 
       {(loading || items.length > 0) && (
-        <div className="mt-6 px-6">
-          <BannerCarousel />
-        </div>
+        <>
+          <div className="mt-6 px-6">
+            <BannerCarousel />
+          </div>
+          <p className="mt-4 px-6 text-xs font-normal" style={{ color: palette.gray500 }}>
+            검사 결과는 검사한 날로부터 {RESULT_ACCESS_DAYS}일 동안만 볼 수 있어요.
+          </p>
+        </>
       )}
 
       <div className="mt-6 px-6">
@@ -101,19 +111,18 @@ export default function HistoryPage() {
           </div>
         ) : (
           <ul className="space-y-3">
-            {items.map((item) => (
-              <li key={item.submissionId}>
-                <Link
-                  href={
-                    defaultTestId
-                      ? `/tests/${defaultTestId}/result/${item.submissionId}`
-                      : '/tests'
-                  }
-                  className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 active:bg-gray-200 transition-colors"
-                >
+            {items.map((item) => {
+              // 서버가 내려준 값이 기준이지만, 화면을 오래 열어둔 경우를 위해 클라이언트에서도 한 번 더 판정한다.
+              const expired = item.isExpired || isResultExpired(item.expiresAt);
+              const remaining = remainingAccessLabel(item.expiresAt);
+
+              const body = (
+                <>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1">
-                      <p className="text-[16px] font-medium text-black truncate">
+                      <p
+                        className={`text-[16px] font-medium truncate ${expired ? 'text-gray-400' : 'text-black'}`}
+                      >
                         {item.primaryTypeLabel || item.primaryType}
                       </p>
                       <span
@@ -127,17 +136,49 @@ export default function HistoryPage() {
                       </span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-1 text-xs font-normal text-gray-500">
-                      <span className="truncate">{item.primaryTypeLabel || item.primaryType}</span>
-                      <span>|</span>
                       <span>{formatDate(item.completedAt)}</span>
+                      <span>|</span>
+                      {expired ? (
+                        <span className="truncate">열람 기간 종료</span>
+                      ) : (
+                        <span className="truncate" style={{ color: palette.teal }}>
+                          {remaining}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </Link>
-              </li>
-            ))}
+                  {!expired && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  )}
+                </>
+              );
+
+              return (
+                <li key={item.submissionId}>
+                  {expired ? (
+                    <div
+                      aria-disabled
+                      className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 opacity-60"
+                    >
+                      {body}
+                    </div>
+                  ) : (
+                    <Link
+                      href={
+                        defaultTestId
+                          ? `/tests/${defaultTestId}/result/${item.submissionId}`
+                          : '/tests'
+                      }
+                      className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 active:bg-gray-200 transition-colors"
+                    >
+                      {body}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

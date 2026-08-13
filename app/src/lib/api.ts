@@ -75,6 +75,8 @@ export interface PaidContent {
 
 export interface TestResult {
   resultId: string;
+  /** 결과 열람 마감 시각(ISO). 미리보기(mock) 결과에는 없다. */
+  expiresAt?: string;
   isPaid: boolean;
   isReliable: boolean;
   reliabilityMsg: string | null;
@@ -101,6 +103,9 @@ export interface HistoryItem {
   primaryTypeLabel: string;
   isPaid: boolean;
   completedAt: string;
+  /** 열람 마감 시각(ISO) — 검사 완료 후 RESULT_ACCESS_DAYS일 */
+  expiresAt: string;
+  isExpired: boolean;
 }
 
 export type AgeGroup = 'newborn' | 'before_first' | 'after_first';

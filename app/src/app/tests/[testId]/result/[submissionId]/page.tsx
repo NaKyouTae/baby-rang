@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
+import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
 
 const TEMPERAMENT_PRICE = 990;
 import type { TestResult } from '@/lib/api';
@@ -36,6 +37,8 @@ export default function ResultPage() {
   );
   const [result, setResult] = useState<TestResult | null>(initialMock);
   const [loading, setLoading] = useState(initialMock === null);
+  // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
+  const [expired, setExpired] = useState(false);
   const unlockedRef = useRef(false);
 
   useEffect(() => {
@@ -53,8 +56,12 @@ export default function ResultPage() {
         setResult(data);
         setLoading(false);
       })
-      .catch(() => {
-        alert('결과를 불러올 수 없습니다.');
+      .catch((e: unknown) => {
+        if ((e as { status?: number })?.status === 410) {
+          setExpired(true);
+        } else {
+          alert('결과를 불러올 수 없습니다.');
+        }
         setLoading(false);
       });
   }, [submissionId, initialMock, paymentOrderId]);
@@ -69,7 +76,12 @@ export default function ResultPage() {
       try {
         await unlockResult(submissionId, paymentOrderId);
         setResult(await getResult(submissionId));
-      } catch {
+      } catch (e: unknown) {
+        // 열람 기간이 끝난 결과는 해제도 조회도 불가 — 만료 안내로 넘긴다.
+        if ((e as { status?: number })?.status === 410) {
+          setExpired(true);
+          return;
+        }
         alert('결제 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         // unlock 에 실패해도 빈 화면 대신 무료 결과라도 보여준다.
         const fallback = await getResult(submissionId).catch(() => null);
@@ -95,7 +107,40 @@ export default function ResultPage() {
     );
   }
 
+  if (expired) {
+    return (
+      <div className="flex flex-col bg-white min-h-dvh">
+        <PageHeader title="검사 결과" variant="back" onAction={() => router.push('/tests')} />
+        <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 mb-4">
+            <svg width="28" height="28" viewBox="0 0 16 16" fill="none">
+              <path d="M14.6666 8.00001C14.6666 11.682 11.6819 14.6667 7.99992 14.6667C4.31792 14.6667 1.33325 11.682 1.33325 8.00001C1.33325 4.31801 4.31792 1.33334 7.99992 1.33334C11.6819 1.33334 14.6666 4.31801 14.6666 8.00001Z" stroke="#9CA3AF" strokeLinecap="round" strokeDasharray="0.33 2.33"/>
+              <path d="M14.6667 8.00001C14.6667 4.31801 11.682 1.33334 8 1.33334" stroke="#9CA3AF" strokeLinecap="round"/>
+              <path d="M8 6V8.66667H10.6667" stroke="#9CA3AF" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <p className="text-[16px] font-medium text-app-black">
+            열람 기간이 지난 결과예요.
+          </p>
+          <p className="mt-2 text-[12px] font-normal text-gray-500">
+            검사 결과는 검사한 날로부터 {RESULT_ACCESS_DAYS}일 동안만 볼 수 있어요.
+            <br />
+            다시 검사하고 지금의 기질을 확인해 보세요.
+          </p>
+          <button
+            onClick={() => router.push(`/tests/${testId}`)}
+            className="mt-6 w-full py-3.5 rounded-[4px] bg-gray-100 text-app-black font-semibold text-sm active:scale-[0.97] transition-transform"
+          >
+            다시 검사하기
+          </button>
+        </main>
+      </div>
+    );
+  }
+
   if (!result) return null;
+
+  const remainingLabel = remainingAccessLabel(result.expiresAt);
 
   const handleUnlock = () => {
     if (!result) return;
@@ -115,6 +160,11 @@ export default function ResultPage() {
     <div className="flex flex-col bg-white">
       <PageHeader title="검사 결과" variant="back" onAction={() => router.push('/tests')} />
       <main className="flex-1 pb-8 px-6 pt-6">
+        {remainingLabel && (
+          <p className="mb-4 text-[11px] font-normal text-gray-400 text-center">
+            이 결과는 검사 후 {RESULT_ACCESS_DAYS}일간 볼 수 있어요 · {remainingLabel}
+          </p>
+        )}
         <ResultCover
           primaryType={result.summary.primaryType}
           primaryTypeLabel={result.summary.primaryTypeLabel}
