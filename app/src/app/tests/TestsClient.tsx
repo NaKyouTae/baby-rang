@@ -23,19 +23,6 @@ export default function TestsClient({ tests }: { tests: TestItem[] }) {
       <PageHeader title="테스트" variant="back" />
 
       <main className="flex-1 flex flex-col px-5 pt-6 pb-28">
-        <div
-          className="mb-4 rounded-lg px-3.5 py-3 text-[12px] leading-snug"
-          style={{
-            backgroundColor: 'rgba(255, 149, 0, 0.12)',
-            color: palette.gray500,
-          }}
-        >
-          <span className="font-semibold" style={{ color: palette.black }}>
-            개발 중인 서비스입니다.
-          </span>{' '}
-          현재 테스트 기능은 개발 중이며, 실제 결제는 이루어지지 않습니다.
-        </div>
-
         {tests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 text-sm">
             <span className="text-3xl mb-2">📝</span>
