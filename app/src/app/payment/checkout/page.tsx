@@ -4,8 +4,15 @@ import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspa
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
-const CLIENT_KEY =
-  process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm';
+// 토스 결제위젯 클라이언트 키.
+//
+// ⚠️ 테스트 키로의 폴백을 두지 않는다.
+// 폴백이 있으면 프로덕션에 env 주입이 빠졌을 때 결제가 "성공한 것처럼" 보이면서
+// 실제 정산은 일어나지 않는다. 매출이 조용히 새는 게 가장 나쁜 실패 방식이라,
+// 키가 없으면 드러내놓고 실패시킨다.
+//
+// NEXT_PUBLIC_ 변수는 빌드 시점에 인라인되므로, 값을 바꾸면 재빌드·재배포가 필요하다.
+const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
 
 type ProductType =
   | 'TEMPERAMENT_REPORT'
@@ -29,7 +36,14 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 키 누락은 사용자가 해결할 수 없는 배포 설정 오류다.
+  // 위젯을 아예 띄우지 않고(ready=false 유지) 결제 버튼도 비활성 상태로 둔다.
+  const configError = CLIENT_KEY
+    ? null
+    : '결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+
   useEffect(() => {
+    if (!CLIENT_KEY) return;
     let cancelled = false;
 
     (async () => {
@@ -130,8 +144,10 @@ function CheckoutContent() {
         <div id="toss-payment-methods" />
         <div id="toss-agreement" />
 
-        {error && (
-          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">{error}</p>
+        {(error ?? configError) && (
+          <p className="rounded-lg bg-red-50 p-3 text-xs text-red-600">
+            {error ?? configError}
+          </p>
         )}
       </main>
 
