@@ -5,8 +5,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AgeGroup, SubmissionStatus } from '@prisma/client';
+import { AgeGroup, PaymentProductType, SubmissionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { getProductSpec } from '../payments/product-catalog';
 import {
   DIMENSIONS,
   NOTICE,
@@ -295,6 +296,24 @@ export class TemperamentService {
       payment.productType !== 'TEMPERAMENT_REPORT'
     ) {
       throw new ForbiddenException('유효한 결제 내역이 없습니다.');
+    }
+
+    // 정가 미만으로 승인된 결제로는 리포트를 열 수 없다.
+    // (결제 생성 단계에서 이미 막지만, 과거 데이터나 다른 경로로 만들어진
+    //  Payment 가 흘러들어올 수 있으므로 사용하는 쪽에서도 확인한다.)
+    const { price } = getProductSpec(PaymentProductType.TEMPERAMENT_REPORT);
+    if (payment.amount < price) {
+      throw new ForbiddenException(
+        '결제 금액이 상품 가격과 일치하지 않습니다.',
+      );
+    }
+
+    // 결제 1건은 결제할 때 지정한 검사 1건만 연다.
+    // 이 확인이 없으면 ₩990 결제 1건의 orderId 로 다른 검사 결과까지
+    // 무제한으로 열 수 있다. (Payment.paymentId 에 유니크 제약이 없다.)
+    const meta = payment.productMeta as { submissionId?: string } | null;
+    if (meta?.submissionId !== submissionId) {
+      throw new ForbiddenException('이 결과에 대한 결제 내역이 아닙니다.');
     }
 
     const updated = await this.prisma.temperamentResult.update({

@@ -14,6 +14,7 @@ import {
   FailPaymentDto,
   ListPaymentsQuery,
 } from './dto';
+import { resolveProduct } from './product-catalog';
 
 @Injectable()
 export class PaymentsService {
@@ -28,6 +29,9 @@ export class PaymentsService {
       throw new BadRequestException('orderId/amount가 올바르지 않습니다.');
     }
 
+    // 금액·상품명은 클라이언트를 믿지 않고 서버 가격표로 확정한다.
+    const spec = resolveProduct(dto.productType, dto.amount);
+
     const exists = await this.prisma.payment.findUnique({
       where: { orderId: dto.orderId },
     });
@@ -39,9 +43,9 @@ export class PaymentsService {
         childId: dto.childId,
         orderId: dto.orderId,
         productType: dto.productType,
-        productName: dto.productName,
+        productName: spec.name,
         productMeta: dto.productMeta as Prisma.InputJsonValue | undefined,
-        amount: dto.amount,
+        amount: spec.price,
         taxFreeAmount: dto.taxFreeAmount ?? 0,
         vatAmount: dto.vatAmount ?? 0,
         discountAmount: dto.discountAmount ?? 0,
@@ -60,7 +64,7 @@ export class PaymentsService {
           create: {
             type: 'CREATED',
             status: PaymentStatus.PENDING,
-            amount: dto.amount,
+            amount: spec.price,
             payload: dto.rawRequest as Prisma.InputJsonValue | undefined,
           },
         },
@@ -138,12 +142,12 @@ export class PaymentsService {
     dto: ConfirmAndCreateDto,
     context: { ipAddress?: string; userAgent?: string },
   ) {
+    // productName 은 클라이언트 값을 쓰지 않는다. 아래 spec.name 으로 확정한다.
     const {
       paymentKey,
       providerId,
       amount,
       productType,
-      productName,
       childId,
       productMeta,
     } = dto;
@@ -151,6 +155,11 @@ export class PaymentsService {
     if (!paymentKey || !providerId || !amount || amount <= 0) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
     }
+
+    // 금액·상품명은 클라이언트를 믿지 않고 서버 가격표로 확정한다.
+    // 정가와 다른 금액이면 PG 승인을 시도하기 전에 여기서 막는다.
+    // (승인되지 않은 결제는 PG에서 자동으로 취소된다.)
+    const spec = resolveProduct(productType, amount);
 
     // 중복 방지: 같은 providerId로 이미 생성된 Payment가 있는지 확인
     const existing = await this.prisma.payment.findUnique({
@@ -179,7 +188,12 @@ export class PaymentsService {
           'Content-Type': 'application/json',
           'Idempotency-Key': providerId,
         },
-        body: JSON.stringify({ paymentKey, orderId: providerId, amount }),
+        // 승인 요청도 서버가 확정한 정가로 보낸다.
+        body: JSON.stringify({
+          paymentKey,
+          orderId: providerId,
+          amount: spec.price,
+        }),
       },
     );
 
@@ -196,9 +210,9 @@ export class PaymentsService {
         childId: childId ?? null,
         orderId: providerId,
         productType,
-        productName,
+        productName: spec.name,
         productMeta: productMeta as Prisma.InputJsonValue | undefined,
-        amount,
+        amount: spec.price,
         currency: 'KRW',
         provider: 'TOSS',
         status: PaymentStatus.PAID,
@@ -219,7 +233,7 @@ export class PaymentsService {
           create: {
             type: 'CONFIRMED',
             status: PaymentStatus.PAID,
-            amount,
+            amount: spec.price,
             payload: tossJson as Prisma.InputJsonValue,
           },
         },
