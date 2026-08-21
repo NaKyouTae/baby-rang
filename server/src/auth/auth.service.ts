@@ -6,8 +6,25 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthProvider, ConsentType, Prisma } from '@prisma/client';
+import {
+  AgeGroup,
+  AuthProvider,
+  ConsentType,
+  GrowthRecordType,
+  Prisma,
+  SubmissionStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SCALE, getQuestions } from '../temperament/data/questions';
+import {
+  buildFreeContentByType,
+  buildPaidContent,
+  buildSummary,
+  checkReliability,
+  computeScores,
+  determineType,
+} from '../temperament/scoring';
+import { RESULT_ACCESS_DAYS } from '../temperament/temperament.service';
 
 export type ConsentInput = {
   terms?: boolean;
@@ -290,40 +307,188 @@ export class AuthService {
       },
     });
 
-    if (existing) {
-      return { accessToken: this.jwtService.sign({ sub: existing.userId }) };
-    }
+    let userId = existing?.userId;
 
-    const now = new Date();
-    const user = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.user.create({
-        data: {
-          nickname: '테스트 계정',
-          parentRole: 'mom',
-          onboardedAt: now,
-          termsAgreedAt: now,
-          privacyAgreedAt: now,
-          accounts: {
-            create: {
-              provider: AuthProvider.KAKAO,
-              providerId: TEST_ACCOUNT_PROVIDER_ID,
+    if (!userId) {
+      const now = new Date();
+      const user = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            nickname: '테스트 계정',
+            parentRole: 'mom',
+            onboardedAt: now,
+            termsAgreedAt: now,
+            privacyAgreedAt: now,
+            accounts: {
+              create: {
+                provider: AuthProvider.KAKAO,
+                providerId: TEST_ACCOUNT_PROVIDER_ID,
+              },
             },
           },
-        },
-      });
+        });
 
-      await tx.group.create({
+        await tx.group.create({
+          data: {
+            ownerId: created.id,
+            code: await this.generateUniqueGroupCode(tx),
+            members: { create: { userId: created.id } },
+          },
+        });
+
+        return created;
+      });
+      userId = user.id;
+    }
+
+    await this.ensureDemoData(userId);
+
+    return { accessToken: this.jwtService.sign({ sub: userId }) };
+  }
+
+  /**
+   * 심사관용 데모 데이터를 보장한다. 로그인할 때마다 호출되며 멱등하다.
+   *
+   * 왜 필요한가:
+   * 스토어 심사관은 계정을 직접 만들거나 유료 콘텐츠를 구매할 수 없다(Google Play 정책).
+   * 빈 계정을 주면 아이 등록부터 검사 20문항까지 직접 해야 하고, 그래도 상세 리포트는
+   * 볼 수 없다. 그래서 아이·기록·해제된 리포트를 미리 채워 둔다.
+   *
+   * 검사 결과는 완료 후 RESULT_ACCESS_DAYS 일이 지나면 열람이 막히므로(410),
+   * 만료됐으면 로그인 시점에 새 검사를 만들어 항상 볼 수 있는 상태로 유지한다.
+   */
+  private async ensureDemoData(userId: string) {
+    const now = new Date();
+
+    const group =
+      (await this.prisma.group.findFirst({ where: { ownerId: userId } })) ??
+      (await this.prisma.group.create({
         data: {
-          ownerId: created.id,
-          code: await this.generateUniqueGroupCode(tx),
-          members: { create: { userId: created.id } },
+          ownerId: userId,
+          code: await this.generateUniqueGroupCode(this.prisma),
+          members: { create: { userId } },
         },
-      });
+      }));
 
-      return created;
+    let child = await this.prisma.child.findFirst({
+      where: { groupId: group.id },
     });
 
-    return { accessToken: this.jwtService.sign({ sub: user.id }) };
+    if (!child) {
+      const birthDate = new Date(now);
+      birthDate.setMonth(birthDate.getMonth() - 6);
+
+      child = await this.prisma.child.create({
+        data: { groupId: group.id, name: '아기', gender: 'female', birthDate },
+      });
+
+      // 홈·기록 화면이 비어 보이지 않도록 최근 기록 몇 건을 함께 넣는다.
+      const hoursAgo = (h: number) =>
+        new Date(now.getTime() - h * 60 * 60 * 1000);
+      await this.prisma.growthRecord.createMany({
+        data: [
+          {
+            userId,
+            childId: child.id,
+            type: GrowthRecordType.BREASTFEEDING,
+            startAt: hoursAgo(2),
+          },
+          {
+            userId,
+            childId: child.id,
+            type: GrowthRecordType.DIAPER,
+            startAt: hoursAgo(4),
+          },
+          {
+            userId,
+            childId: child.id,
+            type: GrowthRecordType.BABY_FOOD,
+            startAt: hoursAgo(6),
+          },
+          {
+            userId,
+            childId: child.id,
+            type: GrowthRecordType.SLEEP,
+            startAt: hoursAgo(11),
+            endAt: hoursAgo(9),
+          },
+        ],
+      });
+    }
+
+    // 아직 열람 가능한 유료 리포트가 있으면 그대로 둔다.
+    const accessibleSince = new Date(
+      now.getTime() - RESULT_ACCESS_DAYS * 24 * 60 * 60 * 1000,
+    );
+    const alive = await this.prisma.temperamentSubmission.findFirst({
+      where: {
+        userId,
+        status: SubmissionStatus.COMPLETED,
+        completedAt: { gt: accessibleSince },
+        result: { isPaid: true },
+      },
+    });
+    if (alive) return;
+
+    // 실제 채점 파이프라인을 그대로 태워 유효한 결과를 만든다.
+    // (임의 값을 넣으면 화면이 깨지거나 신뢰도 경고가 뜬다)
+    const ageGroup = AgeGroup.before_first;
+    const answers = getQuestions(ageGroup).map((q, i) => ({
+      questionId: q.id,
+      questionNo: q.questionNo,
+      dimension: q.dimension,
+      // 활동성만 최고점을 주어 '균형성장형'이 아닌 뚜렷한 유형이 나오게 한다.
+      score: q.dimension === 'activity' ? SCALE.max : 3 + (i % 2),
+    }));
+
+    const scores = computeScores(answers);
+    const typeInfo = determineType(scores);
+    const reliability = checkReliability(answers);
+
+    await this.prisma.temperamentSubmission.create({
+      data: {
+        userId,
+        ageGroup,
+        childAge: 6,
+        status: SubmissionStatus.COMPLETED,
+        completedAt: now,
+        answers: {
+          createMany: {
+            data: answers.map((a) => ({
+              questionId: a.questionId,
+              questionNo: a.questionNo,
+              dimension: a.dimension,
+              score: a.score,
+            })),
+          },
+        },
+        result: {
+          create: {
+            primaryType: typeInfo.primaryType,
+            primaryTypeLabel: typeInfo.primaryTypeLabel,
+            emotionModifier: typeInfo.emotionModifier,
+            isReliable: reliability.isReliable,
+            reliabilityMsg: reliability.reliabilityMsg,
+            scores: scores as unknown as Prisma.InputJsonValue,
+            summary: buildSummary(
+              typeInfo.primaryType,
+              typeInfo.primaryTypeLabel,
+              typeInfo.emotionModifier,
+            ) as unknown as Prisma.InputJsonValue,
+            freeContent: buildFreeContentByType(
+              typeInfo.primaryType,
+            ) as unknown as Prisma.InputJsonValue,
+            paidContent: buildPaidContent(
+              scores,
+              typeInfo.primaryType,
+            ) as unknown as Prisma.InputJsonValue,
+            // 심사관은 직접 구매할 수 없으므로 상세 리포트를 열어둔 상태로 만든다.
+            isPaid: true,
+            unlockedAt: now,
+          },
+        },
+      },
+    });
   }
 
   async updateProfile(
