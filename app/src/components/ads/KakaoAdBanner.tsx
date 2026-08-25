@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
@@ -15,6 +15,15 @@ type Props = {
    * 부모가 빈 광고 영역을 collapse 하는 데 사용한다.
    */
   onFilledChange?: (filled: boolean) => void;
+  /**
+   * 부모 컨테이너 가로폭을 꽉 채운다.
+   *
+   * AdFit 소재는 유닛 등록 시 정해진 규격(320x50 등)으로만 내려온다.
+   * data-ad-width 에 디바이스 너비를 넣어도 소재가 그만큼 커지지 않고
+   * 320px 로 렌더된 뒤 가운데 정렬되어 좌우 여백이 생긴다.
+   * 그래서 요청은 규격대로(320) 보내고, 받은 소재를 CSS transform 으로 확대한다.
+   */
+  stretch?: boolean;
 };
 
 const APP_MAX_WIDTH = 430;
@@ -44,8 +53,32 @@ export default function KakaoAdBanner({
   height = 50,
   className,
   onFilledChange,
+  stretch = false,
 }: Props) {
   const insRef = useRef<HTMLModElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  // AdFit 에 실제로 요청하는 소재 규격. stretch 여부와 무관하게 이 값으로 요청한다.
+  const baseWidth = widthOverride ?? DEFAULT_WIDTH;
+
+  // stretch 모드에서 컨테이너 폭을 재서 확대 배율을 구한다.
+  // 회전·분할화면 등으로 폭이 바뀌면 ResizeObserver 가 다시 계산한다.
+  useEffect(() => {
+    if (!stretch) return;
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const w = el.clientWidth;
+      if (w > 0) setScale(w / baseWidth);
+    };
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [stretch, baseWidth]);
 
   useEffect(() => {
     if (!unit) return;
@@ -63,9 +96,12 @@ export default function KakaoAdBanner({
       onFilledChange?.(next);
     };
 
-    const w =
-      widthOverride ??
-      Math.min(window.innerWidth || DEFAULT_WIDTH, APP_MAX_WIDTH);
+    // stretch 모드는 규격대로(320) 요청하고 확대는 CSS 가 담당한다.
+    // 비-stretch 모드는 기존 동작(디바이스 너비 요청)을 유지한다.
+    const w = stretch
+      ? baseWidth
+      : (widthOverride ??
+        Math.min(window.innerWidth || DEFAULT_WIDTH, APP_MAX_WIDTH));
     ins.setAttribute("data-ad-width", String(w));
 
     // SPA 재마운트 진단: ba.min.js 가 이미 로드돼 있으면 새 <ins> 를 다시 스캔하지
@@ -127,18 +163,45 @@ export default function KakaoAdBanner({
         // 이미 제거됐거나 못 찾는 경우 무시
       }
     };
-  }, [unit, widthOverride, onFilledChange]);
+  }, [unit, widthOverride, onFilledChange, stretch, baseWidth]);
 
   if (!unit) return null;
 
-  return (
+  // style 은 AdFit SDK 가 채움 시점에 직접 건드린다(display 등).
+  // 그래서 확대 transform 은 ins 가 아니라 바깥 래퍼에 건다.
+  const ins = (
     <ins
       ref={insRef}
       className={`kakao_ad_area ${className ?? ""}`.trim()}
       style={{ display: "none" }}
       data-ad-unit={unit}
-      data-ad-width={String(widthOverride ?? DEFAULT_WIDTH)}
+      data-ad-width={String(baseWidth)}
       data-ad-height={String(height)}
     />
+  );
+
+  if (!stretch) return ins;
+
+  // scale = 컨테이너폭 / baseWidth 이므로, top-left 기준으로 확대하면
+  // 확대된 소재의 폭이 컨테이너 폭과 정확히 일치한다(별도 중앙정렬 불필요).
+  // 세로도 같은 배율로 커지므로 바깥 높이를 height * scale 로 잡아
+  // 확대분이 아래 콘텐츠를 덮지 않게 한다.
+  return (
+    <div
+      ref={wrapRef}
+      className="w-full overflow-hidden"
+      style={{ height: height * scale }}
+    >
+      <div
+        style={{
+          width: baseWidth,
+          height,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        {ins}
+      </div>
+    </div>
   );
 }

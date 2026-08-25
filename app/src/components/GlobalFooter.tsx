@@ -12,6 +12,11 @@ const EXCLUDED_PREFIXES = [
   "/dev", // 개발용 트리거 페이지
   "/growth-pattern", // h-[100dvh] + overflow-hidden
   "/nursing-room", // 전체화면 지도
+  // 결제 플로우(checkout/success/fail). 하단이 고정 결제 버튼 바로 덮여 있어
+  // 푸터가 그 아래 깔리고, 승인 대기/실패 화면은 스쳐 지나가는 화면이라 의미가 없다.
+  // 사업자정보 자체는 /settings/refund, /settings/privacy, /support 에 그대로 있고
+  // 결제 화면에서도 환불정책 링크로 닿을 수 있다.
+  "/payment",
 ];
 
 function isExcluded(pathname: string) {
