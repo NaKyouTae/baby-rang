@@ -183,6 +183,31 @@ function SwipeableRow({
   );
 }
 
+function Spinner({ size = 24 }: { size?: number }) {
+  return (
+    <span
+      role="status"
+      aria-label="불러오는 중"
+      className="inline-block border-2 border-primary-500 border-t-transparent rounded-full animate-spin"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+/** 기록 리스트가 도착하기 전 표시 — 하단 더보기 로딩과 동일한 형태 */
+function ListLoading({ label = '불러오는 중...' }: { label?: string }) {
+  return (
+    <div
+      className="py-16 flex flex-col items-center justify-center gap-2"
+      role="status"
+      aria-live="polite"
+    >
+      <Spinner size={22} />
+      <span className="text-xs text-gray-400">{label}</span>
+    </div>
+  );
+}
+
 const DEFAULT_QUICK_TYPES: GrowthType[] = [
   'FORMULA',
   'BREASTFEEDING',
@@ -348,6 +373,14 @@ export default function GrowthRecordPage() {
     return cached && cached.length > 0 ? cached : DEFAULT_QUICK_TYPES;
   });
   const [loadingMore, setLoadingMore] = useState(false);
+  // 최초 진입/아이 전환 시 첫 조회가 끝날 때까지 true (캐시가 있으면 리스트를 그대로 보여줌)
+  const [initialLoading, setInitialLoading] = useState(true);
+  // 기록 추가/수정/삭제/날짜 이동 등 사용자 액션에 의한 갱신 중 여부
+  const [busy, setBusy] = useState(false);
+  const [showBusy, setShowBusy] = useState(false);
+  const busyCountRef = useRef(0);
+  // 카테고리 버튼 연타로 같은 기록이 중복 생성되는 것 방지
+  const creatingRef = useRef(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
   const [editing, setEditing] = useState<GrowthRecord | null>(null);
   const [showAddQuick, setShowAddQuick] = useState(false);
@@ -363,6 +396,25 @@ export default function GrowthRecordPage() {
   const [refreshing, setRefreshing] = useState(false);
   const pullStartYRef = useRef<number | null>(null);
   const pullDistanceRef = useRef(0);
+
+  const beginBusy = useCallback(() => {
+    busyCountRef.current += 1;
+    setBusy(true);
+  }, []);
+  const endBusy = useCallback(() => {
+    busyCountRef.current = Math.max(0, busyCountRef.current - 1);
+    if (busyCountRef.current === 0) setBusy(false);
+  }, []);
+
+  // 응답이 아주 빠를 때 오버레이가 깜빡이지 않도록 150ms 뒤에만 표시
+  useEffect(() => {
+    if (!busy) {
+      setShowBusy(false);
+      return;
+    }
+    const t = setTimeout(() => setShowBusy(true), 150);
+    return () => clearTimeout(t);
+  }, [busy]);
 
   useEffect(() => {
     const el = titleBarRef.current;
@@ -441,7 +493,7 @@ export default function GrowthRecordPage() {
   useEffect(() => {
     if (!selectedChild) return;
     let cancelled = false;
-    const init = async () => {
+    const loadInitial = async () => {
       // 아이 전환/진입 시 리스트를 비우지 않고, 해당 아이의 캐시를 먼저 보여준다.
       // (캐시가 없을 때만 빈 배열 — 새 데이터가 도착하면 조용히 교체)
       setDays(getCachedDays(selectedChild.id) ?? []);
@@ -513,6 +565,14 @@ export default function GrowthRecordPage() {
       setCursor(nextCursor);
       if (!earliest || nextCursor < earliest) setHasMore(false);
     };
+    const init = async () => {
+      setInitialLoading(true);
+      try {
+        await loadInitial();
+      } finally {
+        if (!cancelled) setInitialLoading(false);
+      }
+    };
     init();
     return () => {
       cancelled = true;
@@ -520,43 +580,54 @@ export default function GrowthRecordPage() {
   }, [selectedChild, fetchDay]);
 
   // 리프레시/갱신 — 기존 리스트를 유지한 채 새 데이터가 도착하면 교체한다.
-  // (리스트를 비우거나 로딩 화면을 띄우지 않고 조용히 갱신)
-  const reload = useCallback(async (fromDate?: string) => {
-    if (!selectedChild) return;
-    const start = fromDate ?? todayString();
-    const from = shiftDate(start, -(PAGE_SIZE - 1));
-    const to = start;
-    const res = await fetch(
-      `/api/growth-records/page-init?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const earliest: string | null = data.earliestDate ?? null;
-      setEarliestDate(earliest);
-      const allRecords: GrowthRecord[] = data.records ?? [];
-      const dateMap = new Map<string, GrowthRecord[]>();
-      for (const r of allRecords) {
-        const dt = new Date(r.startAt);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-        if (!dateMap.has(d)) dateMap.set(d, []);
-        dateMap.get(d)!.push(r);
+  // (리스트를 비우지 않음) silent=true면 인디케이터 없이 조용히 갱신한다.
+  const reload = useCallback(
+    async (fromDate?: string, opts?: { silent?: boolean }) => {
+      if (!selectedChild) return;
+      const silent = opts?.silent ?? false;
+      if (!silent) beginBusy();
+      try {
+        const start = fromDate ?? todayString();
+        const from = shiftDate(start, -(PAGE_SIZE - 1));
+        const to = start;
+        const res = await fetch(
+          `/api/growth-records/page-init?childId=${encodeURIComponent(selectedChild.id)}&from=${from}&to=${to}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const earliest: string | null = data.earliestDate ?? null;
+          setEarliestDate(earliest);
+          const allRecords: GrowthRecord[] = data.records ?? [];
+          const dateMap = new Map<string, GrowthRecord[]>();
+          for (const r of allRecords) {
+            const dt = new Date(r.startAt);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+            if (!dateMap.has(d)) dateMap.set(d, []);
+            dateMap.get(d)!.push(r);
+          }
+          const grouped = Array.from(dateMap.entries())
+            .map(([date, recs]) => ({ date, records: recs }))
+            .sort((a, b) => b.date.localeCompare(a.date));
+          setDays(grouped);
+          setCachedDays(selectedChild.id, grouped);
+          const nextCursor = shiftDate(from, -1);
+          setCursor(nextCursor);
+          setHasMore(!(!earliest || nextCursor < earliest));
+        }
+      } finally {
+        if (!silent) endBusy();
       }
-      const grouped = Array.from(dateMap.entries())
-        .map(([date, recs]) => ({ date, records: recs }))
-        .sort((a, b) => b.date.localeCompare(a.date));
-      setDays(grouped);
-      setCachedDays(selectedChild.id, grouped);
-      const nextCursor = shiftDate(from, -1);
-      setCursor(nextCursor);
-      setHasMore(!(!earliest || nextCursor < earliest));
-    }
-  }, [selectedChild]);
+    },
+    [selectedChild, beginBusy, endBusy],
+  );
 
   // 카테고리(기록 항목) 클릭 시 바텀시트 없이 기본값으로 기록 즉시 생성
   const createQuickRecord = useCallback(
     async (type: GrowthType) => {
-      if (!selectedChild) return;
+      if (!selectedChild || creatingRef.current) return;
+      creatingRef.current = true;
+      beginBusy();
       const now = new Date();
       const cfg = TYPE_CONFIG[type];
       const fd = new FormData();
@@ -569,34 +640,45 @@ export default function GrowthRecordPage() {
       fd.append('memo', '');
       fd.append('data', JSON.stringify(buildDefaultRecordData(type)));
       fd.append('keepImageUrls', JSON.stringify([]));
-      const res = await fetch('/api/growth-records', {
-        method: 'POST',
-        body: fd,
-      });
-      if (res.ok) {
-        reloadWidget();
-        reload();
+      try {
+        const res = await fetch('/api/growth-records', {
+          method: 'POST',
+          body: fd,
+        });
+        if (res.ok) {
+          reloadWidget();
+          // 오버레이가 이미 떠 있으므로 목록 갱신은 조용히
+          await reload(undefined, { silent: true });
+        }
+      } finally {
+        creatingRef.current = false;
+        endBusy();
       }
     },
-    [selectedChild, reload],
+    [selectedChild, reload, beginBusy, endBusy],
   );
 
   const deleteRecord = useCallback(
     async (id: string) => {
-      const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        reloadWidget();
-        setDays((prev) => {
-          const next = prev
-            .map((g) => ({ ...g, records: g.records.filter((r) => r.id !== id) }))
-            .filter((g) => g.records.length > 0);
-          if (selectedChild) setCachedDays(selectedChild.id, next);
-          return next;
-        });
-        setSwipedRowId(null);
+      beginBusy();
+      try {
+        const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          reloadWidget();
+          setDays((prev) => {
+            const next = prev
+              .map((g) => ({ ...g, records: g.records.filter((r) => r.id !== id) }))
+              .filter((g) => g.records.length > 0);
+            if (selectedChild) setCachedDays(selectedChild.id, next);
+            return next;
+          });
+          setSwipedRowId(null);
+        }
+      } finally {
+        endBusy();
       }
     },
-    [selectedChild],
+    [selectedChild, beginBusy, endBusy],
   );
 
   // 스와이프 열린 행 — 다른 곳(다른 행 포함)을 탭/클릭하거나 스크롤 시 닫기
@@ -637,9 +719,9 @@ export default function GrowthRecordPage() {
   // 페이지 복귀(브라우저 탭 전환, bfcache 복원 등) 시 데이터 재로드
   useEffect(() => {
     if (!selectedChild) return;
-    const onPageShow = () => reload();
+    const onPageShow = () => reload(undefined, { silent: true });
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') reload();
+      if (document.visibilityState === 'visible') reload(undefined, { silent: true });
     };
     window.addEventListener('pageshow', onPageShow);
     document.addEventListener('visibilitychange', onVisibility);
@@ -679,7 +761,8 @@ export default function GrowthRecordPage() {
       editing !== null ||
       showAddQuick ||
       showDatePicker ||
-      deleteTarget !== null;
+      deleteTarget !== null ||
+      busy;
 
     const onTouchStart = (e: TouchEvent) => {
       if (refreshing || overlayOpen()) return;
@@ -709,7 +792,8 @@ export default function GrowthRecordPage() {
       if (pullDistanceRef.current >= THRESHOLD) {
         setRefreshing(true);
         setDist(THRESHOLD);
-        Promise.resolve(reload()).finally(() => {
+        // 당김 인디케이터가 이미 표시되므로 오버레이는 띄우지 않음
+        Promise.resolve(reload(undefined, { silent: true })).finally(() => {
           setRefreshing(false);
           setDist(0);
         });
@@ -737,6 +821,7 @@ export default function GrowthRecordPage() {
     showAddQuick,
     showDatePicker,
     deleteTarget,
+    busy,
   ]);
 
   const sortedDays = useMemo(
@@ -760,9 +845,11 @@ export default function GrowthRecordPage() {
     [quickTypes],
   );
 
-  if (!isLoaded) return null;
-
-  const noChild = !selectedChild;
+  // 아이 목록을 읽기 전(!isLoaded)에도 화면 전체를 가리지 않고,
+  // 기록 리스트 자리에서만 로딩을 보여준다.
+  const noChild = isLoaded && !selectedChild;
+  const listLoading =
+    !noChild && (!isLoaded || (initialLoading && sortedDays.length === 0));
   const today = todayString();
 
   const pullProgress = Math.min(1, pullDistance / 64);
@@ -824,7 +911,10 @@ export default function GrowthRecordPage() {
         className="flex-1 flex flex-col gap-4 pt-2"
         style={{ paddingBottom: "186px" }}
       >
-        {noChild ? (
+        {!isLoaded ? (
+          // 아이 정보 로딩 중 — 자리만 잡아두고 비워둔다(로딩 표시는 리스트에서만)
+          <div className="h-10" aria-hidden="true" />
+        ) : noChild ? (
           <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
         ) : (
           <ChildSelector
@@ -854,6 +944,7 @@ export default function GrowthRecordPage() {
                   <button
                     key={t}
                     type="button"
+                    disabled={!isLoaded}
                     onClick={() => {
                       if (noChild) {
                         openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.');
@@ -950,7 +1041,9 @@ export default function GrowthRecordPage() {
         })()}
 
         {/* 기록 리스트 (날짜 구분 + 통계 유지) */}
-        {noChild ? (
+        {listLoading ? (
+          <ListLoading />
+        ) : noChild ? (
           <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -994,8 +1087,11 @@ export default function GrowthRecordPage() {
             </Link>
           </div>
         ) : sortedDays.length === 0 ? (
-          // 로딩 문구 없이 백필용 sentinel만 유지 (관찰되면 loadMore 트리거)
-          <div ref={sentinelRef} className="py-16" />
+          // 최근 30일에 기록이 없어 과거 구간을 백필하는 중 (sentinel이 loadMore 트리거)
+          <div ref={sentinelRef} className="py-16 flex flex-col items-center gap-2">
+            <Spinner size={22} />
+            <span className="text-xs text-gray-400">지난 기록을 불러오는 중이에요</span>
+          </div>
         ) : (
           <div className="rounded-[8px] border border-gray-200 bg-white">
             {sortedDays.map((group) => {
@@ -1181,8 +1277,16 @@ export default function GrowthRecordPage() {
               );
             })}
             {hasMore && (
-              <div ref={sentinelRef} className="py-6 text-center text-xs text-gray-400">
-                {loadingMore ? '불러오는 중...' : ''}
+              <div
+                ref={sentinelRef}
+                className="py-6 flex items-center justify-center gap-2 text-xs text-gray-400"
+              >
+                {loadingMore ? (
+                  <>
+                    <Spinner size={16} />
+                    <span>불러오는 중...</span>
+                  </>
+                ) : null}
               </div>
             )}
           </div>
@@ -1222,6 +1326,23 @@ export default function GrowthRecordPage() {
         onClose={() => setShowDatePicker(false)}
         onConfirm={(d: string) => reload(d)}
       />
+
+      {/* 저장/삭제/날짜 이동 등 갱신 중 — 화면이 멈춘 것처럼 보이지 않도록 오버레이 표시
+          (150ms 안에 끝나면 나타나지 않음) */}
+      {showBusy && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/10"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex flex-col items-center gap-2 rounded-[12px] bg-white px-6 py-5 shadow-lg">
+            <Spinner size={26} />
+            <span className="text-[12px] font-medium text-gray-600">
+              불러오는 중...
+            </span>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         open={deleteTarget !== null}
