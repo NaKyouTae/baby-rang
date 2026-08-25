@@ -53,7 +53,10 @@ export default function ChildForm({
 
   return (
     <>
-      <main className="flex-1 px-6 pt-4 space-y-[16px]">
+      {/* 하단 고정 저장 버튼(+ 그 아래 네비) 높이만큼 비워둔다.
+          예전엔 전역 사업자정보 푸터가 이 여백을 대신 만들어줬는데,
+          마이페이지 하위에서 푸터를 걷어내면서 폼이 직접 책임진다. */}
+      <main className="flex-1 px-6 pt-4 space-y-[16px] pb-[calc(var(--bottom-nav-space)+96px)]">
         {/* 이름(닉네임) */}
         <section>
           <p className="text-xs font-medium text-gray-500 mb-[8px]">

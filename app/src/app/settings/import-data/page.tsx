@@ -317,8 +317,10 @@ export default function ImportDataPage() {
     }
   };
 
+  // 하단 여백: 이 화면은 BottomNav 가 숨겨지므로 세이프에어리어만 확보하면 된다.
+  // (예전엔 전역 사업자정보 푸터가 하단 여백을 대신 만들어줬다)
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col bg-white pb-[calc(var(--safe-area-bottom)+24px)]">
       <PageHeader title="데이터 가져오기" variant="back" />
 
       <div className="px-5 pt-6 pb-5">
