@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PaymentStatus, Prisma } from '@prisma/client';
@@ -18,7 +19,52 @@ import { resolveProduct } from './product-catalog';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * 시크릿 키 자체는 절대 로그에 남기지 않는다. live/test 구분만 남긴다.
+   * 클라이언트 키와 시크릿 키의 상점이 다르면 승인이 통째로 실패하므로,
+   * 이 값과 프론트에 찍히는 clientKey 의 환경이 일치하는지가 1차 점검 포인트다.
+   */
+  private describeSecretKey() {
+    const key = process.env.TOSS_SECRET_KEY;
+    if (!key) return 'MISSING';
+    return key.startsWith('live_')
+      ? 'LIVE'
+      : key.startsWith('test_')
+        ? 'TEST'
+        : 'UNKNOWN';
+  }
+
+  /**
+   * paymentKey 로 결제 건을 조회해 실제 상점 아이디(mId)를 읽는다.
+   * 승인이 실패해도 결제 건 자체는 조회되므로, "어느 상점으로 결제창이 떴는지"를
+   * 서버에서 확정할 수 있는 유일한 경로다.
+   * 시크릿 키가 다른 상점 것이면 여기서 404 가 나는데, 그 자체가 진단 정보다.
+   */
+  private async lookupMerchantId(paymentKey: string) {
+    const secretKey = process.env.TOSS_SECRET_KEY;
+    if (!secretKey) return null;
+    try {
+      const auth = Buffer.from(`${secretKey}:`).toString('base64');
+      const res = await fetch(
+        `https://api.tosspayments.com/v1/payments/${paymentKey}`,
+        { headers: { Authorization: `Basic ${auth}` } },
+      );
+      const json: any = await res.json();
+      return {
+        ok: res.ok,
+        mId: json?.mId ?? null,
+        status: json?.status ?? null,
+        code: json?.code ?? null,
+      };
+    } catch (e) {
+      this.logger.warn(`mId 조회 실패: ${String(e)}`);
+      return null;
+    }
+  }
 
   async create(
     userId: string,
@@ -112,6 +158,12 @@ export class PaymentsService {
     const tossJson: any = await tossRes.json();
 
     if (!tossRes.ok) {
+      const lookup = await this.lookupMerchantId(paymentKey);
+      this.logger.error(
+        `[toss/confirm] 실패 orderId=${orderId} httpStatus=${tossRes.status} ` +
+          `code=${tossJson?.code ?? 'null'} message=${tossJson?.message ?? 'null'} ` +
+          `secretKeyEnv=${this.describeSecretKey()} lookup=${JSON.stringify(lookup)}`,
+      );
       await this.fail(userId, orderId, {
         failureCode: tossJson?.code ?? 'TOSS_CONFIRM_FAILED',
         failureMessage: tossJson?.message ?? 'Toss 승인 실패',
@@ -178,6 +230,10 @@ export class PaymentsService {
       );
     }
 
+    this.logger.log(
+      `[toss/confirm] 요청 providerId=${providerId} amount=${spec.price} secretKeyEnv=${this.describeSecretKey()}`,
+    );
+
     const auth = Buffer.from(`${secretKey}:`).toString('base64');
     const tossRes = await fetch(
       'https://api.tosspayments.com/v1/payments/confirm',
@@ -200,8 +256,26 @@ export class PaymentsService {
     const tossJson: any = await tossRes.json();
 
     if (!tossRes.ok) {
-      throw new BadRequestException(tossJson?.message ?? 'Toss 승인 실패');
+      // 실패 원인 규명에 필요한 건 message 가 아니라 code + mId 다.
+      // message("업체 사정으로 결제를 일시 중지하였습니다")는 상점 상태 문제와
+      // 카드사 거절을 같은 문구로 뭉뚱그리기 때문에 그것만으로는 판별이 안 된다.
+      const lookup = await this.lookupMerchantId(paymentKey);
+      this.logger.error(
+        `[toss/confirm] 실패 providerId=${providerId} httpStatus=${tossRes.status} ` +
+          `code=${tossJson?.code ?? 'null'} message=${tossJson?.message ?? 'null'} ` +
+          `secretKeyEnv=${this.describeSecretKey()} lookup=${JSON.stringify(lookup)}`,
+      );
+      throw new BadRequestException(
+        tossJson?.code
+          ? `[${tossJson.code}] ${tossJson?.message ?? 'Toss 승인 실패'}`
+          : (tossJson?.message ?? 'Toss 승인 실패'),
+      );
     }
+
+    // 승인 성공 시 어느 상점으로 정산되는지 로그에 남긴다.
+    this.logger.log(
+      `[toss/confirm] 승인 providerId=${providerId} mId=${tossJson?.mId ?? 'null'} method=${tossJson?.method ?? 'null'}`,
+    );
 
     // 승인 성공 → Payment를 PAID 상태로 바로 생성
     return this.prisma.payment.create({

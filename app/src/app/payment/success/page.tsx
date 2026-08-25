@@ -53,6 +53,9 @@ function PaymentSuccessContent() {
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
+          // 승인 실패는 서버 로그를 봐야 원인이 나오지만, 최소한 화면에서
+          // paymentKey 를 알 수 있어야 토스 대시보드에서 해당 건을 역추적할 수 있다.
+          console.error('[toss] confirm failed', { status: res.status, paymentKey, providerId, err });
           throw new Error(err?.message ?? '결제 승인 실패');
         }
 
