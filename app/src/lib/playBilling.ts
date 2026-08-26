@@ -106,16 +106,45 @@ export function usePlayProduct(sku: string): PlayProductState {
  * item 은 usePlayProduct 로 미리 받아둔 값을 넘겨야 한다. 여기서 조회하면
  * 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다.
  */
+/**
+ * 임시 진단용. 앱(WebView)에서는 콘솔도 못 보고 React 모달도 레이어에 가릴 수 있어서,
+ * 무엇에도 가려지지 않는 alert 로 진행 단계를 찍는다.
+ * Play 결제가 정상 동작하는 것을 확인하면 이 함수와 호출부를 지운다.
+ */
+function step(message: string) {
+  if (typeof window !== "undefined") window.alert(`[결제] ${message}`);
+}
+
 export async function purchaseWithPlay(
   sku: string,
   item: ItemDetails,
 ): Promise<string | null> {
-  const request = new PaymentRequest(
-    [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
-    { total: { label: item.title, amount: item.price } },
-  );
+  step(`1. 시작\nsku=${sku}\n${item.price.currency} ${item.price.value}`);
+
+  let request: PaymentRequest;
+  try {
+    request = new PaymentRequest(
+      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
+      { total: { label: item.title, amount: item.price } },
+    );
+  } catch (e) {
+    const err = e as { name?: string; message?: string };
+    step(`2-X. PaymentRequest 생성 실패\n${err?.name}\n${err?.message}`);
+    throw e;
+  }
+
+  // 이 결제수단을 처리할 앱이 있는지 확인한다. false 면 PaymentActivity 를
+  // Chrome 이 못 찾는다는 뜻이라, show() 가 조용히 멈추는 원인이 특정된다.
+  try {
+    const can = await request.canMakePayment();
+    step(`2. PaymentRequest 생성됨\ncanMakePayment = ${can}`);
+  } catch (e) {
+    const err = e as { name?: string; message?: string };
+    step(`2-E. canMakePayment 실패\n${err?.name}\n${err?.message}`);
+  }
 
   try {
+    step("3. show() 호출 직전");
     // show() 는 결제 시트가 뜨지 못하면 아무 예외 없이 영원히 대기한다.
     // (Chrome 이 PaymentActivity 로 넘긴 뒤 응답이 없는 경우가 대표적이다)
     // 그대로 두면 "결제를 진행하고 있어요"에서 멈춘 채 원인을 알 수 없으므로,
@@ -134,6 +163,7 @@ export async function purchaseWithPlay(
         ),
       ),
     ]);
+    step("4. show() 완료 — 결제 시트 종료됨");
     const { purchaseToken } = response.details as { purchaseToken?: string };
     if (!purchaseToken) {
       await response.complete("fail");
@@ -144,7 +174,12 @@ export async function purchaseWithPlay(
     return purchaseToken;
   } catch (e) {
     // 사용자가 시트를 닫으면 AbortError 가 난다. 실패로 다루지 않는다.
-    if (e instanceof DOMException && e.name === "AbortError") return null;
+    if (e instanceof DOMException && e.name === "AbortError") {
+      step("4-C. 사용자가 결제를 취소함");
+      return null;
+    }
+    const err = e as { name?: string; message?: string };
+    step(`4-X. show() 실패\n${err?.name}\n${err?.message}`);
     throw e;
   }
 }
