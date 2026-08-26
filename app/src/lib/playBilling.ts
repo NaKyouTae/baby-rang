@@ -13,6 +13,16 @@ const PLAY_BILLING_METHOD = "https://play.google.com/billing";
 /** Play Console 에 등록한 일회성 제품 ID. 서버 가격표의 playSku 와 반드시 같아야 한다. */
 export const TEMPERAMENT_SKU = "temperament_report";
 
+/**
+ * Play 결제 노출 스위치.
+ *
+ * 서버의 Play 구매 검증이 깨진 상태에서 결제를 열어두면, 사용자는 실제로 990원을
+ * 결제하는데 승인이 실패해 리포트가 열리지 않는다 — 돈만 나가고 환불 처리가 남는다.
+ * 그런 상황이 생기면 이 값을 false 로 내리고 웹만 배포하면 즉시 결제가 숨겨진다.
+ * (AAB 재빌드 불필요. 결제 UI는 Phase 1 동작으로 되돌아간다)
+ */
+const PLAY_BILLING_ENABLED = true;
+
 interface ItemDetails {
   itemId: string;
   title: string;
@@ -31,6 +41,7 @@ type WindowWithDigitalGoods = Window & {
 
 /** Play 결제를 쓸 수 있으면 서비스를, 아니면 null 을 돌려준다. */
 export async function getPlayBillingService(): Promise<DigitalGoodsService | null> {
+  if (!PLAY_BILLING_ENABLED) return null;
   if (typeof window === "undefined") return null;
   const w = window as WindowWithDigitalGoods;
   if (typeof w.getDigitalGoodsService !== "function") return null;
