@@ -61,7 +61,7 @@ android {
         applicationId "kr.spectrify.baby_rang"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 9
+        versionCode 11
         versionName "1.2.2"
 
         // The name for the application
@@ -229,7 +229,8 @@ dependencies {
 
     // TWA에서 Digital Goods API(웹 → Play 결제) 브리지를 제공한다.
     // 이 라이브러리가 com.android.vending.BILLING 권한을 매니페스트 병합으로 넣어준다.
-    // ⚠️ 1.1.0 이상이어야 한다. 2025-08-31부터 Play Billing Library 7 이상이 강제이고,
-    //    그 요건을 만족하는 최초 버전이 1.1.0이다.
-    implementation 'com.google.androidbrowserhelper:billing:1.1.0'
+    // ⚠️ 버전은 Play 의 Billing Library 요구사항을 따라간다.
+    //    2026-08-31부터 Billing Library 8.0.0 이상이 강제이고,
+    //    billing:1.2.0 이 billingclient 8.3.0 을 물고 온다. (1.1.0 은 7.1.1 이라 미달)
+    implementation 'com.google.androidbrowserhelper:billing:1.2.0'
 }

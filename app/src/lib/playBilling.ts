@@ -39,10 +39,27 @@ type WindowWithDigitalGoods = Window & {
   ) => Promise<DigitalGoodsService>;
 };
 
+/**
+ * 삼성 인터넷이 TWA를 렌더링 중인지.
+ *
+ * 삼성 인터넷은 Digital Goods API를 부분적으로만 구현했다. 상품 조회(getDetails)는
+ * 되지만 PaymentRequest.show() 가 즉시 "AbortError: Invalid state" 로 끊긴다.
+ * (동일 증상 보고: pwa-builder/pwabuilder#6151)
+ *
+ * 그대로 두면 사용자가 결제 버튼을 눌렀을 때 아무 반응 없는 화면을 보게 되므로,
+ * 아예 결제 UI를 띄우지 않는다(Phase 1 동작).
+ * ⚠️ 이때 "웹에서 구매하세요" 같은 안내를 넣으면 안 된다 — 외부 결제 유도는
+ * 2026-12-31 까지 Play 결제 정책 위반이다.
+ */
+function isSamsungInternet(): boolean {
+  return /SamsungBrowser/i.test(window.navigator.userAgent);
+}
+
 /** Play 결제를 쓸 수 있으면 서비스를, 아니면 null 을 돌려준다. */
 export async function getPlayBillingService(): Promise<DigitalGoodsService | null> {
   if (!PLAY_BILLING_ENABLED) return null;
   if (typeof window === "undefined") return null;
+  if (isSamsungInternet()) return null;
   const w = window as WindowWithDigitalGoods;
   if (typeof w.getDigitalGoodsService !== "function") return null;
   try {
