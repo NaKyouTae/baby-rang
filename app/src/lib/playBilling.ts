@@ -107,12 +107,23 @@ export function usePlayProduct(sku: string): PlayProductState {
  * 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다.
  */
 /**
- * 임시 진단용. 앱(WebView)에서는 콘솔도 못 보고 React 모달도 레이어에 가릴 수 있어서,
- * 무엇에도 가려지지 않는 alert 로 진행 단계를 찍는다.
- * Play 결제가 정상 동작하는 것을 확인하면 이 함수와 호출부를 지운다.
+ * 임시 진단용 로그 버퍼.
+ *
+ * ⚠️ show() 이전에는 절대 alert 를 띄우면 안 된다.
+ * alert 는 블로킹 다이얼로그라 사용자 활성화(user activation)를 소멸시키고,
+ * PaymentRequest.show() 는 활성화가 살아 있을 때만 결제 시트를 띄운다.
+ * 진단 때문에 결제가 깨지는 걸 막으려고, 로그는 모아뒀다가 끝난 뒤 한 번에 보여준다.
+ * Play 결제가 안정적으로 동작하면 이 버퍼와 호출부를 지운다.
  */
-function step(message: string) {
-  if (typeof window !== "undefined") window.alert(`[결제] ${message}`);
+const trace: string[] = [];
+function log(message: string) {
+  trace.push(message);
+}
+function flush(title: string) {
+  if (typeof window !== "undefined") {
+    window.alert(`[결제] ${title}\n\n${trace.join("\n")}`);
+  }
+  trace.length = 0;
 }
 
 export async function purchaseWithPlay(
@@ -125,9 +136,7 @@ export async function purchaseWithPlay(
   // 새 '일회성 제품' 모델은 구매 옵션이 붙어 식별자가 달라질 수 있다.
   const purchaseId = item.itemId || sku;
 
-  step(
-    `1. 시작\n요청 sku=${sku}\n실제 itemId=${item.itemId}\n${item.price.currency} ${item.price.value}`,
-  );
+  log(`sku=${sku} / itemId=${item.itemId} / ${item.price.currency} ${item.price.value}`);
 
   let request: PaymentRequest;
   try {
@@ -137,22 +146,12 @@ export async function purchaseWithPlay(
     );
   } catch (e) {
     const err = e as { name?: string; message?: string };
-    step(`2-X. PaymentRequest 생성 실패\n${err?.name}\n${err?.message}`);
+    log(`PaymentRequest 생성 실패: ${err?.name} ${err?.message}`);
+    flush("실패");
     throw e;
   }
 
-  // 이 결제수단을 처리할 앱이 있는지 확인한다. false 면 PaymentActivity 를
-  // Chrome 이 못 찾는다는 뜻이라, show() 가 조용히 멈추는 원인이 특정된다.
   try {
-    const can = await request.canMakePayment();
-    step(`2. PaymentRequest 생성됨\ncanMakePayment = ${can}`);
-  } catch (e) {
-    const err = e as { name?: string; message?: string };
-    step(`2-E. canMakePayment 실패\n${err?.name}\n${err?.message}`);
-  }
-
-  try {
-    step("3. show() 호출 직전");
     // show() 는 결제 시트가 뜨지 못하면 아무 예외 없이 영원히 대기한다.
     // (Chrome 이 PaymentActivity 로 넘긴 뒤 응답이 없는 경우가 대표적이다)
     // 그대로 두면 "결제를 진행하고 있어요"에서 멈춘 채 원인을 알 수 없으므로,
@@ -171,7 +170,7 @@ export async function purchaseWithPlay(
         ),
       ),
     ]);
-    step("4. show() 완료 — 결제 시트 종료됨");
+    log("show() 완료");
     const { purchaseToken } = response.details as { purchaseToken?: string };
     if (!purchaseToken) {
       await response.complete("fail");
@@ -179,19 +178,20 @@ export async function purchaseWithPlay(
     }
     // complete() 를 부르지 않으면 결제 시트가 닫히지 않는다.
     await response.complete("success");
+    flush("성공");
     return purchaseToken;
   } catch (e) {
     // AbortError 는 사용자가 시트를 닫았을 때도 나지만, Chrome 이 결제를 시작조차
     // 못 하고 중단시킬 때도 같은 이름으로 온다. 둘을 구분할 방법이 없어서
     // "취소"로만 처리하면 실패가 조용히 묻힌다. 진단 중에는 그대로 드러낸다.
     if (e instanceof DOMException && e.name === "AbortError") {
-      step(
-        `4-C. AbortError\n결제 시트를 닫았거나, Chrome 이 결제를 시작하지 못했습니다.\n${e.message || "(메시지 없음)"}`,
-      );
+      log(`AbortError: ${e.message || "(메시지 없음)"}`);
+      flush("중단됨 — 시트를 닫았거나 Chrome 이 결제를 시작하지 못함");
       return null;
     }
     const err = e as { name?: string; message?: string };
-    step(`4-X. show() 실패\n${err?.name}\n${err?.message}`);
+    log(`show() 실패: ${err?.name} ${err?.message}`);
+    flush("실패");
     throw e;
   }
 }
