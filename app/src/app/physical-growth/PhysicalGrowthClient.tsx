@@ -284,11 +284,11 @@ export default function PhysicalGrowthClient() {
 
           {/* 성장도표 안내 문구 */}
           <ul className="mt-6 space-y-1 text-[10px] font-normal text-gray-500">
-            <li className="flex gap-1.5">
+            <li className="flex gap-1">
               <span aria-hidden="true">•</span>
               <span>기록을 추가하면 성장 곡선에 표시됩니다</span>
             </li>
-            <li className="flex gap-1.5">
+            <li className="flex gap-1">
               <span aria-hidden="true">•</span>
               <span>2017 소아청소년 성장도표 기준(0-36개월: WHO Growth Standards)</span>
             </li>
@@ -460,7 +460,7 @@ export default function PhysicalGrowthClient() {
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
-            기록
+            성장기록
           </button>
         </div>
       )}

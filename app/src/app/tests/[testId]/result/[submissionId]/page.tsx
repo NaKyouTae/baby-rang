@@ -307,6 +307,16 @@ export default function ResultPage() {
               {playError}
             </p>
           )}
+          {/*
+            앱(WebView) 안에서는 devtools 콘솔을 볼 수 없어서, 결제가 막혔을 때
+            원인을 추적할 방법이 없다. 실패했을 때만 조회된 상품 정보를 화면에 띄운다.
+            결제가 정상 동작하는 것을 확인한 뒤 지워도 된다.
+          */}
+          {playError && playProduct.status === 'ready' && (
+            <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-2 text-[10px] text-gray-600">
+              {JSON.stringify(playProduct.item, null, 2)}
+            </pre>
+          )}
         </>
       ) : null}
 

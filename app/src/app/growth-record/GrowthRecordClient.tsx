@@ -861,7 +861,7 @@ export default function GrowthRecordPage() {
         ref={titleBarRef}
         className="sticky top-0 z-30 bg-white -mx-6"
       >
-        <PageHeader title="기록" variant="back" />
+        <PageHeader title="성장기록" variant="back" />
       </div>
 
       {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}

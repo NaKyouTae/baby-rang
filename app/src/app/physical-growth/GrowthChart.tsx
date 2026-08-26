@@ -302,19 +302,19 @@ export default function GrowthChart({
 
       {/* 범례 */}
       <div className="flex items-center justify-center gap-4 mt-6">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <div className="w-3 h-3 flex items-center">
             <div className="w-full h-0.5 bg-primary-500 rounded" />
           </div>
-          <span className="text-[12px] font-normal text-black">50백분위수</span>
+          <span className="text-[10px] font-normal text-black">50백분위수</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-full border-2 border-primary-500 bg-white" />
-          <span className="text-[12px] font-normal text-black">우리 아기</span>
+          <span className="text-[10px] font-normal text-black">우리 아기</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded-[2px]" style={{ background: BAND_COLORS.inner }} />
-          <span className="text-[12px] font-normal text-black">정상 범위</span>
+          <span className="text-[10px] font-normal text-black">정상 범위</span>
         </div>
       </div>
 

@@ -116,7 +116,24 @@ export async function purchaseWithPlay(
   );
 
   try {
-    const response = await request.show();
+    // show() 는 결제 시트가 뜨지 못하면 아무 예외 없이 영원히 대기한다.
+    // (Chrome 이 PaymentActivity 로 넘긴 뒤 응답이 없는 경우가 대표적이다)
+    // 그대로 두면 "결제를 진행하고 있어요"에서 멈춘 채 원인을 알 수 없으므로,
+    // 일정 시간이 지나면 진단 가능한 오류로 바꿔준다.
+    const response = await Promise.race([
+      request.show(),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                "결제창이 열리지 않았습니다. (25초 초과) Play 스토어 앱이 최신인지 확인해 주세요.",
+              ),
+            ),
+          25_000,
+        ),
+      ),
+    ]);
     const { purchaseToken } = response.details as { purchaseToken?: string };
     if (!purchaseToken) {
       await response.complete("fail");
