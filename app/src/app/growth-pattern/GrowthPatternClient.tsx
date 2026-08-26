@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { motion, type PanInfo } from 'framer-motion';
 import { useSelectedChild } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import NoChildCard from '@/components/NoChildCard';
@@ -43,7 +44,12 @@ const TYPE_CHART_COLOR: Record<GrowthType, string> = {
 const STORAGE_KEY = 'growth-pattern:selectedTypes';
 const VIEW_MODE_KEY = 'growth-pattern:viewMode';
 
-// 마지막으로 본 일/주 탭을 동기적으로 읽어 첫 렌더부터 반영(깜박임 방지)
+// 차트 카드 좌우 스와이프로 날짜 이동 — 손가락을 뗐을 때의 판정 기준.
+const SWIPE_MIN_DISTANCE = 12; // 이보다 작으면 탭/흔들림으로 보고 무시
+const SWIPE_DISTANCE = 56; // 천천히 끌었을 때 전환되는 거리
+const SWIPE_VELOCITY = 400; // 짧게 튕겼을 때 전환되는 속도(px/s)
+
+// 마지막으로 본 일/주 탭
 function readStoredViewMode(): 'day' | 'week' {
   if (typeof window === 'undefined') return 'day';
   try {
@@ -52,6 +58,9 @@ function readStoredViewMode(): 'day' | 'week' {
   } catch {}
   return 'day';
 }
+
+// 서버 렌더 단계에서는 useLayoutEffect 경고가 뜨므로 useEffect 로 대체한다.
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 function pad(n: number) {
   return String(n).padStart(2, '0');
@@ -226,7 +235,8 @@ function computeDayStats(records: GrowthRecord[]): DayStats {
 export default function GrowthPatternClient() {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const { openLoginPrompt } = useLoginPrompt();
-  const [viewMode, setViewMode] = useState<'day' | 'week'>(readStoredViewMode);
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [viewModeLoaded, setViewModeLoaded] = useState(false);
   const todayStr = toDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [days, setDays] = useState<Record<string, GrowthRecord[]>>({});
@@ -271,12 +281,22 @@ export default function GrowthPatternClient() {
     } catch {}
   }, [selectedTypes, typesLoaded]);
 
-  // 마지막으로 선택한 일/주 탭을 저장 → 다음 진입 시 첫 탭으로 복원
+  // 마지막으로 선택한 일/주 탭 복원.
+  // 이 페이지는 정적 프리렌더라 서버 HTML 이 항상 'day' 다. 초기 state 를 localStorage 로 채우면
+  // hydration mismatch 가 나 복원이 불안정해지므로, 초기값은 'day' 로 두고 layout effect 로 되돌린다.
+  // layout effect 는 hydration commit 직후·첫 페인트 전에 동기 실행되므로 탭이 깜박이지 않는다.
+  useIsomorphicLayoutEffect(() => {
+    setViewMode(readStoredViewMode());
+    setViewModeLoaded(true);
+  }, []);
+
+  // 복원이 끝나기 전에는 저장하지 않는다 — 초기값 'day' 로 덮어쓰는 것을 막는다.
   useEffect(() => {
+    if (!viewModeLoaded) return;
     try {
       localStorage.setItem(VIEW_MODE_KEY, viewMode);
     } catch {}
-  }, [viewMode]);
+  }, [viewMode, viewModeLoaded]);
 
   // 최신 요청만 반영하기 위한 요청 식별자(빠른 날짜 전환 시 stale 응답 무시).
   const reqIdRef = useRef(0);
@@ -394,6 +414,17 @@ export default function GrowthPatternClient() {
     setSelectedDate(next > todayStr ? todayStr : next);
   };
 
+  // 차트 카드를 좌우로 밀어 날짜 이동. 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전 —
+  // 화면이 손가락을 따라 넘어가는 방향과 일치시킨다.
+  // 오늘 이후로는 handleNext 가 막으므로 그대로 제자리로 돌아온다.
+  const handleSwipeEnd = (_: unknown, info: PanInfo) => {
+    const dx = info.offset.x;
+    const vx = info.velocity.x;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+    if (dx <= -SWIPE_DISTANCE || vx <= -SWIPE_VELOCITY) handleNext();
+    else if (dx >= SWIPE_DISTANCE || vx >= SWIPE_VELOCITY) handlePrev();
+  };
+
   if (!isLoaded) return null;
 
   const noChild = !selectedChild;
@@ -494,8 +525,17 @@ export default function GrowthPatternClient() {
           </div>
         </div>
 
-        {/* 차트 카드 — 전체 영역 고정 높이 423px */}
-        <div className="mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[423px] shrink-0">
+        {/* 차트 카드 — 전체 영역 고정 높이 423px.
+            drag="x" 는 touch-action 을 pan-y 로 잡아주므로 카드 안쪽 세로 스크롤과 충돌하지 않고,
+            dragDirectionLock 이 첫 움직임의 축을 고정해 세로로 긁을 때는 가로 드래그가 걸리지 않는다. */}
+        <motion.div
+          className="mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[423px] shrink-0"
+          drag={noChild ? false : 'x'}
+          dragDirectionLock
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.15}
+          dragMomentum={false}
+          onDragEnd={handleSwipeEnd}>
           <div className="py-3 px-4 shrink-0">
             <div className="flex items-center justify-center">
               <button
@@ -639,7 +679,7 @@ export default function GrowthPatternClient() {
               />
             )}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <WheelDatePickerModal
