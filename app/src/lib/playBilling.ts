@@ -119,12 +119,20 @@ export async function purchaseWithPlay(
   sku: string,
   item: ItemDetails,
 ): Promise<string | null> {
-  step(`1. 시작\nsku=${sku}\n${item.price.currency} ${item.price.value}`);
+  // ⚠️ 결제 요청에는 반드시 getDetails 가 돌려준 itemId 를 써야 한다.
+  // 우리가 아는 상수(sku)를 그대로 넘기면, Play 가 실제로 파는 식별자와 다를 때
+  // Chrome 이 결제를 중단시킨다(show() 가 AbortError 로 즉시 거부된다).
+  // 새 '일회성 제품' 모델은 구매 옵션이 붙어 식별자가 달라질 수 있다.
+  const purchaseId = item.itemId || sku;
+
+  step(
+    `1. 시작\n요청 sku=${sku}\n실제 itemId=${item.itemId}\n${item.price.currency} ${item.price.value}`,
+  );
 
   let request: PaymentRequest;
   try {
     request = new PaymentRequest(
-      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
+      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku: purchaseId } }],
       { total: { label: item.title, amount: item.price } },
     );
   } catch (e) {
@@ -173,9 +181,13 @@ export async function purchaseWithPlay(
     await response.complete("success");
     return purchaseToken;
   } catch (e) {
-    // 사용자가 시트를 닫으면 AbortError 가 난다. 실패로 다루지 않는다.
+    // AbortError 는 사용자가 시트를 닫았을 때도 나지만, Chrome 이 결제를 시작조차
+    // 못 하고 중단시킬 때도 같은 이름으로 온다. 둘을 구분할 방법이 없어서
+    // "취소"로만 처리하면 실패가 조용히 묻힌다. 진단 중에는 그대로 드러낸다.
     if (e instanceof DOMException && e.name === "AbortError") {
-      step("4-C. 사용자가 결제를 취소함");
+      step(
+        `4-C. AbortError\n결제 시트를 닫았거나, Chrome 이 결제를 시작하지 못했습니다.\n${e.message || "(메시지 없음)"}`,
+      );
       return null;
     }
     const err = e as { name?: string; message?: string };
