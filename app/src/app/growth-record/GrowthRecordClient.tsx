@@ -281,6 +281,11 @@ function computeDayStats(records: GrowthRecord[]) {
   // 수유 기록 존재 여부 판별용 카운트(양이 0이어도 표시하기 위함)
   let feedingCount = 0; // 젖병/모유 전체
   let bottleCount = 0; // 분유/유축/우유 등 ml 기록
+  // 이유식은 단위가 ml/g 로 갈리므로 단위별로 따로 합산한다.
+  let babyFoodMl = 0;
+  let babyFoodG = 0;
+  let babyFoodCount = 0;
+  let babyFoodUnit: BabyFoodUnit | null = null; // 그날 처음 쓰인 단위 — 양이 없을 때 "0<단위>" 표기에 사용
   const now = Date.now();
   for (const r of records) {
     if (r.type === 'SLEEP') {
@@ -311,6 +316,25 @@ function computeDayStats(records: GrowthRecord[]) {
       const rightS = Number(data.rightSec) || 0;
       breastMin += left + right + Math.round((leftS + rightS) / 60);
     }
+    if (r.type === 'BABY_FOOD') {
+      babyFoodCount += 1;
+      // 신규(amount + amountUnit) 우선, 없으면 레거시 amountG / amountMl 폴백.
+      // summarizeRecord 의 우선순위와 동일하게 맞춘다.
+      const data = (r.data ?? {}) as Record<string, unknown>;
+      const unit = data.amountUnit === 'g' || data.amountUnit === 'ml' ? data.amountUnit : null;
+      const amount = Number(data.amount);
+      if (unit && Number.isFinite(amount)) {
+        if (unit === 'g') babyFoodG += amount;
+        else babyFoodMl += amount;
+        babyFoodUnit ??= unit;
+      } else if (Number.isFinite(Number(data.amountG))) {
+        babyFoodG += Number(data.amountG);
+        babyFoodUnit ??= 'g';
+      } else if (Number.isFinite(Number(data.amountMl))) {
+        babyFoodMl += Number(data.amountMl);
+        babyFoodUnit ??= 'ml';
+      }
+    }
   }
   const feedingMl = formulaMl + pumpedMl + otherFeedingMl;
   return {
@@ -322,7 +346,27 @@ function computeDayStats(records: GrowthRecord[]) {
     breastMin,
     feedingCount,
     bottleCount,
+    babyFoodMl,
+    babyFoodG,
+    babyFoodCount,
+    babyFoodUnit,
   };
+}
+
+type BabyFoodUnit = 'ml' | 'g';
+
+// 이유식 합계 표기. g/ml 이 섞인 날은 둘 다 보여주고,
+// 기록은 있으나 먹은 양이 없으면 0으로 표시한다.
+function formatBabyFoodAmount(stats: {
+  babyFoodMl: number;
+  babyFoodG: number;
+  babyFoodUnit: BabyFoodUnit | null;
+}): string {
+  const parts: string[] = [];
+  if (stats.babyFoodG > 0) parts.push(`${stats.babyFoodG}g`);
+  if (stats.babyFoodMl > 0) parts.push(`${stats.babyFoodMl}ml`);
+  if (parts.length > 0) return parts.join('+');
+  return `0${stats.babyFoodUnit ?? 'ml'}`;
 }
 
 // timeOf: 어떤 시각을 "마지막" 기준으로 삼을지 결정. 수유·기저귀는 시작(startAt),
@@ -1158,6 +1202,18 @@ export default function GrowthRecordPage() {
                                 <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
                               </>
                             ) : null}
+                          </span>
+                        </span>
+                      ) : null}
+                      {stats.babyFoodCount > 0 ? (
+                        <span className="flex items-center gap-[2px]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/icon-record-baby-food.svg" alt="" width={16} height={16} aria-hidden="true" />
+                          <span
+                            className="text-[10px] font-medium"
+                            style={{ color: CATEGORY_STYLE.BABY_FOOD.border }}
+                          >
+                            {formatBabyFoodAmount(stats)}
                           </span>
                         </span>
                       ) : null}

@@ -474,9 +474,9 @@ export default function PhysicalGrowthClient() {
         }}
         maxHeight="90dvh"
       >
-        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+        <div className="flex items-center justify-between px-4 pt-5 pb-4">
           <h2 className="text-[16px] font-medium text-black">
-            {editingId ? '성장 기록 수정' : '성장 기록하기'}
+            {editingId ? '성장기록 수정하기' : '성장기록 추가하기'}
           </h2>
           <button
             type="button"
@@ -493,7 +493,7 @@ export default function PhysicalGrowthClient() {
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 pb-0 space-y-3">
+        <div className="overflow-y-auto px-4 pb-0 space-y-3">
           {/* 측정일 */}
           <div>
             <p className="text-[12px] font-medium text-gray-500 mb-2">
@@ -571,7 +571,7 @@ export default function PhysicalGrowthClient() {
           </div>
         </div>
 
-        <div className="px-5 pt-4 pb-3 flex gap-2">
+        <div className="px-4 pt-4 pb-3 flex gap-2">
           <button
             type="button"
             onClick={() => {
@@ -612,7 +612,7 @@ export default function PhysicalGrowthClient() {
             </svg>
           </div>
         }
-        title="기록 삭제하기"
+        title="성장기록 삭제하기"
         description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
         confirmLabel="삭제하기"
         cancelLabel="취소"
