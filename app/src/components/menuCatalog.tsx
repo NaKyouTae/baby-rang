@@ -54,7 +54,7 @@ export const MENU_CATALOG: Record<MenuId, MenuItem> = {
   },
   "growth-record": {
     id: "growth-record",
-    label: "성장기록",
+    label: "기록",
     href: "/growth-record",
     icon: (active, activeColor) => <GrowthRecordNavIcon active={active} colorOverride={activeColor} />,
   },

@@ -27,7 +27,7 @@ def ciKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
 def twaManifest = [
     applicationId: 'kr.spectrify.baby_rang',
     hostName: 'baby-rang.spectrify.kr', // The domain being opened in the TWA.
-    launchUrl: '/home', // The start path for the TWA. Must be relative to the domain.
+    launchUrl: '/home?src=twa', // The start path for the TWA. Must be relative to the domain.
     name: '아기랑', // The application name.
     launcherName: '아기랑', // The name shown on the Android Launcher.
     themeColor: '#3078C9', // The color used for the status bar.
@@ -61,7 +61,7 @@ android {
         applicationId "kr.spectrify.baby_rang"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 8
+        versionCode 9
         versionName "1.2.2"
 
         // The name for the application

@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import { HOME_HREF } from '@/components/menuCatalog';
 import { palette } from '@/lib/colors';
 
 type TestItem = {
@@ -18,9 +21,27 @@ type TestItem = {
 };
 
 export default function TestsClient({ tests }: { tests: TestItem[] }) {
+  const router = useRouter();
+
+  // 테스트 목록에서 뒤로가기 → 항상 홈.
+  // 검사 결과 화면의 뒤로가기가 /tests 를 push 하기 때문에, 여기서 history 를 그대로 따라가면
+  // 방금 보고 나온 검사 결과로 되돌아가 버린다. 목록은 메뉴 진입점이므로 홈으로 고정한다.
+  // 더미 history entry 를 한 칸 쌓고 popstate 를 가로채면 하드웨어 백/스와이프도 함께 잡히고,
+  // hard reload 없이 RootLayout 이 유지돼 splash 가 다시 뜨지 않는다. (온보딩과 동일한 패턴)
+  useEffect(() => {
+    window.history.pushState({ testsHomeGuard: true }, '');
+    const onPopState = () => {
+      router.replace(HOME_HREF);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [router]);
+
   return (
     <div className="flex flex-col bg-white min-h-screen-safe">
-      <PageHeader title="테스트" variant="back" />
+      <PageHeader title="테스트" variant="back" onAction={() => router.replace(HOME_HREF)} />
 
       <main className="flex-1 flex flex-col px-5 pt-6 pb-28">
         {tests.length === 0 ? (

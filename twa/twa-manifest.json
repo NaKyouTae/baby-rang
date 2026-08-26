@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#F1F2F4",
   "enableNotifications": false,
-  "startUrl": "/home",
+  "startUrl": "/home?src=twa",
   "iconUrl": "https://baby-rang.spectrify.kr/icon-512x512.png",
   "maskableIconUrl": "https://baby-rang.spectrify.kr/icon-512x512.png",
   "splashScreenFadeOutDuration": 300,
@@ -21,7 +21,7 @@
     "alias": "my-key-alias"
   },
   "appVersionName": "1.2.2",
-  "appVersionCode": 8,
+  "appVersionCode": 9,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://baby-rang.spectrify.kr/manifest.json",

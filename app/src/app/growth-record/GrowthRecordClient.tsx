@@ -905,7 +905,7 @@ export default function GrowthRecordPage() {
         ref={titleBarRef}
         className="sticky top-0 z-30 bg-white -mx-6"
       >
-        <PageHeader title="성장기록" variant="back" />
+        <PageHeader title="기록" variant="back" />
       </div>
 
       {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}
@@ -1140,6 +1140,26 @@ export default function GrowthRecordPage() {
           <div className="rounded-[8px] border border-gray-200 bg-white">
             {sortedDays.map((group) => {
               const stats = computeDayStats(group.records);
+              // 수유 통계 괄호 안 분해 표기 — 분유 / 유축수유 / 이유식을 각 카테고리 색으로 '+' 연결
+              const feedingBreakdown: ReactNode[] = [];
+              const pushBreakdown = (key: string, color: string, text: string) => {
+                if (feedingBreakdown.length > 0) feedingBreakdown.push(<span key={`${key}-sep`}>+</span>);
+                feedingBreakdown.push(
+                  <span key={key} style={{ color }}>
+                    {text}
+                  </span>,
+                );
+              };
+              if (stats.formulaMl > 0) {
+                pushBreakdown('formula', CATEGORY_STYLE.FORMULA.border, String(stats.formulaMl));
+              }
+              if (stats.pumpedMl > 0) {
+                pushBreakdown('pumped', CATEGORY_STYLE.PUMPED_FEEDING.border, String(stats.pumpedMl));
+              }
+              // 이유식은 단위가 ml/g 로 갈리므로 숫자에 단위를 붙이고, 기록만 있고 양이 없으면 0 으로 표시한다.
+              if (stats.babyFoodCount > 0) {
+                pushBreakdown('babyFood', CATEGORY_STYLE.BABY_FOOD.border, formatBabyFoodAmount(stats));
+              }
               const isToday = group.date === today;
               const dDay = selectedChild?.birthDate
                 ? dayOfLife(selectedChild.birthDate, group.date)
@@ -1177,43 +1197,19 @@ export default function GrowthRecordPage() {
                         <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
                         <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.nightMin)}</span>
                       </span>
-                      {stats.feedingCount > 0 ? (
+                      {stats.feedingCount > 0 || stats.babyFoodCount > 0 ? (
                         <span className="flex items-center gap-[2px]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
                           <span className="text-[10px] font-medium text-gray-900">
                             {stats.bottleCount > 0 ? `${stats.feedingMl}ml` : ''}
-                            {stats.formulaMl > 0 || stats.pumpedMl > 0 ? (
-                              <>
-                                (
-                                {stats.formulaMl > 0 ? (
-                                  <span style={{ color: CATEGORY_STYLE.FORMULA.border }}>{stats.formulaMl}</span>
-                                ) : null}
-                                {stats.formulaMl > 0 && stats.pumpedMl > 0 ? '+' : ''}
-                                {stats.pumpedMl > 0 ? (
-                                  <span style={{ color: CATEGORY_STYLE.PUMPED_FEEDING.border }}>{stats.pumpedMl}</span>
-                                ) : null}
-                                )
-                              </>
-                            ) : null}
+                            {feedingBreakdown.length > 0 ? <>({feedingBreakdown})</> : null}
                             {stats.breastMin > 0 ? (
                               <>
                                 {stats.bottleCount > 0 ? '+' : ''}
                                 <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
                               </>
                             ) : null}
-                          </span>
-                        </span>
-                      ) : null}
-                      {stats.babyFoodCount > 0 ? (
-                        <span className="flex items-center gap-[2px]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/icon-record-baby-food.svg" alt="" width={16} height={16} aria-hidden="true" />
-                          <span
-                            className="text-[10px] font-medium"
-                            style={{ color: CATEGORY_STYLE.BABY_FOOD.border }}
-                          >
-                            {formatBabyFoodAmount(stats)}
                           </span>
                         </span>
                       ) : null}

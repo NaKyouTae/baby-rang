@@ -29,12 +29,23 @@ const STORAGE_KEY = "baby-rang.isTwa";
 let cached: boolean | undefined;
 
 function detect(): boolean {
+  // ① 앱이 웹을 처음 띄우는 순간에만 값이 있다.
   const byReferrer = document.referrer.startsWith(REFERRER_PREFIX);
-  // twa-manifest 의 startUrl 에 ?src=twa 를 달아두면 딥링크가 아닌 진입에서도 잡힌다.
-  // (AAB 재빌드가 필요한 변경이라 Phase 2 빌드 때 함께 반영한다.)
+
+  // ② twa-manifest 의 startUrl(/home?src=twa)로 들어온 경우.
+  //    referrer 는 전체 새로고침 한 번이면 사라지므로 이쪽이 더 확실한 신호다.
   const byStartUrl =
     new URLSearchParams(window.location.search).get("src") === "twa";
-  return byReferrer || byStartUrl;
+
+  // ③ 안전망: Android + standalone 표시 모드.
+  //    홈 화면에 추가한 PWA 도 여기 걸린다. 그 사용자는 결제 버튼을 못 보게 되는데,
+  //    브라우저 탭에서는 그대로 결제할 수 있으므로 손실이 제한적이다.
+  //    반대로 감지에 실패해 앱 안에서 Toss 결제가 열리면 Play 결제 정책 위반이라
+  //    앱이 내려갈 수 있다. 위험의 크기가 다르므로 과탐지 쪽으로 기운다.
+  const isAndroid = /android/i.test(window.navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+
+  return byReferrer || byStartUrl || (isAndroid && isStandalone);
 }
 
 /**
