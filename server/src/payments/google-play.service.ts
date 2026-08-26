@@ -54,12 +54,22 @@ export class GooglePlayService {
         'PLAY_SERVICE_ACCOUNT_JSON 환경변수가 설정되지 않았습니다.',
       );
     }
+    // 콘솔 env 입력란은 멀티라인 값을 자주 망가뜨린다(개행 잘림, 따옴표 덧씌움).
+    // 그래서 JSON 원문뿐 아니라 base64 로 인코딩한 값도 받는다.
+    const trimmed = raw.trim().replace(/^['"]|['"]$/g, '');
+    const candidate = trimmed.startsWith('{')
+      ? trimmed
+      : Buffer.from(trimmed, 'base64').toString('utf8');
+
     let parsed: ServiceAccount;
     try {
-      parsed = JSON.parse(raw) as ServiceAccount;
+      parsed = JSON.parse(candidate) as ServiceAccount;
     } catch {
+      // 키 자체는 절대 남기지 않고, 형태만 알 수 있는 최소 정보로 진단한다.
       throw new BadRequestException(
-        'PLAY_SERVICE_ACCOUNT_JSON 이 올바른 JSON 이 아닙니다.',
+        `PLAY_SERVICE_ACCOUNT_JSON 을 읽을 수 없습니다. ` +
+          `(길이 ${trimmed.length}, 시작 '${trimmed.slice(0, 1)}') ` +
+          `JSON 한 줄 또는 base64 로 넣어주세요.`,
       );
     }
     if (!parsed.client_email || !parsed.private_key) {
