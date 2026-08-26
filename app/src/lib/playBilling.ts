@@ -123,26 +123,6 @@ export function usePlayProduct(sku: string): PlayProductState {
  * item 은 usePlayProduct 로 미리 받아둔 값을 넘겨야 한다. 여기서 조회하면
  * 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다.
  */
-/**
- * 임시 진단용 로그 버퍼.
- *
- * ⚠️ show() 이전에는 절대 alert 를 띄우면 안 된다.
- * alert 는 블로킹 다이얼로그라 사용자 활성화(user activation)를 소멸시키고,
- * PaymentRequest.show() 는 활성화가 살아 있을 때만 결제 시트를 띄운다.
- * 진단 때문에 결제가 깨지는 걸 막으려고, 로그는 모아뒀다가 끝난 뒤 한 번에 보여준다.
- * Play 결제가 안정적으로 동작하면 이 버퍼와 호출부를 지운다.
- */
-const trace: string[] = [];
-function log(message: string) {
-  trace.push(message);
-}
-function flush(title: string) {
-  if (typeof window !== "undefined") {
-    window.alert(`[결제] ${title}\n\n${trace.join("\n")}`);
-  }
-  trace.length = 0;
-}
-
 export async function purchaseWithPlay(
   sku: string,
   item: ItemDetails,
@@ -153,20 +133,10 @@ export async function purchaseWithPlay(
   // 새 '일회성 제품' 모델은 구매 옵션이 붙어 식별자가 달라질 수 있다.
   const purchaseId = item.itemId || sku;
 
-  log(`sku=${sku} / itemId=${item.itemId} / ${item.price.currency} ${item.price.value}`);
-
-  let request: PaymentRequest;
-  try {
-    request = new PaymentRequest(
-      [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku: purchaseId } }],
-      { total: { label: item.title, amount: item.price } },
-    );
-  } catch (e) {
-    const err = e as { name?: string; message?: string };
-    log(`PaymentRequest 생성 실패: ${err?.name} ${err?.message}`);
-    flush("실패");
-    throw e;
-  }
+  const request = new PaymentRequest(
+    [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku: purchaseId } }],
+    { total: { label: item.title, amount: item.price } },
+  );
 
   try {
     // ⚠️ show() 에 타임아웃(Promise.race)을 걸지 말 것.
@@ -174,7 +144,6 @@ export async function purchaseWithPlay(
     // 이후 모든 show() 가 "AbortError: Invalid state"(이미 결제 진행 중)로 막힌다.
     // 중단이 필요하면 request.abort() 를 써야 한다.
     const response = await request.show();
-    log("show() 완료");
     const { purchaseToken } = response.details as { purchaseToken?: string };
     if (!purchaseToken) {
       await response.complete("fail");
@@ -182,20 +151,14 @@ export async function purchaseWithPlay(
     }
     // complete() 를 부르지 않으면 결제 시트가 닫히지 않는다.
     await response.complete("success");
-    flush("성공");
     return purchaseToken;
   } catch (e) {
-    // AbortError 는 사용자가 시트를 닫았을 때도 나지만, Chrome 이 결제를 시작조차
-    // 못 하고 중단시킬 때도 같은 이름으로 온다. 둘을 구분할 방법이 없어서
-    // "취소"로만 처리하면 실패가 조용히 묻힌다. 진단 중에는 그대로 드러낸다.
+    // AbortError 는 사용자가 시트를 닫았을 때 온다.
+    // 브라우저가 결제를 시작하지 못한 경우에도 같은 이름으로 오지만, 그 상황은
+    // getPlayBillingService() 단계에서 걸러지므로 여기서는 취소로 다룬다.
     if (e instanceof DOMException && e.name === "AbortError") {
-      log(`AbortError: ${e.message || "(메시지 없음)"}`);
-      flush("중단됨 — 시트를 닫았거나 Chrome 이 결제를 시작하지 못함");
       return null;
     }
-    const err = e as { name?: string; message?: string };
-    log(`show() 실패: ${err?.name} ${err?.message}`);
-    flush("실패");
     throw e;
   }
 }

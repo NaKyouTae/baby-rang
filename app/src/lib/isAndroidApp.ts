@@ -10,9 +10,9 @@ import { useSyncExternalStore } from "react";
 // Android 앱 안에서 Toss 결제 경로를 아예 노출하지 않는다.
 // 웹 브라우저와 iOS 앱은 영향을 받으면 안 되므로 "TWA만" 정확히 골라내야 한다.
 //
-// ⚠️ display-mode: standalone 은 쓸 수 없다.
-// 홈 화면에 추가한 PWA도 standalone 이라 웹 사용자의 결제까지 막아버린다.
-// (ViewportHeightSetter 의 standalone 감지와 목적이 다르므로 재사용하지 않는다.)
+// 감지는 세 신호를 OR 로 묶는다(detect 참고). display-mode: standalone 은 홈 화면에
+// 추가한 PWA 도 걸리는 과탐지 신호지만, 감지 실패로 앱 안에서 Toss 결제가 열리는 쪽이
+// 훨씬 위험해서 안전망으로 함께 쓴다.
 
 const PACKAGE_ID = "kr.spectrify.baby_rang";
 const REFERRER_PREFIX = `android-app://${PACKAGE_ID}`;
@@ -78,32 +78,6 @@ export function isAndroidApp(): boolean {
   }
   cached = detected;
   return detected;
-}
-
-/**
- * 감지에 쓰인 원시 신호들. 앱(WebView) 안에서는 devtools 콘솔을 볼 수 없어서
- * 결제가 막혔을 때 화면에 그대로 띄워 원인을 추적하는 용도다.
- */
-export function getDetectionInfo(): Record<string, unknown> | null {
-  if (typeof window === "undefined") return null;
-  let cached: string | null | undefined;
-  try {
-    cached = window.sessionStorage.getItem(STORAGE_KEY);
-  } catch {
-    cached = "(접근 불가)";
-  }
-  return {
-    detected: isAndroidApp(),
-    referrer: document.referrer || "(없음)",
-    srcParam: new URLSearchParams(window.location.search).get("src") ?? "(없음)",
-    standalone: window.matchMedia("(display-mode: standalone)").matches,
-    androidUA: /android/i.test(window.navigator.userAgent),
-    sessionCache: cached ?? "(없음)",
-    hasDigitalGoods:
-      typeof (window as unknown as { getDigitalGoodsService?: unknown })
-        .getDigitalGoodsService === "function",
-    href: window.location.href,
-  };
 }
 
 // 값이 세션 중에 변하지 않으므로 구독할 이벤트가 없다.
