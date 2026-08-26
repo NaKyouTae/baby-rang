@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { motion, type PanInfo } from 'framer-motion';
+import { animate, motion, useMotionValue, type PanInfo } from 'framer-motion';
 import { useSelectedChild } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import NoChildCard from '@/components/NoChildCard';
@@ -48,6 +48,10 @@ const VIEW_MODE_KEY = 'growth-pattern:viewMode';
 const SWIPE_MIN_DISTANCE = 12; // 이보다 작으면 탭/흔들림으로 보고 무시
 const SWIPE_DISTANCE = 56; // 천천히 끌었을 때 전환되는 거리
 const SWIPE_VELOCITY = 400; // 짧게 튕겼을 때 전환되는 속도(px/s)
+const PAGE_SPRING = { type: 'spring', stiffness: 420, damping: 42 } as const;
+
+// 이전/현재/다음 페이지를 나란히 두므로, 트랙의 자식 인덱스는 0=이전, 1=현재, 2=다음.
+const PAGE_OFFSETS = [-1, 0, 1] as const;
 
 // 마지막으로 본 일/주 탭
 function readStoredViewMode(): 'day' | 'week' {
@@ -237,6 +241,7 @@ export default function GrowthPatternClient() {
   const { openLoginPrompt } = useLoginPrompt();
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [viewModeLoaded, setViewModeLoaded] = useState(false);
+  const x = useMotionValue(0);
   const todayStr = toDateStr(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [days, setDays] = useState<Record<string, GrowthRecord[]>>({});
@@ -305,8 +310,11 @@ export default function GrowthPatternClient() {
     // 좌측(가장 오래된) 컬럼의 새벽 시간대에 자정을 넘긴 전날 기록이 표시되도록
     // 표시 범위(-6)보다 하루 더 앞당겨 페치한다. 추가된 하루는 컬럼으로 노출되지 않고
     // forward spill 을 통해 dates[0] 새벽 영역만 채운다.
-    const from = shiftDate(selectedDate, -7);
-    const to = selectedDate;
+    // 스와이프 페이징을 위해 앞뒤로 한 페이지(일=1일, 주=7일)씩 더 받아둔다 —
+    // 손가락을 따라 들어오는 옆 페이지가 빈 화면이 되지 않도록.
+    const step = viewMode === 'day' ? 1 : 7;
+    const from = shiftDate(selectedDate, -7 - step);
+    const to = shiftDate(selectedDate, step);
     const myId = ++reqIdRef.current;
     setLoading(true);
     try {
@@ -350,7 +358,7 @@ export default function GrowthPatternClient() {
       setDays({});
       setLoading(false);
     }
-  }, [selectedChild, selectedDate]);
+  }, [selectedChild, selectedDate, viewMode]);
 
   useEffect(() => {
     loadRecords();
@@ -362,32 +370,6 @@ export default function GrowthPatternClient() {
   const dates = useMemo(
     () => Array.from({ length: 7 }, (_, i) => shiftDate(selectedDate, -(6 - i))),
     [selectedDate],
-  );
-
-  // 합성 endAt 적용은 selectedTypes 무관하게 전체 기록에 대해 수행한 뒤 필터
-  const daySyntheticRecords = useMemo(
-    () => withSyntheticEnd(days[selectedDate] ?? []),
-    [days, selectedDate],
-  );
-
-  const dayRecords = useMemo(
-    () => daySyntheticRecords.filter((r) => selectedTypes.has(r.type)),
-    [daySyntheticRecords, selectedTypes],
-  );
-
-  // 요약은 합성 전 원본 데이터 기반 (실제 측정값 표시)
-  // days[selectedDate] 에는 자정을 넘겨 spill 된 전날 기록도 포함되므로,
-  // 기록 메뉴와 동일하게 "시작일이 선택일인" 기록만 집계한다.
-  const stats = useMemo(
-    () =>
-      computeDayStats(
-        (days[selectedDate] ?? []).filter(
-          (r) =>
-            selectedTypes.has(r.type) &&
-            toDateStr(new Date(r.startAt)) === selectedDate,
-        ),
-      ),
-    [days, selectedDate, selectedTypes],
   );
 
   const toggleType = (t: GrowthType) => {
@@ -404,6 +386,26 @@ export default function GrowthPatternClient() {
       ? selectedDate < todayStr
       : shiftDate(selectedDate, 1) <= todayStr;
 
+  // 페이지 폭은 카드 뷰포트에서 실측한다. 카드가 isLoaded 이후에야 붙으므로
+  // ref 콜백으로 잡아야 마운트 시점을 놓치지 않는다.
+  const [pageWidth, setPageWidth] = useState(0);
+  const pageObserverRef = useRef<ResizeObserver | null>(null);
+  const pagerRef = useCallback((el: HTMLDivElement | null) => {
+    pageObserverRef.current?.disconnect();
+    pageObserverRef.current = null;
+    if (!el) return;
+    setPageWidth(el.clientWidth);
+    const ro = new ResizeObserver(() => setPageWidth(el.clientWidth));
+    ro.observe(el);
+    pageObserverRef.current = ro;
+  }, []);
+
+  // 날짜/탭이 바뀌면 가운데 페이지가 곧 새 내용을 그리므로 트랙을 원위치로 돌린다.
+  // layout effect 라 리렌더 커밋 직후·페인트 전에 실행돼 한 프레임도 어긋나지 않는다.
+  useIsomorphicLayoutEffect(() => {
+    x.set(0);
+  }, [selectedDate, viewMode, x]);
+
   const handlePrev = () => {
     setSelectedDate(shiftDate(selectedDate, viewMode === 'day' ? -1 : -7));
   };
@@ -414,15 +416,42 @@ export default function GrowthPatternClient() {
     setSelectedDate(next > todayStr ? todayStr : next);
   };
 
-  // 차트 카드를 좌우로 밀어 날짜 이동. 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전 —
-  // 화면이 손가락을 따라 넘어가는 방향과 일치시킨다.
-  // 오늘 이후로는 handleNext 가 막으므로 그대로 제자리로 돌아온다.
-  const handleSwipeEnd = (_: unknown, info: PanInfo) => {
+  // ── 좌우 스와이프 페이징 ──
+  // 이전/현재/다음 지표를 나란히 깔아두고 트랙 전체를 끌어, 옆 페이지가 손가락을 따라
+  // 실제로 밀려 들어오게 한다. 커밋 시엔 스프링으로 한 페이지만큼 마저 넘긴다.
+  // dir: -1 = 다음(왼쪽으로 밀기), +1 = 이전(오른쪽으로 밀기)
+  const goToPage = (dir: -1 | 1) => {
+    if (dir === -1 && !canGoNext) {
+      animate(x, 0, PAGE_SPRING);
+      return;
+    }
+    // 폭 측정 전이면 애니메이션 없이 즉시 전환
+    if (!pageWidth) {
+      if (dir === -1) handleNext();
+      else handlePrev();
+      return;
+    }
+    animate(x, dir * pageWidth, {
+      ...PAGE_SPRING,
+      onComplete: () => {
+        if (dir === -1) handleNext();
+        else handlePrev();
+      },
+    });
+  };
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
     const dx = info.offset.x;
     const vx = info.velocity.x;
-    if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
-    if (dx <= -SWIPE_DISTANCE || vx <= -SWIPE_VELOCITY) handleNext();
-    else if (dx >= SWIPE_DISTANCE || vx >= SWIPE_VELOCITY) handlePrev();
+    const committed =
+      Math.abs(dx) >= SWIPE_MIN_DISTANCE &&
+      (Math.abs(dx) >= SWIPE_DISTANCE || Math.abs(vx) >= SWIPE_VELOCITY);
+    if (!committed) {
+      // dragConstraints 안에서 놓으면 framer 가 되돌려주지 않으므로 직접 제자리로.
+      animate(x, 0, PAGE_SPRING);
+      return;
+    }
+    goToPage(dx < 0 ? -1 : 1);
   };
 
   if (!isLoaded) return null;
@@ -433,10 +462,6 @@ export default function GrowthPatternClient() {
     viewMode === 'day'
       ? formatDayLabel(selectedDate)
       : `${formatDayLabel(dates[0])} ~ ${formatDayLabel(dates[6])}`;
-
-  const ageDays = selectedChild
-    ? calcChildAge(selectedChild.birthDate, fromDateStr(selectedDate)).days
-    : 0;
 
   return (
     <div className="flex flex-col h-[100dvh] bg-white pb-[calc(var(--bottom-nav-space)+24px)] overflow-hidden">
@@ -525,22 +550,13 @@ export default function GrowthPatternClient() {
           </div>
         </div>
 
-        {/* 차트 카드 — 전체 영역 고정 높이 423px.
-            drag="x" 는 touch-action 을 pan-y 로 잡아주므로 카드 안쪽 세로 스크롤과 충돌하지 않고,
-            dragDirectionLock 이 첫 움직임의 축을 고정해 세로로 긁을 때는 가로 드래그가 걸리지 않는다. */}
-        <motion.div
-          className="mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[423px] shrink-0"
-          drag={noChild ? false : 'x'}
-          dragDirectionLock
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
-          dragMomentum={false}
-          onDragEnd={handleSwipeEnd}>
+        {/* 차트 카드 — 전체 영역 고정 높이 423px. 날짜 네비는 고정, 그 아래 지표 영역만 페이징된다. */}
+        <div className="mb-1 border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[423px] shrink-0">
           <div className="py-3 px-4 shrink-0">
             <div className="flex items-center justify-center">
               <button
                 type="button"
-                onClick={handlePrev}
+                onClick={() => goToPage(1)}
                 aria-label="이전"
                 className="w-4 h-4 flex items-center justify-center shrink-0"
               >
@@ -567,7 +583,7 @@ export default function GrowthPatternClient() {
               </button>
               <button
                 type="button"
-                onClick={handleNext}
+                onClick={() => goToPage(-1)}
                 aria-label="다음"
                 className={`w-4 h-4 flex items-center justify-center shrink-0 ${
                   canGoNext ? '' : 'opacity-30 pointer-events-none'
@@ -587,99 +603,43 @@ export default function GrowthPatternClient() {
                 </svg>
               </button>
             </div>
-
-            {viewMode === 'day' && (
-              <div className="mt-3 flex items-center justify-center gap-[10px] tabular-nums flex-wrap">
-                <span className="flex items-center gap-[2px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/icon-stat-awake.svg"
-                    alt=""
-                    width={16}
-                    height={16}
-                    aria-hidden="true"
-                  />
-                  <span className="text-[10px] font-medium text-black">
-                    {formatDuration(stats.napMin)}
-                  </span>
-                </span>
-                <span className="flex items-center gap-[2px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/icon-stat-sleep.svg"
-                    alt=""
-                    width={16}
-                    height={16}
-                    aria-hidden="true"
-                  />
-                  <span className="text-[10px] font-medium text-black">
-                    {formatDuration(stats.nightMin)}
-                  </span>
-                </span>
-                {(stats.feedingMl > 0 || stats.breastMin > 0) && (
-                  <span className="flex items-center gap-[2px]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/icon-stat-feeding.svg"
-                      alt=""
-                      width={16}
-                      height={16}
-                      aria-hidden="true"
-                    />
-                    <span className="text-[10px] font-medium text-black">
-                      {stats.feedingMl > 0 ? `${stats.feedingMl}ml` : ''}
-                      {(stats.formulaMl > 0 || stats.pumpedMl > 0) && (
-                        <>
-                          (
-                          {stats.formulaMl > 0 && (
-                            <span style={{ color: CATEGORY_STYLE.FORMULA.border }}>
-                              {stats.formulaMl}
-                            </span>
-                          )}
-                          {stats.formulaMl > 0 && stats.pumpedMl > 0 ? '+' : ''}
-                          {stats.pumpedMl > 0 && (
-                            <span
-                              style={{ color: CATEGORY_STYLE.PUMPED_FEEDING.border }}
-                            >
-                              {stats.pumpedMl}
-                            </span>
-                          )}
-                          )
-                        </>
-                      )}
-                      {stats.breastMin > 0 && (
-                        <>
-                          {stats.feedingMl > 0 ? '+' : ''}
-                          <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>
-                            {stats.breastMin}분
-                          </span>
-                        </>
-                      )}
-                    </span>
-                  </span>
-                )}
-              </div>
-            )}
           </div>
 
-          <div className="border-t border-gray-100 px-4 pt-3 pb-3 flex-1 min-h-0 overflow-y-auto flex">
-            {viewMode === 'day' ? (
-              <DonutChart
-                records={dayRecords}
-                dateStr={selectedDate}
-                ageDays={ageDays}
-                loading={loading}
-              />
-            ) : (
-              <WeekBarChart
-                dates={dates}
-                days={days}
-                selectedTypes={selectedTypes}
-                todayStr={todayStr}
-              />
-            )}
+          <div ref={pagerRef} className="relative flex-1 min-h-0 overflow-hidden">
+            {/* 지표 페이저 — 이전/현재/다음을 나란히 두고 트랙을 끈다.
+                drag="x" 가 touch-action 을 pan-y 로 잡아 페이지 안쪽 세로 스크롤과 충돌하지 않고,
+                dragDirectionLock 이 첫 움직임의 축을 고정해 세로로 긁을 땐 가로로 끌리지 않는다. */}
+            <motion.div
+              className="flex h-full"
+              style={{ x, width: pageWidth * 3, marginLeft: -pageWidth }}
+              drag={noChild || !pageWidth ? false : 'x'}
+              dragDirectionLock
+              dragConstraints={{ left: canGoNext ? -pageWidth : 0, right: pageWidth }}
+              dragElastic={0.12}
+              dragMomentum={false}
+              onDragEnd={handleDragEnd}
+            >
+              {PAGE_OFFSETS.map((offset) => (
+                <div
+                  key={offset}
+                  className="h-full shrink-0"
+                  style={{ width: pageWidth }}
+                  aria-hidden={offset !== 0}
+                >
+                  <PatternPage
+                    viewMode={viewMode}
+                    dateStr={shiftDate(selectedDate, offset * (viewMode === 'day' ? 1 : 7))}
+                    days={days}
+                    selectedTypes={selectedTypes}
+                    birthDate={selectedChild?.birthDate ?? null}
+                    todayStr={todayStr}
+                    loading={offset === 0 && loading}
+                  />
+                </div>
+              ))}
+            </motion.div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <WheelDatePickerModal
@@ -689,6 +649,154 @@ export default function GrowthPatternClient() {
         onClose={() => setDatePickerOpen(false)}
         onConfirm={(d) => setSelectedDate(d)}
       />
+    </div>
+  );
+}
+
+// 스와이프 페이저의 한 페이지 — 주어진 날짜(일 탭) 또는 그 날짜로 끝나는 7일(주 탭)의 지표.
+function PatternPage({
+  viewMode,
+  dateStr,
+  days,
+  selectedTypes,
+  birthDate,
+  todayStr,
+  loading,
+}: {
+  viewMode: 'day' | 'week';
+  dateStr: string;
+  days: Record<string, GrowthRecord[]>;
+  selectedTypes: Set<GrowthType>;
+  birthDate: string | null;
+  todayStr: string;
+  loading: boolean;
+}) {
+  const dates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => shiftDate(dateStr, -(6 - i))),
+    [dateStr],
+  );
+
+  // 합성 endAt 적용은 selectedTypes 무관하게 전체 기록에 대해 수행한 뒤 필터
+  const daySyntheticRecords = useMemo(
+    () => withSyntheticEnd(days[dateStr] ?? []),
+    [days, dateStr],
+  );
+
+  const dayRecords = useMemo(
+    () => daySyntheticRecords.filter((r) => selectedTypes.has(r.type)),
+    [daySyntheticRecords, selectedTypes],
+  );
+
+  // 요약은 합성 전 원본 데이터 기반 (실제 측정값 표시)
+  // days[dateStr] 에는 자정을 넘겨 spill 된 전날 기록도 포함되므로,
+  // 기록 메뉴와 동일하게 "시작일이 선택일인" 기록만 집계한다.
+  const stats = useMemo(
+    () =>
+      computeDayStats(
+        (days[dateStr] ?? []).filter(
+          (r) =>
+            selectedTypes.has(r.type) &&
+            toDateStr(new Date(r.startAt)) === dateStr,
+        ),
+      ),
+    [days, dateStr, selectedTypes],
+  );
+
+  const ageDays = birthDate
+    ? calcChildAge(birthDate, fromDateStr(dateStr)).days
+    : 0;
+
+  return (
+    <div className="flex flex-col h-full">
+      {viewMode === 'day' && (
+        <div className="px-4 pb-3 flex items-center justify-center gap-[10px] tabular-nums flex-wrap">
+          <span className="flex items-center gap-[2px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon-stat-awake.svg"
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden="true"
+            />
+            <span className="text-[10px] font-medium text-black">
+              {formatDuration(stats.napMin)}
+            </span>
+          </span>
+          <span className="flex items-center gap-[2px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon-stat-sleep.svg"
+              alt=""
+              width={16}
+              height={16}
+              aria-hidden="true"
+            />
+            <span className="text-[10px] font-medium text-black">
+              {formatDuration(stats.nightMin)}
+            </span>
+          </span>
+          {(stats.feedingMl > 0 || stats.breastMin > 0) && (
+            <span className="flex items-center gap-[2px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon-stat-feeding.svg"
+                alt=""
+                width={16}
+                height={16}
+                aria-hidden="true"
+              />
+              <span className="text-[10px] font-medium text-black">
+                {stats.feedingMl > 0 ? `${stats.feedingMl}ml` : ''}
+                {(stats.formulaMl > 0 || stats.pumpedMl > 0) && (
+                  <>
+                    (
+                    {stats.formulaMl > 0 && (
+                      <span style={{ color: CATEGORY_STYLE.FORMULA.border }}>
+                        {stats.formulaMl}
+                      </span>
+                    )}
+                    {stats.formulaMl > 0 && stats.pumpedMl > 0 ? '+' : ''}
+                    {stats.pumpedMl > 0 && (
+                      <span
+                        style={{ color: CATEGORY_STYLE.PUMPED_FEEDING.border }}
+                      >
+                        {stats.pumpedMl}
+                      </span>
+                    )}
+                    )
+                  </>
+                )}
+                {stats.breastMin > 0 && (
+                  <>
+                    {stats.feedingMl > 0 ? '+' : ''}
+                    <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>
+                      {stats.breastMin}분
+                    </span>
+                  </>
+                )}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
+      <div className="border-t border-gray-100 px-4 pt-3 pb-3 flex-1 min-h-0 overflow-y-auto flex">
+        {viewMode === 'day' ? (
+          <DonutChart
+            records={dayRecords}
+            dateStr={dateStr}
+            ageDays={ageDays}
+            loading={loading}
+          />
+        ) : (
+          <WeekBarChart
+            dates={dates}
+            days={days}
+            selectedTypes={selectedTypes}
+            todayStr={todayStr}
+          />
+        )}
+      </div>
     </div>
   );
 }

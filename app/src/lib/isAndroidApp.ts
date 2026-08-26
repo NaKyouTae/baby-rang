@@ -80,6 +80,32 @@ export function isAndroidApp(): boolean {
   return detected;
 }
 
+/**
+ * 감지에 쓰인 원시 신호들. 앱(WebView) 안에서는 devtools 콘솔을 볼 수 없어서
+ * 결제가 막혔을 때 화면에 그대로 띄워 원인을 추적하는 용도다.
+ */
+export function getDetectionInfo(): Record<string, unknown> | null {
+  if (typeof window === "undefined") return null;
+  let cached: string | null | undefined;
+  try {
+    cached = window.sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    cached = "(접근 불가)";
+  }
+  return {
+    detected: isAndroidApp(),
+    referrer: document.referrer || "(없음)",
+    srcParam: new URLSearchParams(window.location.search).get("src") ?? "(없음)",
+    standalone: window.matchMedia("(display-mode: standalone)").matches,
+    androidUA: /android/i.test(window.navigator.userAgent),
+    sessionCache: cached ?? "(없음)",
+    hasDigitalGoods:
+      typeof (window as unknown as { getDigitalGoodsService?: unknown })
+        .getDigitalGoodsService === "function",
+    href: window.location.href,
+  };
+}
+
 // 값이 세션 중에 변하지 않으므로 구독할 이벤트가 없다.
 const subscribe = () => () => {};
 // 서버 렌더와 하이드레이션 시점에는 판별이 불가능하다.

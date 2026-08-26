@@ -7,7 +7,7 @@ import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
-import { useIsAndroidApp } from '@/lib/isAndroidApp';
+import { getDetectionInfo, useIsAndroidApp } from '@/lib/isAndroidApp';
 import {
   TEMPERAMENT_SKU,
   purchaseWithPlay,
@@ -51,6 +51,7 @@ export default function ResultPage() {
   const playProduct = usePlayProduct(TEMPERAMENT_SKU);
   const [playLoading, setPlayLoading] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
+  const [playDiag, setPlayDiag] = useState<Record<string, unknown> | null>(null);
   // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
   const [expired, setExpired] = useState(false);
   const unlockedRef = useRef(false);
@@ -195,9 +196,14 @@ export default function ResultPage() {
       await unlockResult(submissionId, data.orderId);
       setResult(await getResult(submissionId));
     } catch (e) {
-      setPlayError(
-        e instanceof Error ? e.message : '결제 처리 중 오류가 발생했어요.',
-      );
+      const err = e as { name?: string; message?: string };
+      setPlayError(err?.message ?? '결제 처리 중 오류가 발생했어요.');
+      // 앱에서는 콘솔을 볼 수 없으므로 실패 시점의 상태를 통째로 담아 모달로 보여준다.
+      setPlayDiag({
+        error: { name: err?.name ?? '(없음)', message: err?.message ?? String(e) },
+        product: playProduct.status === 'ready' ? playProduct.item : playProduct.status,
+        detection: getDetectionInfo(),
+      });
     } finally {
       setPlayLoading(false);
     }
@@ -312,11 +318,7 @@ export default function ResultPage() {
             원인을 추적할 방법이 없다. 실패했을 때만 조회된 상품 정보를 화면에 띄운다.
             결제가 정상 동작하는 것을 확인한 뒤 지워도 된다.
           */}
-          {playError && playProduct.status === 'ready' && (
-            <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-2 text-[10px] text-gray-600">
-              {JSON.stringify(playProduct.item, null, 2)}
-            </pre>
-          )}
+
         </>
       ) : null}
 
@@ -358,6 +360,38 @@ export default function ResultPage() {
         </button>
       </div>
       </main>
+
+      {/*
+        결제 진단 모달.
+        앱(WebView)에서는 devtools 콘솔을 볼 수 없어 실패 원인을 추적할 방법이 없다.
+        Play 결제가 안정적으로 동작하는 것을 확인한 뒤 이 블록을 지우면 된다.
+      */}
+      {playDiag && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5"
+          onClick={() => setPlayDiag(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full overflow-y-auto rounded-[8px] bg-white p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[14px] font-semibold text-app-black">결제 진단 정보</p>
+            <p className="mt-1 text-[11px] text-gray-500">
+              이 화면을 캡처해 주세요. 바깥을 누르면 닫힙니다.
+            </p>
+            <pre className="mt-3 overflow-x-auto rounded bg-gray-100 p-3 text-[10px] leading-relaxed text-gray-700">
+              {JSON.stringify(playDiag, null, 2)}
+            </pre>
+            <button
+              type="button"
+              onClick={() => setPlayDiag(null)}
+              className="mt-3 w-full rounded-[4px] bg-gray-100 py-3 text-[13px] font-semibold text-app-black"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
