@@ -54,6 +54,16 @@ export interface ConfirmAndCreateDto {
   productMeta?: Record<string, unknown>;
 }
 
+export interface ConfirmGooglePlayDto {
+  /** Play Console 에 등록한 제품 ID. 현재는 temperament_report 하나뿐. */
+  productId: string;
+  /** Digital Goods API/PaymentRequest 가 돌려준 구매 토큰. */
+  purchaseToken: string;
+  productType: PaymentProductType;
+  childId?: string;
+  productMeta?: Record<string, unknown>;
+}
+
 export interface ListPaymentsQuery {
   status?: PaymentStatus;
   productType?: PaymentProductType;

@@ -13,15 +13,102 @@ import {
   ConfirmPaymentDto,
   CreatePaymentDto,
   FailPaymentDto,
+  ConfirmGooglePlayDto,
   ListPaymentsQuery,
 } from './dto';
-import { resolveProduct } from './product-catalog';
+import { resolveByPlaySku, resolveProduct } from './product-catalog';
+import { GooglePlayService } from './google-play.service';
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private googlePlay: GooglePlayService,
+  ) {}
+
+  /**
+   * Google Play 결제 승인. Android(TWA)에서 Digital Goods API 로 구매한 뒤 호출된다.
+   *
+   * Toss 경로(confirmAndCreate)와 달리 금액을 아예 받지 않는다. 어떤 상품을 샀는지는
+   * 구매 토큰이 묶여 있는 Play 제품 ID가 결정하고, 가격은 서버 가격표에서 가져온다.
+   */
+  async confirmGooglePlay(
+    userId: string,
+    dto: ConfirmGooglePlayDto,
+    context: { ipAddress?: string; userAgent?: string },
+  ) {
+    const { productId, purchaseToken, childId, productMeta } = dto;
+    if (!productId || !purchaseToken) {
+      throw new BadRequestException('필수 파라미터가 누락되었습니다.');
+    }
+
+    // 클라이언트가 보낸 productType 은 쓰지 않는다. Play 제품 ID로 서버가 확정한다.
+    const { productType, spec } = resolveByPlaySku(productId);
+
+    // 같은 구매 토큰으로 두 번 들어와도 결제가 중복 생성되지 않게 한다.
+    // (네트워크 재시도, 사용자의 새로고침 등으로 흔히 발생한다)
+    const existing = await this.prisma.payment.findFirst({
+      where: { provider: 'GOOGLE_PLAY', paymentKey: purchaseToken },
+    });
+    if (existing) return existing;
+
+    const purchase = await this.googlePlay.getPurchase(
+      productId,
+      purchaseToken,
+    );
+
+    // 0=구매완료. 1(취소)·2(대기중)는 콘텐츠를 열어주면 안 된다.
+    if (purchase.purchaseState !== 0) {
+      throw new BadRequestException(
+        purchase.purchaseState === 2
+          ? '결제가 아직 완료되지 않았습니다. 잠시 후 다시 확인해 주세요.'
+          : '취소된 결제입니다.',
+      );
+    }
+
+    const orderId = purchase.orderId ?? `GP-${purchaseToken.slice(0, 40)}`;
+
+    const payment = await this.prisma.payment.create({
+      data: {
+        userId,
+        childId: childId ?? null,
+        orderId,
+        productType,
+        productName: spec.name,
+        productMeta: productMeta as Prisma.InputJsonValue | undefined,
+        amount: spec.price,
+        currency: 'KRW',
+        provider: 'GOOGLE_PLAY',
+        status: PaymentStatus.PAID,
+        paymentKey: purchaseToken,
+        method: 'GOOGLE_PLAY',
+        approvedAt: purchase.purchaseTimeMillis
+          ? new Date(Number(purchase.purchaseTimeMillis))
+          : new Date(),
+        rawResponse: purchase as unknown as Prisma.InputJsonValue,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        events: {
+          create: {
+            type: 'CONFIRMED',
+            status: PaymentStatus.PAID,
+            amount: spec.price,
+            payload: purchase as unknown as Prisma.InputJsonValue,
+          },
+        },
+      },
+      include: { events: true },
+    });
+
+    // Payment 를 먼저 만든 뒤 소비한다. 소비가 실패해도 사용자는 이미 돈을 냈으므로
+    // 콘텐츠는 열어줘야 하고, 소비 실패는 GooglePlayService 가 에러 로그로 남긴다.
+    // (3일 내 미소비 시 자동 환불되므로 로그 모니터링이 필요하다)
+    await this.googlePlay.consume(productId, purchaseToken);
+
+    return payment;
+  }
 
   /**
    * 시크릿 키 자체는 절대 로그에 남기지 않는다. live/test 구분만 남긴다.

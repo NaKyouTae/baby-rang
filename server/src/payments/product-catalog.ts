@@ -17,6 +17,11 @@ export interface ProductSpec {
   name: string;
   /** 정가(KRW). */
   price: number;
+  /**
+   * Play Console 에 등록한 일회성 제품 ID.
+   * ⚠️ 콘솔에서 한 번 만들면 바꿀 수 없으므로 값이 정확해야 한다.
+   */
+  playSku?: string;
 }
 
 /**
@@ -27,7 +32,11 @@ export interface ProductSpec {
  */
 export const PRODUCT_CATALOG: Partial<Record<PaymentProductType, ProductSpec>> =
   {
-    TEMPERAMENT_REPORT: { name: '기질 검사 상세 리포트', price: 990 },
+    TEMPERAMENT_REPORT: {
+      name: '기질 검사 상세 리포트',
+      price: 990,
+      playSku: 'temperament_report',
+    },
     // WONDER_WEEKS_PREMIUM, NURSING_ROOM_PREMIUM 은 아직 판매하지 않는다.
     // 출시할 때 여기에 가격을 등록해야 결제가 열린다.
   };
@@ -41,6 +50,25 @@ export function getProductSpec(productType: PaymentProductType): ProductSpec {
     );
   }
   return spec;
+}
+
+/**
+ * Play 제품 ID로 상품을 역조회한다.
+ *
+ * 클라이언트가 productType 을 함께 보내더라도 그 값을 믿지 않는다.
+ * 구매 토큰은 특정 Play 제품에 묶여 있으므로, 제품 ID가 곧 어떤 상품을 샀는지의
+ * 유일한 근거다. 여기서 상품을 확정해야 "싼 상품을 사고 비싼 콘텐츠를 여는" 경로가 막힌다.
+ */
+export function resolveByPlaySku(sku: string): {
+  productType: PaymentProductType;
+  spec: ProductSpec;
+} {
+  for (const [type, spec] of Object.entries(PRODUCT_CATALOG)) {
+    if (spec?.playSku && spec.playSku === sku) {
+      return { productType: type as PaymentProductType, spec };
+    }
+  }
+  throw new BadRequestException(`알 수 없는 Play 상품입니다. (${sku})`);
 }
 
 /**

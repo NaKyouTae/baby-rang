@@ -21,14 +21,18 @@
     "alias": "my-key-alias"
   },
   "appVersionName": "1.2.2",
-  "appVersionCode": 7,
+  "appVersionCode": 8,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://baby-rang.spectrify.kr/manifest.json",
   "fallbackType": "customtabs",
-  "features": {},
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
   "alphaDependencies": {
-    "enabled": false
+    "enabled": true
   },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,

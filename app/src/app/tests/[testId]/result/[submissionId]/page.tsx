@@ -8,6 +8,11 @@ import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
 import { useIsAndroidApp } from '@/lib/isAndroidApp';
+import {
+  TEMPERAMENT_SKU,
+  purchaseWithPlay,
+  usePlayBillingAvailable,
+} from '@/lib/playBilling';
 
 const TEMPERAMENT_PRICE = 990;
 import type { TestResult } from '@/lib/api';
@@ -41,6 +46,11 @@ export default function ResultPage() {
   // Android(TWA) 앱에서는 Play 결제 정책상 Toss 결제 경로를 노출할 수 없다.
   // null 이면 아직 판별 전이므로 결제 UI를 띄우지 않는다. (isAndroidApp.ts 참고)
   const isAndroidApp = useIsAndroidApp();
+  // Android 앱에서 Play 결제를 쓸 수 있는지. Billing 이 없는 구 빌드에서는 false 가 되어
+  // 결제 UI가 숨겨진 채(Phase 1 동작) 유지된다.
+  const playBillingAvailable = usePlayBillingAvailable();
+  const [playLoading, setPlayLoading] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
   // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
   const [expired, setExpired] = useState(false);
   const unlockedRef = useRef(false);
@@ -146,10 +156,59 @@ export default function ResultPage() {
 
   const remainingLabel = remainingAccessLabel(result.expiresAt);
 
+  // 결제 수단이 확정된 경우에만 유료 유도 UI를 노출한다.
+  // 판별 전(null)에 노출하면 앱에서 결제 버튼이 한 프레임 스쳐 보일 수 있다.
+  const canPurchase =
+    isAndroidApp === false ||
+    (isAndroidApp === true && playBillingAvailable === true);
+
+  // Android(TWA)에서 Play 결제를 진행한다.
+  // 웹과 달리 페이지 이동 없이 Play 결제 시트가 뜨고, 승인 후 바로 리포트가 열린다.
+  const handlePlayUnlock = async () => {
+    if (playLoading) return;
+    setPlayLoading(true);
+    setPlayError(null);
+    try {
+      const purchaseToken = await purchaseWithPlay(TEMPERAMENT_SKU);
+      // 사용자가 결제 시트를 닫은 경우 — 에러가 아니다.
+      if (!purchaseToken) return;
+
+      const res = await fetch('/api/payments/google-play/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: TEMPERAMENT_SKU,
+          productType: 'TEMPERAMENT_REPORT',
+          productMeta: { submissionId },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.orderId) {
+        throw new Error(data?.message ?? '결제 승인에 실패했습니다.');
+      }
+
+      await unlockResult(submissionId, data.orderId);
+      setResult(await getResult(submissionId));
+    } catch (e) {
+      setPlayError(
+        e instanceof Error ? e.message : '결제 처리 중 오류가 발생했어요.',
+      );
+    } finally {
+      setPlayLoading(false);
+    }
+  };
+
   const handleUnlock = () => {
     if (!result) return;
-    // UI를 감추는 것과 별개로, 앱에서는 결제 경로 자체가 열리지 않도록 막는다.
-    if (isAndroidApp !== false) return;
+    if (isAndroidApp === null) return;
+
+    if (isAndroidApp) {
+      // Play 결제를 쓸 수 없는 빌드에서는 버튼 자체가 안 뜨지만, 방어적으로 한 번 더 막는다.
+      if (!playBillingAvailable) return;
+      void handlePlayUnlock();
+      return;
+    }
+
     const redirectTo = `/tests/${testId}/result/${submissionId}`;
     const productMeta = JSON.stringify({ submissionId });
     const qs = new URLSearchParams({
@@ -217,20 +276,33 @@ export default function ResultPage() {
 
       {/*
         이미 결제한 리포트는 어디서 열든 그대로 보여준다.
-        앱 밖(웹)에서 일어난 거래라 Play 결제 정책과 무관하다.
 
-        아직 결제 전이라면 잠금 안내는 웹에서만 노출한다.
-        Android 앱에서는 유료 유도 UI 자체를 렌더링하지 않는다.
-        ⚠️ "웹사이트에서 구매하세요" 같은 안내나 링크를 대신 넣으면 안 된다.
+        아직 결제 전이라면 결제 수단이 확정된 경우에만 잠금 안내를 노출한다.
+          · 웹            → Toss (결제 화면으로 이동)
+          · Android + Play 결제 가능 → Play 결제 시트
+          · Android + Play 결제 불가 → 아무것도 노출하지 않음 (Billing 없는 구 빌드)
+        ⚠️ 마지막 경우에 "웹사이트에서 구매하세요" 같은 안내나 링크를 넣으면 안 된다.
         외부 결제 유도는 그 자체로 Play 결제 정책 위반이다.
       */}
       {result.isPaid && result.paidContent ? (
         <PaidResultSection content={result.paidContent} />
-      ) : isAndroidApp === false ? (
-        <LockedSection
-          sections={result.lockedSections}
-          onUnlock={handleUnlock}
-        />
+      ) : canPurchase ? (
+        <>
+          <LockedSection
+            sections={result.lockedSections}
+            onUnlock={handleUnlock}
+          />
+          {playLoading && (
+            <p className="mt-2 text-center text-[12px] text-gray-500">
+              결제를 진행하고 있어요...
+            </p>
+          )}
+          {playError && (
+            <p className="mt-2 text-center text-[12px]" style={{ color: '#DC2626' }}>
+              {playError}
+            </p>
+          )}
+        </>
       ) : null}
 
       {!result.isReliable && result.reliabilityMsg && (

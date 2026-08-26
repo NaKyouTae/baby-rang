@@ -12,6 +12,7 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   CancelPaymentDto,
   ConfirmAndCreateDto,
+  ConfirmGooglePlayDto,
   ConfirmPaymentDto,
   CreatePaymentDto,
   FailPaymentDto,
@@ -47,6 +48,17 @@ export class PaymentsController {
   @Post('confirm-and-create')
   confirmAndCreate(@Req() req, @Body() dto: ConfirmAndCreateDto) {
     return this.payments.confirmAndCreate(req.user.id, dto, {
+      ipAddress:
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
+  }
+
+  // Android(TWA) Play 결제 승인. 금액을 받지 않는다 — 서버가 Play 제품 ID로 확정한다.
+  @Post('google-play/confirm')
+  confirmGooglePlay(@Req() req, @Body() dto: ConfirmGooglePlayDto) {
+    return this.payments.confirmGooglePlay(req.user.id, dto, {
       ipAddress:
         (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
         req.ip,
