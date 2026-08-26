@@ -54,42 +54,62 @@ export async function getPlayBillingService(): Promise<DigitalGoodsService | nul
 }
 
 /**
- * Play 결제 사용 가능 여부.
+ * Play 상품 정보를 미리 받아둔다.
  *
- * `null` 은 아직 판별 전이다. 결제 UI는 `true` 로 확정된 뒤에만 노출해야
- * "버튼은 보이는데 눌러도 아무 일이 없는" 상태를 피할 수 있다.
+ * ⚠️ 클릭 핸들러 안에서 상품을 조회하면 안 된다.
+ * PaymentRequest.show() 는 사용자 활성화(user activation)가 살아 있을 때만 결제 시트를
+ * 띄운다. 클릭 후 getDigitalGoodsService() → getDetails() 로 두 번 await 하면 그 사이
+ * 활성화가 만료돼, 아무 에러 없이 조용히 멈춰버린다.
+ * 그래서 마운트 시점에 미리 받아두고, 클릭 시에는 곧바로 show() 만 부른다.
+ *
+ * status 가 'ready' 일 때만 결제 UI를 노출한다.
  */
-export function usePlayBillingAvailable(): boolean | null {
-  const [available, setAvailable] = useState<boolean | null>(null);
+export type PlayProductState =
+  | { status: "loading" }
+  | { status: "unavailable" }
+  | { status: "ready"; item: ItemDetails };
+
+export function usePlayProduct(sku: string): PlayProductState {
+  const [state, setState] = useState<PlayProductState>({ status: "loading" });
 
   useEffect(() => {
     let cancelled = false;
-    void getPlayBillingService().then((service) => {
-      if (!cancelled) setAvailable(service !== null);
-    });
+    void (async () => {
+      const service = await getPlayBillingService();
+      if (!service) {
+        if (!cancelled) setState({ status: "unavailable" });
+        return;
+      }
+      try {
+        const details = await service.getDetails([sku]);
+        const item = details.find((d) => d.itemId === sku) ?? details[0];
+        if (!cancelled) {
+          // 상품이 Play Console 에서 비활성이거나 트랙·국가가 맞지 않으면 빈 배열이 온다.
+          setState(item ? { status: "ready", item } : { status: "unavailable" });
+        }
+      } catch {
+        if (!cancelled) setState({ status: "unavailable" });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sku]);
 
-  return available;
+  return state;
 }
 
 /**
  * Play 결제창을 띄우고 구매 토큰을 돌려준다.
  * 사용자가 취소하면 null 을 돌려준다(에러가 아니다).
+ *
+ * item 은 usePlayProduct 로 미리 받아둔 값을 넘겨야 한다. 여기서 조회하면
+ * 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다.
  */
-export async function purchaseWithPlay(sku: string): Promise<string | null> {
-  const service = await getPlayBillingService();
-  if (!service) throw new Error("이 기기에서는 결제를 사용할 수 없습니다.");
-
-  const details = await service.getDetails([sku]);
-  const item = details.find((d) => d.itemId === sku) ?? details[0];
-  if (!item) {
-    // 상품이 Play Console 에서 비활성이거나 국가/트랙이 맞지 않는 경우.
-    throw new Error("상품 정보를 불러오지 못했습니다.");
-  }
-
+export async function purchaseWithPlay(
+  sku: string,
+  item: ItemDetails,
+): Promise<string | null> {
   const request = new PaymentRequest(
     [{ supportedMethods: PLAY_BILLING_METHOD, data: { sku } }],
     { total: { label: item.title, amount: item.price } },

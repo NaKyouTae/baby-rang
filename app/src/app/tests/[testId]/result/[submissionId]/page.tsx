@@ -11,7 +11,7 @@ import { useIsAndroidApp } from '@/lib/isAndroidApp';
 import {
   TEMPERAMENT_SKU,
   purchaseWithPlay,
-  usePlayBillingAvailable,
+  usePlayProduct,
 } from '@/lib/playBilling';
 
 const TEMPERAMENT_PRICE = 990;
@@ -46,9 +46,9 @@ export default function ResultPage() {
   // Android(TWA) 앱에서는 Play 결제 정책상 Toss 결제 경로를 노출할 수 없다.
   // null 이면 아직 판별 전이므로 결제 UI를 띄우지 않는다. (isAndroidApp.ts 참고)
   const isAndroidApp = useIsAndroidApp();
-  // Android 앱에서 Play 결제를 쓸 수 있는지. Billing 이 없는 구 빌드에서는 false 가 되어
-  // 결제 UI가 숨겨진 채(Phase 1 동작) 유지된다.
-  const playBillingAvailable = usePlayBillingAvailable();
+  // Android 앱에서 Play 결제를 쓸 수 있는지 + 상품 정보를 미리 받아둔다.
+  // 클릭 시점에 조회하면 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다. (playBilling.ts 참고)
+  const playProduct = usePlayProduct(TEMPERAMENT_SKU);
   const [playLoading, setPlayLoading] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
   // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
@@ -160,7 +160,7 @@ export default function ResultPage() {
   // 판별 전(null)에 노출하면 앱에서 결제 버튼이 한 프레임 스쳐 보일 수 있다.
   const canPurchase =
     isAndroidApp === false ||
-    (isAndroidApp === true && playBillingAvailable === true);
+    (isAndroidApp === true && playProduct.status === 'ready');
 
   // Android(TWA)에서 Play 결제를 진행한다.
   // 웹과 달리 페이지 이동 없이 Play 결제 시트가 뜨고, 승인 후 바로 리포트가 열린다.
@@ -169,7 +169,11 @@ export default function ResultPage() {
     setPlayLoading(true);
     setPlayError(null);
     try {
-      const purchaseToken = await purchaseWithPlay(TEMPERAMENT_SKU);
+      if (playProduct.status !== 'ready') return;
+      const purchaseToken = await purchaseWithPlay(
+        TEMPERAMENT_SKU,
+        playProduct.item,
+      );
       // 사용자가 결제 시트를 닫은 경우 — 에러가 아니다.
       if (!purchaseToken) return;
 
@@ -178,6 +182,7 @@ export default function ResultPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: TEMPERAMENT_SKU,
+          purchaseToken,
           productType: 'TEMPERAMENT_REPORT',
           productMeta: { submissionId },
         }),
@@ -204,7 +209,7 @@ export default function ResultPage() {
 
     if (isAndroidApp) {
       // Play 결제를 쓸 수 없는 빌드에서는 버튼 자체가 안 뜨지만, 방어적으로 한 번 더 막는다.
-      if (!playBillingAvailable) return;
+      if (playProduct.status !== 'ready') return;
       void handlePlayUnlock();
       return;
     }
