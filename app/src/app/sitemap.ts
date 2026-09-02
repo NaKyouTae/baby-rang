@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAllRegionPaths } from "@/lib/nursingRoomRegions";
 
 const BASE_URL = "https://baby-rang.spectrify.kr";
 
@@ -11,8 +12,11 @@ const BASE_URL = "https://baby-rang.spectrify.kr";
  * - /payment/*      : 결제 플로우 (직접 접근 X)
  * - 동적 라우트     : [submissionId] 등 개인화 결과
  * - /tests/[testId]/test, /tests/[testId]/result : 제출/결과 흐름
+ *
+ * 수유실 지역 페이지(/nursing-room/[sido], /nursing-room/[sido]/[sigungu])는
+ * 전국 수유실 데이터에서 자동 생성되므로 여기서도 동적으로 채운다.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const routes: Array<{
@@ -34,10 +38,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/refund", changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  return routes.map(({ path, changeFrequency, priority }) => ({
-    url: `${BASE_URL}${path}`,
+  const staticEntries: MetadataRoute.Sitemap = routes.map(
+    ({ path, changeFrequency, priority }) => ({
+      url: `${BASE_URL}${path}`,
+      lastModified: now,
+      changeFrequency,
+      priority,
+    }),
+  );
+
+  const { sidos, pairs } = await getAllRegionPaths();
+
+  const sidoEntries: MetadataRoute.Sitemap = sidos.map((sido) => ({
+    url: `${BASE_URL}/nursing-room/${encodeURIComponent(sido)}`,
     lastModified: now,
-    changeFrequency,
-    priority,
+    changeFrequency: "monthly",
+    priority: 0.7,
   }));
+
+  const sigunguEntries: MetadataRoute.Sitemap = pairs.map(({ sido, sigungu }) => ({
+    url: `${BASE_URL}/nursing-room/${encodeURIComponent(sido)}/${encodeURIComponent(sigungu)}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticEntries, ...sidoEntries, ...sigunguEntries];
 }
