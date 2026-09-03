@@ -9,7 +9,12 @@
  * fetch 단계에서 하루 단위로 캐시한 뒤 메모리에서 그룹핑한다.
  */
 
+import { cache } from "react";
+
 const SOOYUSIL_ENDPOINT = "https://sooyusil.com/api/nursingRoomJSON.do";
+
+/** 원본 응답이 약 1.3MB 라 지연이 길어질 수 있어 상한을 둔다. */
+const UPSTREAM_TIMEOUT_MS = 8000;
 
 /** 하루 1회 갱신. 수유실 정보는 거의 바뀌지 않는다. */
 export const REGION_REVALIDATE_SECONDS = 86400;
@@ -102,7 +107,7 @@ export function sidoFullName(slug: string): string {
  * API 키가 없거나(로컬/프리뷰 빌드) 외부 API 가 실패하면 빈 배열을 돌려주고,
  * 호출부는 notFound() 로 처리한다. 빌드 자체를 깨뜨리지 않는다.
  */
-export async function fetchAllNursingRooms(): Promise<NursingRoom[]> {
+export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
   const apiKey = process.env.SOOYUSIL_API_KEY;
   if (!apiKey) {
     console.warn("[nursingRoomRegions] SOOYUSIL_API_KEY 미설정 — 지역 페이지를 건너뜁니다.");
@@ -110,8 +115,11 @@ export async function fetchAllNursingRooms(): Promise<NursingRoom[]> {
   }
 
   try {
+    // 업스트림이 느릴 때 함수 타임아웃(→ 500)으로 번지지 않도록 직접 끊는다.
+    // 여기서 끊기면 빈 배열이 되고, 호출부는 notFound() 로 404 를 준다.
     const res = await fetch(`${SOOYUSIL_ENDPOINT}?confirmApiKey=${apiKey}`, {
       next: { revalidate: REGION_REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     if (!res.ok) {
       console.error(`[nursingRoomRegions] upstream ${res.status}`);
@@ -151,7 +159,7 @@ export async function fetchAllNursingRooms(): Promise<NursingRoom[]> {
     console.error("[nursingRoomRegions] fetch 실패", e);
     return [];
   }
-}
+});
 
 /** 시도별 요약 — 지역 인덱스와 sitemap 에서 사용. */
 export async function getSidoSummaries(): Promise<SidoSummary[]> {

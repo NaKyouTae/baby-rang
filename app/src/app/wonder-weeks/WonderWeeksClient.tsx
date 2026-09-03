@@ -39,7 +39,7 @@ function WonderWeeksContent() {
   return (
     <div className="flex flex-col bg-white">
       <PageHeader title="원더윅스" variant="back" />
-      <div className="flex flex-col px-6 pb-[calc(var(--bottom-nav-space)+80px)]">
+      <div className="flex flex-col px-6 pb-8">
         <div ref={topRef} />
         <div className="pt-6 pb-6">
           {noChild ? (
