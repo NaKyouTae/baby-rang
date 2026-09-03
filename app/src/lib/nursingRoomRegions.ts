@@ -13,9 +13,6 @@ import { cache } from "react";
 
 const SOOYUSIL_ENDPOINT = "https://sooyusil.com/api/nursingRoomJSON.do";
 
-/** 원본 응답이 약 1.3MB 라 지연이 길어질 수 있어 상한을 둔다. */
-const UPSTREAM_TIMEOUT_MS = 8000;
-
 /** 하루 1회 갱신. 수유실 정보는 거의 바뀌지 않는다. */
 export const REGION_REVALIDATE_SECONDS = 86400;
 
@@ -115,11 +112,10 @@ export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
   }
 
   try {
-    // 업스트림이 느릴 때 함수 타임아웃(→ 500)으로 번지지 않도록 직접 끊는다.
-    // 여기서 끊기면 빈 배열이 되고, 호출부는 notFound() 로 404 를 준다.
+    // 옵션은 이미 프로덕션에서 정상 동작하는 /api/nursing-rooms/public 과 동일하게 맞춘다.
+    // (Next.js 가 캐시용으로 감싼 fetch 에 signal 을 넘기면 런타임에 따라 예외가 난다)
     const res = await fetch(`${SOOYUSIL_ENDPOINT}?confirmApiKey=${apiKey}`, {
       next: { revalidate: REGION_REVALIDATE_SECONDS },
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     if (!res.ok) {
       console.error(`[nursingRoomRegions] upstream ${res.status}`);
@@ -290,6 +286,9 @@ export function normalizeTel(raw?: string): { display: string; href: string } | 
 export function sortRooms(rooms: NursingRoom[]): NursingRoom[] {
   return [...rooms].sort((a, b) => {
     if (a.dadAvailable !== b.dadAvailable) return a.dadAvailable ? -1 : 1;
-    return a.name.localeCompare(b.name, "ko");
+    // localeCompare 는 런타임 ICU 구성에 따라 동작이 달라진다.
+    // 한글 음절은 유니코드 순서가 곧 가나다 순이라 코드포인트 비교로 충분하다.
+    if (a.name === b.name) return 0;
+    return a.name < b.name ? -1 : 1;
   });
 }
