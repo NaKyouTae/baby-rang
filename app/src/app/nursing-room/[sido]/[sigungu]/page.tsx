@@ -21,13 +21,9 @@ const SIBLING_LIMIT = 8;
 /** JSON-LD 에 담을 최대 항목 수 — 정상 동작하는 시도 페이지와 동일하게 맞춘다. */
 const JSONLD_LIMIT = 20;
 
-// 이 라우트는 빌드 시 생성한 HTML 만 서빙한다.
-//
-// 요청 시 재생성(ISR)을 허용하면 Vercel 런타임에서만 렌더가 실패해 500 이 났다.
-// 수유실 데이터는 거의 바뀌지 않아 배포 시점 갱신으로 충분하므로,
-// 재생성을 끄고 generateStaticParams 에 없는 지역은 곧바로 404 로 보낸다.
-export const revalidate = false;
-export const dynamicParams = false;
+// URL 슬러그는 로마자다. 한글 경로를 쓰면 Vercel 이 프리렌더 페이지를 매칭하지
+// 못해 404/500 이 났다 (ASCII 경로는 정상). 검색 키워드는 제목·본문이 담당한다.
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const { pairs } = await getAllRegionPaths();
@@ -39,16 +35,14 @@ export async function generateMetadata({
 }: {
   params: Promise<{ sido: string; sigungu: string }>;
 }): Promise<Metadata> {
-  const raw = await params;
-  const sido = decodeURIComponent(raw.sido);
-  const sigungu = decodeURIComponent(raw.sigungu);
-  const data = await getSigunguPageData(sido, sigungu);
+  const { sido: sidoSlug, sigungu: sigunguSlug } = await params;
+  const data = await getSigunguPageData(sidoSlug, sigunguSlug);
   if (!data) return {};
-  const rooms = data.rooms;
+  const { rooms, sidoName: sido, sigunguName: sigungu } = data;
 
   const title = `${sido} ${sigungu} 수유실 ${rooms.length}곳 - 위치·편의시설 정보`;
   const description = `${sidoFullName(sido)} ${sigungu}의 수유실 ${rooms.length}곳을 정리했습니다. 주소, 건물 내 상세 위치, 아빠 이용 가능 여부, 전화번호를 확인하세요.`;
-  const path = `/nursing-room/${encodeURIComponent(sido)}/${encodeURIComponent(sigungu)}`;
+  const path = `/nursing-room/${sidoSlug}/${sigunguSlug}`;
 
   return {
     title,
@@ -63,13 +57,11 @@ export default async function SigunguPage({
 }: {
   params: Promise<{ sido: string; sigungu: string }>;
 }) {
-  const raw = await params;
-  const sido = decodeURIComponent(raw.sido);
-  const sigungu = decodeURIComponent(raw.sigungu);
+  const { sido: sidoSlug, sigungu: sigunguSlug } = await params;
 
-  const data = await getSigunguPageData(sido, sigungu);
+  const data = await getSigunguPageData(sidoSlug, sigunguSlug);
   if (!data) notFound();
-  const { rooms } = data;
+  const { rooms, sidoName: sido, sigunguName: sigungu } = data;
 
   const sorted = sortRooms(rooms);
   const fullName = sidoFullName(sido);
@@ -78,8 +70,8 @@ export default async function SigunguPage({
 
   const siblings = data.siblings.slice(0, SIBLING_LIMIT);
 
-  const basePath = `/nursing-room/${encodeURIComponent(sido)}`;
-  const selfPath = `${basePath}/${encodeURIComponent(sigungu)}`;
+  const basePath = `/nursing-room/${sidoSlug}`;
+  const selfPath = `${basePath}/${sigunguSlug}`;
 
   const jsonLd = [
     {
@@ -215,7 +207,7 @@ export default async function SigunguPage({
               {siblings.map((s) => (
                 <li key={s.sigungu}>
                   <Link
-                    href={`${basePath}/${encodeURIComponent(s.sigungu)}`}
+                    href={`${basePath}/${s.slug}`}
                     className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[13px] text-app-black"
                   >
                     {s.sigungu}

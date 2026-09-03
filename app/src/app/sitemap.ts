@@ -50,14 +50,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { sidos, pairs } = await getAllRegionPaths();
 
   const sidoEntries: MetadataRoute.Sitemap = sidos.map((sido) => ({
-    url: `${BASE_URL}/nursing-room/${encodeURIComponent(sido)}`,
+    url: `${BASE_URL}/nursing-room/${sido}`,
     lastModified: now,
     changeFrequency: "monthly",
     priority: 0.7,
   }));
 
   const sigunguEntries: MetadataRoute.Sitemap = pairs.map(({ sido, sigungu }) => ({
-    url: `${BASE_URL}/nursing-room/${encodeURIComponent(sido)}/${encodeURIComponent(sigungu)}`,
+    url: `${BASE_URL}/nursing-room/${sido}/${sigungu}`,
     lastModified: now,
     changeFrequency: "monthly",
     priority: 0.6,

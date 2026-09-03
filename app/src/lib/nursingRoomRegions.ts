@@ -10,6 +10,7 @@
  */
 
 import { cache } from "react";
+import { romanize } from "./romanize";
 
 const SOOYUSIL_ENDPOINT = "https://sooyusil.com/api/nursingRoomJSON.do";
 
@@ -31,8 +32,12 @@ interface RawRoom {
 export interface NursingRoom {
   id: string;
   name: string;
+  /** 표시용 한글 지역명 */
   sido: string;
   sigungu: string;
+  /** URL 슬러그(로마자). 한글 경로는 Vercel 이 프리렌더 페이지를 매칭하지 못했다. */
+  sidoSlug: string;
+  sigunguSlug: string;
   town: string;
   type: string;
   tel?: string;
@@ -45,12 +50,14 @@ export interface NursingRoom {
 
 export interface SigunguSummary {
   sigungu: string;
+  slug: string;
   count: number;
   dadAvailableCount: number;
 }
 
 export interface SidoSummary {
   sido: string;
+  slug: string;
   count: number;
   sigunguCount: number;
 }
@@ -59,14 +66,14 @@ export interface SidoSummary {
  * API 가 내려주는 시도명을 URL 슬러그이자 검색 키워드로 쓸 짧은 이름으로 정규화한다.
  * "강원특별자치도 수유실" 보다 "강원 수유실" 로 검색하는 사람이 압도적으로 많다.
  */
-const SIDO_SLUG: Record<string, string> = {
+const SIDO_SHORT_NAME: Record<string, string> = {
   강원특별자치도: "강원",
   전북특별자치도: "전북",
   제주특별자치도: "제주",
   세종특별자치시: "세종",
 };
 
-/** 슬러그 → 본문에 노출할 정식 명칭. */
+/** 짧은 이름 → 본문에 노출할 정식 명칭. */
 const SIDO_FULL_NAME: Record<string, string> = {
   서울: "서울특별시",
   부산: "부산광역시",
@@ -87,9 +94,9 @@ const SIDO_FULL_NAME: Record<string, string> = {
   제주: "제주특별자치도",
 };
 
-export function toSidoSlug(zoneName: string): string {
+export function toSidoName(zoneName: string): string {
   const name = zoneName.trim();
-  return SIDO_SLUG[name] ?? name;
+  return SIDO_SHORT_NAME[name] ?? name;
 }
 
 export function sidoFullName(slug: string): string {
@@ -111,12 +118,8 @@ export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
   try {
     // 옵션은 이미 프로덕션에서 정상 동작하는 /api/nursing-rooms/public 과 동일하게 맞춘다.
     // (Next.js 가 캐시용으로 감싼 fetch 에 signal 을 넘기면 런타임에 따라 예외가 난다)
-    // force-cache: 빌드 시점 데이터를 그대로 굳힌다.
-    // revalidate 를 두면 지역 페이지가 하루 단위로 요청 시 재생성되는데,
-    // 그 경로가 Vercel 런타임에서 500 을 냈다. 수유실 정보는 거의 바뀌지 않으므로
-    // 배포할 때 갱신되는 것으로 충분하다.
     const res = await fetch(`${SOOYUSIL_ENDPOINT}?confirmApiKey=${apiKey}`, {
-      cache: "force-cache",
+      next: { revalidate: 86400 },
     });
     if (!res.ok) {
       console.error(`[nursingRoomRegions] upstream ${res.status}`);
@@ -136,11 +139,14 @@ export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
         const lat = Number(r.gpsLat);
         const lng = Number(r.gpsLong);
 
+        const sidoName = toSidoName(zone);
         return {
           id: r.roomNo || `${zone}-${city}-${i}`,
           name,
-          sido: toSidoSlug(zone),
+          sido: sidoName,
           sigungu: city,
+          sidoSlug: romanize(sidoName),
+          sigunguSlug: romanize(city),
           town: r.townName?.trim() ?? "",
           type: r.roomTypeName?.trim() || "수유실",
           tel: r.managerTelNo?.trim() || undefined,
@@ -161,59 +167,57 @@ export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
 /** 시도별 요약 — 지역 인덱스와 sitemap 에서 사용. */
 export async function getSidoSummaries(): Promise<SidoSummary[]> {
   const rooms = await fetchAllNursingRooms();
-  const bySido = new Map<string, Set<string>>();
-  const counts = new Map<string, number>();
+  const acc = new Map<string, { sido: string; count: number; sigungus: Set<string> }>();
 
   for (const room of rooms) {
-    counts.set(room.sido, (counts.get(room.sido) ?? 0) + 1);
-    if (!bySido.has(room.sido)) bySido.set(room.sido, new Set());
-    bySido.get(room.sido)!.add(room.sigungu);
+    const cur = acc.get(room.sidoSlug) ?? {
+      sido: room.sido,
+      count: 0,
+      sigungus: new Set<string>(),
+    };
+    cur.count += 1;
+    cur.sigungus.add(room.sigungu);
+    acc.set(room.sidoSlug, cur);
   }
 
-  return [...counts.entries()]
-    .map(([sido, count]) => ({
-      sido,
-      count,
-      sigunguCount: bySido.get(sido)?.size ?? 0,
+  return [...acc.entries()]
+    .map(([slug, v]) => ({
+      sido: v.sido,
+      slug,
+      count: v.count,
+      sigunguCount: v.sigungus.size,
     }))
     .sort((a, b) => b.count - a.count);
 }
 
 /** 특정 시도의 수유실 + 시군구 요약. 데이터가 없으면 null. */
-export async function getSidoDetail(sido: string): Promise<{
+export async function getSidoDetail(sidoSlug: string): Promise<{
+  sidoName: string;
   rooms: NursingRoom[];
   sigungus: SigunguSummary[];
 } | null> {
   const all = await fetchAllNursingRooms();
-  const rooms = all.filter((r) => r.sido === sido);
+  const rooms = all.filter((r) => r.sidoSlug === sidoSlug);
   if (rooms.length === 0) return null;
 
   const map = new Map<string, SigunguSummary>();
   for (const room of rooms) {
-    const cur = map.get(room.sigungu) ?? {
+    const cur = map.get(room.sigunguSlug) ?? {
       sigungu: room.sigungu,
+      slug: room.sigunguSlug,
       count: 0,
       dadAvailableCount: 0,
     };
     cur.count += 1;
     if (room.dadAvailable) cur.dadAvailableCount += 1;
-    map.set(room.sigungu, cur);
+    map.set(room.sigunguSlug, cur);
   }
 
   return {
+    sidoName: rooms[0].sido,
     rooms,
     sigungus: [...map.values()].sort((a, b) => b.count - a.count),
   };
-}
-
-/** 특정 시군구의 수유실. 없으면 null. */
-export async function getSigunguRooms(
-  sido: string,
-  sigungu: string,
-): Promise<NursingRoom[] | null> {
-  const all = await fetchAllNursingRooms();
-  const rooms = all.filter((r) => r.sido === sido && r.sigungu === sigungu);
-  return rooms.length > 0 ? rooms : null;
 }
 
 /**
@@ -223,33 +227,41 @@ export async function getSigunguRooms(
  * 훑었다. 정상 동작하는 시도 페이지와 구조를 맞추기 위해 한 번만 훑는다.
  */
 export async function getSigunguPageData(
-  sido: string,
-  sigungu: string,
-): Promise<{ rooms: NursingRoom[]; siblings: SigunguSummary[] } | null> {
+  sidoSlug: string,
+  sigunguSlug: string,
+): Promise<{
+  sidoName: string;
+  sigunguName: string;
+  rooms: NursingRoom[];
+  siblings: SigunguSummary[];
+} | null> {
   const all = await fetchAllNursingRooms();
 
   const rooms: NursingRoom[] = [];
   const siblingMap = new Map<string, SigunguSummary>();
 
   for (const room of all) {
-    if (room.sido !== sido) continue;
-    if (room.sigungu === sigungu) {
+    if (room.sidoSlug !== sidoSlug) continue;
+    if (room.sigunguSlug === sigunguSlug) {
       rooms.push(room);
       continue;
     }
-    const cur = siblingMap.get(room.sigungu) ?? {
+    const cur = siblingMap.get(room.sigunguSlug) ?? {
       sigungu: room.sigungu,
+      slug: room.sigunguSlug,
       count: 0,
       dadAvailableCount: 0,
     };
     cur.count += 1;
     if (room.dadAvailable) cur.dadAvailableCount += 1;
-    siblingMap.set(room.sigungu, cur);
+    siblingMap.set(room.sigunguSlug, cur);
   }
 
   if (rooms.length === 0) return null;
 
   return {
+    sidoName: rooms[0].sido,
+    sigunguName: rooms[0].sigungu,
     rooms,
     siblings: [...siblingMap.values()].sort((a, b) => b.count - a.count),
   };
@@ -265,10 +277,10 @@ export async function getAllRegionPaths(): Promise<{
   const pairs = new Map<string, { sido: string; sigungu: string }>();
 
   for (const room of rooms) {
-    sidos.add(room.sido);
-    pairs.set(`${room.sido}/${room.sigungu}`, {
-      sido: room.sido,
-      sigungu: room.sigungu,
+    sidos.add(room.sidoSlug);
+    pairs.set(`${room.sidoSlug}/${room.sigunguSlug}`, {
+      sido: room.sidoSlug,
+      sigungu: room.sigunguSlug,
     });
   }
 

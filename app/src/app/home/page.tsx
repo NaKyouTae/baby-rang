@@ -5,6 +5,8 @@ import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
 import { palette } from "@/lib/colors";
 import HomeHeaderActions from "@/components/HomeHeaderActions";
 import InitialScreenRedirect from "@/components/InitialScreenRedirect";
+import HomeRegionLinks from "@/components/HomeRegionLinks";
+import AppStoreCta from "@/components/AppStoreCta";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -101,6 +103,14 @@ export default function HomePage() {
 
           <div>
             <NearbyNursingRoomsStrip />
+          </div>
+
+          <div>
+            <HomeRegionLinks />
+          </div>
+
+          <div>
+            <AppStoreCta />
           </div>
         </div>
       </main>

@@ -18,13 +18,9 @@ const SITE_URL = "https://baby-rang.spectrify.kr";
 /** 시도 페이지에 노출할 대표 수유실 수 — 나머지는 시군구 페이지에서 본다. */
 const PREVIEW_LIMIT = 20;
 
-// 이 라우트는 빌드 시 생성한 HTML 만 서빙한다.
-//
-// 요청 시 재생성(ISR)을 허용하면 Vercel 런타임에서만 렌더가 실패해 500 이 났다.
-// 수유실 데이터는 거의 바뀌지 않아 배포 시점 갱신으로 충분하므로,
-// 재생성을 끄고 generateStaticParams 에 없는 지역은 곧바로 404 로 보낸다.
-export const revalidate = false;
-export const dynamicParams = false;
+// URL 슬러그는 로마자다. 한글 경로를 쓰면 Vercel 이 프리렌더 페이지를 매칭하지
+// 못해 404/500 이 났다 (ASCII 경로는 정상). 검색 키워드는 제목·본문이 담당한다.
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   const { sidos } = await getAllRegionPaths();
@@ -36,21 +32,21 @@ export async function generateMetadata({
 }: {
   params: Promise<{ sido: string }>;
 }): Promise<Metadata> {
-  const { sido: rawSido } = await params;
-  const sido = decodeURIComponent(rawSido);
-  const detail = await getSidoDetail(sido);
+  const { sido: slug } = await params;
+  const detail = await getSidoDetail(slug);
   if (!detail) return {};
 
+  const sido = detail.sidoName;
   const fullName = sidoFullName(sido);
   const title = `${sido} 수유실 ${detail.rooms.length}곳 - 위치·편의시설 정보`;
   const description = `${fullName}의 수유실 ${detail.rooms.length}곳을 시군구별로 정리했습니다. 주소, 건물 내 상세 위치, 아빠 이용 가능 여부, 운영 정보를 한눈에 확인하세요.`;
-  const url = `${SITE_URL}/nursing-room/${encodeURIComponent(sido)}`;
+  const path = `/nursing-room/${slug}`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/nursing-room/${encodeURIComponent(sido)}` },
-    openGraph: { title: `${title} | 아기랑`, description, url },
+    alternates: { canonical: path },
+    openGraph: { title: `${title} | 아기랑`, description, url: `${SITE_URL}${path}` },
   };
 }
 
@@ -59,12 +55,12 @@ export default async function SidoPage({
 }: {
   params: Promise<{ sido: string }>;
 }) {
-  const { sido: rawSido } = await params;
-  const sido = decodeURIComponent(rawSido);
-  const detail = await getSidoDetail(sido);
+  const { sido: slug } = await params;
+  const detail = await getSidoDetail(slug);
   if (!detail) notFound();
 
-  const { rooms, sigungus } = detail;
+  const { rooms, sigungus, sidoName: sido } = detail;
+  const basePath = `/nursing-room/${slug}`;
   const fullName = sidoFullName(sido);
   const dadCount = rooms.filter((r) => r.dadAvailable).length;
   const familyCount = rooms.filter((r) => r.type.includes("가족")).length;
@@ -85,7 +81,7 @@ export default async function SidoPage({
           "@type": "ListItem",
           position: 2,
           name: `${sido} 수유실`,
-          item: `${SITE_URL}/nursing-room/${encodeURIComponent(sido)}`,
+          item: `${SITE_URL}${basePath}`,
         },
       ],
     },
@@ -181,7 +177,7 @@ export default async function SidoPage({
             {sigungus.map((s) => (
               <li key={s.sigungu}>
                 <Link
-                  href={`/nursing-room/${encodeURIComponent(sido)}/${encodeURIComponent(s.sigungu)}`}
+                  href={`${basePath}/${s.slug}`}
                   className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2.5"
                 >
                   <span className="text-[14px] font-medium text-app-black">

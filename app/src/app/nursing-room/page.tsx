@@ -67,7 +67,7 @@ export default async function NursingRoomPage() {
             <ul>
               {sidos.map((s) => (
                 <li key={s.sido}>
-                  <Link href={`/nursing-room/${encodeURIComponent(s.sido)}`}>
+                  <Link href={`/nursing-room/${s.slug}`}>
                     {s.sido} 수유실 {s.count}곳
                   </Link>
                 </li>
