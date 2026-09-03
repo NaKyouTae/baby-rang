@@ -50,7 +50,7 @@ export default async function NursingRoomPage() {
           각 수유실의 위치, 편의시설, 운영시간 정보를 제공하며, 새로운 수유실을
           직접 제보할 수도 있습니다.
           {totalRooms > 0
-            ? ` 전국 ${totalRooms.toLocaleString('ko-KR')}곳의 수유실 정보를 지역별로 정리해 두었습니다.`
+            ? ` 전국 ${totalRooms.toLocaleString()}곳의 수유실 정보를 지역별로 정리해 두었습니다.`
             : ''}
         </p>
         <h2>주요 기능</h2>
