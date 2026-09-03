@@ -3,8 +3,8 @@ import Link from 'next/link';
 import NursingRoomClient from './NursingRoomClient';
 import { getSidoSummaries } from '@/lib/nursingRoomRegions';
 
-// 세그먼트 설정은 정적 분석 대상이라 리터럴이어야 한다 (= REGION_REVALIDATE_SECONDS)
-export const revalidate = 86400;
+// 지역 데이터는 배포 시점에 굳는다(nursingRoomRegions 의 force-cache 와 한 쌍).
+export const revalidate = false;
 
 export const metadata: Metadata = {
   title: '수유실 찾기',

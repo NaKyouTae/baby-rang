@@ -13,9 +13,6 @@ import { cache } from "react";
 
 const SOOYUSIL_ENDPOINT = "https://sooyusil.com/api/nursingRoomJSON.do";
 
-/** 하루 1회 갱신. 수유실 정보는 거의 바뀌지 않는다. */
-export const REGION_REVALIDATE_SECONDS = 86400;
-
 interface RawRoom {
   roomNo?: string;
   roomName?: string;
@@ -114,8 +111,12 @@ export const fetchAllNursingRooms = cache(async (): Promise<NursingRoom[]> => {
   try {
     // 옵션은 이미 프로덕션에서 정상 동작하는 /api/nursing-rooms/public 과 동일하게 맞춘다.
     // (Next.js 가 캐시용으로 감싼 fetch 에 signal 을 넘기면 런타임에 따라 예외가 난다)
+    // force-cache: 빌드 시점 데이터를 그대로 굳힌다.
+    // revalidate 를 두면 지역 페이지가 하루 단위로 요청 시 재생성되는데,
+    // 그 경로가 Vercel 런타임에서 500 을 냈다. 수유실 정보는 거의 바뀌지 않으므로
+    // 배포할 때 갱신되는 것으로 충분하다.
     const res = await fetch(`${SOOYUSIL_ENDPOINT}?confirmApiKey=${apiKey}`, {
-      next: { revalidate: REGION_REVALIDATE_SECONDS },
+      cache: "force-cache",
     });
     if (!res.ok) {
       console.error(`[nursingRoomRegions] upstream ${res.status}`);
@@ -213,6 +214,45 @@ export async function getSigunguRooms(
   const all = await fetchAllNursingRooms();
   const rooms = all.filter((r) => r.sido === sido && r.sigungu === sigungu);
   return rooms.length > 0 ? rooms : null;
+}
+
+/**
+ * 시군구 페이지가 필요한 것을 한 번의 조회로 모두 만든다.
+ *
+ * 이전에는 getSigunguRooms + getSidoDetail 을 각각 호출해 같은 원본을 두 번
+ * 훑었다. 정상 동작하는 시도 페이지와 구조를 맞추기 위해 한 번만 훑는다.
+ */
+export async function getSigunguPageData(
+  sido: string,
+  sigungu: string,
+): Promise<{ rooms: NursingRoom[]; siblings: SigunguSummary[] } | null> {
+  const all = await fetchAllNursingRooms();
+
+  const rooms: NursingRoom[] = [];
+  const siblingMap = new Map<string, SigunguSummary>();
+
+  for (const room of all) {
+    if (room.sido !== sido) continue;
+    if (room.sigungu === sigungu) {
+      rooms.push(room);
+      continue;
+    }
+    const cur = siblingMap.get(room.sigungu) ?? {
+      sigungu: room.sigungu,
+      count: 0,
+      dadAvailableCount: 0,
+    };
+    cur.count += 1;
+    if (room.dadAvailable) cur.dadAvailableCount += 1;
+    siblingMap.set(room.sigungu, cur);
+  }
+
+  if (rooms.length === 0) return null;
+
+  return {
+    rooms,
+    siblings: [...siblingMap.values()].sort((a, b) => b.count - a.count),
+  };
 }
 
 /** generateStaticParams / sitemap 이 함께 쓰는 전체 지역 목록. */

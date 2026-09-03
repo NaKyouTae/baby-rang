@@ -18,8 +18,13 @@ const SITE_URL = "https://baby-rang.spectrify.kr";
 /** 시도 페이지에 노출할 대표 수유실 수 — 나머지는 시군구 페이지에서 본다. */
 const PREVIEW_LIMIT = 20;
 
-// 세그먼트 설정은 정적 분석 대상이라 리터럴이어야 한다 (= REGION_REVALIDATE_SECONDS)
-export const revalidate = 86400;
+// 이 라우트는 빌드 시 생성한 HTML 만 서빙한다.
+//
+// 요청 시 재생성(ISR)을 허용하면 Vercel 런타임에서만 렌더가 실패해 500 이 났다.
+// 수유실 데이터는 거의 바뀌지 않아 배포 시점 갱신으로 충분하므로,
+// 재생성을 끄고 generateStaticParams 에 없는 지역은 곧바로 404 로 보낸다.
+export const revalidate = false;
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const { sidos } = await getAllRegionPaths();

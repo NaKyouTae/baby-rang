@@ -3,8 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getAllRegionPaths,
-  getSidoDetail,
-  getSigunguRooms,
+  getSigunguPageData,
   sidoFullName,
   sortRooms,
 } from "@/lib/nursingRoomRegions";
@@ -19,8 +18,16 @@ const SITE_URL = "https://baby-rang.spectrify.kr";
 /** 하단에 노출할 같은 시도 내 다른 시군구 링크 수. */
 const SIBLING_LIMIT = 8;
 
-// 세그먼트 설정은 정적 분석 대상이라 리터럴이어야 한다 (= REGION_REVALIDATE_SECONDS)
-export const revalidate = 86400;
+/** JSON-LD 에 담을 최대 항목 수 — 정상 동작하는 시도 페이지와 동일하게 맞춘다. */
+const JSONLD_LIMIT = 20;
+
+// 이 라우트는 빌드 시 생성한 HTML 만 서빙한다.
+//
+// 요청 시 재생성(ISR)을 허용하면 Vercel 런타임에서만 렌더가 실패해 500 이 났다.
+// 수유실 데이터는 거의 바뀌지 않아 배포 시점 갱신으로 충분하므로,
+// 재생성을 끄고 generateStaticParams 에 없는 지역은 곧바로 404 로 보낸다.
+export const revalidate = false;
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
   const { pairs } = await getAllRegionPaths();
@@ -35,8 +42,9 @@ export async function generateMetadata({
   const raw = await params;
   const sido = decodeURIComponent(raw.sido);
   const sigungu = decodeURIComponent(raw.sigungu);
-  const rooms = await getSigunguRooms(sido, sigungu);
-  if (!rooms) return {};
+  const data = await getSigunguPageData(sido, sigungu);
+  if (!data) return {};
+  const rooms = data.rooms;
 
   const title = `${sido} ${sigungu} 수유실 ${rooms.length}곳 - 위치·편의시설 정보`;
   const description = `${sidoFullName(sido)} ${sigungu}의 수유실 ${rooms.length}곳을 정리했습니다. 주소, 건물 내 상세 위치, 아빠 이용 가능 여부, 전화번호를 확인하세요.`;
@@ -59,18 +67,16 @@ export default async function SigunguPage({
   const sido = decodeURIComponent(raw.sido);
   const sigungu = decodeURIComponent(raw.sigungu);
 
-  const rooms = await getSigunguRooms(sido, sigungu);
-  if (!rooms) notFound();
+  const data = await getSigunguPageData(sido, sigungu);
+  if (!data) notFound();
+  const { rooms } = data;
 
   const sorted = sortRooms(rooms);
   const fullName = sidoFullName(sido);
   const dadCount = rooms.filter((r) => r.dadAvailable).length;
   const towns = [...new Set(rooms.map((r) => r.town).filter(Boolean))];
 
-  const detail = await getSidoDetail(sido);
-  const siblings = (detail?.sigungus ?? [])
-    .filter((s) => s.sigungu !== sigungu)
-    .slice(0, SIBLING_LIMIT);
+  const siblings = data.siblings.slice(0, SIBLING_LIMIT);
 
   const basePath = `/nursing-room/${encodeURIComponent(sido)}`;
   const selfPath = `${basePath}/${encodeURIComponent(sigungu)}`;
@@ -105,7 +111,7 @@ export default async function SigunguPage({
       "@type": "ItemList",
       name: `${fullName} ${sigungu} 수유실 목록`,
       numberOfItems: sorted.length,
-      itemListElement: sorted.map((room, i) => ({
+      itemListElement: sorted.slice(0, JSONLD_LIMIT).map((room, i) => ({
         "@type": "ListItem",
         position: i + 1,
         item: {
