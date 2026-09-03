@@ -151,7 +151,15 @@ export default function RootLayout({
         name: "아기랑은 어디서 사용할 수 있나요?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용할 수 있습니다. 홈 화면에 추가하면 앱처럼 사용 가능하며, 추후 iOS/Android 네이티브 앱으로도 출시 예정입니다.",
+          text: "iOS 는 App Store 에서 '아기랑' 을 검색해 설치할 수 있습니다. 안드로이드 앱은 출시를 준비 중이며, 그전까지는 https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용하거나 홈 화면에 추가해 앱처럼 쓸 수 있습니다.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "아기랑 앱은 어디서 다운로드하나요?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "iOS 는 App Store 에서 내려받을 수 있습니다. (https://apps.apple.com/kr/app/id6761984903) 안드로이드 앱은 현재 출시 준비 중입니다.",
         },
       },
       {
@@ -205,6 +213,8 @@ export default function RootLayout({
     applicationCategory: "ParentingApplication",
     description: SITE_DESCRIPTION,
     url: SITE_URL,
+    installUrl: "https://apps.apple.com/kr/app/id6761984903",
+    downloadUrl: "https://apps.apple.com/kr/app/id6761984903",
     inLanguage: "ko-KR",
     offers: {
       "@type": "Offer",

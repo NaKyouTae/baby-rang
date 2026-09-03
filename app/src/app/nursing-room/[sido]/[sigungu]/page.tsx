@@ -145,14 +145,29 @@ export default async function SigunguPage({
     },
   ];
 
+  // 화면 FAQ 와 동일한 내용을 FAQPage 스키마로도 노출한다.
+  // (AI 검색이 인용하기 가장 쉬운 형태)
+  const structuredData = [
+    ...jsonLd,
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faq.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      })),
+    },
+  ];
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <main className="px-4 pb-24 pt-6">
+      <main className="px-4 pt-6 pb-[calc(var(--bottom-nav-space)+32px)]">
         <nav aria-label="위치" className="mb-3 text-[12px] text-gray-500">
           <Link href="/nursing-room" className="underline">
             수유실 찾기
