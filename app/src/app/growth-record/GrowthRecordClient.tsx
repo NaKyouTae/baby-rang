@@ -423,6 +423,11 @@ export default function GrowthRecordPage() {
   const [busy, setBusy] = useState(false);
   const [showBusy, setShowBusy] = useState(false);
   const busyCountRef = useRef(0);
+  // 캐시된 리스트를 보여주는 동안 뒤에서 최신 데이터를 받아오는 중인지
+  // (초기 진입 · 앱 복귀 시의 조용한 갱신을 사용자에게 알리기 위함)
+  const [syncing, setSyncing] = useState(false);
+  const [showSync, setShowSync] = useState(false);
+  const syncCountRef = useRef(0);
   // 카테고리 버튼 연타로 같은 기록이 중복 생성되는 것 방지
   const creatingRef = useRef(false);
   const [sheetType, setSheetType] = useState<GrowthType | null>(null);
@@ -450,6 +455,15 @@ export default function GrowthRecordPage() {
     if (busyCountRef.current === 0) setBusy(false);
   }, []);
 
+  const beginSync = useCallback(() => {
+    syncCountRef.current += 1;
+    setSyncing(true);
+  }, []);
+  const endSync = useCallback(() => {
+    syncCountRef.current = Math.max(0, syncCountRef.current - 1);
+    if (syncCountRef.current === 0) setSyncing(false);
+  }, []);
+
   // 응답이 아주 빠를 때 오버레이가 깜빡이지 않도록 150ms 뒤에만 표시
   useEffect(() => {
     if (!busy) {
@@ -459,6 +473,16 @@ export default function GrowthRecordPage() {
     const t = setTimeout(() => setShowBusy(true), 150);
     return () => clearTimeout(t);
   }, [busy]);
+
+  // 갱신 인디케이터도 동일하게 아주 빠른 응답에서는 표시하지 않는다
+  useEffect(() => {
+    if (!syncing) {
+      setShowSync(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSync(true), 200);
+    return () => clearTimeout(t);
+  }, [syncing]);
 
   useEffect(() => {
     const el = titleBarRef.current;
@@ -611,17 +635,19 @@ export default function GrowthRecordPage() {
     };
     const init = async () => {
       setInitialLoading(true);
+      beginSync();
       try {
         await loadInitial();
       } finally {
         if (!cancelled) setInitialLoading(false);
+        endSync();
       }
     };
     init();
     return () => {
       cancelled = true;
     };
-  }, [selectedChild, fetchDay]);
+  }, [selectedChild, fetchDay, beginSync, endSync]);
 
   // 리프레시/갱신 — 기존 리스트를 유지한 채 새 데이터가 도착하면 교체한다.
   // (리스트를 비우지 않음) silent=true면 인디케이터 없이 조용히 갱신한다.
@@ -629,7 +655,8 @@ export default function GrowthRecordPage() {
     async (fromDate?: string, opts?: { silent?: boolean }) => {
       if (!selectedChild) return;
       const silent = opts?.silent ?? false;
-      if (!silent) beginBusy();
+      if (silent) beginSync();
+      else beginBusy();
       try {
         const start = fromDate ?? todayString();
         const from = shiftDate(start, -(PAGE_SIZE - 1));
@@ -660,10 +687,11 @@ export default function GrowthRecordPage() {
           setHasMore(!(!earliest || nextCursor < earliest));
         }
       } finally {
-        if (!silent) endBusy();
+        if (silent) endSync();
+        else endBusy();
       }
     },
-    [selectedChild, beginBusy, endBusy],
+    [selectedChild, beginBusy, endBusy, beginSync, endSync],
   );
 
   // 카테고리(기록 항목) 클릭 시 바텀시트 없이 기본값으로 기록 즉시 생성
@@ -907,6 +935,25 @@ export default function GrowthRecordPage() {
       >
         <PageHeader title="기록" variant="back" />
       </div>
+
+      {/* 백그라운드 갱신 인디케이터 — 캐시된 리스트를 보여주는 동안
+          최신 기록을 받아오는 중임을 알린다(레이아웃은 밀지 않음) */}
+      {showSync && !listLoading && !refreshing && (
+        <div
+          className="sticky z-20 flex items-start justify-center pointer-events-none"
+          style={{ top: titleBarH + 8, height: 0 }}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+            <span
+              aria-hidden="true"
+              className="inline-block w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin"
+            />
+            최신 기록 불러오는 중...
+          </div>
+        </div>
+      )}
 
       {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}
       <div
