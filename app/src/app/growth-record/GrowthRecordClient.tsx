@@ -1207,6 +1207,18 @@ export default function GrowthRecordPage() {
               if (stats.babyFoodCount > 0) {
                 pushBreakdown('babyFood', CATEGORY_STYLE.BABY_FOOD.border, formatBabyFoodAmount(stats));
               }
+              // 총 수유량에는 이유식도 합산한다. 이유식 g 은 ml 과 더할 수 없어 "250ml+30g" 처럼 뒤에 따로 붙인다.
+              const totalMl = stats.feedingMl + stats.babyFoodMl;
+              const totalParts: string[] = [];
+              if (
+                stats.bottleCount > 0 ||
+                stats.babyFoodMl > 0 ||
+                (stats.babyFoodCount > 0 && stats.babyFoodG === 0)
+              ) {
+                totalParts.push(`${totalMl}ml`);
+              }
+              if (stats.babyFoodG > 0) totalParts.push(`${stats.babyFoodG}g`);
+              const feedingTotal = totalParts.join('+');
               const isToday = group.date === today;
               const dDay = selectedChild?.birthDate
                 ? dayOfLife(selectedChild.birthDate, group.date)
@@ -1249,11 +1261,11 @@ export default function GrowthRecordPage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
                           <span className="text-[10px] font-medium text-gray-900">
-                            {stats.bottleCount > 0 ? `${stats.feedingMl}ml` : ''}
+                            {feedingTotal}
                             {feedingBreakdown.length > 0 ? <>({feedingBreakdown})</> : null}
                             {stats.breastMin > 0 ? (
                               <>
-                                {stats.bottleCount > 0 ? '+' : ''}
+                                {feedingTotal ? '+' : ''}
                                 <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
                               </>
                             ) : null}
