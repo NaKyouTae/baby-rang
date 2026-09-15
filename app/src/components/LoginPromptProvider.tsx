@@ -24,42 +24,44 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | undefined>(undefined);
-  const [testFormOpen, setTestFormOpen] = useState(false);
-  const [testUsername, setTestUsername] = useState('');
-  const [testPassword, setTestPassword] = useState('');
-  const [testLoading, setTestLoading] = useState(false);
-  const [testError, setTestError] = useState<string | null>(null);
+  // 애플 로그인 / 계정으로 로그인 미사용 (주석 처리)
+  // const [testFormOpen, setTestFormOpen] = useState(false);
+  // const [testUsername, setTestUsername] = useState('');
+  // const [testPassword, setTestPassword] = useState('');
+  // const [testLoading, setTestLoading] = useState(false);
+  // const [testError, setTestError] = useState<string | null>(null);
 
   const openLoginPrompt = useCallback((msg?: string) => {
     setMessage(msg);
     setOpen(true);
-    setTestFormOpen(false);
-    setTestError(null);
+    // setTestFormOpen(false);
+    // setTestError(null);
   }, []);
 
-  const handleTestLogin = useCallback(async () => {
-    if (testLoading) return;
-    setTestLoading(true);
-    setTestError(null);
-    try {
-      const res = await fetch('/api/auth/test-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: testUsername, password: testPassword }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.accessToken) {
-        setTestError('아이디 또는 비밀번호가 올바르지 않습니다.');
-        return;
-      }
-      // 쿠키는 session 라우트가 navigation 응답으로 설정 (WKWebView 영속화 대응)
-      window.location.href = `/api/auth/session?token=${encodeURIComponent(data.accessToken)}`;
-    } catch {
-      setTestError('로그인 중 오류가 발생했어요.');
-    } finally {
-      setTestLoading(false);
-    }
-  }, [testUsername, testPassword, testLoading]);
+  // 계정으로 로그인 미사용 (주석 처리)
+  //   const handleTestLogin = useCallback(async () => {
+  //     if (testLoading) return;
+  //     setTestLoading(true);
+  //     setTestError(null);
+  //     try {
+  //       const res = await fetch('/api/auth/test-login', {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ username: testUsername, password: testPassword }),
+  //       });
+  //       const data = await res.json().catch(() => ({}));
+  //       if (!res.ok || !data.accessToken) {
+  //         setTestError('아이디 또는 비밀번호가 올바르지 않습니다.');
+  //         return;
+  //       }
+  //       // 쿠키는 session 라우트가 navigation 응답으로 설정 (WKWebView 영속화 대응)
+  //       window.location.href = `/api/auth/session?token=${encodeURIComponent(data.accessToken)}`;
+  //     } catch {
+  //       setTestError('로그인 중 오류가 발생했어요.');
+  //     } finally {
+  //       setTestLoading(false);
+  //     }
+  //   }, [testUsername, testPassword, testLoading]);
 
   const requireLogin = useCallback(
     (msg?: string) => {
@@ -111,6 +113,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 카카오로 시작하기
               </button>
+              {/* 애플 로그인 미사용 (주석 처리)
               <button
                 type="button"
                 onClick={() => {
@@ -125,6 +128,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 Apple로 로그인
               </button>
+              */}
+              {/* 계정으로 로그인 미사용 (주석 처리)
               <button
                 type="button"
                 onClick={() => setTestFormOpen((v) => !v)}
@@ -172,6 +177,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                   </button>
                 </div>
               )}
+              */}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
