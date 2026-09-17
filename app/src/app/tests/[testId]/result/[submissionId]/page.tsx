@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
+import AppBannerSlot from '@/components/ads/AppBannerSlot';
 import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
 import { useIsAndroidApp } from '@/lib/isAndroidApp';
 import {
@@ -355,6 +356,8 @@ export default function ResultPage() {
       </div>
       </main>
 
+      {/* 앱에서는 카카오 인라인 광고가 빠지므로 하단 고정 배너 자리를 둔다. */}
+      <AppBannerSlot />
     </div>
   );
 }

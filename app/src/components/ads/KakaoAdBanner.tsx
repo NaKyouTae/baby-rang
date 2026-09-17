@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isNativeApp, useIsNativeApp } from "@/lib/isNativeApp";
 
 type Props = {
   /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
@@ -42,26 +43,6 @@ const adLog = (unit: string, msg: string, extra?: Record<string, unknown>) => {
 
 type WindowWithCallbacks = Window & Record<string, (() => void) | undefined>;
 
-type NativeBridgeWindow = Window & {
-  webkit?: { messageHandlers?: Record<string, unknown> };
-  Android?: Record<string, unknown>;
-};
-
-/**
- * 네이티브 앱(WebView) 안에서 실행 중인지 판별한다.
- *
- * iOS 앱은 WKWebView 에 openSettings 등의 메시지 핸들러를 등록하고,
- * 안드로이드 앱은 Android 브리지 객체를 주입하므로 그 존재로 구분한다.
- * settings 화면의 위치 권한 분기와 같은 방식이다.
- */
-const isNativeApp = () => {
-  if (typeof window === "undefined") return false;
-  const w = window as NativeBridgeWindow;
-  return !!(w.webkit?.messageHandlers?.openSettings || w.Android?.openLocationSettings);
-};
-
-// 브리지 주입 여부는 마운트 후 바뀌지 않으므로 구독할 대상이 없다.
-const subscribeNothing = () => () => {};
 
 /**
  * 플랫폼별 광고 슬롯.
@@ -89,14 +70,7 @@ export default function KakaoAdBanner({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
-  // 서버 스냅샷은 false, 클라이언트 스냅샷은 실제 브리지 존재 여부.
-  // useSyncExternalStore 를 쓰면 hydration 불일치 없이 클라이언트 전용 값을 읽을 수 있고,
-  // effect 안에서 setState 를 호출하는 캐스케이드 렌더도 피할 수 있다.
-  const inNativeApp = useSyncExternalStore(
-    subscribeNothing,
-    isNativeApp,
-    () => false,
-  );
+  const inNativeApp = useIsNativeApp();
 
   // AdFit 에 실제로 요청하는 소재 규격. stretch 여부와 무관하게 이 값으로 요청한다.
   const baseWidth = widthOverride ?? DEFAULT_WIDTH;

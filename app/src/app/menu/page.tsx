@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLoginPrompt } from "@/components/LoginPromptProvider";
 import { palette } from "@/lib/colors";
 import KakaoAdBanner from "@/components/ads/KakaoAdBanner";
+import AppBannerSlot from "@/components/ads/AppBannerSlot";
 import { MENU_CATALOG, type MenuId } from "@/components/menuCatalog";
 
 const ROLE_ICONS: Record<string, string> = {
@@ -192,6 +193,9 @@ export default function MenuPage() {
           </div>
         ))}
       </div>
+
+      {/* 앱에서는 카카오 인라인 광고가 빠지므로 하단 고정 배너 자리를 둔다. */}
+      <AppBannerSlot />
     </div>
   );
 }

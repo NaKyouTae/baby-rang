@@ -9,6 +9,7 @@ import QuestionCard from '../../_components/QuestionCard';
 import ConfirmModal from '@/components/ConfirmModal';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
+import AppBannerSlot from '@/components/ads/AppBannerSlot';
 
 type ScreenState =
   | { type: 'question'; index: number }
@@ -232,6 +233,9 @@ export default function TestPage() {
         onClose={() => setErrorModal(null)}
       />
       {exitModal}
+
+      {/* 앱에서는 카카오 인라인 광고가 빠지므로 하단 고정 배너 자리를 둔다. */}
+      <AppBannerSlot />
     </>
   );
 }
