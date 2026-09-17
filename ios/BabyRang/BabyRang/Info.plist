@@ -2,15 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>주변 수유실을 찾기 위해 위치 정보가 필요합니다.</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>kakaokompassauth</string>
-		<string>kakaotalk</string>
-	</array>
-	<!-- 카드사 앱카드/ISP 인증 후 아기랑 앱으로 복귀할 때 사용하는 스킴.
-	     웹의 결제 요청(requestPayment)에서 card.appScheme 으로 동일한 값을 넘겨야 한다. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -22,6 +13,24 @@
 			<array>
 				<string>babyrang</string>
 			</array>
+		</dict>
+	</array>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-6008464533427245~7115583932</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaotalk</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>주변 수유실을 찾기 위해 위치 정보가 필요합니다.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>관심에 맞는 광고를 보여드리기 위해 사용됩니다. 허용하지 않아도 앱의 모든 기능을 그대로 이용할 수 있습니다.</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
 		</dict>
 	</array>
 </dict>

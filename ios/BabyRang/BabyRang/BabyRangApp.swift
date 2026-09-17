@@ -5,12 +5,15 @@
 //  Created by 나규태 on 4/10/26.
 //
 
+import GoogleMobileAds
 import SwiftUI
 
 @main
 struct BabyRangApp: App {
     @State private var isWebViewLoaded = false
     @State private var minimumElapsed = false
+    /// 웹이 알려주는 배너 슬롯 위치.
+    @StateObject private var adSlot = AdSlotModel()
 
     private var shouldHideSplash: Bool {
         isWebViewLoaded && minimumElapsed
@@ -27,9 +30,14 @@ struct BabyRangApp: App {
                 // 뷰포트(innerHeight)가 실제 보이는 화면보다 커지고, 그 결과
                 // fixed bottom:0 하단 네비가 화면 아래로 밀려나 안 보였다.
                 // safe area 에 맞추면 WebView 뷰포트 = 실제 보이는 영역이 되어 네비가 보인다.
-                WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!) {
+                WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!, adSlot: adSlot) {
                     isWebViewLoaded = true
                 }
+
+                // 배너는 웹 하단바가 비워 둔 광고 슬롯 위에 겹쳐 놓는다.
+                // WebView 아래에 쌓으면 하단 네비보다 더 아래에 깔려서 보기 나쁘다.
+                // 정확한 좌표는 웹이 재서 알려준다(AdSlotModel).
+                BottomBannerSlot(slot: adSlot)
 
                 SplashView()
                     .ignoresSafeArea()
@@ -37,6 +45,13 @@ struct BabyRangApp: App {
                     .allowsHitTesting(!shouldHideSplash)
                     .animation(.easeOut(duration: 0.3), value: shouldHideSplash)
                     .zIndex(10)
+            }
+            // ATT 요청과 SDK 초기화는 조건부로 사라지지 않는 루트에 붙인다.
+            // 배너 쪽에 붙였을 때는 슬롯이 EmptyView 로 접히면서 task 가 아예 실행되지 않았다.
+            // SDK 는 start 이전에 들어온 광고 요청을 큐에 담으므로 순서는 안전하다.
+            .task {
+                await AdConsent.resolveTrackingAuthorization()
+                _ = await MobileAds.shared.start()
             }
             .onAppear {
                 // 브랜드 노출 최소 1초 보장
@@ -51,6 +66,39 @@ struct BabyRangApp: App {
                 }
             }
         }
+    }
+}
+
+/// WebView 아래에 붙는 하단 배너 슬롯.
+///
+/// 광고가 실제로 채워지기 전이나 노필일 때는 높이 0 으로 접는다.
+/// 빈 띠를 남겨두면 WebView 뷰포트만 줄어들어 레이아웃이 어색해진다.
+private struct BottomBannerSlot: View {
+    @ObservedObject var slot: AdSlotModel
+
+    @State private var isLoaded = false
+
+    /// 웹이 이 화면에 배너 자리를 보고했고, 광고도 채워진 상태인지.
+    private var isVisible: Bool {
+        slot.bottomInset != nil && isLoaded
+    }
+
+    var body: some View {
+        // 배너는 항상 마운트한다. 조건부로 감싸면 EmptyView 로 접히는 순간
+        // 붙여둔 modifier 들이 함께 사라져 광고 요청 자체가 일어나지 않는다.
+        BannerAdView(
+            adUnitID: AdConfig.bottomBannerUnitID,
+            isBannerHidden: !isVisible,
+            onLoaded: { isLoaded = true },
+            onFailed: { isLoaded = false }
+        )
+        .frame(height: BannerAdView.height)
+        .frame(height: isVisible ? BannerAdView.height : 0)
+        .clipped()
+        // 웹이 비워 둔 광고 슬롯 위치에 정확히 얹는다.
+        .padding(.bottom, slot.bottomInset ?? 0)
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .allowsHitTesting(isVisible)
     }
 }
 

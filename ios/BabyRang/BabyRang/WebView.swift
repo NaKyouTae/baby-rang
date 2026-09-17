@@ -5,10 +5,12 @@ import WidgetKit
 
 struct WebView: UIViewRepresentable {
     let url: URL
+    /// 웹이 보고하는 앱 배너 슬롯 위치를 담을 모델.
+    let adSlot: AdSlotModel
     let onLoad: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onLoad: onLoad)
+        Coordinator(adSlot: adSlot, onLoad: onLoad)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -27,6 +29,8 @@ struct WebView: UIViewRepresentable {
         contentController.add(context.coordinator, name: "clearWidgetData")
         // 기록 저장/삭제 직후 위젯 즉시 갱신 요청
         contentController.add(context.coordinator, name: "reloadWidget")
+        // 앱 배너를 놓을 슬롯 위치 보고
+        contentController.add(context.coordinator, name: "adSlot")
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -48,9 +52,11 @@ struct WebView: UIViewRepresentable {
         private let locationManager = CLLocationManager()
         private var permissionCompletion: ((Bool) -> Void)?
         private let onLoad: () -> Void
+        private let adSlot: AdSlotModel
         private var hasNotifiedLoad = false
 
-        init(onLoad: @escaping () -> Void) {
+        init(adSlot: AdSlotModel, onLoad: @escaping () -> Void) {
+            self.adSlot = adSlot
             self.onLoad = onLoad
             super.init()
             locationManager.delegate = self
@@ -86,6 +92,19 @@ struct WebView: UIViewRepresentable {
             } else if message.name == "reloadWidget" {
                 // 기록 저장/삭제 직후 웹이 요청 → 위젯 타임라인 즉시 갱신
                 WidgetCenter.shared.reloadAllTimelines()
+            } else if message.name == "adSlot" {
+                // 웹이 { visible, bottomInset, height } 를 보낸다.
+                // visible 이 false 면 이 화면엔 배너 자리가 없다.
+                let body = message.body as? [String: Any]
+                let visible = body?["visible"] as? Bool ?? false
+                let inset = (body?["bottomInset"] as? NSNumber)?.doubleValue
+                let height = (body?["height"] as? NSNumber)?.doubleValue ?? 0
+                Task { @MainActor [adSlot] in
+                    adSlot.update(
+                        bottomInset: visible ? inset.map { CGFloat($0) } : nil,
+                        height: CGFloat(height),
+                    )
+                }
             }
         }
 

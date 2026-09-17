@@ -6,6 +6,7 @@ import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import WidgetBridge from "@/components/WidgetBridge";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
+import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
 import GlobalFooter from "@/components/GlobalFooter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
@@ -303,6 +304,7 @@ export default function RootLayout({
               </SplashProvider>
             </div>
             <BottomNavServer />
+            <AppAdSlotReporter />
           </div>
         </LoginPromptProvider>
       </body>

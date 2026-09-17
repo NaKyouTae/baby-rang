@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type Props = {
   /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
@@ -42,8 +42,38 @@ const adLog = (unit: string, msg: string, extra?: Record<string, unknown>) => {
 
 type WindowWithCallbacks = Window & Record<string, (() => void) | undefined>;
 
+type NativeBridgeWindow = Window & {
+  webkit?: { messageHandlers?: Record<string, unknown> };
+  Android?: Record<string, unknown>;
+};
+
 /**
- * 카카오 디스플레이 배너.
+ * 네이티브 앱(WebView) 안에서 실행 중인지 판별한다.
+ *
+ * iOS 앱은 WKWebView 에 openSettings 등의 메시지 핸들러를 등록하고,
+ * 안드로이드 앱은 Android 브리지 객체를 주입하므로 그 존재로 구분한다.
+ * settings 화면의 위치 권한 분기와 같은 방식이다.
+ */
+const isNativeApp = () => {
+  if (typeof window === "undefined") return false;
+  const w = window as NativeBridgeWindow;
+  return !!(w.webkit?.messageHandlers?.openSettings || w.Android?.openLocationSettings);
+};
+
+// 브리지 주입 여부는 마운트 후 바뀌지 않으므로 구독할 대상이 없다.
+const subscribeNothing = () => () => {};
+
+/**
+ * 플랫폼별 광고 슬롯.
+ *
+ * - 웹 브라우저: 카카오 애드핏 배너를 띄운다.
+ * - 네이티브 앱: 아무것도 렌더하지 않되 슬롯 높이는 그대로 남긴다.
+ *   비워둔 그 자리에 네이티브 AdMob 배너가 겹쳐 들어오기 때문이다.
+ *   (AdMob 은 네이티브 SDK 라서 WebView 안에서는 띄울 수 없고,
+ *    웹용 AdSense 를 앱 WebView 에 넣는 것은 Google 정책 위반이다.)
+ *   두 광고를 동시에 띄우면 화면도 잡아먹고 광고 밀도 정책에도 걸린다.
+ *   슬롯을 접지 않는 이유: 접으면 네이티브 배너가 하단 네비를 덮어버린다.
+ *
  * width 미지정 시 디바이스 너비(앱 max-width 430까지)에 맞춰 data-ad-width를 설정한다.
  * 광고가 채워지지 않으면 onFilledChange(false)로 알려 빈 영역을 접게 한다.
  */
@@ -58,6 +88,15 @@ export default function KakaoAdBanner({
   const insRef = useRef<HTMLModElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+
+  // 서버 스냅샷은 false, 클라이언트 스냅샷은 실제 브리지 존재 여부.
+  // useSyncExternalStore 를 쓰면 hydration 불일치 없이 클라이언트 전용 값을 읽을 수 있고,
+  // effect 안에서 setState 를 호출하는 캐스케이드 렌더도 피할 수 있다.
+  const inNativeApp = useSyncExternalStore(
+    subscribeNothing,
+    isNativeApp,
+    () => false,
+  );
 
   // AdFit 에 실제로 요청하는 소재 규격. stretch 여부와 무관하게 이 값으로 요청한다.
   const baseWidth = widthOverride ?? DEFAULT_WIDTH;
@@ -83,6 +122,10 @@ export default function KakaoAdBanner({
   useEffect(() => {
     if (!unit) return;
     if (typeof document === "undefined") return;
+    // 상태(inNativeApp)가 아니라 함수를 직접 호출한다.
+    // 상태는 이 effect 다음 렌더에 반영되므로, 그 사이에 애드핏 SDK 가
+    // 한 번 로드되어 앱에서도 광고가 요청되는 것을 막아야 한다.
+    if (isNativeApp()) return;
 
     const ins = insRef.current;
     if (!ins) return;
@@ -166,6 +209,8 @@ export default function KakaoAdBanner({
   }, [unit, widthOverride, onFilledChange, stretch, baseWidth]);
 
   if (!unit) return null;
+  // 앱에서는 네이티브 AdMob 배너가 노출되므로 웹 광고는 렌더하지 않는다.
+  if (inNativeApp) return null;
 
   // style 은 AdFit SDK 가 채움 시점에 직접 건드린다(display 등).
   // 그래서 확대 transform 은 ins 가 아니라 바깥 래퍼에 건다.

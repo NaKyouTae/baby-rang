@@ -10,6 +10,7 @@ import { useLoginPrompt } from "./LoginPromptProvider";
 import { HomeNavIcon, AddNavIcon } from "./nav-icons";
 import { palette } from "@/lib/colors";
 import KakaoAdBanner from "./ads/KakaoAdBanner";
+import { APP_AD_SLOT_ID } from "./ads/AppAdSlotReporter";
 
 const BOTTOM_AD_UNIT = "DAN-go0noPJx8cIt6SU7";
 
@@ -246,6 +247,7 @@ export default function BottomNav({
 
         {showAdBanner && (
           <div
+            id={APP_AD_SLOT_ID}
             className="w-full flex justify-center"
             style={{ height: "var(--bottom-ad-banner-height)", overflow: "hidden" }}
           >
