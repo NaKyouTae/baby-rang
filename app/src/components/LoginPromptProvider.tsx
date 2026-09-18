@@ -113,7 +113,9 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 카카오로 시작하기
               </button>
-              {/* 애플 로그인 미사용 (주석 처리)
+              {/* Apple 심사 가이드라인 4.8: 서드파티 로그인(카카오)을 제공하면
+                  개인정보 보호형 로그인도 함께 제공해야 한다.
+                  이 버튼을 빼면 4.8 위반으로 심사에서 거절된다. */}
               <button
                 type="button"
                 onClick={() => {
@@ -128,7 +130,6 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 Apple로 로그인
               </button>
-              */}
               {/* 계정으로 로그인 미사용 (주석 처리)
               <button
                 type="button"
