@@ -41,6 +41,10 @@ export default function AppAdSlotReporter() {
         // 뷰포트 하단에서 슬롯 하단까지의 거리. CSS px = pt 이므로 그대로 쓴다.
         bottomInset: window.innerHeight - rect.bottom,
         height: rect.height,
+        // 가로 위치도 함께 보낸다. iPad 처럼 화면이 콘텐츠 셸보다 넓으면
+        // 배너가 화면 전체 폭을 쓰면서 콘텐츠 기둥 밖으로 튀어나온다.
+        width: rect.width,
+        left: rect.left,
       });
     };
 

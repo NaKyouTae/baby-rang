@@ -1,5 +1,7 @@
 import AppTrackingTransparency
 import Foundation
+import OSLog
+import UIKit
 
 /// AdMob 식별자 모음.
 ///
@@ -24,25 +26,40 @@ enum AdConfig {
 
 /// 광고 추적 동의(ATT) 처리.
 enum AdConsent {
-    /// 아직 묻지 않았다면 ATT 권한을 요청하고 응답을 받은 뒤 반환한다.
-    ///
-    /// 첫 광고 요청 전에 호출해야 한다. 응답 전에 광고를 요청하면
-    /// 그 요청은 비맞춤 광고로 처리되어 단가가 낮아진다.
-    /// ATT 응답을 기다리는 최대 시간. 이 시간을 넘기면 광고를 먼저 띄운다.
-    private static let timeout: Duration = .seconds(3)
+    /// 앱이 active 가 되기를 기다리는 최대 시간.
+    private static let activationTimeout: Duration = .seconds(5)
 
+    /// ATT 권한을 요청하고 응답을 받은 뒤 반환한다.
+    ///
+    /// ⚠️ 시스템 ATT 프롬프트는 앱이 `.active` 상태일 때만 표시된다.
+    /// 실행 직후(스플래시가 떠 있고 씬이 아직 inactive 인 시점)에 호출하면
+    /// 프롬프트가 뜨지 않고 즉시 반환되며 상태는 notDetermined 로 남는다.
+    /// 그래서 active 가 된 것을 확인한 뒤에 요청해야 한다.
+    /// (이 순서를 지키지 않아 심사에서 "ATT 프롬프트를 찾을 수 없음"으로 거절된 적이 있다.)
     @MainActor
     static func resolveTrackingAuthorization() async {
         guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else { return }
 
-        // 시스템 프롬프트는 앱이 active 상태가 아니면 응답 없이 묶일 수 있다.
-        // 여기서 무한정 기다리면 배너가 영구히 생성되지 않으므로 타임아웃을 둔다.
-        // (맞춤 광고 여부만 늦게 반영되고, 광고 노출 자체는 막히지 않는다.)
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { _ = await ATTrackingManager.requestTrackingAuthorization() }
-            group.addTask { try? await Task.sleep(for: timeout) }
-            await group.next()
-            group.cancelAll()
+        await waitUntilActive()
+
+        // active 를 못 본 채 타임아웃했다면 요청해도 프롬프트가 안 뜬다.
+        // 다음 실행 때 다시 시도할 수 있도록 여기서 요청하지 않고 물러난다.
+        guard UIApplication.shared.applicationState == .active else {
+            adLogger.error("ATT: 앱이 active 가 되지 않아 요청을 건너뜀")
+            return
+        }
+
+        let status = await ATTrackingManager.requestTrackingAuthorization()
+        adLogger.info("ATT 응답: \(status.rawValue, privacy: .public)")
+    }
+
+    /// 앱이 foreground active 가 될 때까지 기다린다.
+    @MainActor
+    private static func waitUntilActive() async {
+        let deadline = ContinuousClock.now.advanced(by: activationTimeout)
+        while UIApplication.shared.applicationState != .active {
+            if ContinuousClock.now >= deadline { return }
+            try? await Task.sleep(for: .milliseconds(100))
         }
     }
 }

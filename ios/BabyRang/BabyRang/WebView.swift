@@ -99,10 +99,14 @@ struct WebView: UIViewRepresentable {
                 let visible = body?["visible"] as? Bool ?? false
                 let inset = (body?["bottomInset"] as? NSNumber)?.doubleValue
                 let height = (body?["height"] as? NSNumber)?.doubleValue ?? 0
+                let width = (body?["width"] as? NSNumber)?.doubleValue
+                let left = (body?["left"] as? NSNumber)?.doubleValue ?? 0
                 Task { @MainActor [adSlot] in
                     adSlot.update(
                         bottomInset: visible ? inset.map { CGFloat($0) } : nil,
                         height: CGFloat(height),
+                        width: width.map { CGFloat($0) },
+                        left: CGFloat(left),
                     )
                 }
             }

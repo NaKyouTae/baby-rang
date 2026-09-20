@@ -17,8 +17,17 @@ final class AdSlotModel: ObservableObject {
     /// 슬롯 높이(pt). 웹이 잡아 둔 자리에 맞춰 배너를 그린다.
     @Published var height: CGFloat = 0
 
-    func update(bottomInset: CGFloat?, height: CGFloat) {
+    /// 슬롯 가로 폭(pt). iPad 처럼 화면이 콘텐츠 셸보다 넓을 때,
+    /// 배너가 화면 전체로 퍼져 콘텐츠 기둥 밖으로 튀어나오는 것을 막는다.
+    @Published var width: CGFloat?
+
+    /// 뷰포트 왼쪽에서 슬롯 왼쪽까지의 거리(pt).
+    @Published var left: CGFloat = 0
+
+    func update(bottomInset: CGFloat?, height: CGFloat, width: CGFloat?, left: CGFloat) {
         self.bottomInset = bottomInset
         self.height = height
+        self.width = width
+        self.left = left
     }
 }

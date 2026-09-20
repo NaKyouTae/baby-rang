@@ -95,10 +95,29 @@ private struct BottomBannerSlot: View {
         .frame(height: BannerAdView.height)
         .frame(height: isVisible ? BannerAdView.height : 0)
         .clipped()
-        // 웹이 비워 둔 광고 슬롯 위치에 정확히 얹는다.
-        .padding(.bottom, slot.bottomInset ?? 0)
-        .frame(maxHeight: .infinity, alignment: .bottom)
+        // 웹 콘텐츠 셸이 화면보다 좁을 수 있다(iPad). 배너를 화면 전체 폭으로 두면
+        // 기둥 밖으로 튀어나오므로, 웹이 알려준 슬롯 폭·좌측 위치에 맞춘다.
+        .modifier(SlotGeometry(slot: slot))
         .allowsHitTesting(isVisible)
+    }
+}
+
+/// 웹이 보고한 슬롯의 가로 폭·좌우 위치·하단 오프셋에 배너를 정렬한다.
+private struct SlotGeometry: ViewModifier {
+    @ObservedObject var slot: AdSlotModel
+
+    func body(content: Content) -> some View {
+        GeometryReader { proxy in
+            content
+                .frame(width: slot.width ?? proxy.size.width)
+                .padding(.bottom, slot.bottomInset ?? 0)
+                // 웹 뷰포트 기준 left 를 그대로 쓴다. WebView 가 safe area 안에
+                // 놓여 있어 두 좌표계의 원점이 같다.
+                .offset(x: slot.left)
+                // 아래(bottom)·왼쪽(leading) 기준 정렬.
+                // topLeading 으로 두면 배너가 화면 맨 위로 올라가 상태바를 덮는다.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        }
     }
 }
 
