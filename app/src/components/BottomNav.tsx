@@ -229,7 +229,7 @@ export default function BottomNav({
     <>
       <nav
         data-bottom-nav-root
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-white border-t border-gray-200"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-50 bg-white border-t border-gray-200"
         style={{ paddingBottom: "max(var(--safe-area-bottom), 16px)" }}
       >
         {editMode && (
@@ -299,7 +299,7 @@ export default function BottomNav({
       {pickerOpen !== null && (
         <div
           data-nav-picker
-          className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[51] pointer-events-none"
+          className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-[51] pointer-events-none"
         >
           <div
             className="mx-6 pointer-events-auto"

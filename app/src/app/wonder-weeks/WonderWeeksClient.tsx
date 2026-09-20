@@ -80,7 +80,7 @@ function WonderWeeksContent() {
       {/* 하단 버튼들 — 오늘(왼쪽) + 상단 이동(오른쪽) */}
       {!noChild && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 px-6 pointer-events-none"
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-30 px-6 pointer-events-none"
           style={{ bottom: 'calc(var(--bottom-nav-space) + 24px)' }}
         >
           <div className="flex justify-between items-center">

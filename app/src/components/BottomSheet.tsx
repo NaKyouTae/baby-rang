@@ -69,7 +69,7 @@ export default function BottomSheet({
     >
       <div className="absolute inset-0 bg-black/40 -z-10" />
       <div
-        className={`relative w-full max-w-[430px] ${surfaceClassName} ${surfaceRounded} shadow-2xl flex flex-col overflow-hidden`}
+        className={`relative w-full max-w-[var(--app-shell-width)] ${surfaceClassName} ${surfaceRounded} shadow-2xl flex flex-col overflow-hidden`}
         style={{ maxHeight }}
         onClick={(e) => e.stopPropagation()}
       >

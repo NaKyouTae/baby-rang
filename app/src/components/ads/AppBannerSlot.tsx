@@ -33,7 +33,7 @@ export default function AppBannerSlot() {
         }}
       />
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 bg-white"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-40 bg-white"
         style={{ paddingBottom: bottomPadding }}
       >
         <div

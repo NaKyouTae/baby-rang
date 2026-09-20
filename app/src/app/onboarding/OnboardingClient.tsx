@@ -455,7 +455,7 @@ export default function OnboardingClient() {
 
       {/* 하단 고정 저장 버튼 */}
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white px-6 pt-3"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] bg-white px-6 pt-3"
         style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
       >
         <button

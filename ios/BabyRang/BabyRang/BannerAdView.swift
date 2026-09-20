@@ -14,6 +14,12 @@ let adLogger = Logger(subsystem: "kr.spectrify.baby-rang", category: "AdMob")
 /// 호출측에서 슬롯 자체를 접을 수 있어야 한다.
 struct BannerAdView: UIViewRepresentable {
     let adUnitID: String
+    /// ATT 응답을 받고 SDK 초기화가 끝났는지.
+    ///
+    /// 이 값이 true 가 되기 전에는 광고를 요청하지 않는다.
+    /// 추적 동의 전에 광고를 요청하면 "동의 전 데이터 수집"이 되어
+    /// 심사 기준(ATT 프롬프트는 추적 데이터 수집 전에 표시)에 걸린다.
+    let canLoad: Bool
     /// 배너를 화면에서 감출지 여부.
     ///
     /// opacity 0 이나 height 0 으로만 숨기면 SDK 는 여전히 노출(impression)로
@@ -38,8 +44,7 @@ struct BannerAdView: UIViewRepresentable {
         banner.adUnitID = adUnitID
         banner.delegate = context.coordinator
         banner.rootViewController = Self.rootViewController()
-        adLogger.info("배너 요청: unit=\(adUnitID, privacy: .public) rootVC=\(Self.rootViewController() != nil, privacy: .public)")
-        banner.load(Request())
+        // 여기서 load 하지 않는다. ATT 응답 전에 요청이 나가면 안 된다.
         return banner
     }
 
@@ -49,6 +54,12 @@ struct BannerAdView: UIViewRepresentable {
         if banner.rootViewController == nil {
             banner.rootViewController = Self.rootViewController()
         }
+
+        // ATT 응답 이후에 딱 한 번만 요청한다.
+        guard canLoad, !context.coordinator.hasRequestedAd else { return }
+        context.coordinator.hasRequestedAd = true
+        adLogger.info("배너 요청: unit=\(adUnitID, privacy: .public) rootVC=\(banner.rootViewController != nil, privacy: .public)")
+        banner.load(Request())
     }
 
     /// 광고 클릭 후 전면 화면 표시에 쓰이는 루트 뷰 컨트롤러.
@@ -62,6 +73,9 @@ struct BannerAdView: UIViewRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, BannerViewDelegate {
+        /// 광고를 이미 요청했는지. updateUIView 가 여러 번 불려도 한 번만 요청한다.
+        var hasRequestedAd = false
+
         private let onLoaded: () -> Void
         private let onFailed: () -> Void
 

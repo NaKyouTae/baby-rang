@@ -14,9 +14,27 @@ struct BabyRangApp: App {
     @State private var minimumElapsed = false
     /// 웹이 알려주는 배너 슬롯 위치.
     @StateObject private var adSlot = AdSlotModel()
+    /// ATT 응답 + SDK 초기화 완료 여부. 이 전에는 광고를 요청하지 않는다.
+    @State private var isAdSDKReady = false
+    /// 광고 초기화를 이미 시작했는지. active 전환이 여러 번 와도 한 번만 실행한다.
+    @State private var didStartAdSetup = false
+
+    @Environment(\.scenePhase) private var scenePhase
 
     private var shouldHideSplash: Bool {
         isWebViewLoaded && minimumElapsed
+    }
+
+    /// ATT 응답을 받은 뒤 광고 SDK 를 초기화한다. 앱 실행당 한 번만.
+    @MainActor
+    private func startAdSetupIfNeeded() {
+        guard !didStartAdSetup else { return }
+        didStartAdSetup = true
+        Task {
+            await AdConsent.resolveTrackingAuthorization()
+            _ = await MobileAds.shared.start()
+            isAdSDKReady = true
+        }
     }
 
     var body: some Scene {
@@ -37,7 +55,7 @@ struct BabyRangApp: App {
                 // 배너는 웹 하단바가 비워 둔 광고 슬롯 위에 겹쳐 놓는다.
                 // WebView 아래에 쌓으면 하단 네비보다 더 아래에 깔려서 보기 나쁘다.
                 // 정확한 좌표는 웹이 재서 알려준다(AdSlotModel).
-                BottomBannerSlot(slot: adSlot)
+                BottomBannerSlot(slot: adSlot, canLoad: isAdSDKReady)
 
                 SplashView()
                     .ignoresSafeArea()
@@ -49,9 +67,13 @@ struct BabyRangApp: App {
             // ATT 요청과 SDK 초기화는 조건부로 사라지지 않는 루트에 붙인다.
             // 배너 쪽에 붙였을 때는 슬롯이 EmptyView 로 접히면서 task 가 아예 실행되지 않았다.
             // SDK 는 start 이전에 들어온 광고 요청을 큐에 담으므로 순서는 안전하다.
+            // ATT 프롬프트는 앱이 active 일 때만 뜬다.
+            // 실행 직후(.task)에 요청하면 씬이 아직 inactive 라 조용히 무시된다.
             .task {
-                await AdConsent.resolveTrackingAuthorization()
-                _ = await MobileAds.shared.start()
+                if scenePhase == .active { startAdSetupIfNeeded() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { startAdSetupIfNeeded() }
             }
             .onAppear {
                 // 브랜드 노출 최소 1초 보장
@@ -75,6 +97,8 @@ struct BabyRangApp: App {
 /// 빈 띠를 남겨두면 WebView 뷰포트만 줄어들어 레이아웃이 어색해진다.
 private struct BottomBannerSlot: View {
     @ObservedObject var slot: AdSlotModel
+    /// ATT 응답 전에는 false. 배너 뷰는 마운트하되 요청만 미룬다.
+    let canLoad: Bool
 
     @State private var isLoaded = false
 
@@ -88,6 +112,7 @@ private struct BottomBannerSlot: View {
         // 붙여둔 modifier 들이 함께 사라져 광고 요청 자체가 일어나지 않는다.
         BannerAdView(
             adUnitID: AdConfig.bottomBannerUnitID,
+            canLoad: canLoad,
             isBannerHidden: !isVisible,
             onLoaded: { isLoaded = true },
             onFailed: { isLoaded = false }
