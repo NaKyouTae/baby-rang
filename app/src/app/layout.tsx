@@ -287,14 +287,14 @@ export default function RootLayout({
               translate(-50%,-50%) 의 transform 이 fixed 자식들의 컨테이닝 블록이 되어
               헤더·네비가 이 셸(=보이는 영역) 기준으로 앵커링된다. */}
           <div
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[var(--app-shell-width)] overflow-hidden"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[430px] overflow-hidden"
             style={{ height: 'var(--app-h, 100dvh)' }}
           >
             <div id="app-scroll-container" className="relative w-full h-full overflow-y-auto overscroll-contain">
               {/* 상태바 영역 배경 — 스크롤 시 콘텐츠가 상태바에 겹치지 않도록 */}
               <div
                 aria-hidden
-                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
+                className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/80 backdrop-blur-md z-[100] pointer-events-none"
                 style={{ height: 'var(--safe-area-top)' }}
               />
               <SplashProvider>

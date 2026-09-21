@@ -39,9 +39,9 @@ export default function ConfirmModal({
       onClick={onClose}
     >
       {/* 딤드 — 모바일 영역에만 */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] h-full bg-black/40 backdrop-blur-sm" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-full bg-black/40 backdrop-blur-sm" />
 
-      <div className="relative w-full max-w-[var(--app-shell-width)] px-6">
+      <div className="relative w-full max-w-[430px] px-6">
         <div
           className="w-full bg-white rounded-[8px] p-[16px] flex flex-col items-center shadow-2xl"
           onClick={(e) => e.stopPropagation()}

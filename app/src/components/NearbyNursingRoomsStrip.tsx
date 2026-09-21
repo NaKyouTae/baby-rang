@@ -175,7 +175,7 @@ export default function NearbyNursingRoomsStrip() {
       </div>
 
       {showLoading && (
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-2">
+        <div className="flex flex-col gap-2">
           {[0, 1, 2].map((i) => (
             <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{ minHeight: 56 }}>
               <div className="flex flex-col gap-[6px]">
@@ -232,8 +232,7 @@ export default function NearbyNursingRoomsStrip() {
       )}
 
       {!showLoading && !showLocationPrompt && !showEmpty && (
-      /* 태블릿에서는 한 줄에 하나씩 두면 카드가 지나치게 길어져 2단으로 나눈다. */
-      <div className="flex flex-col gap-2 md:grid md:grid-cols-2">
+      <div className="flex flex-col gap-2">
       {nearest.map((room, idx) => (
         <Link
           key={room.name}

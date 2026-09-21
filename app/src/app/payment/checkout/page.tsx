@@ -200,7 +200,7 @@ function CheckoutContent() {
       </main>
 
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] bg-white px-4 pt-3"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white px-4 pt-3"
         style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 12px)' }}
       >
         <p className="mb-2 text-center text-xs text-neutral-500">

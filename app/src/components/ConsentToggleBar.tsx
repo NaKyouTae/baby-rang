@@ -76,7 +76,7 @@ export default function ConsentToggleBar({ consentKey }: { consentKey: ConsentKe
   if (loading || !state) {
     return (
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] bg-white border-t"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t"
         style={{
           borderColor: palette.gray200,
           paddingBottom: 'calc(var(--safe-area-bottom) + 12px)',
@@ -117,7 +117,7 @@ export default function ConsentToggleBar({ consentKey }: { consentKey: ConsentKe
   return (
     <>
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] bg-white border-t"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t"
         style={{
           borderColor: palette.gray200,
           paddingBottom: 'calc(var(--safe-area-bottom) + 12px)',

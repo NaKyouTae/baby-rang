@@ -440,7 +440,7 @@ export default function PhysicalGrowthClient() {
       {/* + 기록 FAB — 하단 네비게이션 위 16px */}
       {!showForm && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-40 px-5 pointer-events-none flex justify-end"
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-5 pointer-events-none flex justify-end"
           style={{ bottom: 'calc(var(--bottom-nav-space) + 24px)' }}
         >
           <button

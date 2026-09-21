@@ -36,29 +36,10 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
-  /* 앱 셸 가로 폭. 폰은 430px 고정, 태블릿부터 넓힌다.
-     헤더·하단네비·바텀시트·모달이 모두 이 폭에 앵커링되므로
-     여기 한 곳만 바꾸면 전체가 함께 따라간다.
-     ⚠️ iPad 지원은 뺄 수 없다 — 이미 출시된 버전이 iPad 를 지원하므로
-     업데이트에서 지원 기기를 줄이면 업로드가 거부된다(오류 90101). */
-  --app-shell-width: 430px;
   --bottom-nav-gap: 24px;
   --bottom-nav-height: 64px;
   --bottom-ad-banner-height: 50px;
   --bottom-nav-space: calc(var(--bottom-nav-height) + var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 16px));
-}
-
-/* 태블릿: 폰 레이아웃이 화면 가운데 좁은 기둥으로 남지 않도록 셸을 넓힌다. */
-@media (min-width: 768px) {
-  :root {
-    --app-shell-width: 720px;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --app-shell-width: 860px;
-  }
 }
 
 body {

@@ -41,7 +41,7 @@ const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursing
   loading: () => (
     <section>
       <div className="flex items-center justify-between mb-3"><div className="w-24 h-4 rounded bg-gray-200 animate-pulse" /><div className="w-12 h-3 rounded bg-gray-200 animate-pulse" /></div>
-      <div className="flex flex-col gap-2 md:grid md:grid-cols-2">{[0,1,2].map(i => <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{minHeight:56}}><div className="flex flex-col gap-[6px]"><div className="w-32 h-3 rounded bg-gray-200" /><div className="w-48 h-3 rounded bg-gray-200" /></div></div>)}</div>
+      <div className="flex flex-col gap-2">{[0,1,2].map(i => <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{minHeight:56}}><div className="flex flex-col gap-[6px]"><div className="w-32 h-3 rounded bg-gray-200" /><div className="w-48 h-3 rounded bg-gray-200" /></div></div>)}</div>
     </section>
   ),
 });
@@ -71,8 +71,7 @@ export default function HomePage() {
         <div className="flex flex-col gap-4">
           {/* 퀵 메뉴 */}
           <section>
-            {/* 태블릿에서 셸이 넓어지면 아이콘 사이가 과하게 벌어지므로 폭을 묶는다. */}
-            <div className="flex justify-between md:max-w-[520px] md:mx-auto">
+            <div className="flex justify-between">
               {HOME_QUICK_MENUS.map((id) => {
                 const item = MENU_CATALOG[id];
                 return (

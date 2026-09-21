@@ -212,7 +212,7 @@ export default function TestPage() {
       </main>
 
       {/* 카카오 배너 — 화면 하단 24px, 디바이스 가로폭 꽉 채움 */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-30 pointer-events-none">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-30 pointer-events-none">
         <div className="pointer-events-auto w-full">
           <KakaoAdBanner unit="DAN-gFh4OIyY7XHzHJyP" stretch />
         </div>

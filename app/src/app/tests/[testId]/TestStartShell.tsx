@@ -115,7 +115,7 @@ export default function TestStartShell({
       </main>
 
       {/* Bottom CTA */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[var(--app-shell-width)] z-40 pointer-events-none">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 pointer-events-none">
         <div className="pointer-events-auto px-5">{bottomSlot}</div>
       </div>
     </>
