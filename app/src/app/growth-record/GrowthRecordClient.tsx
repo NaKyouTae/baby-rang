@@ -32,6 +32,16 @@ import PageHeader from '@/components/PageHeader';
 const SWIPE_DELETE_WIDTH = 59;
 const SWIPE_OPEN_THRESHOLD = 30;
 
+/**
+ * 실제 스크롤을 담당하는 엘리먼트.
+ * 앱 셸(layout.tsx)이 fixed 라서 window 는 절대 스크롤되지 않는다.
+ * (window.scrollY 는 항상 0 → 최상단 판정에 쓰면 안 됨)
+ */
+function getScroller(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  return document.getElementById('app-scroll-container');
+}
+
 function SwipeableRow({
   open,
   onOpenChange,
@@ -764,13 +774,14 @@ export default function GrowthRecordPage() {
       setSwipedRowId(null);
     };
     const onScroll = () => setSwipedRowId(null);
+    const scroller = getScroller();
     document.addEventListener('touchstart', close, { passive: true });
     document.addEventListener('mousedown', close);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    scroller?.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       document.removeEventListener('touchstart', close);
       document.removeEventListener('mousedown', close);
-      window.removeEventListener('scroll', onScroll);
+      scroller?.removeEventListener('scroll', onScroll);
     };
   }, [swipedRowId]);
 
@@ -836,15 +847,18 @@ export default function GrowthRecordPage() {
       deleteTarget !== null ||
       busy;
 
+    const scroller = getScroller();
+    if (!scroller) return;
+
     const onTouchStart = (e: TouchEvent) => {
       if (refreshing || overlayOpen()) return;
-      if (window.scrollY > 0 || pullDistanceRef.current !== 0) return;
+      if (scroller.scrollTop > 0 || pullDistanceRef.current !== 0) return;
       if (e.touches.length !== 1) return;
       pullStartYRef.current = e.touches[0].clientY;
     };
     const onTouchMove = (e: TouchEvent) => {
       if (pullStartYRef.current === null) return;
-      if (window.scrollY > 0) {
+      if (scroller.scrollTop > 0) {
         pullStartYRef.current = null;
         setDist(0);
         return;
@@ -874,15 +888,15 @@ export default function GrowthRecordPage() {
       }
     };
 
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    scroller.addEventListener('touchstart', onTouchStart, { passive: true });
+    scroller.addEventListener('touchmove', onTouchMove, { passive: false });
+    scroller.addEventListener('touchend', onTouchEnd, { passive: true });
+    scroller.addEventListener('touchcancel', onTouchEnd, { passive: true });
     return () => {
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchEnd);
+      scroller.removeEventListener('touchstart', onTouchStart);
+      scroller.removeEventListener('touchmove', onTouchMove);
+      scroller.removeEventListener('touchend', onTouchEnd);
+      scroller.removeEventListener('touchcancel', onTouchEnd);
     };
   }, [
     selectedChild,
