@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { isAppOverlayOpen, subscribeAppOverlay } from "./appOverlay";
 
 /** BottomNav 가 비워 두는 앱 배너 슬롯의 DOM id. */
 export const APP_AD_SLOT_ID = "app-ad-slot";
@@ -30,6 +31,13 @@ export default function AppAdSlotReporter() {
     if (!handler) return;
 
     const report = () => {
+      // 바텀시트·모달이 열려 있으면 배너를 숨긴다.
+      // 배너는 WebView 위에 얹힌 네이티브 뷰라, 그대로 두면 오버레이를 덮어버린다.
+      if (isAppOverlayOpen()) {
+        handler.postMessage({ visible: false });
+        return;
+      }
+
       const el = document.getElementById(APP_AD_SLOT_ID);
       if (!el) {
         handler.postMessage({ visible: false });
@@ -52,6 +60,8 @@ export default function AppAdSlotReporter() {
 
     // 하단바는 편집 모드 진입, 광고 no-fill, 회전 등으로 높이가 바뀐다.
     // 슬롯 자체와 body 를 같이 관찰해 변화를 놓치지 않는다.
+    const unsubscribeOverlay = subscribeAppOverlay(report);
+
     const observer = new ResizeObserver(report);
     const el = document.getElementById(APP_AD_SLOT_ID);
     if (el) observer.observe(el);
@@ -59,6 +69,7 @@ export default function AppAdSlotReporter() {
     window.addEventListener("resize", report);
 
     return () => {
+      unsubscribeOverlay();
       observer.disconnect();
       window.removeEventListener("resize", report);
     };

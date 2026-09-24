@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useAppOverlayLock } from './ads/appOverlay';
 
 type ZIndex = 70 | 80 | 90 | 100;
 type Variant = 'floating' | 'sheet';
@@ -41,6 +42,9 @@ export default function BottomSheet({
   ariaLabel,
   variant = 'floating',
 }: BottomSheetProps) {
+  // 열려 있는 동안 네이티브 앱 배너를 숨긴다(배너가 시트를 덮는 것 방지).
+  useAppOverlayLock(open);
+
   useEffect(() => {
     if (!open || !lockBodyScroll) return;
     const prev = document.body.style.overflow;

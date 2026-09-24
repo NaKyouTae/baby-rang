@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { palette } from '@/lib/colors';
+import { useAppOverlayLock } from './ads/appOverlay';
 
 interface Props {
   open: boolean;
@@ -31,6 +32,9 @@ export default function ConfirmModal({
   onConfirm,
   onClose,
 }: Props) {
+  // 열려 있는 동안 네이티브 앱 배너를 숨긴다(배너가 모달을 덮는 것 방지).
+  useAppOverlayLock(open);
+
   if (!open) return null;
 
   return (

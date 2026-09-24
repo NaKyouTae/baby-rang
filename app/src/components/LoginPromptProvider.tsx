@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
+import { useAppOverlayLock } from './ads/appOverlay';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
@@ -23,6 +24,8 @@ export function useLoginPrompt() {
 export default function LoginPromptProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
+  // 로그인 시트가 열려 있는 동안 네이티브 앱 배너를 숨긴다.
+  useAppOverlayLock(open);
   const [message, setMessage] = useState<string | undefined>(undefined);
   // 애플 로그인 / 계정으로 로그인 미사용 (주석 처리)
   // const [testFormOpen, setTestFormOpen] = useState(false);
