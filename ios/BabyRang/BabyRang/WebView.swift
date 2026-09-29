@@ -52,6 +52,8 @@ struct WebView: UIViewRepresentable {
         // 브릿지가 결과를 돌려보낼 대상. WebView 가 Coordinator 를 소유하므로 약한 참조다.
         context.coordinator.storeKit.webView = webView
         context.coordinator.kakaoLogin.webView = webView
+        // 앱 밖에서 확정된 거래(보호자 승인, 중단 후 복구)를 받아 웹에 넘긴다.
+        context.coordinator.storeKit.startTransactionListener()
 
         webView.load(URLRequest(url: url))
         return webView

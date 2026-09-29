@@ -7,6 +7,7 @@ import WidgetBridge from "@/components/WidgetBridge";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
+import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
@@ -305,6 +306,7 @@ export default function RootLayout({
             </div>
             <BottomNavServer />
             <AppAdSlotReporter />
+            <AppStorePurchaseRecovery />
           </div>
         </LoginPromptProvider>
       </body>

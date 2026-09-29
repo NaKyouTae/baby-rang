@@ -12,12 +12,69 @@ import WebKit
 ///   · iapProducts { requestId, productIds } → { ok, products: [{ id, displayPrice, displayName }] }
 ///   · iapPurchase { requestId, productId }  → { ok, transactionId } / { ok: false, cancelled } / { ok: false, message }
 ///   · iapFinish   { transactionId }         → 응답 없음
+///
+/// 그리고 앱이 떠 있는 동안 Transaction.updates 를 계속 듣는다(startTransactionListener).
 @MainActor
 final class StoreKitBridge {
     /// 웹에 결과를 돌려줄 WebView. WebView 가 이 객체를 소유하므로 약한 참조로 잡는다.
     weak var webView: WKWebView?
 
     static let handlerNames = ["iapProducts", "iapPurchase", "iapFinish"]
+
+    /// Transaction.updates 구독. 앱이 살아 있는 동안 계속 돈다.
+    private var listener: Task<Void, Never>?
+
+    deinit {
+        listener?.cancel()
+    }
+
+    /// 앱 밖에서 확정된 거래를 받아 웹에 알린다.
+    ///
+    /// StoreKit 은 결제 시트를 거치지 않고 거래가 확정되는 경로를 여럿 가진다 —
+    /// 가족 공유 '구입 요청'을 보호자가 나중에 승인하거나, 결제 중 앱이 죽었다가
+    /// 나중에 처리가 끝나는 경우다. 이 경로들은 purchase() 의 반환값으로 오지 않고
+    /// 오직 Transaction.updates 로만 전달된다.
+    ///
+    /// 듣지 않으면 그 거래는 미완료로 남아, **사용자가 결제 버튼을 다시 눌러야만**
+    /// 복구된다(purchase 안의 unfinishedTransaction 경로). 실제 청구가 끝난 상태라
+    /// "돈은 나갔는데 리포트가 안 열리는" 구간이 그만큼 길어진다.
+    ///
+    /// ⚠️ 여기서 finish() 를 부르지 않는다. 서버 승인이 끝나야 완료할 수 있고,
+    /// 승인에 필요한 정보(어떤 검사 결과에 대한 결제인지)는 웹만 알고 있다.
+    /// 웹이 승인까지 마친 뒤 iapFinish 로 돌려준다.
+    func startTransactionListener() {
+        guard listener == nil else { return }
+        listener = Task { [weak self] in
+            for await result in StoreKit.Transaction.updates {
+                let tx: StoreKit.Transaction
+                switch result {
+                case .verified(let value): tx = value
+                case .unverified(let value, _): tx = value
+                }
+                // 취소·환불된 거래는 열어줄 것이 없다.
+                guard tx.revocationDate == nil else { continue }
+                await self?.notifyWeb(tx)
+            }
+        }
+    }
+
+    private func notifyWeb(_ tx: StoreKit.Transaction) {
+        guard let webView else { return }
+        let payload: [String: Any] = [
+            "transactionId": String(tx.id),
+            "productId": tx.productID,
+        ]
+        guard
+            let data = try? JSONSerialization.data(withJSONObject: payload),
+            let json = String(data: data, encoding: .utf8)
+        else { return }
+
+        // 웹이 아직 브릿지를 만들기 전일 수 있다. 그때는 조용히 넘어가고,
+        // 거래는 미완료로 남아 기존 복구 경로(결제 버튼 재시도)가 처리한다.
+        let script =
+            "window.__iapBridge && window.__iapBridge.onTransaction && window.__iapBridge.onTransaction(\(json))"
+        webView.evaluateJavaScript(script)
+    }
 
     func handle(_ message: WKScriptMessage) {
         let body = message.body as? [String: Any] ?? [:]

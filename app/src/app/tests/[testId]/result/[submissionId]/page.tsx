@@ -20,6 +20,8 @@ import {
   TEMPERAMENT_IOS_SKU,
   finishAppStoreTransaction,
   purchaseWithAppStore,
+  rememberPendingPurchase,
+  clearPendingPurchase,
   useAppStoreProduct,
 } from '@/lib/appStoreBilling';
 
@@ -251,9 +253,20 @@ export default function ResultPage() {
     setPurchaseLoading(true);
     setPurchaseError(null);
     try {
+      // 결제 도중 앱이 죽어도 어떤 검사 결과에 대한 결제인지 알 수 있게 남겨둔다.
+      // 나중에 확정된 거래를 AppStorePurchaseRecovery 가 이 맥락으로 마무리한다.
+      rememberPendingPurchase({
+        sku: TEMPERAMENT_IOS_SKU,
+        submissionId,
+        productType: 'TEMPERAMENT_REPORT',
+      });
+
       const transactionId = await purchaseWithAppStore(TEMPERAMENT_IOS_SKU);
       // 사용자가 결제 시트를 닫은 경우 — 에러가 아니다.
-      if (!transactionId) return;
+      if (!transactionId) {
+        clearPendingPurchase();
+        return;
+      }
 
       const res = await fetch('/api/payments/app-store/confirm', {
         method: 'POST',
@@ -279,6 +292,7 @@ export default function ResultPage() {
       // 완료하지 않고 두면 다음 시도에서 같은 거래가 재사용되고(추가 청구 없음),
       // 서버는 같은 트랜잭션 ID를 중복 저장하지 않으므로 unlock 만 다시 시도된다.
       finishAppStoreTransaction(transactionId);
+      clearPendingPurchase();
 
       setResult(await getResult(submissionId));
     } catch (e) {

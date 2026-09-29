@@ -46,6 +46,8 @@ interface BridgeWindow extends Window {
   };
   __iapBridge?: {
     resolve: (requestId: string, payload: BridgeResponse) => void;
+    /** 앱 밖에서 확정된 거래를 네이티브가 알려주는 창구. */
+    onTransaction?: (tx: { transactionId: string; productId: string }) => void;
   };
 }
 
@@ -187,4 +189,89 @@ export async function purchaseWithAppStore(
 export function finishAppStoreTransaction(transactionId: string): void {
   const webkit = bridge();
   webkit?.messageHandlers?.iapFinish?.postMessage({ transactionId });
+}
+
+// ─────────────────────────────────────────────────────────────
+// 앱 밖에서 확정된 거래 복구
+// ─────────────────────────────────────────────────────────────
+//
+// 결제 시트를 거치지 않고 거래가 확정되는 경로가 있다(보호자의 '구입 요청' 승인,
+// 결제 도중 앱 종료 후 나중에 처리 완료). 네이티브는 그걸 Transaction.updates 로
+// 받아 여기로 넘겨준다(StoreKitBridge.startTransactionListener).
+//
+// 문제는 서버 승인에 "어떤 검사 결과에 대한 결제인지"(submissionId)가 필요한데
+// 네이티브는 그 값을 모른다는 것이다. 그래서 결제를 시작할 때 웹이 저장해 두고,
+// 거래가 돌아오면 그 맥락으로 승인을 마친다.
+
+const PENDING_KEY = "app-store-pending-purchase";
+
+export interface PendingPurchase {
+  sku: string;
+  submissionId: string;
+  productType: string;
+}
+
+/**
+ * 결제 시작 시 맥락을 남긴다.
+ *
+ * localStorage 를 쓰는 이유: 결제 도중 앱이 죽어도 살아남아야 한다.
+ * 그 경우가 바로 이 복구 경로가 필요한 상황이다.
+ */
+export function rememberPendingPurchase(pending: PendingPurchase): void {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+  } catch {
+    // 저장이 막힌 환경(프라이빗 모드 등)에서는 자동 복구만 포기한다.
+    // 결제 버튼을 다시 누르는 기존 복구 경로는 그대로 동작한다.
+  }
+}
+
+export function clearPendingPurchase(): void {
+  try {
+    localStorage.removeItem(PENDING_KEY);
+  } catch {
+    // 지우지 못해도 다음 결제 때 덮어써지므로 문제되지 않는다.
+  }
+}
+
+export function readPendingPurchase(): PendingPurchase | null {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PendingPurchase>;
+    if (!parsed?.sku || !parsed?.submissionId || !parsed?.productType) {
+      return null;
+    }
+    return parsed as PendingPurchase;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 네이티브가 알려주는 거래를 받을 핸들러를 등록한다.
+ * 등록 해제 함수를 돌려준다.
+ */
+export function onAppStoreTransaction(
+  handler: (tx: { transactionId: string; productId: string }) => void,
+): () => void {
+  if (typeof window === "undefined") return () => {};
+  const w = window as BridgeWindow;
+  if (!w.__iapBridge) {
+    w.__iapBridge = {
+      resolve(requestId, payload) {
+        const fn = pending.get(requestId);
+        if (!fn) return;
+        pending.delete(requestId);
+        fn(payload);
+      },
+    };
+  }
+  w.__iapBridge.onTransaction = handler;
+  return () => {
+    const bridgeWindow = window as BridgeWindow;
+    if (bridgeWindow.__iapBridge?.onTransaction === handler) {
+      bridgeWindow.__iapBridge.onTransaction = undefined;
+    }
+  };
 }
