@@ -20,13 +20,20 @@
 			<key>CFBundleURLName</key>
 			<string>kakao</string>
 			<!-- 카카오톡이 로그인 인증을 마친 뒤 이 스킴으로 앱에 돌아온다.
-			     kakao + 네이티브 앱 키. 카카오 개발자 콘솔의 '스킴' 값과 같아야 한다. -->
+			     kakao + 네이티브 앱 키. 카카오 개발자 콘솔의 '스킴' 값과 같아야 한다.
+			     키는 빌드 설정 KAKAO_NATIVE_APP_KEY 에서 온다(Debug=개발 앱, Release=운영 앱).
+			     여기에 직접 적지 않는 이유: 스킴과 initSDK 에 쓰는 키가 어긋나면
+			     카카오톡은 열리는데 앱으로 돌아오지 못한다. 한 곳에서만 정의한다. -->
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kakao6e650917dc42ab9d0868a18d065823c5</string>
+				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
 			</array>
 		</dict>
 	</array>
+	<!-- 카카오 네이티브 앱 키. 빌드 구성별로 다른 값이 들어간다.
+	     BabyRangApp 이 KakaoSDK.initSDK 에 넘길 때 읽는다. -->
+	<key>KakaoNativeAppKey</key>
+	<string>$(KAKAO_NATIVE_APP_KEY)</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6008464533427245~7115583932</string>
 	<key>LSApplicationQueriesSchemes</key>

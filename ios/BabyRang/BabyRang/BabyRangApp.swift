@@ -10,10 +10,28 @@ import KakaoSDKAuth
 import KakaoSDKCommon
 import SwiftUI
 
-/// 카카오 네이티브 앱 키. Info.plist 의 URL 스킴(kakao + 이 값)과 반드시 같아야 한다.
+/// 카카오 네이티브 앱 키.
+///
+/// 값은 빌드 설정 `KAKAO_NATIVE_APP_KEY` 에서 오고, Info.plist 의 URL 스킴과
+/// 이 상수가 **같은 출처**를 읽는다. 둘을 따로 적어두면 어긋났을 때
+/// "카카오톡은 열리는데 앱으로 돌아오지 않는" 증상이 나는데, 원인을 찾기 어렵다.
+///
+/// Debug = 개발 카카오 앱, Release = 운영 카카오 앱.
+/// 카카오 회원번호는 앱마다 다르게 발급되므로 섞이면 계정이 갈라진다.
+/// 서버도 KAKAO_APP_ID 로 같은 분기를 한다(kakao-native.service.ts).
+///
 /// 비밀값이 아니다 — 앱 바이너리에 그대로 실려 나가며, 카카오의 보안 경계는
 /// 개발자 콘솔에 등록한 번들 ID 다.
-private let kakaoNativeAppKey = "6e650917dc42ab9d0868a18d065823c5"
+private let kakaoNativeAppKey: String = {
+    let key = Bundle.main.object(forInfoDictionaryKey: "KakaoNativeAppKey") as? String
+    guard let key, !key.isEmpty else {
+        // 빌드 설정이 빠진 채로 나가면 로그인만 조용히 안 되고 원인이 안 드러난다.
+        // 개발 중에 바로 알아채도록 여기서 멈춘다.
+        assertionFailure("KAKAO_NATIVE_APP_KEY 빌드 설정이 비어 있다.")
+        return ""
+    }
+    return key
+}()
 
 @main
 struct BabyRangApp: App {

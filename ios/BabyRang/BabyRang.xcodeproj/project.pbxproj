@@ -412,6 +412,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRang/Info.plist;
+				KAKAO_NATIVE_APP_KEY = 6e650917dc42ab9d0868a18d065823c5;
 				"INFOPLIST_FILE[sdk=*]" = BabyRang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
@@ -451,6 +452,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRang/Info.plist;
+				KAKAO_NATIVE_APP_KEY = 3cab8374c32c276f9ffeb4c824415544;
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
