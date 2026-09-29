@@ -553,6 +553,18 @@ export class PaymentsService {
     });
     if (!payment) throw new NotFoundException('결제 내역을 찾을 수 없습니다.');
 
+    // 이 메서드는 Toss 취소 API 만 호출한다.
+    // 인앱결제의 paymentKey 는 스토어 트랜잭션 ID 라서 Toss 가 모르는 값이고,
+    // Apple 은 애초에 판매자에게 환불 API 를 주지 않는다(Google 은 Play Console).
+    // 막지 않으면 Toss 에 엉뚱한 취소 요청이 나가고, 실패 사유도 드러나지 않는다.
+    if (payment.provider !== 'TOSS') {
+      throw new ConflictException(
+        payment.provider === 'APP_STORE'
+          ? 'App Store 결제는 Apple 만 환불할 수 있습니다. 고객이 reportaproblem.apple.com 에서 신청해야 합니다.'
+          : 'Google Play 결제는 Play Console 에서 환불해야 합니다.',
+      );
+    }
+
     if (
       payment.status !== PaymentStatus.PAID &&
       payment.status !== PaymentStatus.PARTIAL_REFUNDED

@@ -105,6 +105,7 @@ export default async function PaymentsPage({
                 orderId={p.orderId}
                 amount={p.amount}
                 status={p.status}
+                provider={p.provider}
                 variant="card"
               />
             </div>
@@ -161,6 +162,7 @@ export default async function PaymentsPage({
                       orderId={p.orderId}
                       amount={p.amount}
                       status={p.status}
+                      provider={p.provider}
                     />
                   </div>
                 </TableCell>

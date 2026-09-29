@@ -20,10 +20,30 @@ type Props = {
   orderId: string;
   amount: number;
   status: string;
+  /** 'TOSS' | 'APP_STORE' | 'GOOGLE_PLAY' */
+  provider: string;
   variant?: "table" | "card";
 };
 
-export function RefundButton({ orderId, amount, status, variant = "table" }: Props) {
+/**
+ * 어드민에서 환불할 수 있는 결제인지.
+ *
+ * 환불 API 는 Toss 취소만 호출한다(payments.service.ts refundTossByAdmin).
+ * 인앱결제의 paymentKey 는 스토어 트랜잭션 ID 라서 Toss 가 모르는 값이고,
+ * 애초에 Apple 은 판매자에게 환불 API 를 주지 않는다.
+ * 그래서 스토어 결제에는 버튼 대신 처리 경로를 안내한다.
+ */
+function storeRefundNotice(provider: string): string | null {
+  if (provider === "APP_STORE") {
+    return "App Store 환불은 Apple 만 처리할 수 있습니다. 고객이 reportaproblem.apple.com 에서 직접 신청해야 합니다.";
+  }
+  if (provider === "GOOGLE_PLAY") {
+    return "Google Play 환불은 Play Console 의 주문 관리에서 처리합니다.";
+  }
+  return null;
+}
+
+export function RefundButton({ orderId, amount, status, provider, variant = "table" }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -35,6 +55,23 @@ export function RefundButton({ orderId, amount, status, variant = "table" }: Pro
   const refundable = status === "PAID" || status === "PARTIAL_REFUNDED";
 
   if (!refundable) return null;
+
+  // 스토어 결제는 여기서 환불할 수 없다. 버튼을 그대로 두면 눌렀을 때
+  // Toss API 가 호출되어 실패하므로, 어디서 처리하는지만 알려준다.
+  const notice = storeRefundNotice(provider);
+  if (notice) {
+    return (
+      <span
+        className={
+          variant === "card"
+            ? "flex-1 text-xs text-muted-foreground"
+            : "text-xs text-muted-foreground"
+        }
+      >
+        {notice}
+      </span>
+    );
+  }
 
   async function submit() {
     if (!reason.trim()) {
