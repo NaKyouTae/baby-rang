@@ -10,6 +10,17 @@ export const APP_AD_SLOT_ID = "app-ad-slot";
 type MessageHandler = { postMessage: (body: unknown) => void };
 type NativeBridgeWindow = Window & {
   webkit?: { messageHandlers?: Record<string, MessageHandler | undefined> };
+  // 안드로이드는 @JavascriptInterface 로 노출된다.
+  // JS 객체를 그대로 못 넘기므로 JSON 문자열로 보낸다.
+  Android?: { reportAdSlot?: (json: string) => void };
+};
+
+type SlotPayload = {
+  visible: boolean;
+  bottomInset?: number;
+  height?: number;
+  width?: number;
+  left?: number;
 };
 
 /**
@@ -27,24 +38,37 @@ export default function AppAdSlotReporter() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const handler = (window as NativeBridgeWindow).webkit?.messageHandlers?.adSlot;
-    if (!handler) return;
+    const w = window as NativeBridgeWindow;
+    const iosHandler = w.webkit?.messageHandlers?.adSlot;
+    const hasAndroid = typeof w.Android?.reportAdSlot === "function";
+    if (!iosHandler && !hasAndroid) return;
+
+    // 플랫폼별 전송 방식을 여기서 흡수한다. 아래 로직은 동일하다.
+    const send = (payload: SlotPayload) => {
+      if (iosHandler) {
+        iosHandler.postMessage(payload);
+        return;
+      }
+      // ⚠️ 안드로이드 브리지는 메서드만 떼어내 호출하면 동작하지 않는다.
+      //    수신 객체(window.Android)를 유지한 채 호출해야 한다.
+      w.Android?.reportAdSlot?.(JSON.stringify(payload));
+    };
 
     const report = () => {
       // 바텀시트·모달이 열려 있으면 배너를 숨긴다.
       // 배너는 WebView 위에 얹힌 네이티브 뷰라, 그대로 두면 오버레이를 덮어버린다.
       if (isAppOverlayOpen()) {
-        handler.postMessage({ visible: false });
+        send({ visible: false });
         return;
       }
 
       const el = document.getElementById(APP_AD_SLOT_ID);
       if (!el) {
-        handler.postMessage({ visible: false });
+        send({ visible: false });
         return;
       }
       const rect = el.getBoundingClientRect();
-      handler.postMessage({
+      send({
         visible: rect.height > 0,
         // 뷰포트 하단에서 슬롯 하단까지의 거리. CSS px = pt 이므로 그대로 쓴다.
         bottomInset: window.innerHeight - rect.bottom,

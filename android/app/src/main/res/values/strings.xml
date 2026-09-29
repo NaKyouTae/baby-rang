@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">아기랑</string>
+    <!--
+      AdMob 앱 ID. 매니페스트는 빌드 타입별 분기가 번거로워 문자열로 둔다.
+      디버그 빌드는 res/values 를 덮어쓰는 debug 소스셋에서 테스트 ID 로 교체된다.
+    -->
+    <string name="admob_app_id" translatable="false">ca-app-pub-6008464533427245~7265600089</string>
+</resources>

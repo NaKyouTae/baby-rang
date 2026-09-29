@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-// TWA(Trusted Web Activity)로 감싼 Android 앱 안에서 열렸는지 판별한다.
+// Android 앱(TWA 또는 네이티브 WebView) 안에서 열렸는지 판별한다.
 //
 // 왜 필요한가:
 // Google Play 결제 정책상, Play에서 배포되는 앱 안에서 소비되는 디지털 콘텐츠는
@@ -29,6 +29,12 @@ const STORAGE_KEY = "baby-rang.isTwa";
 let cached: boolean | undefined;
 
 function detect(): boolean {
+  // ⓪ 네이티브 Android 앱은 JS 브리지를 주입한다. 가장 확실한 신호다.
+  //    TWA 판별 신호(referrer·startUrl·standalone)는 네이티브 WebView 에선 전부 잡히지
+  //    않으므로, 이걸 빠뜨리면 네이티브 앱에서 Toss 결제가 노출돼 Play 정책을 위반한다.
+  const w = window as Window & { Android?: { openLocationSettings?: unknown } };
+  if (typeof w.Android?.openLocationSettings === "function") return true;
+
   // ① 앱이 웹을 처음 띄우는 순간에만 값이 있다.
   const byReferrer = document.referrer.startsWith(REFERRER_PREFIX);
 

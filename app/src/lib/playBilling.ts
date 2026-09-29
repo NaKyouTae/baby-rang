@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  fetchAndroidProduct,
+  isAndroidBillingAvailable,
+  purchaseWithAndroid,
+} from "./androidBilling";
 
 // Android(TWA)에서 Digital Goods API 로 Google Play 결제를 처리한다.
 //
@@ -92,6 +97,29 @@ export function usePlayProduct(sku: string): PlayProductState {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      // 네이티브 앱이면 Play Billing 브리지를 쓴다. TWA 는 Digital Goods 로 간다.
+      if (isAndroidBillingAvailable()) {
+        if (!PLAY_BILLING_ENABLED) {
+          if (!cancelled) setState({ status: "unavailable" });
+          return;
+        }
+        const item = await fetchAndroidProduct(sku);
+        if (cancelled) return;
+        setState(
+          item
+            ? {
+                status: "ready",
+                item: {
+                  itemId: item.itemId,
+                  title: item.title,
+                  price: { currency: item.currency, value: item.value },
+                },
+              }
+            : { status: "unavailable" },
+        );
+        return;
+      }
+
       const service = await getPlayBillingService();
       if (!service) {
         if (!cancelled) setState({ status: "unavailable" });
@@ -127,6 +155,11 @@ export async function purchaseWithPlay(
   sku: string,
   item: ItemDetails,
 ): Promise<string | null> {
+  // 네이티브 앱은 브리지가 결제 시트를 띄운다. 사용자 활성화 제약이 없다.
+  if (isAndroidBillingAvailable()) {
+    return purchaseWithAndroid(item.itemId || sku);
+  }
+
   // ⚠️ 결제 요청에는 반드시 getDetails 가 돌려준 itemId 를 써야 한다.
   // 우리가 아는 상수(sku)를 그대로 넘기면, Play 가 실제로 파는 식별자와 다를 때
   // Chrome 이 결제를 중단시킨다(show() 가 AbortError 로 즉시 거부된다).

@@ -1,0 +1,55 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'kr.spectrify.babyrang'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "kr.spectrify.baby_rang"
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        debug {
+            // TWA 와 같은 기기에 함께 설치할 수 있도록 디버그 빌드는 패키지를 분리한다.
+            applicationIdSuffix ".debug"
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+        // AdConfig 가 BuildConfig.DEBUG 로 테스트/실제 광고 단위를 가른다.
+        // AGP 8 부터 기본값이 false 라 명시해야 한다.
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.activity:activity-ktx:1.9.3'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    // ktx 변형은 Kotlin 2.3 으로 컴파일돼 이 프로젝트(2.0.x)와 메타데이터가 충돌한다.
+    // 콜백 API 만 쓰므로 자바 기반 기본 아티팩트로 충분하다.
+    implementation 'com.android.billingclient:billing:9.1.0'
+}
