@@ -11,6 +11,9 @@ import { ConfigService } from '@nestjs/config';
 // 웹 로그인은 서버가 OAuth code 를 직접 교환하므로(kakao.strategy.ts) 토큰의 출처가
 // 보장되지만, 앱은 카카오 SDK 가 받은 토큰을 서버에 건네주는 구조라 그 보장이 없다.
 // 그래서 "이 토큰이 정말 우리 앱에서 발급된 것인가"를 반드시 되물어야 한다.
+//
+// 허용할 앱은 KAKAO_APP_ID 로 정한다. 쉼표로 여러 개를 넣을 수 있어서,
+// 개발 서버는 테스트 앱과 운영 앱을 동시에 받아줄 수 있다.
 
 const TOKEN_INFO_URL = 'https://kapi.kakao.com/v1/user/access_token_info';
 const USER_ME_URL = 'https://kapi.kakao.com/v2/user/me';
@@ -53,8 +56,8 @@ export class KakaoNativeService {
    * 계정이 열리므로, 토큰이 우리 앱 소유인지부터 확인한다.
    */
   async resolveProfile(accessToken: string): Promise<KakaoNativeProfile> {
-    const expectedAppId = this.configService.get<string>('KAKAO_APP_ID');
-    if (!expectedAppId) {
+    const allowedAppIds = this.allowedAppIds();
+    if (allowedAppIds.length === 0) {
       // 설정 누락 상태로 통과시키면 검증 자체가 사라진다. 차라리 로그인을 막는다.
       this.logger.error(
         'KAKAO_APP_ID 가 설정되지 않아 네이티브 로그인을 거부한다.',
@@ -65,9 +68,10 @@ export class KakaoNativeService {
     }
 
     const info = await this.get<TokenInfoResponse>(TOKEN_INFO_URL, accessToken);
-    if (String(info.app_id ?? '') !== String(expectedAppId)) {
+    const appId = String(info.app_id ?? '');
+    if (!allowedAppIds.includes(appId)) {
       this.logger.warn(
-        `다른 앱의 카카오 토큰이 들어왔다. app_id=${info.app_id} expected=${expectedAppId}`,
+        `허용되지 않은 앱의 카카오 토큰이 들어왔다. app_id=${appId} allowed=${allowedAppIds.join(',')}`,
       );
       throw new UnauthorizedException('로그인 정보를 확인할 수 없습니다.');
     }
@@ -87,6 +91,23 @@ export class KakaoNativeService {
       profileImage:
         account?.profile?.profile_image_url ?? me.properties?.profile_image,
     };
+  }
+
+  /**
+   * 로그인을 허용할 카카오 앱 ID 목록.
+   *
+   * 쉼표로 여러 개를 넣을 수 있다(예: 개발 서버에서 테스트 앱 + 운영 앱 둘 다 허용).
+   *
+   * ⚠️ 운영 서버에는 운영 앱 ID 하나만 두는 편이 안전하다.
+   * 카카오 회원번호는 앱마다 다르게 발급되므로, 운영 서버가 테스트 앱 토큰까지
+   * 받아주면 같은 사람이 앱을 바꿔 로그인할 때 **다른 계정**으로 갈라진다.
+   */
+  private allowedAppIds(): string[] {
+    const raw = this.configService.get<string>('KAKAO_APP_ID') ?? '';
+    return raw
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
   }
 
   private async get<T>(url: string, accessToken: string): Promise<T> {
