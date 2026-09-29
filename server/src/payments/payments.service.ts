@@ -14,10 +14,16 @@ import {
   CreatePaymentDto,
   FailPaymentDto,
   ConfirmGooglePlayDto,
+  ConfirmAppStoreDto,
   ListPaymentsQuery,
 } from './dto';
-import { resolveByPlaySku, resolveProduct } from './product-catalog';
+import {
+  resolveByIosSku,
+  resolveByPlaySku,
+  resolveProduct,
+} from './product-catalog';
 import { GooglePlayService } from './google-play.service';
+import { AppStoreService } from './app-store.service';
 
 @Injectable()
 export class PaymentsService {
@@ -26,7 +32,82 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private googlePlay: GooglePlayService,
+    private appStore: AppStoreService,
   ) {}
+
+  /**
+   * iOS 인앱결제 승인. WebView 안의 웹이 StoreKit 브릿지로 구매한 뒤 호출한다.
+   *
+   * confirmGooglePlay 와 같은 구조다. 금액을 받지 않고, 어떤 상품을 샀는지는
+   * Apple 이 돌려준 productId 가 정한다. 가격은 서버 가격표에서 가져온다.
+   *
+   * ⚠️ 여기서 소비(consume)에 해당하는 처리를 하지 않는다.
+   * StoreKit 은 Transaction.finish() 를 **앱이** 불러야 거래가 끝나고, 그전까지는
+   * 앱을 다시 켤 때마다 미완료 거래로 다시 내려온다. 이 응답을 받은 웹이 네이티브에
+   * finish 를 요청하는 순서라, 서버 저장이 실패하면 거래가 살아남아 재시도된다.
+   * (Play 는 반대로 서버가 consume 해야 해서 여기서 처리한다)
+   */
+  async confirmAppStore(
+    userId: string,
+    dto: ConfirmAppStoreDto,
+    context: { ipAddress?: string; userAgent?: string },
+  ) {
+    const { transactionId, childId, productMeta } = dto;
+    if (!transactionId) {
+      throw new BadRequestException('필수 파라미터가 누락되었습니다.');
+    }
+
+    // 같은 트랜잭션으로 두 번 들어와도 결제가 중복 생성되지 않게 한다.
+    // iOS 는 미완료 거래를 앱 실행마다 다시 내려주므로 재시도가 Play 보다 잦다.
+    const existing = await this.prisma.payment.findFirst({
+      where: { provider: 'APP_STORE', paymentKey: transactionId },
+    });
+    if (existing) return existing;
+
+    const tx = await this.appStore.getTransaction(transactionId);
+
+    // 클라이언트가 보낸 productType 은 쓰지 않는다. Apple 이 돌려준 productId 로 확정한다.
+    const { productType, spec } = resolveByIosSku(tx.productId);
+
+    // 가족 공유로 받은 항목은 결제가 아니다. 소모품에는 원래 적용되지 않지만,
+    // 상품 구성이 바뀌어도 이 경로가 조용히 열리지 않도록 막아둔다.
+    if (tx.inAppOwnershipType && tx.inAppOwnershipType !== 'PURCHASED') {
+      throw new BadRequestException('구매하신 결제 정보가 아닙니다.');
+    }
+
+    return this.prisma.payment.create({
+      data: {
+        userId,
+        childId: childId ?? null,
+        // Apple 은 Play 의 orderId 같은 별도 주문번호를 주지 않는다.
+        // 트랜잭션 ID 가 거래당 유일하므로 그대로 주문번호로 쓴다.
+        orderId: `AS-${tx.transactionId}`,
+        productType,
+        productName: spec.name,
+        productMeta: productMeta as Prisma.InputJsonValue | undefined,
+        amount: spec.price,
+        currency: 'KRW',
+        provider: 'APP_STORE',
+        status: PaymentStatus.PAID,
+        paymentKey: tx.transactionId,
+        transactionId: tx.originalTransactionId,
+        method: 'APP_STORE',
+        approvedAt: tx.purchaseDate ? new Date(tx.purchaseDate) : new Date(),
+        rawResponse: tx as unknown as Prisma.InputJsonValue,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        events: {
+          create: {
+            type: 'CONFIRMED',
+            status: PaymentStatus.PAID,
+            amount: spec.price,
+            payload: tx as unknown as Prisma.InputJsonValue,
+          },
+        },
+      },
+      include: { events: true },
+    });
+  }
 
   /**
    * Google Play 결제 승인. Android(TWA)에서 Digital Goods API 로 구매한 뒤 호출된다.

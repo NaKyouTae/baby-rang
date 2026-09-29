@@ -64,6 +64,17 @@ export interface ConfirmGooglePlayDto {
   productMeta?: Record<string, unknown>;
 }
 
+export interface ConfirmAppStoreDto {
+  /**
+   * StoreKit 이 돌려준 트랜잭션 ID.
+   * 영수증(JWS)이 아니라 ID 만 받는다 — 진위는 서버가 Apple 에 되물어 확인한다.
+   */
+  transactionId: string;
+  productType: PaymentProductType;
+  childId?: string;
+  productMeta?: Record<string, unknown>;
+}
+
 export interface ListPaymentsQuery {
   status?: PaymentStatus;
   productType?: PaymentProductType;

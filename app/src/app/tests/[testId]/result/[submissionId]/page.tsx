@@ -9,11 +9,19 @@ import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import AppBannerSlot from '@/components/ads/AppBannerSlot';
 import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
 import { useIsAndroidApp } from '@/lib/isAndroidApp';
+import { useIsIosApp } from '@/lib/isNativeApp';
 import {
   TEMPERAMENT_SKU,
   purchaseWithPlay,
   usePlayProduct,
 } from '@/lib/playBilling';
+import {
+  IOS_LEGACY_TOSS_ENABLED,
+  TEMPERAMENT_IOS_SKU,
+  finishAppStoreTransaction,
+  purchaseWithAppStore,
+  useAppStoreProduct,
+} from '@/lib/appStoreBilling';
 
 const TEMPERAMENT_PRICE = 990;
 import type { TestResult } from '@/lib/api';
@@ -50,8 +58,13 @@ export default function ResultPage() {
   // Android 앱에서 Play 결제를 쓸 수 있는지 + 상품 정보를 미리 받아둔다.
   // 클릭 시점에 조회하면 사용자 활성화가 끊겨 결제 시트가 뜨지 않는다. (playBilling.ts 참고)
   const playProduct = usePlayProduct(TEMPERAMENT_SKU);
-  const [playLoading, setPlayLoading] = useState(false);
-  const [playError, setPlayError] = useState<string | null>(null);
+  // iOS 앱에서는 StoreKit 인앱결제를 쓴다. 브릿지가 없는 구 빌드에서는
+  // 곧바로 unavailable 이 되므로 아래 결제 경로 판정에서 걸러진다.
+  const isIosApp = useIsIosApp();
+  const iosProduct = useAppStoreProduct(TEMPERAMENT_IOS_SKU);
+  // 세 결제 경로가 같은 로딩/오류 UI를 쓴다.
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
   // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
   const [expired, setExpired] = useState(false);
   const unlockedRef = useRef(false);
@@ -157,18 +170,46 @@ export default function ResultPage() {
 
   const remainingLabel = remainingAccessLabel(result.expiresAt);
 
-  // 결제 수단이 확정된 경우에만 유료 유도 UI를 노출한다.
-  // 판별 전(null)에 노출하면 앱에서 결제 버튼이 한 프레임 스쳐 보일 수 있다.
-  const canPurchase =
-    isAndroidApp === false ||
-    (isAndroidApp === true && playProduct.status === 'ready');
+  /*
+    결제 경로는 어디서 열렸는지에 따라 정확히 하나로 확정된다.
+      · 웹                        → 'toss'      (결제 화면으로 이동)
+      · Android(TWA)              → 'play'      (Play 결제 시트)
+      · iOS 앱 + StoreKit 브릿지   → 'appStore'  (인앱결제 시트)
+      · 어느 쪽도 쓸 수 없음        → 'none'      (아무것도 노출하지 않음)
+      · 아직 판별 전               → 'pending'   (아무것도 노출하지 않음)
+
+    ⚠️ 'none' 일 때 "웹사이트에서 구매하세요" 같은 안내나 링크를 넣으면 안 된다.
+       외부 결제 유도는 Play·App Store 양쪽 모두에서 그 자체로 정책 위반이다.
+  */
+  const paymentRoute: 'pending' | 'none' | 'toss' | 'play' | 'appStore' =
+    (() => {
+      // 판별 전에 노출하면 앱에서 결제 버튼이 한 프레임 스쳐 보일 수 있다.
+      if (isAndroidApp === null || isIosApp === null) return 'pending';
+
+      if (isAndroidApp) {
+        // Billing 없는 구 TWA 빌드에서는 결제 자체를 노출하지 않는다.
+        return playProduct.status === 'ready' ? 'play' : 'none';
+      }
+
+      if (isIosApp) {
+        if (iosProduct.status === 'ready') return 'appStore';
+        // 상품 조회가 끝나기 전에는 결제 수단이 확정되지 않았다.
+        if (iosProduct.status === 'loading') return 'pending';
+        // 브릿지가 없는 구 빌드. 전환 기간 동안만 Toss 를 남긴다.
+        return IOS_LEGACY_TOSS_ENABLED ? 'toss' : 'none';
+      }
+
+      return 'toss';
+    })();
+
+  const canPurchase = paymentRoute !== 'pending' && paymentRoute !== 'none';
 
   // Android(TWA)에서 Play 결제를 진행한다.
   // 웹과 달리 페이지 이동 없이 Play 결제 시트가 뜨고, 승인 후 바로 리포트가 열린다.
   const handlePlayUnlock = async () => {
-    if (playLoading) return;
-    setPlayLoading(true);
-    setPlayError(null);
+    if (purchaseLoading) return;
+    setPurchaseLoading(true);
+    setPurchaseError(null);
     try {
       if (playProduct.status !== 'ready') return;
       const purchaseToken = await purchaseWithPlay(
@@ -196,24 +237,72 @@ export default function ResultPage() {
       await unlockResult(submissionId, data.orderId);
       setResult(await getResult(submissionId));
     } catch (e) {
-      setPlayError(
+      setPurchaseError(
         e instanceof Error ? e.message : '결제 처리 중 오류가 발생했어요.',
       );
     } finally {
-      setPlayLoading(false);
+      setPurchaseLoading(false);
+    }
+  };
+
+  // iOS 앱에서 StoreKit 인앱결제를 진행한다.
+  const handleAppStoreUnlock = async () => {
+    if (purchaseLoading) return;
+    setPurchaseLoading(true);
+    setPurchaseError(null);
+    try {
+      const transactionId = await purchaseWithAppStore(TEMPERAMENT_IOS_SKU);
+      // 사용자가 결제 시트를 닫은 경우 — 에러가 아니다.
+      if (!transactionId) return;
+
+      const res = await fetch('/api/payments/app-store/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactionId,
+          productType: 'TEMPERAMENT_REPORT',
+          productMeta: { submissionId },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.orderId) {
+        throw new Error(data?.message ?? '결제 승인에 실패했습니다.');
+      }
+
+      await unlockResult(submissionId, data.orderId);
+
+      // ⚠️ 리포트가 실제로 열린 뒤에야 거래를 완료한다.
+      //
+      // 이 줄이 위로 올라가면 이중 청구가 생긴다. 승인은 됐는데 unlockResult 가
+      // 실패한 경우, 거래를 이미 완료해 버렸으면 사용자가 다시 눌렀을 때
+      // StoreKit 이 새 결제를 진행한다 — 소모품이라 막아주지 않는다.
+      // 완료하지 않고 두면 다음 시도에서 같은 거래가 재사용되고(추가 청구 없음),
+      // 서버는 같은 트랜잭션 ID를 중복 저장하지 않으므로 unlock 만 다시 시도된다.
+      finishAppStoreTransaction(transactionId);
+
+      setResult(await getResult(submissionId));
+    } catch (e) {
+      setPurchaseError(
+        e instanceof Error ? e.message : '결제 처리 중 오류가 발생했어요.',
+      );
+    } finally {
+      setPurchaseLoading(false);
     }
   };
 
   const handleUnlock = () => {
     if (!result) return;
-    if (isAndroidApp === null) return;
 
-    if (isAndroidApp) {
-      // Play 결제를 쓸 수 없는 빌드에서는 버튼 자체가 안 뜨지만, 방어적으로 한 번 더 막는다.
-      if (playProduct.status !== 'ready') return;
+    if (paymentRoute === 'play') {
       void handlePlayUnlock();
       return;
     }
+    if (paymentRoute === 'appStore') {
+      void handleAppStoreUnlock();
+      return;
+    }
+    // 'pending' / 'none' 에서는 버튼 자체가 안 뜨지만 방어적으로 막는다.
+    if (paymentRoute !== 'toss') return;
 
     const redirectTo = `/tests/${testId}/result/${submissionId}`;
     const productMeta = JSON.stringify({ submissionId });
@@ -282,13 +371,8 @@ export default function ResultPage() {
 
       {/*
         이미 결제한 리포트는 어디서 열든 그대로 보여준다.
-
-        아직 결제 전이라면 결제 수단이 확정된 경우에만 잠금 안내를 노출한다.
-          · 웹            → Toss (결제 화면으로 이동)
-          · Android + Play 결제 가능 → Play 결제 시트
-          · Android + Play 결제 불가 → 아무것도 노출하지 않음 (Billing 없는 구 빌드)
-        ⚠️ 마지막 경우에 "웹사이트에서 구매하세요" 같은 안내나 링크를 넣으면 안 된다.
-        외부 결제 유도는 그 자체로 Play 결제 정책 위반이다.
+        아직 결제 전이라면 결제 경로가 확정된 경우에만 잠금 안내를 노출한다.
+        어떤 경로가 뽑히는지는 위의 paymentRoute 를 볼 것.
       */}
       {result.isPaid && result.paidContent ? (
         <PaidResultSection content={result.paidContent} />
@@ -298,14 +382,14 @@ export default function ResultPage() {
             sections={result.lockedSections}
             onUnlock={handleUnlock}
           />
-          {playLoading && (
+          {purchaseLoading && (
             <p className="mt-2 text-center text-[12px] text-gray-500">
               결제를 진행하고 있어요...
             </p>
           )}
-          {playError && (
+          {purchaseError && (
             <p className="mt-2 text-center text-[12px]" style={{ color: '#DC2626' }}>
-              {playError}
+              {purchaseError}
             </p>
           )}
           {/*

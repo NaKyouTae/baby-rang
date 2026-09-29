@@ -12,6 +12,7 @@ import { AuthGuard } from '@nestjs/passport';
 import {
   CancelPaymentDto,
   ConfirmAndCreateDto,
+  ConfirmAppStoreDto,
   ConfirmGooglePlayDto,
   ConfirmPaymentDto,
   CreatePaymentDto,
@@ -59,6 +60,18 @@ export class PaymentsController {
   @Post('google-play/confirm')
   confirmGooglePlay(@Req() req, @Body() dto: ConfirmGooglePlayDto) {
     return this.payments.confirmGooglePlay(req.user.id, dto, {
+      ipAddress:
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+        req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
+  }
+
+  // iOS 인앱결제 승인. 금액도, 영수증도 받지 않는다 —
+  // 서버가 트랜잭션 ID로 Apple 에 되물어 상품과 가격을 확정한다.
+  @Post('app-store/confirm')
+  confirmAppStore(@Req() req, @Body() dto: ConfirmAppStoreDto) {
+    return this.payments.confirmAppStore(req.user.id, dto, {
       ipAddress:
         (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
         req.ip,

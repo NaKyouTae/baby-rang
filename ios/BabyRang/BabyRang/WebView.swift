@@ -31,6 +31,10 @@ struct WebView: UIViewRepresentable {
         contentController.add(context.coordinator, name: "reloadWidget")
         // 앱 배너를 놓을 슬롯 위치 보고
         contentController.add(context.coordinator, name: "adSlot")
+        // StoreKit 인앱결제 브릿지 (iapProducts / iapPurchase / iapFinish)
+        for name in StoreKitBridge.handlerNames {
+            contentController.add(context.coordinator, name: name)
+        }
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -41,6 +45,9 @@ struct WebView: UIViewRepresentable {
 
         webView.scrollView.showsVerticalScrollIndicator = false
         webView.scrollView.showsHorizontalScrollIndicator = false
+
+        // 브릿지가 결과를 돌려보낼 대상. WebView 가 Coordinator 를 소유하므로 약한 참조다.
+        context.coordinator.storeKit.webView = webView
 
         webView.load(URLRequest(url: url))
         return webView
@@ -54,6 +61,8 @@ struct WebView: UIViewRepresentable {
         private let onLoad: () -> Void
         private let adSlot: AdSlotModel
         private var hasNotifiedLoad = false
+        /// 인앱결제 요청을 처리한다. makeUIView 에서 webView 를 물려준다.
+        let storeKit = StoreKitBridge()
 
         init(adSlot: AdSlotModel, onLoad: @escaping () -> Void) {
             self.adSlot = adSlot
@@ -72,6 +81,14 @@ struct WebView: UIViewRepresentable {
 
         func userContentController(_ userContentController: WKUserContentController,
                                    didReceive message: WKScriptMessage) {
+            // 인앱결제 메시지는 StoreKitBridge 가 통째로 처리한다.
+            // WKScriptMessageHandler 콜백은 항상 메인 스레드에서 불리므로,
+            // @MainActor 인 브릿지를 여기서 바로 부를 수 있다.
+            if StoreKitBridge.handlerNames.contains(message.name) {
+                MainActor.assumeIsolated { storeKit.handle(message) }
+                return
+            }
+
             if message.name == "openSettings" {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     DispatchQueue.main.async {

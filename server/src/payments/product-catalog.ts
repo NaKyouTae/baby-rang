@@ -22,6 +22,14 @@ export interface ProductSpec {
    * ⚠️ 콘솔에서 한 번 만들면 바꿀 수 없으므로 값이 정확해야 한다.
    */
   playSku?: string;
+  /**
+   * App Store Connect 에 등록한 앱 내 구입 제품 ID.
+   * ⚠️ Play 와 달리 앱 번들 ID(kr.spectrify.baby-rang)와 철자가 다르다.
+   *    제품 ID 는 Android 패키지명을 따라 baby_rang(언더스코어)으로 만들어졌다.
+   *    번들 ID 검증(app-store.service.ts)과 혼동하지 말 것.
+   * ⚠️ 콘솔에서 한 번 만들면 바꿀 수 없다. 삭제해도 같은 문자열을 다시 쓸 수 없다.
+   */
+  iosSku?: string;
 }
 
 /**
@@ -36,6 +44,7 @@ export const PRODUCT_CATALOG: Partial<Record<PaymentProductType, ProductSpec>> =
       name: '기질 검사 상세 리포트',
       price: 990,
       playSku: 'temperament_report',
+      iosSku: 'kr.spectrify.baby_rang.temperament_report',
     },
     // WONDER_WEEKS_PREMIUM, NURSING_ROOM_PREMIUM 은 아직 판매하지 않는다.
     // 출시할 때 여기에 가격을 등록해야 결제가 열린다.
@@ -69,6 +78,25 @@ export function resolveByPlaySku(sku: string): {
     }
   }
   throw new BadRequestException(`알 수 없는 Play 상품입니다. (${sku})`);
+}
+
+/**
+ * App Store 제품 ID로 상품을 역조회한다.
+ *
+ * resolveByPlaySku 와 같은 이유로 클라이언트가 보낸 productType 을 믿지 않는다.
+ * 트랜잭션은 특정 App Store 제품에 묶여 있으므로, Apple 이 돌려준 productId 가
+ * 어떤 상품을 샀는지의 유일한 근거다.
+ */
+export function resolveByIosSku(sku: string): {
+  productType: PaymentProductType;
+  spec: ProductSpec;
+} {
+  for (const [type, spec] of Object.entries(PRODUCT_CATALOG)) {
+    if (spec?.iosSku && spec.iosSku === sku) {
+      return { productType: type as PaymentProductType, spec };
+    }
+  }
+  throw new BadRequestException(`알 수 없는 App Store 상품입니다. (${sku})`);
 }
 
 /**
