@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,7 +12,9 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { AuthProvider } from '@prisma/client';
 import { AuthService, OAuthResult } from './auth.service';
+import { KakaoNativeService } from './kakao-native.service';
 import type { Response } from 'express';
 
 @Controller('auth')
@@ -19,6 +22,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
+    private kakaoNativeService: KakaoNativeService,
   ) {}
 
   @Get('kakao')
@@ -44,6 +48,36 @@ export class AuthController {
     return res.redirect(
       `${clientUrl}/api/auth/session?signupToken=${signupToken}`,
     );
+  }
+
+  // 네이티브 앱(카카오톡 앱 로그인) 전용.
+  //
+  // 웹은 /auth/kakao 리다이렉트로 시작하지만, 앱은 카카오 SDK 가 카카오톡을 열어
+  // access token 을 먼저 받아온다. 그 토큰을 여기로 보내면 검증 후 우리 토큰으로 바꿔준다.
+  // 리다이렉트가 아니라 JSON 을 돌려주는 것만 다르고, 신규/기존 분기는 웹과 완전히 같다.
+  @Post('kakao/native')
+  async kakaoNativeLogin(@Body() body: { accessToken?: string }) {
+    if (!body?.accessToken) {
+      throw new BadRequestException('accessToken 이 필요합니다.');
+    }
+
+    const profile = await this.kakaoNativeService.resolveProfile(
+      body.accessToken,
+    );
+    const result = await this.authService.resolveOAuthLogin({
+      provider: AuthProvider.KAKAO,
+      providerId: profile.providerId,
+      nickname: profile.nickname,
+      email: profile.email,
+      profileImage: profile.profileImage,
+    });
+
+    if (result.kind === 'existing') {
+      return this.authService.generateToken(result.userId);
+    }
+    return {
+      signupToken: this.authService.generateSignupToken(result.profile),
+    };
   }
 
   @Get('apple')

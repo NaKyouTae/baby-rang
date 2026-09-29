@@ -1,0 +1,88 @@
+{
+  "identifier" : "BABYRANG-LOCAL-STOREKIT",
+  "nonRenewingSubscriptions" : [
+  ],
+  "products" : [
+    {
+      "displayPrice" : "990",
+      "familyShareable" : false,
+      "internalID" : "TEMPERAMENT-REPORT",
+      "localizations" : [
+        {
+          "description" : "기질 검사 결과를 바탕으로 우리 아기 성향과 맞춤 육아 팁을 알려드려요.",
+          "displayName" : "기질 검사 상세 리포트",
+          "locale" : "ko_KR"
+        },
+        {
+          "description" : "A detailed temperament report with personalized parenting tips.",
+          "displayName" : "Temperament Report",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "kr.spectrify.baby_rang.temperament_report",
+      "referenceName" : "기질 검사 상세 리포트",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6740000000",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

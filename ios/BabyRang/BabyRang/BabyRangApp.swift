@@ -6,10 +6,22 @@
 //
 
 import GoogleMobileAds
+import KakaoSDKAuth
+import KakaoSDKCommon
 import SwiftUI
+
+/// 카카오 네이티브 앱 키. Info.plist 의 URL 스킴(kakao + 이 값)과 반드시 같아야 한다.
+/// 비밀값이 아니다 — 앱 바이너리에 그대로 실려 나가며, 카카오의 보안 경계는
+/// 개발자 콘솔에 등록한 번들 ID 다.
+private let kakaoNativeAppKey = "6e650917dc42ab9d0868a18d065823c5"
 
 @main
 struct BabyRangApp: App {
+    init() {
+        // 카카오 SDK 는 로그인 요청 전에 반드시 초기화돼 있어야 한다.
+        KakaoSDK.initSDK(appKey: kakaoNativeAppKey)
+    }
+
     @State private var isWebViewLoaded = false
     @State private var minimumElapsed = false
     /// 웹이 알려주는 배너 슬롯 위치.
@@ -74,6 +86,13 @@ struct BabyRangApp: App {
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { startAdSetupIfNeeded() }
+            }
+            // 카카오톡이 인증을 마치고 kakao{앱키}:// 스킴으로 앱에 돌아오는 지점.
+            // 이 처리가 없으면 카카오톡까지는 열리지만 로그인이 끝나지 않는다.
+            .onOpenURL { url in
+                if AuthApi.isKakaoTalkLoginUrl(url) {
+                    _ = AuthController.handleOpenUrl(url: url)
+                }
             }
             .onAppear {
                 // 브랜드 노출 최소 1초 보장

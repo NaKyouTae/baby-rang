@@ -4,6 +4,10 @@ import { createContext, useCallback, useContext, useState, ReactNode } from 'rea
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 import { useAppOverlayLock } from './ads/appOverlay';
+import {
+  isKakaoNativeLoginAvailable,
+  runKakaoNativeLogin,
+} from '@/lib/kakaoNativeLogin';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
@@ -27,6 +31,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   // 로그인 시트가 열려 있는 동안 네이티브 앱 배너를 숨긴다.
   useAppOverlayLock(open);
   const [message, setMessage] = useState<string | undefined>(undefined);
+  // 네이티브 카카오 로그인이 진행 중인지. 카카오톡으로 전환된 동안 중복 탭을 막는다.
+  const [kakaoLoading, setKakaoLoading] = useState(false);
   // 애플 로그인 / 계정으로 로그인 미사용 (주석 처리)
   // const [testFormOpen, setTestFormOpen] = useState(false);
   // const [testUsername, setTestUsername] = useState('');
@@ -104,17 +110,35 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
             <div className="flex flex-col" style={{ marginTop: 16, gap: 8 }}>
               <button
                 type="button"
+                disabled={kakaoLoading}
                 onClick={() => {
-                  setOpen(false);
-                  window.location.href = `${API_URL}/auth/kakao`;
+                  // 앱에 브릿지가 있으면 카카오톡 앱으로 인증한다.
+                  // 웹 브라우저나 브릿지 없는 구 빌드는 기존 웹 OAuth 로 간다.
+                  if (!isKakaoNativeLoginAvailable()) {
+                    setOpen(false);
+                    window.location.href = `${API_URL}/auth/kakao`;
+                    return;
+                  }
+                  setKakaoLoading(true);
+                  void runKakaoNativeLogin()
+                    .then((done) => {
+                      // done=false 는 사용자가 카카오톡에서 취소한 경우. 시트를 그대로 둔다.
+                      if (done) setOpen(false);
+                      setKakaoLoading(false);
+                    })
+                    .catch(() => {
+                      // 네이티브 경로가 실패해도 로그인 자체는 되게 한다.
+                      // 웹 OAuth 는 같은 계정으로 이어지므로(providerId 동일) 안전하다.
+                      window.location.href = `${API_URL}/auth/kakao`;
+                    });
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
+                className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80 disabled:opacity-60"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
                   <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.7-.8 3.1-.1.5.2.5.4.4.2-.1 2.7-1.8 3.7-2.5.6.1 1.2.1 1.9.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z" />
                 </svg>
-                카카오로 시작하기
+                {kakaoLoading ? '카카오톡으로 이동 중...' : '카카오로 시작하기'}
               </button>
               {/* Apple 심사 가이드라인 4.8: 서드파티 로그인(카카오)을 제공하면
                   개인정보 보호형 로그인도 함께 제공해야 한다.

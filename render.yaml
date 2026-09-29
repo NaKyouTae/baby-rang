@@ -41,6 +41,11 @@ services:
         sync: false
       - key: KAKAO_CALLBACK_URL
         sync: false
+      # 네이티브 앱(카카오톡) 로그인 토큰 검증용 카카오 앱 ID.
+      # KAKAO_CLIENT_ID 와 반드시 같은 카카오 앱의 값이어야 한다
+      # (회원번호가 앱마다 다르게 발급되므로, 어긋나면 기존 계정을 못 찾는다).
+      - key: KAKAO_APP_ID
+        sync: false
       # Supabase S3 (이미지 업로드용)
       - key: SUPABASE_ACCESS_KEY
         sync: false

@@ -14,6 +14,18 @@
 				<string>babyrang</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>kakao</string>
+			<!-- 카카오톡이 로그인 인증을 마친 뒤 이 스킴으로 앱에 돌아온다.
+			     kakao + 네이티브 앱 키. 카카오 개발자 콘솔의 '스킴' 값과 같아야 한다. -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao6e650917dc42ab9d0868a18d065823c5</string>
+			</array>
+		</dict>
 	</array>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6008464533427245~7115583932</string>

@@ -35,6 +35,8 @@ struct WebView: UIViewRepresentable {
         for name in StoreKitBridge.handlerNames {
             contentController.add(context.coordinator, name: name)
         }
+        // 카카오톡 앱 로그인 브릿지
+        contentController.add(context.coordinator, name: KakaoLoginBridge.handlerName)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -48,6 +50,7 @@ struct WebView: UIViewRepresentable {
 
         // 브릿지가 결과를 돌려보낼 대상. WebView 가 Coordinator 를 소유하므로 약한 참조다.
         context.coordinator.storeKit.webView = webView
+        context.coordinator.kakaoLogin.webView = webView
 
         webView.load(URLRequest(url: url))
         return webView
@@ -63,6 +66,8 @@ struct WebView: UIViewRepresentable {
         private var hasNotifiedLoad = false
         /// 인앱결제 요청을 처리한다. makeUIView 에서 webView 를 물려준다.
         let storeKit = StoreKitBridge()
+        /// 카카오톡 앱 로그인을 처리한다.
+        let kakaoLogin = KakaoLoginBridge()
 
         init(adSlot: AdSlotModel, onLoad: @escaping () -> Void) {
             self.adSlot = adSlot
@@ -86,6 +91,10 @@ struct WebView: UIViewRepresentable {
             // @MainActor 인 브릿지를 여기서 바로 부를 수 있다.
             if StoreKitBridge.handlerNames.contains(message.name) {
                 MainActor.assumeIsolated { storeKit.handle(message) }
+                return
+            }
+            if message.name == KakaoLoginBridge.handlerName {
+                MainActor.assumeIsolated { kakaoLogin.handle(message) }
                 return
             }
 
@@ -129,9 +138,34 @@ struct WebView: UIViewRepresentable {
             }
         }
 
+        // MARK: - 외부 페이지에서 배너 감추기
+
+        /// 우리 서비스 도메인. 이 밖의 페이지에서는 배너를 숨긴다.
+        private static let serviceHost = "spectrify.kr"
+
+        /// 우리 도메인이 아닌 페이지로 넘어가면 배너를 즉시 감춘다.
+        ///
+        /// 배너 좌표는 웹(AppAdSlotReporter)이 보고한 값만 따른다. 카카오 로그인이나
+        /// 카드사 인증 페이지에는 그 보고를 하는 코드가 없어서, 직전 화면의 좌표가
+        /// 그대로 남은 채 배너가 남의 페이지 위에 떠 버튼을 덮는다
+        /// (카카오 '계속하기' 버튼이 가려졌던 원인).
+        ///
+        /// 남의 페이지 위에 우리 광고를 얹는 것 자체가 AdMob 정책 위반이기도 하다.
+        /// 우리 도메인으로 돌아오면 웹이 다시 보고하므로 여기서 되살릴 필요는 없다.
+        private func hideBannerIfOffsite(_ url: URL?) {
+            let host = url?.host ?? ""
+            let isOurs = host == Self.serviceHost || host.hasSuffix("." + Self.serviceHost)
+            guard !isOurs else { return }
+            Task { @MainActor [adSlot] in
+                adSlot.update(bottomInset: nil, height: 0, width: nil, left: 0)
+            }
+        }
+
         // MARK: - WKNavigationDelegate
 
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            hideBannerIfOffsite(webView.url)
+
             // HTML 응답이 수신되어 렌더링이 시작되는 시점에 스플래시 페이드아웃을 트리거.
             // didFinish(전체 로드 완료)를 기다리면 JS 번들/데이터 페치까지 끝나야 해서 5초 이상 걸림.
             // didCommit 시점엔 이미 SSR HTML이 그려지고, 웹의 SplashProvider가 동일 splash 이미지로
@@ -159,6 +193,10 @@ struct WebView: UIViewRepresentable {
             // 카드사 인증 페이지의 <a> 기반 버튼까지 사파리로 튕겨나가면서
             // 세션이 끊겨 "비정상적인 시도" 오류가 났다.
             // 새 창(target="_blank")으로 여는 외부 링크는 createWebViewWith 에서 처리한다.
+            if navigationAction.targetFrame?.isMainFrame ?? true {
+                hideBannerIfOffsite(navigationAction.request.url)
+            }
+
             decisionHandler(.allow)
         }
 
