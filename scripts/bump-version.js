@@ -35,6 +35,7 @@ const PKG_FILES = [
 const PBXPROJ = 'ios/BabyRang/BabyRang.xcodeproj/project.pbxproj';
 const TWA_MANIFEST = 'twa/twa-manifest.json';
 const TWA_GRADLE = 'twa/app/build.gradle';
+const ANDROID_GRADLE = 'android/app/build.gradle';
 
 // 현재 버전 = 루트 package.json 기준
 const rootPkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
@@ -111,12 +112,36 @@ if (fs.existsSync(twaManifestPath) && fs.existsSync(twaGradlePath)) {
   console.warn(`  ! TWA 프로젝트 파일을 찾지 못해 건너뜀: ${TWA_MANIFEST}`);
 }
 
+// 4) 네이티브 Android 앱: TWA 와 **같은 패키지**라 같은 Play 리스팅을 쓴다.
+//    versionCode 도 같은 수열을 공유해야 하므로 TWA 와 같은 값으로 맞춘다.
+//    (둘 중 하나만 올라가면 나중에 다른 쪽을 올릴 때 versionCode 충돌이 난다)
+let nextAndroidCode = null;
+const androidGradlePath = path.join(ROOT, ANDROID_GRADLE);
+
+if (fs.existsSync(androidGradlePath)) {
+  let gradle = fs.readFileSync(androidGradlePath, 'utf8');
+  const codeMatch = /versionCode (\d+)/.exec(gradle);
+  // TWA 값이 있으면 그걸 따르고, 없으면 자기 값을 +1 한다.
+  nextAndroidCode = nextTwaCode ?? (codeMatch ? Number(codeMatch[1]) + 1 : null);
+
+  if (nextAndroidCode != null) {
+    gradle = gradle.replace(/versionCode \d+/, `versionCode ${nextAndroidCode}`);
+    gradle = gradle.replace(/versionName "[^"]+"/, `versionName "${next}"`);
+    fs.writeFileSync(androidGradlePath, gradle);
+  }
+} else {
+  console.warn(`  ! Android 프로젝트 파일을 찾지 못해 건너뜀: ${ANDROID_GRADLE}`);
+}
+
 console.log(`\n✅ 버전 갱신: ${current} → ${next}  (${kind})`);
 console.log(`   package.json ×${PKG_FILES.length} → ${next}`);
 console.log(`   iOS MARKETING_VERSION → ${next}`);
 if (nextBuild != null) console.log(`   iOS CURRENT_PROJECT_VERSION(빌드번호) → ${nextBuild}`);
 if (nextTwaCode != null) {
   console.log(`   TWA versionName → ${next}, versionCode → ${nextTwaCode}`);
+}
+if (nextAndroidCode != null) {
+  console.log(`   Android versionName → ${next}, versionCode → ${nextAndroidCode}`);
 }
 console.log('\n다음 할 일:');
 console.log(`   1) CHANGELOG.md의 [Unreleased] 항목을 [${next}]로 정리`);

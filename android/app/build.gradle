@@ -3,6 +3,10 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+// CI 가 키스토어를 복원해 두는 경로. 로컬에는 없으므로 릴리스 서명도 건너뛴다.
+// (twa/app/build.gradle 과 같은 규약 — 워크플로가 같은 환경변수를 넘긴다)
+def ciKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+
 android {
     namespace 'kr.spectrify.babyrang'
     compileSdk 36
@@ -11,18 +15,43 @@ android {
         applicationId "kr.spectrify.baby_rang"
         minSdk 24
         targetSdk 36
-        versionCode 1
-        versionName "1.0.0"
+        // ⚠️ TWA 와 같은 패키지라 같은 Play 리스팅을 덮어쓴다.
+        //    versionCode 는 되돌릴 수 없는 정수라 TWA 의 마지막 값(12)보다 커야 한다.
+        //    scripts/bump-version.js 가 TWA·iOS 와 함께 갱신한다.
+        versionCode 13
+        versionName "1.2.7"
+    }
+
+    signingConfigs {
+        release {
+            if (ciKeystorePath) {
+                storeFile file(ciKeystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         debug {
             // TWA 와 같은 기기에 함께 설치할 수 있도록 디버그 빌드는 패키지를 분리한다.
             applicationIdSuffix ".debug"
+            // 카카오 개발 앱 키. iOS 의 KAKAO_NATIVE_APP_KEY(Debug) 와 같은 값이어야 한다.
+            manifestPlaceholders = [kakaoNativeAppKey: '6e650917dc42ab9d0868a18d065823c5']
+            buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '"6e650917dc42ab9d0868a18d065823c5"'
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // 키스토어가 없는 로컬 빌드에서는 서명을 붙이지 않는다.
+            // (워크플로의 '서명 확인' 단계가 미서명 AAB 업로드를 막는다)
+            if (ciKeystorePath) {
+                signingConfig signingConfigs.release
+            }
+            // 카카오 운영 앱 키. iOS 의 KAKAO_NATIVE_APP_KEY(Release) 와 같은 값이어야 한다.
+            manifestPlaceholders = [kakaoNativeAppKey: '3cab8374c32c276f9ffeb4c824415544']
+            buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '"3cab8374c32c276f9ffeb4c824415544"'
         }
     }
 
@@ -52,4 +81,6 @@ dependencies {
     // ktx 변형은 Kotlin 2.3 으로 컴파일돼 이 프로젝트(2.0.x)와 메타데이터가 충돌한다.
     // 콜백 API 만 쓰므로 자바 기반 기본 아티팩트로 충분하다.
     implementation 'com.android.billingclient:billing:9.1.0'
+    // 카카오톡 앱으로 로그인. v2-user 가 auth/common 을 함께 끌어온다.
+    implementation 'com.kakao.sdk:v2-user:2.25.0'
 }

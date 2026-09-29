@@ -1,4 +1,4 @@
-name: Android Release (TWA)
+name: Android Release
 
 # v* 태그를 밀면 AAB를 빌드해 Play 내부 테스트 트랙에 올린다.
 # 프로덕션 출시는 항상 Play Console에서 수동으로 승격(promote)한다.
@@ -43,16 +43,21 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          VERSION_NAME=$(node -p "require('./twa/twa-manifest.json').appVersionName")
-          VERSION_CODE=$(node -p "require('./twa/twa-manifest.json').appVersionCode")
-          PACKAGE_ID=$(node -p "require('./twa/twa-manifest.json').packageId")
+          # 배포 대상은 네이티브 앱(android/)이다. TWA(twa/)는 이 앱으로 대체됐다.
+          GRADLE=android/app/build.gradle
+          VERSION_NAME=$(grep -oE 'versionName "[^"]+"' $GRADLE | head -1 | sed 's/.*"\(.*\)"/\1/')
+          VERSION_CODE=$(grep -oE 'versionCode [0-9]+' $GRADLE | head -1 | awk '{print $2}')
+          PACKAGE_ID=$(grep -oE 'applicationId "[^"]+"' $GRADLE | head -1 | sed 's/.*"\(.*\)"/\1/')
 
-          # build.gradle과 twa-manifest.json이 어긋나면 엉뚱한 버전이 올라가므로 미리 막는다.
-          GRADLE_CODE=$(grep -oE 'versionCode [0-9]+' twa/app/build.gradle | head -1 | awk '{print $2}')
-          GRADLE_NAME=$(grep -oE 'versionName "[^"]+"' twa/app/build.gradle | head -1 | sed 's/.*"\(.*\)"/\1/')
-
-          if [ "$VERSION_CODE" != "$GRADLE_CODE" ] || [ "$VERSION_NAME" != "$GRADLE_NAME" ]; then
-            echo "::error::twa-manifest.json($VERSION_NAME/$VERSION_CODE)과 build.gradle($GRADLE_NAME/$GRADLE_CODE)의 버전이 다릅니다. pnpm version:patch 로 함께 올려주세요."
+          # 네이티브 앱은 TWA와 같은 패키지라 같은 Play 리스팅을 덮어쓴다.
+          # versionCode는 되돌릴 수 없는 정수라, TWA가 마지막으로 올린 값보다 커야
+          # 업로드가 거부되지 않는다. pnpm version:* 가 두 파일을 함께 올리지만
+          # 손으로 고친 경우를 대비해 여기서도 막는다.
+          # pnpm version:* 는 두 값을 같은 번호로 맞춘다(같은 리스팅이므로 정상).
+          # android 쪽만 갱신이 빠진 경우에만 막는다.
+          TWA_CODE=$(node -p "require('./twa/twa-manifest.json').appVersionCode" 2>/dev/null || echo 0)
+          if [ "$VERSION_CODE" -lt "$TWA_CODE" ]; then
+            echo "::error::versionCode $VERSION_CODE 가 TWA($TWA_CODE)보다 낮습니다. pnpm version:patch 로 함께 올려주세요."
             exit 1
           fi
 
@@ -82,7 +87,7 @@ jobs:
           echo "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/signing.keystore"
 
       - name: AAB 빌드
-        working-directory: twa
+        working-directory: android
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/signing.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -95,7 +100,7 @@ jobs:
       - name: 서명 확인
         run: |
           set -euo pipefail
-          AAB=twa/app/build/outputs/bundle/release/app-release.aab
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
           # 서명되지 않은 번들이 Play에 올라가는 것을 막는다.
           # jarsigner는 미서명이어도 종료코드 0을 반환하므로 출력 문자열로 판정한다.
           if ! jarsigner -verify "$AAB" | grep -q 'jar verified'; then
@@ -108,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-release-${{ steps.version.outputs.name }}
-          path: twa/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 90
 
       - name: Play 트랙 업로드
@@ -116,7 +121,7 @@ jobs:
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ steps.version.outputs.package }}
-          releaseFiles: twa/app/build/outputs/bundle/release/app-release.aab
+          releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
           track: ${{ inputs.track || 'internal' }}
           releaseName: ${{ steps.version.outputs.name }} (${{ steps.version.outputs.code }})
           status: completed

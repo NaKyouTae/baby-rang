@@ -8,6 +8,7 @@ import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
 import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
+import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
@@ -307,6 +308,7 @@ export default function RootLayout({
             <BottomNavServer />
             <AppAdSlotReporter />
             <AppStorePurchaseRecovery />
+            <AndroidPurchaseRecovery />
           </div>
         </LoginPromptProvider>
       </body>

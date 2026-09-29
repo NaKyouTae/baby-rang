@@ -21,6 +21,7 @@ import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.kakao.sdk.common.KakaoSdk
 import kr.spectrify.babyrang.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -46,6 +47,10 @@ class MainActivity : AppCompatActivity() {
 
     /** 결제. AndroidBridge 가 웹 요청을 여기로 넘긴다. */
     lateinit var billing: BillingManager
+        private set
+
+    /** 카카오 로그인. AndroidBridge 가 웹 요청을 여기로 넘긴다. */
+    lateinit var kakaoLogin: KakaoLoginManager
         private set
 
     private var adView: AdView? = null
@@ -145,6 +150,19 @@ class MainActivity : AppCompatActivity() {
             // ⚠️ Billing 콜백은 백그라운드 스레드에서 온다.
             //    evaluateJavascript 를 UI 스레드 밖에서 부르면 조용히 무시돼
             //    웹의 Promise 가 영원히 대기 상태로 남는다.
+            runOnUiThread { binding.webView.evaluateJavascript(js, null) }
+        }
+
+        // ⚠️ 매니페스트의 리다이렉트 스킴(kakao<키>)과 반드시 같은 키를 써야 한다.
+        //    어긋나면 카카오톡은 열리는데 앱으로 돌아오지 못한다.
+        //    그래서 양쪽 모두 build.gradle 의 한 값에서 온다.
+        KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)
+
+        kakaoLogin = KakaoLoginManager(this) { requestId, payload ->
+            val js = "window.__kakaoLoginBridge && window.__kakaoLoginBridge.resolve(" +
+                org.json.JSONObject.quote(requestId) + "," + payload.toString() + ")"
+            // 카카오 콜백은 메인 스레드로 오지만, evaluateJavascript 를 UI 스레드 밖에서
+            // 부르면 조용히 무시되므로 결제와 같은 방식으로 한 번 더 보장한다.
             runOnUiThread { binding.webView.evaluateJavascript(js, null) }
         }
 

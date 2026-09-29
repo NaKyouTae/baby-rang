@@ -10,6 +10,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 카카오 SDK 는 Maven Central 에 올라오지 않는다. 카카오 전용 저장소에서만 받는다.
+        maven { url 'https://devrepo.kakao.com/nexus/content/groups/public/' }
     }
 }
 

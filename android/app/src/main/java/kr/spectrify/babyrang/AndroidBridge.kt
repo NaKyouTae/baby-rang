@@ -19,6 +19,18 @@ class AndroidBridge(private val activity: MainActivity) {
         activity.runOnUiThread { activity.openAppSettings() }
     }
 
+    /**
+     * 카카오 로그인. 결과는 window.__kakaoLoginBridge.resolve 로 돌아간다.
+     *
+     * 카카오톡이 깔려 있으면 앱으로 넘어가 인증하고, 없으면 카카오계정 웹 로그인으로 간다.
+     * 어느 쪽인지는 네이티브가 판단한다(KakaoLoginManager).
+     */
+    @JavascriptInterface
+    fun kakaoLogin(json: String) {
+        val requestId = JSONObject(json).optString("requestId")
+        activity.runOnUiThread { activity.kakaoLogin.login(requestId) }
+    }
+
     /** 상품 정보 조회. 결과는 window.__playBridge.resolve 로 돌아간다. */
     @JavascriptInterface
     fun billingProducts(json: String) {

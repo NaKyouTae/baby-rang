@@ -6,7 +6,10 @@
 // 앱에서는 카카오톡이 깔려 있으면 앱으로 넘어가 인증하는 쪽이 자연스럽다.
 // WebView 안의 웹은 카카오 SDK 를 직접 부를 수 없으므로, 네이티브가 등록한
 // 메시지 핸들러로 요청을 보내고 결과를 돌려받는다.
-// (ios/BabyRang/BabyRang/KakaoLoginBridge.swift 와 짝을 이룬다)
+// (ios/.../KakaoLoginBridge.swift, android/.../KakaoLoginManager.kt 와 짝을 이룬다)
+//
+// iOS 는 webkit.messageHandlers, Android 는 window.Android 로 창구가 다르지만
+// 응답은 양쪽 모두 window.__kakaoLoginBridge.resolve 로 돌아온다.
 //
 // 브릿지가 없는 구 빌드·웹 브라우저에서는 기존 웹 OAuth 로 그대로 간다.
 
@@ -14,6 +17,7 @@ interface BridgeWindow extends Window {
   webkit?: {
     messageHandlers?: Record<string, { postMessage: (body: unknown) => void }>;
   };
+  Android?: { kakaoLogin?: (json: string) => void };
   __kakaoLoginBridge?: {
     resolve: (requestId: string, payload: BridgeResponse) => void;
   };
@@ -23,10 +27,28 @@ type BridgeResponse =
   | { ok: true; accessToken: string }
   | { ok: false; cancelled?: boolean; message?: string };
 
-function bridge(): BridgeWindow['webkit'] | null {
+/**
+ * 네이티브에 요청을 보내는 함수를 돌려준다. 브릿지가 없으면 null.
+ *
+ * 핸들러의 존재가 곧 "이 빌드는 카카오 네이티브 로그인이 들어간 버전"이라는 뜻이라,
+ * 이 한 줄로 플랫폼 분기와 버전 분기가 같이 해결된다. 구 빌드에서는 null 이 되어
+ * 호출하는 쪽이 기존 웹 OAuth 로 넘어간다.
+ */
+function bridge(): ((requestId: string) => void) | null {
   if (typeof window === 'undefined') return null;
   const w = window as BridgeWindow;
-  return w.webkit?.messageHandlers?.kakaoLogin ? w.webkit : null;
+
+  const ios = w.webkit?.messageHandlers?.kakaoLogin;
+  if (ios) return (requestId) => ios.postMessage({ requestId });
+
+  const android = w.Android?.kakaoLogin;
+  // ⚠️ @JavascriptInterface 는 JS 객체를 못 받는다. JSON 문자열로 넘긴다.
+  //    수신 객체(window.Android)를 유지한 채 호출해야 한다.
+  if (typeof android === 'function') {
+    return (requestId) => w.Android?.kakaoLogin?.(JSON.stringify({ requestId }));
+  }
+
+  return null;
 }
 
 /** 네이티브 카카오 로그인을 쓸 수 있는지. 없으면 웹 OAuth 로 가야 한다. */
@@ -47,9 +69,8 @@ const pending = new Map<string, (payload: BridgeResponse) => void>();
  */
 export function loginWithKakaoNative(): Promise<string | null> {
   return new Promise<string | null>((resolve, reject) => {
-    const webkit = bridge();
-    const target = webkit?.messageHandlers?.kakaoLogin;
-    if (!target) {
+    const send = bridge();
+    if (!send) {
       reject(new Error('카카오 로그인을 사용할 수 없습니다.'));
       return;
     }
@@ -79,7 +100,7 @@ export function loginWithKakaoNative(): Promise<string | null> {
       }
       reject(new Error(payload.message ?? '로그인을 완료하지 못했습니다.'));
     });
-    target.postMessage({ requestId });
+    send(requestId);
   });
 }
 

@@ -214,12 +214,24 @@ export default function ResultPage() {
     setPurchaseError(null);
     try {
       if (playProduct.status !== 'ready') return;
+
+      // 결제 도중 앱이 죽어도 어떤 검사 결과에 대한 결제인지 알 수 있게 남겨둔다.
+      // 승인이 끝나지 않은 구매를 AndroidPurchaseRecovery 가 이 맥락으로 마무리한다.
+      rememberPendingPurchase({
+        sku: TEMPERAMENT_SKU,
+        submissionId,
+        productType: 'TEMPERAMENT_REPORT',
+      });
+
       const purchaseToken = await purchaseWithPlay(
         TEMPERAMENT_SKU,
         playProduct.item,
       );
       // 사용자가 결제 시트를 닫은 경우 — 에러가 아니다.
-      if (!purchaseToken) return;
+      if (!purchaseToken) {
+        clearPendingPurchase();
+        return;
+      }
 
       const res = await fetch('/api/payments/google-play/confirm', {
         method: 'POST',
@@ -237,6 +249,7 @@ export default function ResultPage() {
       }
 
       await unlockResult(submissionId, data.orderId);
+      clearPendingPurchase();
       setResult(await getResult(submissionId));
     } catch (e) {
       setPurchaseError(
