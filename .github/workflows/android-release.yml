@@ -93,7 +93,8 @@ jobs:
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/signing.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # 별칭은 비밀이 아니다(twa-manifest.json 에도 있다). 시크릿으로 둘 이유가 없다.
+          ANDROID_KEY_ALIAS: my-key-alias
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
