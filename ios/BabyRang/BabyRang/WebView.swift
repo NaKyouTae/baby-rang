@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import CoreLocation
+import OSLog
 import WidgetKit
 
 struct WebView: UIViewRepresentable {
@@ -127,6 +128,9 @@ struct WebView: UIViewRepresentable {
                 let height = (body?["height"] as? NSNumber)?.doubleValue ?? 0
                 let width = (body?["width"] as? NSNumber)?.doubleValue
                 let left = (body?["left"] as? NSNumber)?.doubleValue ?? 0
+                adLogger.info(
+                    "슬롯 수신: visible=\(visible, privacy: .public) bottom=\(inset ?? -1, privacy: .public) h=\(height, privacy: .public) w=\(width ?? -1, privacy: .public) left=\(left, privacy: .public)",
+                )
                 Task { @MainActor [adSlot] in
                     adSlot.update(
                         bottomInset: visible ? inset.map { CGFloat($0) } : nil,
@@ -156,6 +160,7 @@ struct WebView: UIViewRepresentable {
             let host = url?.host ?? ""
             let isOurs = host == Self.serviceHost || host.hasSuffix("." + Self.serviceHost)
             guard !isOurs else { return }
+            adLogger.info("외부 페이지라 배너 숨김: host=\(host, privacy: .public)")
             Task { @MainActor [adSlot] in
                 adSlot.update(bottomInset: nil, height: 0, width: nil, left: 0)
             }
@@ -193,7 +198,11 @@ struct WebView: UIViewRepresentable {
             // 카드사 인증 페이지의 <a> 기반 버튼까지 사파리로 튕겨나가면서
             // 세션이 끊겨 "비정상적인 시도" 오류가 났다.
             // 새 창(target="_blank")으로 여는 외부 링크는 createWebViewWith 에서 처리한다.
-            if navigationAction.targetFrame?.isMainFrame ?? true {
+            // ⚠️ targetFrame 이 nil 인 경우(iframe 최초 로드, target=_blank)를
+            //    메인 프레임으로 간주하면, 페이지 안의 서드파티 iframe 이 열릴 때마다
+            //    배너가 꺼진다. 확실히 메인 프레임일 때만 판단한다.
+            //    메인 프레임 교체는 아래 didCommit 이 확실하게 잡아준다.
+            if navigationAction.targetFrame?.isMainFrame == true {
                 hideBannerIfOffsite(navigationAction.request.url)
             }
 
