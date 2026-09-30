@@ -65,6 +65,9 @@ export default function ResultPage() {
   const isIosApp = useIsIosApp();
   const iosProduct = useAppStoreProduct(TEMPERAMENT_IOS_SKU);
   // 세 결제 경로가 같은 로딩/오류 UI를 쓴다.
+  // 결제 진행 중 표시는 두지 않는다 — 버튼을 누르면 스토어 결제 시트가 바로 뜨므로
+  // 그 위에 우리 로딩 문구를 겹쳐봐야 보이지도 않고 거슬린다.
+  // 다만 상태 자체는 남긴다. 중복 탭을 막는 재진입 가드로 쓰인다(handle*Unlock).
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   // 열람 기간(검사 후 7일)이 지난 결과 — 서버가 410 Gone 으로 알려준다.
@@ -395,6 +398,22 @@ export default function ResultPage() {
         아직 결제 전이라면 결제 경로가 확정된 경우에만 잠금 안내를 노출한다.
         어떤 경로가 뽑히는지는 위의 paymentRoute 를 볼 것.
       */}
+      {/*
+        환불로 잠긴 경우. 결제 경로가 없는 환경(웹 등)에서도 왜 잠겼는지는 알려야 해서
+        아래 결제 안내와 별개로 항상 띄운다.
+      */}
+      {result.isRefunded && !result.isPaid && (
+        <div className="mt-6 rounded-[4px] border border-gray-200 bg-gray-50 p-3">
+          <p className="text-[12px] font-semibold text-app-black">
+            환불되어 상세 리포트가 잠겼어요
+          </p>
+          <p className="mt-1 text-[12px] font-normal text-gray-500">
+            App Store에서 환불이 완료되어 상세 리포트를 볼 수 없어요. 무료로 제공되는
+            내용은 열람 기간 동안 계속 확인하실 수 있어요.
+          </p>
+        </div>
+      )}
+
       {result.isPaid && result.paidContent ? (
         <PaidResultSection content={result.paidContent} />
       ) : canPurchase ? (
@@ -403,11 +422,6 @@ export default function ResultPage() {
             sections={result.lockedSections}
             onUnlock={handleUnlock}
           />
-          {purchaseLoading && (
-            <p className="mt-2 text-center text-[12px] text-gray-500">
-              결제를 진행하고 있어요...
-            </p>
-          )}
           {purchaseError && (
             <p className="mt-2 text-center text-[12px]" style={{ color: '#DC2626' }}>
               {purchaseError}
