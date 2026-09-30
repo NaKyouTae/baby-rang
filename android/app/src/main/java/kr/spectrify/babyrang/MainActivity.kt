@@ -61,6 +61,25 @@ class MainActivity : AppCompatActivity() {
     private var adSlot: AdSlot? = null
 
     @SuppressLint("SetJavaScriptEnabled")
+    /** 스플래시를 이미 걷었는지. 안전망과 중복 호출을 막는다. */
+    private var splashHidden = false
+
+    /**
+     * 스플래시 이미지를 걷는다.
+     *
+     * 웹의 SplashProvider 가 같은 이미지를 이어받으므로 그대로 사라져도 끊겨 보이지 않는다.
+     * 짧게 페이드시키는 이유는, 웹 스플래시가 뜨기까지의 한 프레임을 덮기 위해서다.
+     */
+    private fun hideSplash() {
+        if (splashHidden) return
+        splashHidden = true
+        binding.splashView.animate()
+            .alpha(0f)
+            .setDuration(200)
+            .withEndAction { binding.splashView.visibility = android.view.View.GONE }
+            .start()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // ⚠️ super.onCreate 보다 먼저 불러야 한다.
         //    스플래시 테마(Theme.BabyRang.Starting)를 실제 앱 테마로 갈아끼우는 일을 하므로,
@@ -69,6 +88,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // onPageCommitVisible 이 오지 않는 경우(네트워크 오류 등) 대비.
+        // 스플래시가 영원히 남아 앱이 멈춘 것처럼 보이는 것을 막는다.
+        binding.root.postDelayed({ hideSplash() }, 5000)
 
         with(binding.webView.settings) {
             javaScriptEnabled = true
@@ -83,6 +106,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.webView.webViewClient = object : WebViewClient() {
+            // 첫 픽셀이 그려지는 시점. onPageFinished 는 JS 번들·데이터까지 끝나야 해서
+            // 몇 초씩 걸린다. iOS 의 didCommit 과 같은 자리다.
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                hideSplash()
+            }
+
             override fun shouldOverrideUrlLoading(
                 view: WebView,
                 request: WebResourceRequest,
