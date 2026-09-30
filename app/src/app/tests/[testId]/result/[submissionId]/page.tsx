@@ -34,6 +34,7 @@ import PaidResultSection from '../../_components/PaidResultSection';
 import ReliabilityNotice from '../../_components/ReliabilityNotice';
 import ResultLoading from '../../_components/ResultLoading';
 import { getMockResult } from './_mocks';
+import { takeResult } from '@/lib/resultHandoff';
 
 export default function ResultPage() {
   const params = useParams();
@@ -52,8 +53,15 @@ export default function ResultPage() {
       ? searchParams.get('orderId')
       : null,
   );
-  const [result, setResult] = useState<TestResult | null>(initialMock);
-  const [loading, setLoading] = useState(initialMock === null);
+  // 검사를 막 끝내고 넘어온 경우, 제출 응답에 실려 온 결과를 그대로 쓴다.
+  // 방금 저장한 것을 다시 조회하는 왕복을 건너뛴다. (resultHandoff.ts)
+  // 한 번만 꺼내고 지우므로, 새로고침이나 직접 링크로 들어오면 평소처럼 조회한다.
+  const [handedOff] = useState(() =>
+    initialMock ? null : takeResult(submissionId),
+  );
+  const initial = initialMock ?? handedOff;
+  const [result, setResult] = useState<TestResult | null>(initial);
+  const [loading, setLoading] = useState(initial === null);
   // Android(TWA) 앱에서는 Play 결제 정책상 Toss 결제 경로를 노출할 수 없다.
   // null 이면 아직 판별 전이므로 결제 UI를 띄우지 않는다. (isAndroidApp.ts 참고)
   const isAndroidApp = useIsAndroidApp();
@@ -75,17 +83,14 @@ export default function ResultPage() {
   const unlockedRef = useRef(false);
 
   useEffect(() => {
-    if (initialMock) return;
+    if (initial) return;
     // 결제 직후 진입이면 아래 unlock 이펙트가 조회를 책임진다.
     // 여기서 같이 조회하면 unlock 이전(isPaid=false) 응답이 2초 지연 뒤에 도착해
     // 먼저 반영된 unlock 결과를 덮어쓰고, 상세 리포트가 잠긴 채로 보인다.
     if (paymentOrderId) return;
 
-    const minDelay = new Promise((r) => setTimeout(r, 2000));
-    const fetchData = getResult(submissionId);
-
-    Promise.all([fetchData, minDelay])
-      .then(([data]) => {
+    getResult(submissionId)
+      .then((data) => {
         setResult(data);
         setLoading(false);
       })
@@ -97,7 +102,7 @@ export default function ResultPage() {
         }
         setLoading(false);
       });
-  }, [submissionId, initialMock, paymentOrderId]);
+  }, [submissionId, initial, paymentOrderId]);
 
   // 결제 성공 리다이렉트 처리: ?paymentStatus=success&orderId=...
   useEffect(() => {

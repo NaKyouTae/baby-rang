@@ -11,6 +11,7 @@ import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
 import AppBannerSlot from '@/components/ads/AppBannerSlot';
 import ResultLoading from '../../_components/ResultLoading';
+import { stashResult } from '@/lib/resultHandoff';
 
 type ScreenState =
   | { type: 'question'; index: number }
@@ -96,6 +97,11 @@ export default function TestPage() {
         }));
 
         const result = await submitAnswers(submissionId, answerPayload);
+        // 서버가 제출 응답에 결과를 실어 보낸다. 넘겨두면 결과 페이지가
+        // 같은 데이터를 다시 조회하지 않는다(왕복 한 번 절약).
+        if (result.result) {
+          stashResult(result.submissionId, result.result);
+        }
         router.push(`/tests/${testId}/result/${result.submissionId}`);
       } catch (e) {
         const err = e as Error & { status?: number };

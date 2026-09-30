@@ -133,7 +133,13 @@ export function submitAnswers(
   submissionId: string,
   answers: { questionId: string; questionNo: number; score: number }[],
 ) {
-  return fetchApi<{ submissionId: string; status: string; resultId: string }>(
+  return fetchApi<{
+    submissionId: string;
+    status: string;
+    resultId: string;
+    /** 서버가 제출 시점에 만든 결과. 결과 페이지에서 재조회를 건너뛰는 데 쓴다. */
+    result?: TestResult;
+  }>(
     `/api/temperament/submissions/${submissionId}/answers`,
     {
       method: 'POST',

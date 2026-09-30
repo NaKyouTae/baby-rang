@@ -179,6 +179,9 @@ export class TemperamentService {
     const freeContent = buildFreeContentByType(typeInfo.primaryType);
     const paidContent = buildPaidContent(scores, typeInfo.primaryType);
 
+    // 만료 계산에 쓰려고 트랜잭션 밖에서 고정한다(아래 update 와 같은 값이어야 한다).
+    const completedAt = new Date();
+
     // 트랜잭션: 답변 저장 + 결과 저장 + 제출 상태 갱신
     const result = await this.prisma.$transaction(async (tx) => {
       // 기존 답변 정리(재제출 케이스)
@@ -215,7 +218,7 @@ export class TemperamentService {
         where: { id: submissionId },
         data: {
           status: SubmissionStatus.COMPLETED,
-          completedAt: new Date(),
+          completedAt,
         },
       });
 
@@ -226,6 +229,11 @@ export class TemperamentService {
       submissionId,
       status: 'completed',
       resultId: result.id,
+      // 결과를 함께 돌려준다. 클라이언트가 결과 페이지에서 다시 조회하지 않아도 된다.
+      result: this.toResultResponse(
+        result,
+        resultExpiresAt(completedAt, result.createdAt),
+      ),
     };
   }
 
@@ -247,6 +255,30 @@ export class TemperamentService {
       );
     }
 
+    return this.toResultResponse(r, expiresAt);
+  }
+
+  /**
+   * 결과 응답 형태.
+   *
+   * 제출 직후(submitAnswers)와 조회(getResult)가 **같은 모양**을 돌려줘야 한다.
+   * 제출 응답에 결과를 실어 보내면 클라이언트가 곧바로 화면을 그릴 수 있고,
+   * 방금 저장한 것을 다시 읽어오는 왕복 한 번이 통째로 사라진다.
+   */
+  private toResultResponse(
+    r: {
+      id: string;
+      isPaid: boolean;
+      refundedAt: Date | null;
+      isReliable: boolean;
+      reliabilityMsg: string | null;
+      summary: unknown;
+      scores: unknown;
+      freeContent: unknown;
+      paidContent: unknown;
+    },
+    expiresAt: Date,
+  ) {
     return {
       resultId: r.id,
       expiresAt: expiresAt.toISOString(),
