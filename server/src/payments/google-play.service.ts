@@ -12,6 +12,17 @@ const SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
 const API_BASE = 'https://androidpublisher.googleapis.com/androidpublisher/v3';
 const PACKAGE_NAME = 'kr.spectrify.baby_rang';
 
+/** purchases.voidedpurchases.list 응답 항목. */
+export interface PlayVoidedPurchase {
+  purchaseToken?: string;
+  orderId?: string;
+  voidedTimeMillis?: string;
+  /** 0 사용자 요청 · 1 개발자 취소 · 그 외 문서 참고 */
+  voidedReason?: number;
+  /** 0 사용자 · 1 개발자 · 2 Google */
+  voidedSource?: number;
+}
+
 /** purchases.products.get 응답 중 우리가 쓰는 필드. */
 export interface PlayPurchase {
   /** 0=구매완료, 1=취소됨, 2=대기중 */
@@ -172,6 +183,39 @@ export class GooglePlayService {
     }
 
     return (await res.json()) as PlayPurchase;
+  }
+
+  /**
+   * 환불·취소된 구매 목록을 가져온다.
+   *
+   * Play 는 App Store 와 달리 환불 알림을 우리 서버로 밀어주지 않는다(그건 RTDN 인데
+   * Pub/Sub 토픽·푸시 구독을 따로 세팅해야 한다). 대신 이 API 를 주기적으로 훑어
+   * 환불된 구매를 찾아낸다.
+   *
+   * ⚠️ Play 는 기본적으로 최근 30일치만 돌려준다. 폴링 주기가 그보다 길어지면
+   * 그 사이 환불이 목록에서 사라져 영영 놓친다.
+   *
+   * @param sinceMs 이 시각 이후 환불된 건만. 생략하면 Play 기본 보관 기간 전체.
+   */
+  async listVoidedPurchases(sinceMs?: number): Promise<PlayVoidedPurchase[]> {
+    const query = sinceMs ? `?startTime=${sinceMs}` : '';
+    const res = await this.call(`/purchases/voidedpurchases${query}`, 'GET');
+
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: { message?: string };
+      };
+      // 조회 실패는 다음 주기에 다시 시도하면 된다. 예외로 올리지 않는다.
+      this.logger.warn(
+        `환불 목록 조회 실패 [${res.status}] ${body.error?.message ?? ''}`,
+      );
+      return [];
+    }
+
+    const json = (await res.json()) as {
+      voidedPurchases?: PlayVoidedPurchase[];
+    };
+    return json.voidedPurchases ?? [];
   }
 
   /**

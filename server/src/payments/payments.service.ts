@@ -184,6 +184,68 @@ export class PaymentsService {
   }
 
   /**
+   * Play 에서 환불된 구매를 찾아 결제 상태와 리포트 잠금을 맞춘다.
+   *
+   * App Store 는 환불 알림을 서버로 밀어주지만(webhooks/app-store), Play 는 그런
+   * 경로가 없어 주기적으로 훑어야 한다. 그래서 반영이 폴링 주기만큼 늦다.
+   *
+   * 여러 인스턴스에서 동시에 돌아도 안전하다 — 이미 REFUNDED 인 결제는 건너뛴다.
+   */
+  async syncGooglePlayRefunds(sinceMs?: number) {
+    const voided = await this.googlePlay.listVoidedPurchases(sinceMs);
+    if (voided.length === 0) return { checked: 0, applied: 0 };
+
+    let applied = 0;
+    for (const item of voided) {
+      if (!item.purchaseToken) continue;
+
+      const payment = await this.prisma.payment.findFirst({
+        where: { provider: 'GOOGLE_PLAY', paymentKey: item.purchaseToken },
+      });
+      // 우리 DB 에 없는 구매(저장 실패 등)는 잠글 콘텐츠가 없다.
+      if (!payment) continue;
+      if (payment.status === PaymentStatus.REFUNDED) continue;
+
+      const refundedAt = item.voidedTimeMillis
+        ? new Date(Number(item.voidedTimeMillis))
+        : new Date();
+
+      await this.prisma.$transaction([
+        this.prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.REFUNDED,
+            refundedAt,
+            events: {
+              create: {
+                type: 'REFUNDED',
+                status: PaymentStatus.REFUNDED,
+                amount: payment.amount,
+                reason:
+                  `Google Play 환불 (reason=${item.voidedReason ?? '-'}` +
+                  ` source=${item.voidedSource ?? '-'})`,
+                payload: item as unknown as Prisma.InputJsonValue,
+              },
+            },
+          },
+        }),
+        // 이 결제로 열린 상세 리포트를 잠근다.
+        this.prisma.temperamentResult.updateMany({
+          where: { paymentId: payment.id },
+          data: { isPaid: false, refundedAt },
+        }),
+      ]);
+
+      applied += 1;
+      this.logger.log(
+        `Google Play 환불 반영 order=${payment.orderId} token=${item.purchaseToken.slice(0, 12)}…`,
+      );
+    }
+
+    return { checked: voided.length, applied };
+  }
+
+  /**
    * 환불 심사용 소비 정보를 Apple 에 보낸다(CONSUMPTION_REQUEST 응답).
    *
    * Apple 은 12시간 안에 받은 응답만 심사에 반영한다. 실패해도 서비스 동작에는
