@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getResult, unlockResult } from '@/lib/api';
 import PageHeader from '@/components/PageHeader';
 import KakaoAdBanner from '@/components/ads/KakaoAdBanner';
-import AppBannerSlot from '@/components/ads/AppBannerSlot';
 import { RESULT_ACCESS_DAYS, remainingAccessLabel } from '@/lib/resultAccess';
 import { useIsAndroidApp } from '@/lib/isAndroidApp';
 import { useIsIosApp } from '@/lib/isNativeApp';
@@ -33,6 +32,7 @@ import ResultSection from '../../_components/ResultSection';
 import LockedSection from '../../_components/LockedSection';
 import PaidResultSection from '../../_components/PaidResultSection';
 import ReliabilityNotice from '../../_components/ReliabilityNotice';
+import ResultLoading from '../../_components/ResultLoading';
 import { getMockResult } from './_mocks';
 
 export default function ResultPage() {
@@ -125,15 +125,9 @@ export default function ResultPage() {
 
   if (loading) {
     return (
-      <main className="flex flex-col items-center justify-center min-h-dvh gap-4 gradient-page">
-        <div className="w-12 h-12 border-4 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-        <p className="text-sm text-gray-500">
-          {paymentOrderId
-            ? '결제 내역을 확인하고 있어요...'
-            : '아기의 기질을 분석하고 있어요...'}
-        </p>
-        <p className="text-xs text-gray-300">잠시만 기다려 주세요.</p>
-      </main>
+      <ResultLoading
+        message={paymentOrderId ? '결제 내역을 확인하고 있어요...' : undefined}
+      />
     );
   }
 
@@ -466,9 +460,12 @@ export default function ResultPage() {
         </button>
       </div>
       </main>
-
-      {/* 앱에서는 카카오 인라인 광고가 빠지므로 하단 고정 배너 자리를 둔다. */}
-      <AppBannerSlot />
+      {/*
+        이 화면에는 앱 배너를 두지 않는다(사용자 결정).
+        슬롯 DOM 이 없으면 AppAdSlotReporter 가 visible:false 를 보내 네이티브 배너가 숨는다.
+        배너 자리를 남겨두면 버튼 아래가 84px 비는데, 결과를 다 읽은 뒤의 마무리 화면이라
+        그 여백이 그대로 드러난다.
+      */}
     </div>
   );
 }

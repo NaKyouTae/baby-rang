@@ -33,7 +33,13 @@ function isExcluded(pathname: string) {
   // 이미 손봐두었으므로 여백까지 통째로 제외한다.
   if (pathname.startsWith("/settings/")) return true;
   // 검사 응답 화면(/tests/[testId]/test/[submissionId])은 몰입형이라 제외.
-  return /^\/tests\/[^/]+\/test(\/|$)/.test(pathname);
+  //
+  // 검사 결과 화면(/tests/[testId]/result/[submissionId])도 제외한다.
+  // 이 화면은 하단 네비가 숨겨지는데(BottomNav 의 hide 목록) BottomSpacer 는
+  // --bottom-nav-space(네비 64 + 배너 50 + 세이프에어리어)를 그대로 잡는다.
+  // 게다가 이 페이지는 AppBannerSlot 으로 배너 자리를 직접 만들고 있어서
+  // 배너 높이가 두 번 잡힌다. 둘이 겹쳐 버튼 아래가 280px 가까이 비었다.
+  return /^\/tests\/[^/]+\/(test|result)(\/|$)/.test(pathname);
 }
 
 /**
