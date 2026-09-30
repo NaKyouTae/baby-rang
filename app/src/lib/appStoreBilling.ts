@@ -32,13 +32,14 @@ const APP_STORE_BILLING_ENABLED = true;
  * 새 빌드가 승인되기 전까지 iOS 매출이 0이 된다 — 아직 아무도 인앱결제를 쓸 수
  * 없는데 Toss 까지 막히기 때문이다.
  *
- * 그래서 전환 기간에는 true 로 두고, 새 빌드 보급률이 충분히 오른 뒤 false 로
- * 내린다. 그때부터 구 빌드는 결제 UI 자체가 사라진다(3.1.1 위반 상태가 끝난다).
+ * 2026-09-30 부터 false. 1.2.6(인앱결제 포함)이 출시됐고 구 빌드 사용자가 없어서,
+ * 전환 기간을 유지할 이유가 사라졌다. 이제 구 빌드에서는 결제 UI 가 아예 뜨지 않는다
+ * (3.1.1 위반 상태가 끝난다).
  *
  * ⚠️ false 로 내릴 때 "웹에서 구매하세요" 같은 안내를 넣으면 안 된다.
  *    외부 결제 유도는 그 자체로 App Store 심사 지침 위반이다.
  */
-export const IOS_LEGACY_TOSS_ENABLED = true;
+export const IOS_LEGACY_TOSS_ENABLED = false;
 
 interface BridgeWindow extends Window {
   webkit?: {

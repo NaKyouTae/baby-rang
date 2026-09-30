@@ -184,6 +184,66 @@ export class PaymentsService {
   }
 
   /**
+   * 환불 심사용 소비 정보를 Apple 에 보낸다(CONSUMPTION_REQUEST 응답).
+   *
+   * Apple 은 12시간 안에 받은 응답만 심사에 반영한다. 실패해도 서비스 동작에는
+   * 영향이 없으므로 예외를 밖으로 던지지 않는다 — 웹훅은 200 으로 닫혀야 한다.
+   *
+   * ⚠️ customerConsented 를 사용자의 '제3자 제공 동의'로 본다.
+   *    Apple 은 사용자가 소비 정보 제공에 동의했을 때만 이 데이터를 쓴다.
+   *    동의가 없으면 false 로 보내고, Apple 은 그 데이터를 무시한다.
+   *    개인정보처리방침에 "환불 심사를 위해 구매·이용 정보를 App Store 에 제공"이
+   *    명시돼 있어야 이 매핑이 성립한다.
+   */
+  async respondToConsumptionRequest(transactionId: string) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { provider: 'APP_STORE', paymentKey: transactionId },
+      include: { user: true },
+    });
+    if (!payment?.user) {
+      this.logger.warn(`소비 정보 요청: DB 에 없는 결제 tx=${transactionId}`);
+      return { handled: false as const };
+    }
+
+    // 이 결제로 열린 리포트가 남아 있는지 = 콘텐츠를 실제로 전달했는지.
+    const delivered = await this.prisma.temperamentResult.count({
+      where: { paymentId: payment.id },
+    });
+
+    // 누적 구매·환불액(원). 구간 계산에만 쓰므로 환율은 대략값으로 충분하다.
+    const [purchased, refunded] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: { userId: payment.userId, status: PaymentStatus.PAID },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.aggregate({
+        where: { userId: payment.userId, status: PaymentStatus.REFUNDED },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const ok = await this.appStore.sendConsumptionInfo(transactionId, {
+      customerConsented: Boolean(payment.user.thirdPartyAgreedAt),
+      // 리포트는 구매 즉시 전부 공개된다. 남아 있으면 '전부 사용'으로 본다.
+      consumptionStatus: delivered > 0 ? 3 : 1,
+      deliveryStatus: 0,
+      platform: 2,
+      // 구매 전에도 무료 결과(성향 요약·강점)를 볼 수 있다.
+      sampleContentProvided: true,
+      // 콘텐츠를 정상 전달했으면 환불 거절을 권한다. 아니면 의견을 내지 않는다.
+      refundPreference: delivered > 0 ? 2 : 3,
+      accountTenure: accountTenureBucket(payment.user.createdAt),
+      // 열람 시간을 측정하지 않는다. 추측해서 보내느니 미신고가 낫다.
+      playTime: 0,
+      lifetimeDollarsPurchased: dollarBucket(purchased._sum.amount ?? 0),
+      lifetimeDollarsRefunded: dollarBucket(refunded._sum.amount ?? 0),
+      userStatus: 1,
+    });
+
+    return { handled: ok };
+  }
+
+  /**
    * Google Play 결제 승인. Android(TWA)에서 Digital Goods API 로 구매한 뒤 호출된다.
    *
    * Toss 경로(confirmAndCreate)와 달리 금액을 아예 받지 않는다. 어떤 상품을 샀는지는
@@ -813,4 +873,28 @@ export class PaymentsService {
   async findByOrderIdOrNull(orderId: string) {
     return this.prisma.payment.findUnique({ where: { orderId } });
   }
+}
+
+/** 가입 후 경과일을 Apple 의 accountTenure 구간으로 바꾼다. */
+function accountTenureBucket(createdAt: Date): number {
+  const days = (Date.now() - createdAt.getTime()) / 86_400_000;
+  if (days < 3) return 1;
+  if (days < 10) return 2;
+  if (days < 30) return 3;
+  if (days < 90) return 4;
+  if (days < 180) return 5;
+  if (days < 365) return 6;
+  return 7;
+}
+
+/** 원화 누적액을 Apple 의 달러 구간으로 바꾼다(환율은 구간 판정용 근사값). */
+function dollarBucket(amountKrw: number): number {
+  const usd = amountKrw / 1350;
+  if (usd <= 0) return 1;
+  if (usd < 50) return 2;
+  if (usd < 100) return 3;
+  if (usd < 500) return 4;
+  if (usd < 1000) return 5;
+  if (usd < 2000) return 6;
+  return 7;
 }

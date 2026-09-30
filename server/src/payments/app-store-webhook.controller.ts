@@ -53,11 +53,20 @@ export class AppStoreWebhookController {
       }
 
       // 소모품 환불 심사 중 Apple 이 소비 정보를 요청한 것.
-      // 응답(PUT /inApps/v1/transactions/consumption/{id})하면 심사에 반영되지만
-      // 사용자 동의(customerConsented)가 전제라 지금은 기록만 남긴다.
-      case 'CONSUMPTION_REQUEST':
-        this.logger.warn(`소비 정보 요청 수신 tx=${txId ?? '-'} — 미응답`);
+      // 12시간 안에 응답해야 심사에 반영된다.
+      //
+      // ⚠️ 여기서는 예외를 삼킨다. 환불 심사 결과는 우리 서비스 동작과 무관하고,
+      // 실패를 이유로 Apple 이 재시도해도 12시간 창이 이미 닫혀 있을 수 있다.
+      // REFUND 알림과 달리 유실돼도 콘텐츠 상태가 틀어지지 않는다.
+      case 'CONSUMPTION_REQUEST': {
+        if (!txId) return { ok: true };
+        try {
+          await this.payments.respondToConsumptionRequest(txId);
+        } catch (error) {
+          this.logger.error(`소비 정보 응답 실패 tx=${txId}`, error as Error);
+        }
         return { ok: true };
+      }
 
       // App Store Connect 의 "테스트 알림 요청" 버튼이 보내는 것.
       case 'TEST':

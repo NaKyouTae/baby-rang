@@ -22,6 +22,35 @@ const SANDBOX_BASE = 'https://api.storekit-sandbox.itunes.apple.com';
  */
 const BUNDLE_ID = 'kr.spectrify.baby-rang';
 
+/**
+ * 소모품 환불 심사용 소비 정보.
+ * 값의 의미는 Apple 문서(ConsumptionRequest)를 따른다 — 대부분 구간(bucket) 코드다.
+ */
+export interface ConsumptionRequest {
+  /** 사용자가 소비 정보 제공에 동의했는지. false 면 Apple 이 무시한다. */
+  customerConsented: boolean;
+  /** 0 미신고 · 1 미사용 · 2 일부 사용 · 3 전부 사용 */
+  consumptionStatus: 0 | 1 | 2 | 3;
+  /** 0 정상 전달 · 1 앱 오류로 미전달 · 그 외 문서 참고 */
+  deliveryStatus: 0 | 1 | 2 | 3 | 4 | 5;
+  /** 1 미신고 · 2 Apple · 3 비Apple */
+  platform: 1 | 2 | 3;
+  /** 무료 체험/샘플을 제공했는지 */
+  sampleContentProvided: boolean;
+  /** 0 미신고 · 1 환불 권장 · 2 환불 거절 권장 · 3 의견 없음 */
+  refundPreference: 0 | 1 | 2 | 3;
+  /** 계정 사용 기간 구간 (0 미신고 ~ 8) */
+  accountTenure: number;
+  /** 사용 시간 구간 (0 미신고 ~ 7) */
+  playTime: number;
+  /** 누적 구매액 구간 (USD, 0 미신고 ~ 7) */
+  lifetimeDollarsPurchased: number;
+  /** 누적 환불액 구간 (USD, 0 미신고 ~ 7) */
+  lifetimeDollarsRefunded: number;
+  /** 0 미신고 · 1 활성 · 2 정지 · 3 해지 · 4 제한 */
+  userStatus: 0 | 1 | 2 | 3 | 4;
+}
+
 /** JWSTransactionDecodedPayload 중 우리가 쓰는 필드. */
 export interface AppStoreTransaction {
   transactionId: string;
@@ -259,6 +288,62 @@ export class AppStoreService {
    * Apple 이 "환불 아님"이라고 답하면 아무 일도 일어나지 않으므로,
    * x5c 인증서 체인 검증이 통째로 필요 없어진다. 이 파일 맨 위 주석과 같은 방침이다.
    */
+  /**
+   * 소모품 환불 심사에 쓰이는 소비 정보를 Apple 에 보낸다.
+   *
+   * 사용자가 환불을 신청하면 Apple 이 CONSUMPTION_REQUEST 알림을 보내고,
+   * **12시간 안에** 이 응답을 받으면 환불 여부 판단에 반영한다.
+   * "콘텐츠를 이미 전달했고 사용자가 열람했다"는 사실을 Apple 에 알릴 수 있는
+   * 유일한 공식 창구다. 응답하지 않으면 Apple 은 사용자 주장만 보고 판단한다.
+   *
+   * ⚠️ customerConsented 가 false 면 Apple 은 이 데이터를 쓰지 않는다.
+   *    보내는 것 자체는 무해하지만 효과도 없다.
+   *
+   * 실패해도 던지지 않는다. 환불 심사는 우리 서비스 동작과 무관하고,
+   * 재시도해봐야 12시간 창이 이미 닫혔을 수 있다.
+   */
+  async sendConsumptionInfo(
+    transactionId: string,
+    info: ConsumptionRequest,
+  ): Promise<boolean> {
+    const token = this.token();
+    const path = `/inApps/v1/transactions/consumption/${transactionId}`;
+    const send = (base: string) =>
+      fetch(`${base}${path}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(info),
+      });
+
+    try {
+      // 조회와 같은 순서로 환경을 찾는다(프로덕션 → 샌드박스).
+      let res = await send(PROD_BASE);
+      if (res.status === 404) res = await send(SANDBOX_BASE);
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.warn(
+          `소비 정보 전송 실패 [${res.status}] tx=${transactionId} ${body}`,
+        );
+        return false;
+      }
+      this.logger.log(
+        `소비 정보 전송 tx=${transactionId} ` +
+          `consented=${info.customerConsented} status=${info.consumptionStatus}`,
+      );
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `소비 정보 전송 중 오류 tx=${transactionId}`,
+        error as Error,
+      );
+      return false;
+    }
+  }
+
   decodeNotification(signedPayload: string): AppStoreNotification {
     const payload = this.decodeJws<AppStoreNotification>(signedPayload);
     if (!payload?.notificationType) {
