@@ -7,7 +7,7 @@
  * 로딩이 두 번 깜빡이는 것으로 보인다. 한 컴포넌트를 공유해 하나로 이어 붙인다.
  */
 export default function ResultLoading({
-  message = '아기의 기질을 분석하고 있어요...',
+  message = '아기의 기질을 분석하고 있어요',
 }: {
   message?: string;
 }) {

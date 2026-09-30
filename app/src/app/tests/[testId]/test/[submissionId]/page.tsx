@@ -165,7 +165,7 @@ export default function TestPage() {
         <main className="flex items-center justify-center min-h-[60dvh] gradient-page">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-3 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">문항을 불러오는 중...</p>
+            <p className="text-sm text-gray-400">문항을 불러오는 중</p>
           </div>
         </main>
       </>

@@ -138,7 +138,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
                   <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.7-.8 3.1-.1.5.2.5.4.4.2-.1 2.7-1.8 3.7-2.5.6.1 1.2.1 1.9.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z" />
                 </svg>
-                {kakaoLoading ? '카카오톡으로 이동 중...' : '카카오로 시작하기'}
+                {kakaoLoading ? '카카오톡으로 이동 중' : '카카오로 시작하기'}
               </button>
               {/* Apple 심사 가이드라인 4.8: 서드파티 로그인(카카오)을 제공하면
                   개인정보 보호형 로그인도 함께 제공해야 한다.

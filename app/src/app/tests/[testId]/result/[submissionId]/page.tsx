@@ -126,7 +126,7 @@ export default function ResultPage() {
   if (loading) {
     return (
       <ResultLoading
-        message={paymentOrderId ? '결제 내역을 확인하고 있어요...' : undefined}
+        message={paymentOrderId ? '결제 내역을 확인하고 있어요' : undefined}
       />
     );
   }
