@@ -5,6 +5,38 @@ import { useRouter } from 'next/navigation';
 import { getPayments, type PaymentItem } from '@/lib/api';
 import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
+import ConfirmModal from '@/components/ConfirmModal';
+
+/**
+ * 인앱결제 영수증 안내.
+ *
+ * 스토어 결제는 영수증을 애플·구글이 발행한다. App Store Server API 도
+ * Play Developer API 도 영수증 URL 을 돌려주지 않아서(트랜잭션 정보만 준다),
+ * 우리 서버에는 receiptUrl 이 비어 있다. 그래서 링크로 보내는 대신
+ * 각 스토어의 구입 내역 경로를 안내한다.
+ *
+ * 판별은 기기가 아니라 결제 건의 method 로 한다. iOS 에서 산 결제를
+ * 웹이나 안드로이드에서 열어볼 수 있기 때문이다.
+ */
+const STORE_RECEIPT_GUIDE = {
+  APP_STORE: {
+    title: 'App Store 영수증 안내',
+    description:
+      '이 결제의 영수증은 Apple에서 발행합니다.\n\n설정 → Apple 계정 → 미디어 및 구입 항목\n→ 구입 내역에서 확인하실 수 있어요.',
+  },
+  GOOGLE_PLAY: {
+    title: 'Google Play 영수증 안내',
+    description:
+      '이 결제의 영수증은 Google에서 발행합니다.\n\nPlay 스토어 → 프로필 → 결제 및 정기 결제\n→ 예산 및 주문 내역에서 확인하실 수 있어요.',
+  },
+} as const;
+
+type StoreMethod = keyof typeof STORE_RECEIPT_GUIDE;
+
+function storeMethodOf(item: PaymentItem): StoreMethod | null {
+  const m = item.method;
+  return m === 'APP_STORE' || m === 'GOOGLE_PLAY' ? m : null;
+}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -38,6 +70,8 @@ export default function PaymentsPage() {
   const [items, setItems] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 인앱결제 건을 눌렀을 때 띄울 안내. null 이면 닫힌 상태다.
+  const [receiptGuide, setReceiptGuide] = useState<StoreMethod | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,14 +124,23 @@ export default function PaymentsPage() {
             {items.map((item) => {
               const meta = STATUS_META[item.status];
               const isPaid = item.status === 'PAID';
+              const storeMethod = storeMethodOf(item);
+              // 누를 수 있는 건 영수증이 있는 토스 결제와 안내를 띄울 인앱결제뿐이다.
+              const clickable = isPaid && (Boolean(item.receiptUrl) || Boolean(storeMethod));
               return (
                 <li
                   key={item.id}
-                  className="flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 cursor-pointer active:bg-gray-200 transition-colors"
+                  className={`flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 transition-colors ${
+                    clickable ? 'cursor-pointer active:bg-gray-200' : ''
+                  }`}
                   onClick={() => {
-                    if (isPaid && item.receiptUrl) {
+                    if (!clickable) return;
+                    if (item.receiptUrl) {
                       window.open(item.receiptUrl, '_blank', 'noopener,noreferrer');
+                      return;
                     }
+                    // 인앱결제는 영수증 URL 이 없다. 스토어 구입 내역 경로를 안내한다.
+                    if (storeMethod) setReceiptGuide(storeMethod);
                   }}
                 >
                   <div className="flex-1 min-w-0">
@@ -118,7 +161,7 @@ export default function PaymentsPage() {
                       <span>{formatDate(item.approvedAt || item.createdAt)}</span>
                     </div>
                   </div>
-                  {isPaid && item.receiptUrl && (
+                  {clickable && (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="9 18 15 12 9 6" />
                     </svg>
@@ -129,6 +172,25 @@ export default function PaymentsPage() {
           </ul>
         )}
       </div>
+
+      <ConfirmModal
+        open={receiptGuide !== null}
+        icon={
+          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 3v18l2-1.5L8 21l2-1.5L12 21l2-1.5L16 21l2-1.5L20 21V3l-2 1.5L16 3l-2 1.5L12 3l-2 1.5L8 3 6 4.5 4 3Z" />
+              <line x1="8" y1="9" x2="16" y2="9" />
+              <line x1="8" y1="13" x2="14" y2="13" />
+            </svg>
+          </div>
+        }
+        title={receiptGuide ? STORE_RECEIPT_GUIDE[receiptGuide].title : ''}
+        description={receiptGuide ? STORE_RECEIPT_GUIDE[receiptGuide].description : ''}
+        confirmLabel="확인"
+        hideCancel
+        onConfirm={() => setReceiptGuide(null)}
+        onClose={() => setReceiptGuide(null)}
+      />
     </div>
   );
 }

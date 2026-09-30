@@ -141,9 +141,20 @@ export default function HistoryPage() {
                       {expired ? (
                         <span className="truncate">열람 기간 종료</span>
                       ) : (
-                        <span className="truncate" style={{ color: palette.teal }}>
-                          {remaining}
-                        </span>
+                        <>
+                          {/* 환불되면 상세 배지가 '일반'으로 돌아가므로, 왜 그런지 여기서 밝힌다. */}
+                          {item.isRefunded && (
+                            <>
+                              <span className="shrink-0" style={{ color: '#3078C9' }}>
+                                환불됨
+                              </span>
+                              <span>·</span>
+                            </>
+                          )}
+                          <span className="truncate" style={{ color: palette.teal }}>
+                            {remaining}
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>

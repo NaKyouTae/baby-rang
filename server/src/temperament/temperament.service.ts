@@ -251,6 +251,9 @@ export class TemperamentService {
       resultId: r.id,
       expiresAt: expiresAt.toISOString(),
       isPaid: r.isPaid,
+      // 환불로 잠긴 경우. isPaid 가 이미 false 라 잠금은 위에서 처리되고,
+      // 이 값은 "결제한 적 없음"과 구분해 안내 문구를 바꾸기 위한 것이다.
+      isRefunded: Boolean(r.refundedAt),
       isReliable: r.isReliable,
       reliabilityMsg: r.reliabilityMsg,
       summary: r.summary,
@@ -322,6 +325,8 @@ export class TemperamentService {
         isPaid: true,
         paymentId: payment.id,
         unlockedAt: new Date(),
+        // 환불 뒤 다시 구매한 경우. 지우지 않으면 화면에 "환불됨"이 남는다.
+        refundedAt: null,
       },
     });
 
@@ -361,6 +366,7 @@ export class TemperamentService {
             primaryType: s.result!.primaryType,
             primaryTypeLabel: s.result!.primaryTypeLabel,
             isPaid: s.result!.isPaid,
+            isRefunded: Boolean(s.result!.refundedAt),
             completedAt: s.completedAt!.toISOString(),
             expiresAt: expiresAt.toISOString(),
             isExpired: now >= expiresAt.getTime(),

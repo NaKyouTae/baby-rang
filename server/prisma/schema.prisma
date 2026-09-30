@@ -238,6 +238,8 @@ model TemperamentResult {
   isPaid          Boolean   @default(false)
   paymentId       String?
   unlockedAt      DateTime?
+  /// 환불로 잠긴 시각. isPaid 는 false 로 되돌리고 이 값으로 "환불됨"과 "미결제"를 구분한다.
+  refundedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

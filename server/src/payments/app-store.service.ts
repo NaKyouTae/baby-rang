@@ -46,6 +46,24 @@ export interface AppStoreTransaction {
   storefront?: string;
 }
 
+/** responseBodyV2DecodedPayload 중 우리가 쓰는 필드. */
+export interface AppStoreNotification {
+  /** 'REFUND' | 'REFUND_REVERSED' | 'REFUND_DECLINED' | 'CONSUMPTION_REQUEST' | 'TEST' | ... */
+  notificationType: string;
+  subtype?: string;
+  /** 같은 알림의 재시도를 구분하는 ID. 로그 추적용. */
+  notificationUUID: string;
+  data?: {
+    bundleId?: string;
+    /** 'Production' | 'Sandbox' */
+    environment?: string;
+    signedTransactionInfo?: string;
+    signedRenewalInfo?: string;
+  };
+  version?: string;
+  signedDate?: number;
+}
+
 function base64url(input: Buffer | string): string {
   return Buffer.from(input)
     .toString('base64')
@@ -131,7 +149,7 @@ export class AppStoreService {
   }
 
   /** JWS 의 페이로드(가운데 조각)를 디코드한다. 서명 검증은 하지 않는다 — 위 주석 참고. */
-  private decodeJws(jws: string): AppStoreTransaction {
+  private decodeJws<T>(jws: string): T {
     const parts = jws.split('.');
     if (parts.length !== 3) {
       throw new BadRequestException('App Store 응답을 해석할 수 없습니다.');
@@ -139,7 +157,7 @@ export class AppStoreService {
     try {
       return JSON.parse(
         Buffer.from(parts[1], 'base64url').toString('utf8'),
-      ) as AppStoreTransaction;
+      ) as T;
     } catch {
       throw new BadRequestException('App Store 응답을 해석할 수 없습니다.');
     }
@@ -157,22 +175,25 @@ export class AppStoreService {
   }
 
   /**
-   * 트랜잭션 ID를 Apple 에 조회한다. 존재하지 않으면 404 → 위조로 간주.
+   * 트랜잭션을 Apple 에 조회한다. 존재하지 않으면 null.
+   *
+   * 환불 여부는 **판단하지 않는다.** 호출하는 쪽이 revocationDate 를 보고 결정한다
+   * (결제 승인은 거절, 웹훅 처리는 오히려 그 값을 찾으러 온다).
    *
    * 프로덕션에 없으면 샌드박스를 한 번 더 본다. 두 환경은 완전히 분리돼 있고
    * 어느 쪽 구매인지 클라이언트 말로는 알 수 없다(그 말을 믿으면 샌드박스 구매로
    * 실제 콘텐츠를 여는 경로가 생긴다). Apple 이 권장하는 순서 그대로다.
    */
-  async getTransaction(transactionId: string): Promise<AppStoreTransaction> {
+  async lookupTransaction(
+    transactionId: string,
+  ): Promise<AppStoreTransaction | null> {
     const token = this.token();
 
     let res = await this.fetchTransaction(PROD_BASE, transactionId, token);
-    let environment = 'Production';
-
     if (res.status === 404) {
       res = await this.fetchTransaction(SANDBOX_BASE, transactionId, token);
-      environment = 'Sandbox';
     }
+    if (res.status === 404) return null;
 
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as {
@@ -184,9 +205,7 @@ export class AppStoreService {
           `${body.errorCode ?? ''} ${body.errorMessage ?? ''}`,
       );
       throw new BadRequestException(
-        res.status === 404
-          ? '유효하지 않은 결제 정보입니다.'
-          : (body.errorMessage ?? 'App Store 결제 조회에 실패했습니다.'),
+        body.errorMessage ?? 'App Store 결제 조회에 실패했습니다.',
       );
     }
 
@@ -195,7 +214,7 @@ export class AppStoreService {
       throw new BadRequestException('App Store 응답에 결제 정보가 없습니다.');
     }
 
-    const tx = this.decodeJws(json.signedTransactionInfo);
+    const tx = this.decodeJws<AppStoreTransaction>(json.signedTransactionInfo);
 
     // 다른 앱의 트랜잭션으로 우리 콘텐츠를 여는 경로를 막는다.
     // API 키는 계정 단위라 같은 계정의 다른 앱 트랜잭션도 조회되기 때문에,
@@ -204,6 +223,18 @@ export class AppStoreService {
       this.logger.warn(
         `번들 ID 불일치 tx=${transactionId} bundleId=${tx.bundleId}`,
       );
+      return null;
+    }
+
+    return tx;
+  }
+
+  /**
+   * 결제 승인용 조회. 위조·환불된 트랜잭션이면 던진다.
+   */
+  async getTransaction(transactionId: string): Promise<AppStoreTransaction> {
+    const tx = await this.lookupTransaction(transactionId);
+    if (!tx) {
       throw new BadRequestException('유효하지 않은 결제 정보입니다.');
     }
 
@@ -214,9 +245,36 @@ export class AppStoreService {
 
     this.logger.log(
       `트랜잭션 확인 tx=${tx.transactionId} product=${tx.productId} ` +
-        `env=${tx.environment ?? environment} type=${tx.type}`,
+        `env=${tx.environment} type=${tx.type}`,
     );
 
     return tx;
+  }
+
+  /**
+   * App Store Server Notifications V2 의 signedPayload 를 푼다.
+   *
+   * ⚠️ 여기서도 서명을 검증하지 않는다. 대신 꺼낸 transactionId 로 Apple 에
+   * 되물어(lookupTransaction) 환불 여부를 확인한다. 위조 알림을 보내도
+   * Apple 이 "환불 아님"이라고 답하면 아무 일도 일어나지 않으므로,
+   * x5c 인증서 체인 검증이 통째로 필요 없어진다. 이 파일 맨 위 주석과 같은 방침이다.
+   */
+  decodeNotification(signedPayload: string): AppStoreNotification {
+    const payload = this.decodeJws<AppStoreNotification>(signedPayload);
+    if (!payload?.notificationType) {
+      throw new BadRequestException('알림 페이로드를 해석할 수 없습니다.');
+    }
+    return payload;
+  }
+
+  /** 알림에 실려온 트랜잭션 ID. 없으면 null. */
+  transactionIdOf(notification: AppStoreNotification): string | null {
+    const jws = notification.data?.signedTransactionInfo;
+    if (!jws) return null;
+    try {
+      return this.decodeJws<AppStoreTransaction>(jws).transactionId ?? null;
+    } catch {
+      return null;
+    }
   }
 }

@@ -110,6 +110,80 @@ export class PaymentsService {
   }
 
   /**
+   * App Store 환불 / 환불 취소를 결제와 콘텐츠에 반영한다.
+   *
+   * 웹훅 페이로드를 믿지 않고 transactionId 로 Apple 에 되물은 결과만 쓴다.
+   * 위조 알림이 들어와도 Apple 이 revocationDate 를 주지 않으면 아무 일도 일어나지 않는다.
+   * (confirmAppStore 가 영수증 대신 트랜잭션 ID 로 되묻는 것과 같은 구조다)
+   *
+   * ⚠️ 열람 차단은 새 플래그가 아니라 TemperamentResult.isPaid 를 false 로
+   * 되돌려서 한다. 결과를 읽는 쪽(getResult / getHistory / buildPreview)이 이미
+   * 전부 isPaid 로 분기하고 있어서, 플래그를 하나 더 만들고 읽는 곳을 일일이
+   * 고치는 방식보다 빠뜨릴 구멍이 없다. refundedAt 은 "환불됨"과 "애초에 결제
+   * 안 함"을 화면에서 구분하기 위해서만 쓴다.
+   */
+  async applyAppStoreRevocation(transactionId: string) {
+    const tx = await this.appStore.lookupTransaction(transactionId);
+    if (!tx) {
+      this.logger.warn(`환불 알림: Apple 에 없는 트랜잭션 tx=${transactionId}`);
+      return { handled: false, reason: 'unknown-transaction' as const };
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { provider: 'APP_STORE', paymentKey: transactionId },
+    });
+    if (!payment) {
+      // 결제 저장이 실패한 채로 환불된 경우. 잠글 콘텐츠가 없으니 기록만 남긴다.
+      this.logger.warn(`환불 알림: DB 에 없는 결제 tx=${transactionId}`);
+      return { handled: false, reason: 'unknown-payment' as const };
+    }
+
+    const revoked = Boolean(tx.revocationDate);
+    const nextStatus = revoked ? PaymentStatus.REFUNDED : PaymentStatus.PAID;
+
+    // 같은 알림이 재시도로 여러 번 들어와도 이벤트가 쌓이지 않게 한다.
+    if (payment.status === nextStatus) {
+      return { handled: true, status: nextStatus, changed: false };
+    }
+
+    const revokedAt = tx.revocationDate ? new Date(tx.revocationDate) : null;
+
+    await this.prisma.$transaction([
+      this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: nextStatus,
+          refundedAt: revokedAt,
+          events: {
+            create: {
+              type: revoked ? 'REFUNDED' : 'REFUND_REVERSED',
+              status: nextStatus,
+              amount: payment.amount,
+              reason: revoked
+                ? `App Store 환불 (reason=${tx.revocationReason ?? '-'})`
+                : 'App Store 환불 취소',
+              payload: tx as unknown as Prisma.InputJsonValue,
+            },
+          },
+        },
+      }),
+      // 이 결제로 열린 상세 리포트를 잠근다(환불 취소면 되돌린다).
+      this.prisma.temperamentResult.updateMany({
+        where: { paymentId: payment.id },
+        data: revoked
+          ? { isPaid: false, refundedAt: revokedAt ?? new Date() }
+          : { isPaid: true, refundedAt: null },
+      }),
+    ]);
+
+    this.logger.log(
+      `App Store ${revoked ? '환불' : '환불 취소'} 반영 ` +
+        `tx=${transactionId} order=${payment.orderId}`,
+    );
+    return { handled: true, status: nextStatus, changed: true };
+  }
+
+  /**
    * Google Play 결제 승인. Android(TWA)에서 Digital Goods API 로 구매한 뒤 호출된다.
    *
    * Toss 경로(confirmAndCreate)와 달리 금액을 아예 받지 않는다. 어떤 상품을 샀는지는

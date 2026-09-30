@@ -78,6 +78,8 @@ export interface TestResult {
   /** 결과 열람 마감 시각(ISO). 미리보기(mock) 결과에는 없다. */
   expiresAt?: string;
   isPaid: boolean;
+  /** 환불로 상세 리포트가 잠긴 경우. isPaid 는 false 가 된다. */
+  isRefunded?: boolean;
   isReliable: boolean;
   reliabilityMsg: string | null;
   summary: {
@@ -102,6 +104,8 @@ export interface HistoryItem {
   primaryType: string;
   primaryTypeLabel: string;
   isPaid: boolean;
+  /** 환불로 상세 리포트가 잠긴 경우. isPaid 는 false 가 된다. */
+  isRefunded?: boolean;
   completedAt: string;
   /** 열람 마감 시각(ISO) — 검사 완료 후 RESULT_ACCESS_DAYS일 */
   expiresAt: string;
