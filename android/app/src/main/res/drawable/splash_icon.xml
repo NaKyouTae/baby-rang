@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  시스템 스플래시에 올릴 로고.
+
+  windowSplashScreenAnimatedIcon 은 드로어블을 정해진 크기의 원형 영역에 꽉 채워
+  그린다. 원본을 그대로 주면 화면에 비해 지나치게 커 보이므로, 여백을 넣어
+  실제 로고가 차지하는 비율을 줄인다.
+
+  로고는 배경을 투명하게 뺀 PNG 다. 원본(icon-512x512.png)은 옅은 회색 배경이 깔려 있어
+  그대로 쓰면 스플래시 배경과 색이 미세하게 달라 네모난 판이 보인다.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/splash_logo"
+        android:bottom="40dp"
+        android:left="40dp"
+        android:right="40dp"
+        android:top="40dp" />
+</layer-list>
