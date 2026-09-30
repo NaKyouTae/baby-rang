@@ -18,8 +18,8 @@ android {
         // ⚠️ TWA 와 같은 패키지라 같은 Play 리스팅을 덮어쓴다.
         //    versionCode 는 되돌릴 수 없는 정수라 TWA 의 마지막 값(12)보다 커야 한다.
         //    scripts/bump-version.js 가 TWA·iOS 와 함께 갱신한다.
-        versionCode 13
-        versionName "1.2.7"
+        versionCode 14
+        versionName "1.2.8"
     }
 
     signingConfigs {
