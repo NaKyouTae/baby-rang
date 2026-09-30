@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { canGoBack } from '@/lib/navHistory';
 import { palette } from '@/lib/colors';
 
 interface PageHeaderProps {
@@ -16,7 +17,11 @@ export default function PageHeader({
   onAction,
 }: PageHeaderProps) {
   const router = useRouter();
-  const handleAction = onAction ?? (() => router.back());
+  // 뒤로 갈 히스토리가 없으면 홈으로 보낸다.
+  // 초기 화면 설정으로 바로 내려앉은 화면은 replace 로 들어와 히스토리가 없어서,
+  // router.back() 만으로는 버튼이 먹통처럼 보인다. (navHistory.ts 참고)
+  const handleAction =
+    onAction ?? (() => (canGoBack() ? router.back() : router.push('/home')));
 
   return (
     <header className="sticky top-0 z-30 bg-white flex items-center justify-center relative px-5 py-4" style={{ paddingTop: 'calc(var(--safe-area-top) + 16px)' }}>

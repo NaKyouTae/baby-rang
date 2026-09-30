@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
@@ -61,6 +62,10 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ⚠️ super.onCreate 보다 먼저 불러야 한다.
+        //    스플래시 테마(Theme.BabyRang.Starting)를 실제 앱 테마로 갈아끼우는 일을 하므로,
+        //    순서가 바뀌면 스플래시 색이 적용되지 않는다.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

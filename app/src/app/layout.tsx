@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import LoginPromptProvider from "@/components/LoginPromptProvider";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
+import NavigationBaseline from "@/components/NavigationBaseline";
 import WidgetBridge from "@/components/WidgetBridge";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
@@ -281,6 +282,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
+        <NavigationBaseline />
         <WidgetBridge />
         <LoginPromptProvider>
           {/* 앱 셸: 실제 보이는 화면(screen.height)에 맞춰, 뷰포트 중앙에 배치한다.

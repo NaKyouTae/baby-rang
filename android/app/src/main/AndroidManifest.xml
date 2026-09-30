@@ -19,7 +19,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BabyRang">
+        android:theme="@style/Theme.BabyRang.Starting">
 
         <!-- AdMob 앱 ID. 빠지면 SDK 가 앱 시작 시 예외를 던진다. -->
         <meta-data

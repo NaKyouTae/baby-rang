@@ -83,4 +83,6 @@ dependencies {
     implementation 'com.android.billingclient:billing:9.1.0'
     // 카카오톡 앱으로 로그인. v2-user 가 auth/common 을 함께 끌어온다.
     implementation 'com.kakao.sdk:v2-user:2.25.0'
+    // Android 12 이전에도 같은 스플래시가 뜨도록 한다(minSdk 24).
+    implementation 'androidx.core:core-splashscreen:1.0.1'
 }

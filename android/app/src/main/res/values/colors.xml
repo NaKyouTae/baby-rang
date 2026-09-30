@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#FDFDFE</color>
+    <!-- 웹(SplashProvider)·iOS 스플래시와 같은 배경색. 값이 어긋나면 전환 때 색이 튄다. -->
+    <color name="splash_background">#F1F2F4</color>
 </resources>

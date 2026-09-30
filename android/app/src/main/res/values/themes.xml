@@ -6,4 +6,22 @@
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
+
+    <!--
+      시작 화면 테마.
+
+      Android 12+ 는 앱을 띄울 때 시스템 스플래시를 반드시 한 번 보여준다.
+      지정하지 않으면 런처 아이콘을 흰 배경에 얹어 쓰기 때문에, 웹·iOS 스플래시와
+      배경색이 달라 화면이 한 번 번쩍인다.
+
+      ⚠️ Android 12+ 스플래시는 '배경색 + 가운데 아이콘' 형식이 강제된다.
+         iOS 처럼 전면 이미지를 깔 수는 없다. 대신 배경색을 웹 스플래시와 맞춰
+         네이티브 → 웹 전환이 이어져 보이게 한다.
+    -->
+    <style name="Theme.BabyRang.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <!-- 스플래시가 끝나면 실제 앱 테마로 갈아탄다. -->
+        <item name="postSplashScreenTheme">@style/Theme.BabyRang</item>
+    </style>
 </resources>
