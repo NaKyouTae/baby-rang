@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#3078C9"
-        android:pathData="M54,30a24,24 0 1,0 0.1,0z" />
-</vector>
+<!--
+  적응형 아이콘(Android 8.0+)의 전경 레이어.
+
+  전경 캔버스는 108dp 이지만 런처가 모양(원·둥근네모 등)으로 잘라내므로,
+  실제로 안전하게 보이는 영역은 가운데 72dp 다. 그래서 상하좌우 18dp 를 비운다.
+  여백 없이 꽉 채우면 원형 런처에서 젖꼭지 가장자리가 잘린다.
+
+  로고는 배경을 투명하게 뺀 PNG 라, 뒤에 깔리는 background 색이 그대로 비친다.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/splash_logo"
+        android:bottom="18dp"
+        android:left="18dp"
+        android:right="18dp"
+        android:top="18dp" />
+</layer-list>
