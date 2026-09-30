@@ -158,21 +158,17 @@ export default function TestPage() {
   };
 
   if (loading) {
-    return (
-      <>
-        <PageHeader title="테스트" variant="back" />
-        <main className="flex items-center justify-center min-h-[60dvh] gradient-page">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-3 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
-            <p className="text-sm text-gray-400">문항을 불러오는 중...</p>
-          </div>
-        </main>
-      </>
-    );
+    return <LoadingView message="문항을 불러오는 중..." />;
   }
 
+  // ⚠️ 여기서 아무것도 렌더하지 않으면(return null) 흰 화면이 그대로 보인다.
+  //
+  // 제출부터 결과 페이지가 뜨기까지 네트워크 왕복이 두 번 있다 —
+  // ① 답안 제출(BFF → NestJS, 서버에서 채점) ② 결과 페이지의 RSC 페이로드
+  // (dynamic 라우트라 서버를 거친다). Next 는 새 라우트를 받을 때까지 현재 화면을
+  // 유지하므로, 현재 화면이 비어 있으면 그 시간 내내 흰 화면이 된다.
   if (screen.type === 'submitting') {
-    return null;
+    return <LoadingView message="결과를 분석하고 있어요..." />;
   }
 
   const currentQuestion = questions[screen.index];
@@ -236,6 +232,21 @@ export default function TestPage() {
 
       {/* 앱에서는 카카오 인라인 광고가 빠지므로 하단 고정 배너 자리를 둔다. */}
       <AppBannerSlot />
+    </>
+  );
+}
+
+/** 문항 로딩·답안 제출 중에 쓰는 공통 로딩 화면. */
+function LoadingView({ message }: { message: string }) {
+  return (
+    <>
+      <PageHeader title="테스트" variant="back" />
+      <main className="flex items-center justify-center min-h-[60dvh] gradient-page">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-primary-100 border-t-primary-500 rounded-full animate-spin" />
+          <p className="text-sm text-gray-400">{message}</p>
+        </div>
+      </main>
     </>
   );
 }
