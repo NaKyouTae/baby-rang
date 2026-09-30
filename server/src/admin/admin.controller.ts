@@ -209,24 +209,36 @@ export class AdminController {
   async users(@Query('page') page = '1', @Query('limit') limit = '20') {
     const p = Math.max(1, parseInt(page, 10) || 1);
     const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-    const [items, total] = await Promise.all([
-      this.prisma.user.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip: (p - 1) * l,
-        take: l,
-        include: {
-          _count: { select: { groupMemberships: true, payments: true } },
-        },
-      }),
-      this.prisma.user.count(),
+
+    // 마지막 활동 시각은 컬럼이 아니라 여러 테이블의 최신 기록에서 계산한다.
+    // 그래서 DB 의 orderBy 로는 정렬할 수 없고, 전체를 계산해 정렬한 뒤
+    // 해당 페이지만 다시 조회한다.
+    const [all, lastActiveMap] = await Promise.all([
+      this.prisma.user.findMany({ select: { id: true, createdAt: true } }),
+      this.lastActivityMap(),
     ]);
-    // 실제 기록(성장기록/신체성장/기질검사/결제/공지열람) 기준 마지막 활동 시각
-    const lastActiveMap = await this.lastActivityMap(items.map((u) => u.id));
-    const withActivity = items.map((u) => ({
-      ...u,
-      lastActiveAt: lastActiveMap.get(u.id) ?? null,
-    }));
-    return { items: withActivity, total, page: p, limit: l };
+
+    // 활동 기록이 없는 사용자는 가입 시각을 기준으로 둔다.
+    // null 을 맨 뒤로 몰면 신규 가입자가 목록에서 사라져 관리가 어렵다.
+    const sortKey = (u: { id: string; createdAt: Date }) =>
+      (lastActiveMap.get(u.id) ?? u.createdAt).getTime();
+    const ordered = [...all].sort((a, b) => sortKey(b) - sortKey(a));
+    const pageIds = ordered.slice((p - 1) * l, p * l).map((u) => u.id);
+
+    const items = await this.prisma.user.findMany({
+      where: { id: { in: pageIds } },
+      include: {
+        _count: { select: { groupMemberships: true, payments: true } },
+      },
+    });
+    // in 조회는 순서를 보장하지 않으므로 정렬 순서대로 다시 배열한다.
+    const byId = new Map(items.map((u) => [u.id, u]));
+    const withActivity = pageIds.flatMap((id) => {
+      const u = byId.get(id);
+      return u ? [{ ...u, lastActiveAt: lastActiveMap.get(id) ?? null }] : [];
+    });
+
+    return { items: withActivity, total: all.length, page: p, limit: l };
   }
 
   @Get('users/:id')
@@ -259,10 +271,14 @@ export class AdminController {
   // 여러 사용자의 "마지막 활동 시각"을 한 번에 조회한다.
   // 앱 접속 시각을 따로 저장하지 않으므로, 사용자가 남긴 실제 기록들의
   // 최신 타임스탬프를 활동 시각으로 본다.
-  private async lastActivityMap(userIds: string[]): Promise<Map<string, Date>> {
+  private async lastActivityMap(
+    userIds?: string[],
+  ): Promise<Map<string, Date>> {
     const map = new Map<string, Date>();
-    if (userIds.length === 0) return map;
-    const where = { userId: { in: userIds } };
+    if (userIds && userIds.length === 0) return map;
+    // userIds 를 주지 않으면 전체 사용자를 대상으로 한다(목록 정렬용).
+    // 전체 id 를 in 으로 넘기면 쿼리가 비대해지므로 조건을 아예 빼는 편이 낫다.
+    const where = userIds ? { userId: { in: userIds } } : {};
     const [growth, physical, temperament, payment, noticeRead] =
       await Promise.all([
         this.prisma.growthRecord.groupBy({
