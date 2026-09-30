@@ -13,13 +13,15 @@ android {
 
     defaultConfig {
         applicationId "kr.spectrify.baby_rang"
-        minSdk 24
+        // TWA(23)와 맞춘다. 24 로 올리면 Android 6.0 기기 1,209종이 지원에서 빠지고,
+        // 그 기기에 이미 깔린 사용자는 업데이트를 받지 못한다.
+        minSdk 23
         targetSdk 36
         // ⚠️ TWA 와 같은 패키지라 같은 Play 리스팅을 덮어쓴다.
         //    versionCode 는 되돌릴 수 없는 정수라 TWA 의 마지막 값(12)보다 커야 한다.
         //    scripts/bump-version.js 가 TWA·iOS 와 함께 갱신한다.
-        versionCode 16
-        versionName "1.2.10"
+        versionCode 17
+        versionName "1.2.11"
     }
 
     signingConfigs {
@@ -42,7 +44,10 @@ android {
             buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '"6e650917dc42ab9d0868a18d065823c5"'
         }
         release {
-            minifyEnabled false
+            // R8 로 코드를 줄이고 매핑 파일을 만든다(크래시 역난독화에 필요).
+            // ⚠️ @JavascriptInterface 는 반드시 keep 해야 한다 — proguard-rules.pro 참고.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // 키스토어가 없는 로컬 빌드에서는 서명을 붙이지 않는다.
             // (워크플로의 '서명 확인' 단계가 미서명 AAB 업로드를 막는다)
@@ -83,6 +88,6 @@ dependencies {
     implementation 'com.android.billingclient:billing:9.1.0'
     // 카카오톡 앱으로 로그인. v2-user 가 auth/common 을 함께 끌어온다.
     implementation 'com.kakao.sdk:v2-user:2.25.0'
-    // Android 12 이전에도 같은 스플래시가 뜨도록 한다(minSdk 24).
+    // Android 12 이전에도 같은 스플래시가 뜨도록 한다.
     implementation 'androidx.core:core-splashscreen:1.0.1'
 }

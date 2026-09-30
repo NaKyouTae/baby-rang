@@ -61,8 +61,8 @@ android {
         applicationId "kr.spectrify.baby_rang"
         minSdkVersion 23
         targetSdkVersion 36
-        versionCode 16
-        versionName "1.2.10"
+        versionCode 17
+        versionName "1.2.11"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
