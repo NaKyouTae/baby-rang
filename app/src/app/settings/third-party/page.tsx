@@ -47,6 +47,17 @@ export default function SettingsThirdPartyPage() {
         </section>
 
         <section>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>제공받는 자: Apple(App Store), Google(Google Play)</li>
+            <li>제공 목적: 인앱결제 환불 심사 및 부정 환불 방지</li>
+            <li>
+              제공 항목: 거래 식별자, 구매·환불 이력, 콘텐츠 제공 및 이용 여부, 가입 경과 기간
+            </li>
+            <li>보유 및 이용 기간: 각 스토어의 정책에 따른 보관 기간까지</li>
+          </ul>
+        </section>
+
+        <section>
           <p>
             회원은 개인정보 제3자 제공에 대한 동의를 거부할 권리가 있으며, 동의하지 않을 경우 일부
             서비스(결제, 소셜 로그인 등) 이용에 제한이 있을 수 있습니다.
