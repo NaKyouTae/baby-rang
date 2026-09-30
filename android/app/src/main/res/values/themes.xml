@@ -20,7 +20,7 @@
     -->
     <style name="Theme.BabyRang.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_none</item>
         <!-- 스플래시가 끝나면 실제 앱 테마로 갈아탄다. -->
         <item name="postSplashScreenTheme">@style/Theme.BabyRang</item>
     </style>
