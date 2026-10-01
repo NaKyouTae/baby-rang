@@ -13,6 +13,10 @@ import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
 
 const SITE_URL = "https://baby-rang.spectrify.kr";
+// 스토어 등록정보. 구조화 데이터의 sameAs 로 묶어 같은 앱임을 알린다.
+const APP_STORE_URL = "https://apps.apple.com/kr/app/id6761984903";
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang";
 const SITE_NAME = "아기랑";
 const SITE_DESCRIPTION =
   "아기랑은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아기의 매일을 더 잘 이해할 수 있도록 돕습니다.";
@@ -189,8 +193,43 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Spectrify",
+    alternateName: "스펙트럼",
     url: "https://spectrify.kr",
     logo: `${SITE_URL}/icon.png`,
+    // 같은 주체임을 알려주는 링크. 이게 없으면 검색엔진·AI 가 '스펙트럼'을
+    // 동명의 유축기 브랜드(Spectra)와 섞어버린다.
+    sameAs: [APP_STORE_URL, PLAY_STORE_URL, "https://github.com/NaKyouTae"],
+  };
+
+  // 앱 자체를 설명하는 구조화 데이터.
+  //
+  // Organization·WebSite 만으로는 "아기랑이 어떤 앱인가"를 말해주지 못한다.
+  // '아기랑'은 한국어에서 매우 흔한 표현이라("19개월 아기랑 나들이"), 앱으로
+  // 특정되지 않으면 검색·AI 답변에서 일반 문구에 묻힌다.
+  // sameAs 로 스토어 등록정보를 묶어 같은 대상임을 명시한다.
+  const appLd = {
+    "@context": "https://schema.org",
+    "@type": "MobileApplication",
+    name: "아기랑 - 육아 기록·기질 검사",
+    alternateName: ["아기랑", "Babyrang"],
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    applicationCategory: "HealthApplication",
+    operatingSystem: "iOS, Android",
+    inLanguage: "ko-KR",
+    sameAs: [APP_STORE_URL, PLAY_STORE_URL],
+    publisher: {
+      "@type": "Organization",
+      name: "Spectrify",
+      alternateName: "스펙트럼",
+      url: "https://spectrify.kr",
+    },
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "KRW",
+      description: "무료 설치 · 기질 검사 상세 리포트는 앱 내 구입",
+    },
   };
 
   const websiteLd = {
@@ -270,6 +309,11 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+        />
+        {/* JSON-LD: MobileApplication */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }}
         />
         {/* JSON-LD: WebSite */}
         <script
