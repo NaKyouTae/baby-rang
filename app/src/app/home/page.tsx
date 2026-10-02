@@ -7,6 +7,7 @@ import HomeHeaderActions from "@/components/HomeHeaderActions";
 import InitialScreenRedirect from "@/components/InitialScreenRedirect";
 import HomeRegionLinks from "@/components/HomeRegionLinks";
 import AppStoreCta from "@/components/AppStoreCta";
+import HomeIntro from "@/components/HomeIntro";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -112,6 +113,9 @@ export default function HomePage() {
           <div>
             <AppStoreCta />
           </div>
+
+          {/* 검색엔진·AI 크롤러가 읽을 서비스 설명. 로그인 전 방문자에게도 같은 내용이 보인다. */}
+          <HomeIntro />
         </div>
       </main>
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AirQualityClient from "./AirQualityClient";
+import AirQualityGuide from "./AirQualityGuide";
 
 export const metadata: Metadata = {
   title: "미세먼지",
@@ -9,5 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default function AirQualityPage() {
-  return <AirQualityClient />;
+  return (
+    <>
+      <AirQualityClient />
+      {/* 위치와 무관한 고정 정보 — 서버에서 그려 크롤러가 읽을 본문을 만든다. */}
+      <AirQualityGuide />
+    </>
+  );
 }
