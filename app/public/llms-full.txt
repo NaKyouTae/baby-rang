@@ -9,7 +9,7 @@
 - **정식 명칭**: 아기랑 (영문: Babyrang)
 - **슬로건**: 부모와 아기를 위한, 따뜻한 동행
 - **도메인**: https://baby-rang.spectrify.kr
-- **운영사**: Spectrify (https://spectrify.kr)
+- **운영사**: Spectrify / 스펙트럼 (대표 사이트 https://baby-rang.spectrify.kr)
 - **서비스 언어**: 한국어
 - **대상 사용자**: 0~36개월 신생아·영유아의 부모 (예비 부모 포함)
 - **가격**: 기본 무료, 프리미엄 기능(기질 검사 전체 결과 등)은 결제 또는 광고 시청

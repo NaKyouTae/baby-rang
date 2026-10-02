@@ -17,6 +17,13 @@ const SITE_URL = "https://baby-rang.spectrify.kr";
 const APP_STORE_URL = "https://apps.apple.com/kr/app/id6761984903";
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang";
+// 운영사 URL.
+//
+// spectrify.kr 은 독립된 회사 사이트가 아니라 이 사이트로 308 리디렉트만 한다.
+// 구조화 데이터가 리디렉트 주소를 가리키면 AI·검색엔진이 회사를 확인하러 갔을 때
+// 빈손으로 돌아오고, 그 탓에 '스펙트럼'이 엉뚱한 대상(자폐 스펙트럼 등)과 섞인다.
+// 실제로 내용이 있는 주소를 가리킨다. 회사 소개 페이지가 생기면 그때 바꾼다.
+const PUBLISHER_URL = SITE_URL;
 const SITE_NAME = "아기랑";
 const SITE_DESCRIPTION =
   "아기랑은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아기의 매일을 더 잘 이해할 수 있도록 돕습니다.";
@@ -136,7 +143,7 @@ export default function RootLayout({
     "@type": "Organization",
     name: "Spectrify",
     alternateName: "스펙트럼",
-    url: "https://spectrify.kr",
+    url: PUBLISHER_URL,
     logo: `${SITE_URL}/icon.png`,
     description:
       "Spectrify(스펙트럼)는 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사입니다.",
@@ -190,7 +197,7 @@ export default function RootLayout({
       "@type": "Organization",
       name: "Spectrify",
       alternateName: "스펙트럼",
-      url: "https://spectrify.kr",
+      url: PUBLISHER_URL,
     },
     offers: {
       "@type": "Offer",
@@ -211,7 +218,7 @@ export default function RootLayout({
     publisher: {
       "@type": "Organization",
       name: "Spectrify",
-      url: "https://spectrify.kr",
+      url: PUBLISHER_URL,
     },
   };
 

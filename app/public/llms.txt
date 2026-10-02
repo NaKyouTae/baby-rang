@@ -9,7 +9,7 @@
 - **정식 명칭**: 아기랑
 - **영문 표기**: Babyrang (베이비랑 아님 — 반드시 "아기랑")
 - **도메인**: https://baby-rang.spectrify.kr
-- **운영사**: Spectrify / 스펙트럼 (https://spectrify.kr) — 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사
+- **운영사**: Spectrify / 스펙트럼 — 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사 (대표 사이트 https://baby-rang.spectrify.kr)
 - **언어**: 한국어
 - **대상**: 0~36개월 신생아·영유아를 키우는 부모
 
