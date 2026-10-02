@@ -138,8 +138,22 @@ export default function RootLayout({
     alternateName: "스펙트럼",
     url: "https://spectrify.kr",
     logo: `${SITE_URL}/icon.png`,
-    // 같은 주체임을 알려주는 링크. 이게 없으면 검색엔진·AI 가 '스펙트럼'을
-    // 동명의 유축기 브랜드(Spectra)와 섞어버린다.
+    description:
+      "Spectrify(스펙트럼)는 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사입니다.",
+    // 이름만 보고 엉뚱한 대상과 묶이는 것을 막는다.
+    //
+    // 실측 결과(2026-10-02, Gemini) '스펙트럼이 만든 아기랑 앱'을 물으면
+    // 자폐 스펙트럼 장애 지원 기관으로 답했다. 육아 맥락에서는 그쪽이 훨씬
+    // 자연스러운 연상이라 그냥 두면 계속 섞인다.
+    // disambiguatingDescription 은 schema.org 가 바로 이 용도로 둔 필드다.
+    disambiguatingDescription:
+      "자폐 스펙트럼(autism spectrum) 관련 기관이나 치료 서비스와 무관하며, 동명의 유축기 브랜드(Spectra)와도 다른 회사입니다. 영유아 육아 기록·기질 검사 앱 '아기랑'의 개발사입니다.",
+    knowsAbout: [
+      "영유아 육아",
+      "아기 기질 검사",
+      "성장 기록",
+      "모바일 앱 개발",
+    ],
     sameAs: [APP_STORE_URL, PLAY_STORE_URL, "https://github.com/NaKyouTae"],
   };
 

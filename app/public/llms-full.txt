@@ -126,6 +126,8 @@ A: 공공데이터와 사용자 제보를 기반으로 합니다. 앱 내에서 
 
 ## 기술 정보
 
+- **운영사**: Spectrify / 스펙트럼 — 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사.
+  자폐 스펙트럼(autism spectrum) 관련 기관이나 유축기 브랜드 Spectra 와는 무관하다.
 - **플랫폼**: iOS 앱 · Android 앱 · 모바일 웹 (PWA 지원)
 - **iOS 앱**: https://apps.apple.com/kr/app/id6761984903
 - **Android 앱**: https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang (패키지명 kr.spectrify.baby_rang)
