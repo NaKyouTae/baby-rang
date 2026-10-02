@@ -18,7 +18,7 @@
 
 ## 핵심 기능 상세
 
-### 1. 기질 검사 (/temperament)
+### 1. 기질 검사 (/tests)
 
 아기의 타고난 기질을 과학적으로 분석하는 서비스입니다.
 
@@ -117,7 +117,7 @@ A: 아기의 월령에 맞는 최적의 낮잠 횟수, 활동 시간, 밤잠 권
 A: 모든 데이터는 암호화되어 저장되며, 개인정보처리방침에 따라 엄격히 관리됩니다.
 
 ### Q: 아기랑은 어디서 사용할 수 있나요?
-A: https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용 가능합니다. 홈 화면에 추가하면 앱처럼 사용할 수 있으며, 추후 iOS/Android 네이티브 앱으로도 출시 예정입니다.
+A: iOS 는 App Store(https://apps.apple.com/kr/app/id6761984903), 안드로이드는 Google Play(https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang) 에서 '아기랑' 으로 검색해 설치할 수 있습니다. 설치 없이 https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용하거나 홈 화면에 추가해 앱처럼 쓸 수도 있습니다. 세 경로 모두 같은 서비스입니다.
 
 ### Q: 수유실 정보는 어디서 오나요?
 A: 공공데이터와 사용자 제보를 기반으로 합니다. 앱 내에서 새로운 수유실을 직접 제보할 수 있습니다.
@@ -126,7 +126,9 @@ A: 공공데이터와 사용자 제보를 기반으로 합니다. 앱 내에서 
 
 ## 기술 정보
 
-- **플랫폼**: 모바일 웹 (PWA 지원)
+- **플랫폼**: iOS 앱 · Android 앱 · 모바일 웹 (PWA 지원)
+- **iOS 앱**: https://apps.apple.com/kr/app/id6761984903
+- **Android 앱**: https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang (패키지명 kr.spectrify.baby_rang)
 - **프레임워크**: Next.js (React)
 - **접근 방식**: 웹 앱 → 추후 네이티브 WebView 래핑 예정
 - **지원 브라우저**: Chrome, Safari, Samsung Internet 등 주요 모바일 브라우저
@@ -136,7 +138,7 @@ A: 공공데이터와 사용자 제보를 기반으로 합니다. 앱 내에서 
 ## 서비스 정책
 
 - [이용약관](https://baby-rang.spectrify.kr/terms)
-- [개인정보처리방침](https://baby-rang.spectrify.kr/privacy)
+- [개인정보처리방침](https://baby-rang.spectrify.kr/settings/privacy)
 - [환불 정책](https://baby-rang.spectrify.kr/refund)
 
 ---

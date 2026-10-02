@@ -159,7 +159,7 @@ export default function RootLayout({
         name: "아기랑은 어디서 사용할 수 있나요?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "iOS 는 App Store 에서 '아기랑' 을 검색해 설치할 수 있습니다. 안드로이드 앱은 출시를 준비 중이며, 그전까지는 https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용하거나 홈 화면에 추가해 앱처럼 쓸 수 있습니다.",
+          text: "iOS 는 App Store, 안드로이드는 Google Play 에서 '아기랑' 을 검색해 설치할 수 있습니다. 설치 없이 https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용하거나 홈 화면에 추가해 앱처럼 쓸 수도 있습니다.",
         },
       },
       {
@@ -167,7 +167,7 @@ export default function RootLayout({
         name: "아기랑 앱은 어디서 다운로드하나요?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "iOS 는 App Store 에서 내려받을 수 있습니다. (https://apps.apple.com/kr/app/id6761984903) 안드로이드 앱은 현재 출시 준비 중입니다.",
+          text: "iOS 는 App Store (https://apps.apple.com/kr/app/id6761984903), 안드로이드는 Google Play (https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang) 에서 내려받을 수 있습니다. 두 플랫폼 모두 정식 출시되었습니다.",
         },
       },
       {
@@ -215,9 +215,21 @@ export default function RootLayout({
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     applicationCategory: "HealthApplication",
-    operatingSystem: "iOS, Android",
+    operatingSystem: "iOS, Android, Web",
     inLanguage: "ko-KR",
+    // 스토어 두 곳과 웹을 같은 앱으로 묶는다. installUrl 은 단일 값만 받으므로
+    // 대표 1개(Google Play)를 두고 나머지는 sameAs 로 연결한다.
     sameAs: [APP_STORE_URL, PLAY_STORE_URL],
+    installUrl: PLAY_STORE_URL,
+    downloadUrl: PLAY_STORE_URL,
+    featureList: [
+      "아기 기질 검사",
+      "성장 기록 및 성장 패턴 분석",
+      "원더윅스(정신발달 급등기) 안내",
+      "수면추천",
+      "수유실 찾기",
+      "오늘의 육아 요약",
+    ],
     publisher: {
       "@type": "Organization",
       name: "Spectrify",
@@ -247,32 +259,6 @@ export default function RootLayout({
     },
   };
 
-  const mobileAppLd = {
-    "@context": "https://schema.org",
-    "@type": "MobileApplication",
-    name: SITE_NAME,
-    alternateName: "Babyrang",
-    operatingSystem: "Web, iOS, Android",
-    applicationCategory: "ParentingApplication",
-    description: SITE_DESCRIPTION,
-    url: SITE_URL,
-    installUrl: "https://apps.apple.com/kr/app/id6761984903",
-    downloadUrl: "https://apps.apple.com/kr/app/id6761984903",
-    inLanguage: "ko-KR",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "KRW",
-    },
-    featureList: [
-      "아기 기질 검사",
-      "성장 기록 및 성장 패턴 분석",
-      "원더윅스(정신발달 급등기) 안내",
-      "수면추천",
-      "수유실 찾기",
-      "오늘의 육아 요약",
-    ],
-  };
 
   return (
     <html lang="ko" className="h-full">
@@ -319,11 +305,6 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
-        />
-        {/* JSON-LD: MobileApplication */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(mobileAppLd) }}
         />
         <ViewportHeightSetter />
         <NavigationBaseline />
