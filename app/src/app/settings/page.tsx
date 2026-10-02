@@ -148,17 +148,20 @@ const MENU_SECTIONS: MenuSection[] = [
   {
     title: "이용 안내",
     items: [
-      {
-        label: "자주 묻는 질문",
-        href: "/settings/faq",
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6.25" stroke="black"/>
-            <path d="M6.25 6.1a1.75 1.75 0 1 1 1.75 1.9v1.1" stroke="black" strokeLinecap="round"/>
-            <circle cx="8" cy="11.3" r="0.6" fill="black"/>
-          </svg>
-        ),
-      },
+      // 노출할 내용이 충분히 쌓일 때까지 메뉴에서 감춘다.
+      // 페이지(/settings/faq)와 어드민 등록 화면은 그대로 살아 있으므로,
+      // 어드민에 질문을 채운 뒤 이 블록만 되살리면 된다.
+      // {
+      //   label: "자주 묻는 질문",
+      //   href: "/settings/faq",
+      //   icon: (
+      //     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      //       <circle cx="8" cy="8" r="6.25" stroke="black"/>
+      //       <path d="M6.25 6.1a1.75 1.75 0 1 1 1.75 1.9v1.1" stroke="black" strokeLinecap="round"/>
+      //       <circle cx="8" cy="11.3" r="0.6" fill="black"/>
+      //     </svg>
+      //   ),
+      // },
       {
         label: "환불 안내",
         href: "/settings/refund-guide",
