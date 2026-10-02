@@ -31,6 +31,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/growth-pattern", changeFrequency: "monthly", priority: 0.8 },
     { path: "/growth-record", changeFrequency: "monthly", priority: 0.7 },
     { path: "/wonder-weeks", changeFrequency: "monthly", priority: 0.8 },
+    // 문서 페이지. 기능 화면(/wonder-weeks, /physical-growth)에서 분리해
+    // 검색·AI 가 읽을 본문만 담았다.
+    { path: "/wonder-weeks-guide", changeFrequency: "monthly", priority: 0.9 },
+    { path: "/growth-chart", changeFrequency: "monthly", priority: 0.9 },
+    { path: "/sleep-guide", changeFrequency: "monthly", priority: 0.9 },
+    { path: "/air-quality-guide", changeFrequency: "monthly", priority: 0.9 },
     { path: "/sleep-golden-time", changeFrequency: "monthly", priority: 0.8 },
     { path: "/nursing-room", changeFrequency: "weekly", priority: 0.7 },
     { path: "/air-quality", changeFrequency: "daily", priority: 0.6 },

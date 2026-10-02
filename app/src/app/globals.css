@@ -83,16 +83,23 @@ body {
   height: 0;
 }
 
-/* 모바일 뷰포트 높이 폴백 (dvh 미지원 브라우저용) */
+/* 모바일 뷰포트 높이.
+ *
+ * ⚠️ 100dvh 를 쓰면 안 된다. 앱 셸(layout.tsx)이 스크롤 컨테이너의 높이를
+ * --app-h 로 잡기 때문이다. 페이지가 100dvh 를 쓰면 둘이 어긋나, 내용이 짧아도
+ * 컨테이너보다 커져서 빈 화면만 스크롤되는 현상이 생긴다.
+ * (WebView 에서 innerHeight 가 실제 보이는 높이보다 크게 잡히는 경우가 있어
+ *  ViewportHeightSetter 가 --app-h 를 따로 계산한다)
+ *
+ * 셸과 같은 값을 쓰도록 맞춘다. --app-h 는 JS 로 설정되므로 첫 페인트 전에는
+ * 셸과 동일하게 100dvh 로 폴백한다. */
 .h-screen-safe {
-  height: 100vh; /* 최후 폴백 */
-  height: calc(var(--vh, 1vh) * 100); /* JS 기반 정확한 높이 */
-  height: 100dvh; /* 모던 브라우저 */
+  height: 100vh; /* dvh 미지원 브라우저 최후 폴백 */
+  height: var(--app-h, 100dvh);
 }
 .min-h-screen-safe {
   min-height: 100vh;
-  min-height: calc(var(--vh, 1vh) * 100);
-  min-height: 100dvh;
+  min-height: var(--app-h, 100dvh);
 }
 
 .gradient-btn {

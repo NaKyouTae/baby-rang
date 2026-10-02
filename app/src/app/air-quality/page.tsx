@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import AirQualityClient from "./AirQualityClient";
-import AirQualityGuide from "./AirQualityGuide";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "미세먼지",
@@ -13,8 +13,17 @@ export default function AirQualityPage() {
   return (
     <>
       <AirQualityClient />
-      {/* 위치와 무관한 고정 정보 — 서버에서 그려 크롤러가 읽을 본문을 만든다. */}
-      <AirQualityGuide />
+
+      {/* 등급 기준표는 /air-quality-guide 로 분리했다. 사이트맵에만 있고 들어오는
+          링크가 없으면 크롤러가 고아 페이지로 보고 색인하지 않는다. */}
+      <div className="px-5 pb-[calc(var(--bottom-nav-space)+16px)]">
+        <Link
+          href="/air-quality-guide"
+          className="block rounded-[8px] bg-gray-100 px-4 py-3 text-[13px] font-medium text-gray-600 active:bg-gray-200"
+        >
+          미세먼지 등급 기준 보기 →
+        </Link>
+      </div>
     </>
   );
 }
