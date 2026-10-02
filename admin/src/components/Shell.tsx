@@ -4,17 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard,
-  Image,
-  Megaphone,
   Baby,
-  ClipboardList,
+  Bot,
   Brain,
-  Users,
+  ClipboardList,
   CreditCard,
-  Menu,
-  LogOut,
+  HelpCircle,
+  Image,
+  LayoutDashboard,
   ListChecks,
+  LogOut,
+  Megaphone,
+  Menu,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +43,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/banners", label: "배너 관리", icon: Image },
       { href: "/tests", label: "테스트 관리", icon: ListChecks },
       { href: "/notices", label: "공지사항", icon: Megaphone },
+      { href: "/faqs", label: "자주 묻는 질문", icon: HelpCircle },
       { href: "/nursing-rooms", label: "수유실 관리", icon: Baby },
     ],
   },
@@ -56,6 +59,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/users", label: "사용자", icon: Users },
       { href: "/payments", label: "결제 내역", icon: CreditCard },
+      { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
     ],
   },
 ];

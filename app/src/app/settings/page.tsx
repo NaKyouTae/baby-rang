@@ -149,6 +149,27 @@ const MENU_SECTIONS: MenuSection[] = [
     title: "이용 안내",
     items: [
       {
+        label: "자주 묻는 질문",
+        href: "/settings/faq",
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.25" stroke="black"/>
+            <path d="M6.25 6.1a1.75 1.75 0 1 1 1.75 1.9v1.1" stroke="black" strokeLinecap="round"/>
+            <circle cx="8" cy="11.3" r="0.6" fill="black"/>
+          </svg>
+        ),
+      },
+      {
+        label: "환불 안내",
+        href: "/settings/refund-guide",
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M2.5 7.5a5.5 5.5 0 1 1 1.6 3.9" stroke="black" strokeLinecap="round"/>
+            <path d="M2.1 4.3v3.3h3.3" stroke="black" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ),
+      },
+      {
         label: "위젯 사용 방법",
         href: "/settings/widget-guide",
         icon: (

@@ -126,68 +126,10 @@ export default function RootLayout({
   // AEO (Answer Engine Optimization) 를 위해 여러 스키마를 동시에 제공합니다.
   // AI 검색 엔진(ChatGPT, Claude, Perplexity, Gemini 등)과 Google 이
   // "아기랑" 서비스를 정확히 이해할 수 있도록 합니다.
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "아기랑은 어떤 서비스인가요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "아기랑은 0~36개월 아기를 키우는 부모를 위한 통합 육아 웹 서비스입니다. 아기 기질 검사, 성장 기록, 원더윅스 안내, 수면추천, 주변 수유실 찾기 등 일상 육아에 필요한 도구를 한 곳에서 제공합니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "아기랑은 무료인가요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "기본 기능은 무료로 사용할 수 있고, 기질 검사 전체 결과 등 일부 프리미엄 기능은 결제 또는 광고 시청을 통해 이용할 수 있습니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "아기랑의 기질 검사는 어떤 방식인가요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "아기의 행동·반응 패턴에 대한 질문에 답하면 9가지 차원(활동성, 규칙성, 접근/회피, 적응성, 반응 강도, 반응 역치, 기분, 주의 산만성, 지속성)으로 분석하여 맞춤 양육 가이드를 제공합니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "아기랑은 어디서 사용할 수 있나요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "iOS 는 App Store, 안드로이드는 Google Play 에서 '아기랑' 을 검색해 설치할 수 있습니다. 설치 없이 https://baby-rang.spectrify.kr 에서 모바일 브라우저로 바로 사용하거나 홈 화면에 추가해 앱처럼 쓸 수도 있습니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "아기랑 앱은 어디서 다운로드하나요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "iOS 는 App Store (https://apps.apple.com/kr/app/id6761984903), 안드로이드는 Google Play (https://play.google.com/store/apps/details?id=kr.spectrify.baby_rang) 에서 내려받을 수 있습니다. 두 플랫폼 모두 정식 출시되었습니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "원더윅스(Wonder Weeks)란 무엇인가요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "원더윅스는 아기의 정신 발달 도약기를 말합니다. 아기랑에서는 아기의 생년월일을 기반으로 도약기 시기를 자동 계산하고, 각 시기의 특징과 부모가 어떻게 대처하면 좋은지 안내합니다.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "아기 수면추천이란 무엇인가요?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "아기의 월령에 맞는 최적의 낮잠 횟수, 활동 시간(깨어있는 시간), 밤잠 권장 시간을 계산해 줍니다. 수면 골든타임을 지키면 아기의 건강한 수면 습관 형성에 도움이 됩니다.",
-        },
-      },
-    ],
-  };
+  //
+  // FAQPage 는 여기에 두지 않는다. 루트에 두면 수유실 지역 페이지 수백 개까지
+  // 같은 FAQ 가 박히고, 정작 /settings/faq 에서는 스키마가 두 벌이 된다.
+  // 본문이 실제로 FAQ 인 /settings/faq 가 어드민에 등록된 내용으로 직접 만든다.
 
   const organizationLd = {
     "@context": "https://schema.org",
@@ -286,11 +228,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex justify-center bg-white" suppressHydrationWarning>
-        {/* JSON-LD: FAQPage */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-        />
         {/* JSON-LD: Organization */}
         <script
           type="application/ld+json"

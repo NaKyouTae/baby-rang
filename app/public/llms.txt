@@ -39,11 +39,14 @@
 - [원더윅스](https://baby-rang.spectrify.kr/wonder-weeks): 정신발달 급등기 가이드
 - [수면추천](https://baby-rang.spectrify.kr/sleep-golden-time): 월령별 수면 시간
 - [수유실 찾기](https://baby-rang.spectrify.kr/nursing-room): 주변 수유실 탐색
+- [자주 묻는 질문](https://baby-rang.spectrify.kr/settings/faq): 서비스 이용 FAQ
+- [환불 안내](https://baby-rang.spectrify.kr/settings/refund-guide): iOS·Android 스토어별 환불 신청 방법
 
 ## 서비스 정책
 
 - [이용약관](https://baby-rang.spectrify.kr/terms)
 - [개인정보처리방침](https://baby-rang.spectrify.kr/settings/privacy)
+- [환불 안내(스토어별)](https://baby-rang.spectrify.kr/settings/refund-guide)
 - [환불 정책](https://baby-rang.spectrify.kr/refund)
 
 ## FAQ

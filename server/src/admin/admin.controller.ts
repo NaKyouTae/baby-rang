@@ -18,6 +18,7 @@ import { AgeGroup, TestType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { StorageService } from '../storage/storage.service';
+import { CrawlerVisitsService } from '../crawler-visits/crawler-visits.service';
 import { AdminGuard } from './admin.guard';
 import {
   DIMENSIONS,
@@ -136,6 +137,7 @@ export class AdminController {
     private prisma: PrismaService,
     private storage: StorageService,
     private paymentsService: PaymentsService,
+    private crawlerVisits: CrawlerVisitsService,
   ) {}
 
   // ===== Upload =====
@@ -581,6 +583,61 @@ export class AdminController {
   async deleteNotice(@Param('id') id: string) {
     await this.prisma.notice.delete({ where: { id } });
     return { ok: true };
+  }
+
+  // ===== FAQs =====
+  @Get('faqs')
+  async listFaqs() {
+    const items = await this.prisma.faq.findMany({
+      orderBy: [{ category: 'asc' }, { order: 'asc' }, { createdAt: 'asc' }],
+    });
+    return { items };
+  }
+
+  @Post('faqs')
+  async createFaq(@Body() body: any) {
+    return this.prisma.faq.create({
+      data: {
+        category: body.category?.trim() || '일반',
+        question: body.question,
+        answer: body.answer,
+        order: body.order ?? 0,
+        isPublished: body.isPublished ?? true,
+      },
+    });
+  }
+
+  @Patch('faqs/:id')
+  async updateFaq(@Param('id') id: string, @Body() body: any) {
+    return this.prisma.faq.update({
+      where: { id },
+      data: {
+        ...(body.category !== undefined && {
+          category: body.category?.trim() || '일반',
+        }),
+        ...(body.question !== undefined && { question: body.question }),
+        ...(body.answer !== undefined && { answer: body.answer }),
+        ...(body.order !== undefined && { order: body.order }),
+        ...(body.isPublished !== undefined && {
+          isPublished: body.isPublished,
+        }),
+      },
+    });
+  }
+
+  @Delete('faqs/:id')
+  async deleteFaq(@Param('id') id: string) {
+    await this.prisma.faq.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ===== AI 크롤러 유입 =====
+  @Get('crawler-visits')
+  async crawlerVisitSummary(@Query('days') days?: string) {
+    const parsed = Number(days);
+    const window =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 365) : 30;
+    return this.crawlerVisits.summary(window);
   }
 
   // ===== Nursing Room Reports =====

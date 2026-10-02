@@ -7,40 +7,40 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  nickname      String?
-  email         String?
-  profileImage  String?
-  parentRole    String?  // 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other'
-  birthYear     Int?
-  onboardedAt   DateTime?
+  id                     String                  @id @default(uuid())
+  nickname               String?
+  email                  String?
+  profileImage           String?
+  parentRole             String? // 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other'
+  birthYear              Int?
+  onboardedAt            DateTime?
   // 동의 시각 — null이면 미동의 또는 철회됨. 필수(terms/privacy)는 회원가입 시 항상 기록.
-  termsAgreedAt        DateTime?
-  privacyAgreedAt      DateTime?
-  marketingAgreedAt    DateTime?
+  termsAgreedAt          DateTime?
+  privacyAgreedAt        DateTime?
+  marketingAgreedAt      DateTime?
   // 마케팅 동의 만료일 (개인정보보호법 시행령 §48조의2 — 2년 재확인 권장).
   // null이면 미동의 또는 철회. 만료 후엔 발송 대상에서 제외하고 재동의 안내해야 함.
-  marketingExpiresAt   DateTime?
-  thirdPartyAgreedAt   DateTime?
+  marketingExpiresAt     DateTime?
+  thirdPartyAgreedAt     DateTime?
   // 초기 화면(첫 진입) 설정 — 앱/웹 진입 시 처음 보여줄 화면의 menuId.
   // null이면 기본값(홈). 값 예: 'growth-record' | 'growth-pattern' | 'nursing-room' 등.
-  homeMenu      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  accounts      Account[]
-  payments      Payment[]
+  homeMenu               String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  accounts               Account[]
+  payments               Payment[]
   temperamentSubmissions TemperamentSubmission[]
-  navSlots      NavSlot[]
-  growthRecords GrowthRecord[]
-  growthQuickButtons GrowthQuickButton[]
-  physicalGrowths PhysicalGrowth[]
-  noticeReads   NoticeRead[]
-  consentLogs   ConsentLog[]
+  navSlots               NavSlot[]
+  growthRecords          GrowthRecord[]
+  growthQuickButtons     GrowthQuickButton[]
+  physicalGrowths        PhysicalGrowth[]
+  noticeReads            NoticeRead[]
+  consentLogs            ConsentLog[]
   // 그룹 멤버십 — 한 사용자가 여러 그룹에 속할 수 있음.
   // 그룹은 아이를 함께 관리하는 단위 (배우자/조부모 등 공동 양육자).
-  groupMemberships GroupMember[]
+  groupMemberships       GroupMember[]
   // 본인이 owner인 그룹들. owner 탈퇴 시 다른 멤버에게 자동 이양된다.
-  ownedGroups   Group[]            @relation("groupOwner")
+  ownedGroups            Group[]                 @relation("groupOwner")
 
   @@map("users")
 }
@@ -78,30 +78,30 @@ enum ConsentType {
 // 동의/철회 감사 로그 — append-only.
 // 분쟁/감사 시 정보주체가 언제 어떤 항목에 동의·철회했는지 증빙.
 model ConsentLog {
-  id          String      @id @default(uuid())
-  userId      String
-  type        ConsentType
-  agreed      Boolean
-  occurredAt  DateTime    @default(now())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String      @id @default(uuid())
+  userId     String
+  type       ConsentType
+  agreed     Boolean
+  occurredAt DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type, occurredAt])
   @@map("consent_logs")
 }
 
 model Banner {
-  id          String   @id @default(uuid())
-  title       String
-  subtitle    String?
-  imageUrl    String?
-  bgColor     String?
-  linkUrl     String
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  startsAt    DateTime?
-  endsAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(uuid())
+  title     String
+  subtitle  String?
+  imageUrl  String?
+  bgColor   String?
+  linkUrl   String
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([isActive, sortOrder])
   @@map("banners")
@@ -134,14 +134,14 @@ model Test {
 }
 
 model Notice {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
   content     String
-  isPinned    Boolean  @default(false)
-  isPublished Boolean  @default(true)
-  publishedAt DateTime @default(now())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPinned    Boolean      @default(false)
+  isPublished Boolean      @default(true)
+  publishedAt DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   reads       NoticeRead[]
 
   @@index([isPublished, isPinned, publishedAt])
@@ -149,10 +149,10 @@ model Notice {
 }
 
 model NoticeRead {
-  id        String   @id @default(uuid())
-  userId    String
-  noticeId  String
-  readAt    DateTime @default(now())
+  id       String   @id @default(uuid())
+  userId   String
+  noticeId String
+  readAt   DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
@@ -198,7 +198,7 @@ model TemperamentSubmission {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers TemperamentAnswer[]
   result  TemperamentResult?
 
@@ -224,24 +224,24 @@ model TemperamentAnswer {
 }
 
 model TemperamentResult {
-  id              String    @id @default(uuid())
-  submissionId    String    @unique
-  primaryType     String
+  id               String    @id @default(uuid())
+  submissionId     String    @unique
+  primaryType      String
   primaryTypeLabel String
-  emotionModifier Boolean   @default(false)
-  isReliable      Boolean   @default(true)
-  reliabilityMsg  String?
-  scores          Json
-  summary         Json
-  freeContent     Json
-  paidContent     Json?
-  isPaid          Boolean   @default(false)
-  paymentId       String?
-  unlockedAt      DateTime?
+  emotionModifier  Boolean   @default(false)
+  isReliable       Boolean   @default(true)
+  reliabilityMsg   String?
+  scores           Json
+  summary          Json
+  freeContent      Json
+  paidContent      Json?
+  isPaid           Boolean   @default(false)
+  paymentId        String?
+  unlockedAt       DateTime?
   /// 환불로 잠긴 시각. isPaid 는 false 로 되돌리고 이 값으로 "환불됨"과 "미결제"를 구분한다.
-  refundedAt      DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  refundedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   submission TemperamentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
@@ -313,35 +313,35 @@ model Payment {
 }
 
 model PaymentEvent {
-  id          String   @id @default(uuid())
-  paymentId   String
-  type        String
-  status      PaymentStatus
-  amount      Int?
-  reason      String?
-  payload     Json?
-  createdAt   DateTime @default(now())
-  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  id        String        @id @default(uuid())
+  paymentId String
+  type      String
+  status    PaymentStatus
+  amount    Int?
+  reason    String?
+  payload   Json?
+  createdAt DateTime      @default(now())
+  payment   Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId, createdAt])
   @@map("payment_events")
 }
 
 model Child {
-  id            String   @id @default(uuid())
+  id              String           @id @default(uuid())
   // 아이는 그룹에 속한다. 그룹의 모든 멤버가 동등하게 접근 가능.
   // 그룹의 마지막 멤버가 탈퇴하면 그룹과 함께 cascade 삭제.
-  groupId       String
-  name          String
-  gender        String
-  birthDate     DateTime @db.Date
-  dueDate       DateTime? @db.Date
-  profileImage  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  group         Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  payments      Payment[]
-  growthRecords GrowthRecord[]
+  groupId         String
+  name            String
+  gender          String
+  birthDate       DateTime         @db.Date
+  dueDate         DateTime?        @db.Date
+  profileImage    String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  group           Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+  growthRecords   GrowthRecord[]
   physicalGrowths PhysicalGrowth[]
 
   @@index([groupId])
@@ -379,13 +379,13 @@ model GrowthRecord {
   endAt     DateTime?
   memo      String?
   imageUrl  String?
-  imageUrls String[] @default([])
+  imageUrls String[]         @default([])
   data      Json?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
-  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  child Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, startAt])
   @@index([userId, startAt])
@@ -474,22 +474,59 @@ model GroupMember {
 }
 
 model PhysicalGrowth {
-  id              String   @id @default(uuid())
+  id           String   @id @default(uuid())
   // 작성자(createdBy 역할). 탈퇴 시 SetNull. 권한 체크는 child.group 기준.
-  userId          String?
-  childId         String
-  measuredAt      DateTime @db.Date
-  heightCm        Float?
-  weightKg        Float?
-  headCircumCm    Float?
-  memo            String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userId       String?
+  childId      String
+  measuredAt   DateTime @db.Date
+  heightCm     Float?
+  weightKg     Float?
+  headCircumCm Float?
+  memo         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  child Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   // measuredAt desc 정렬(findAll)에 맞춘 내림차순 인덱스
   @@index([childId, measuredAt(sort: Desc)])
   @@map("physical_growths")
+}
+
+/// 자주 묻는 질문. 어드민에서 직접 등록·수정하고, 앱의 /settings/faq 와
+/// FAQPage 구조화 데이터(AEO)가 같은 데이터를 쓴다.
+model Faq {
+  id          String   @id @default(uuid())
+  /// 화면에서 묶어 보여줄 분류. 자유 입력(예: 기질 검사, 결제/환불).
+  category    String   @default("일반")
+  question    String
+  answer      String
+  /// 같은 분류 안에서의 노출 순서. 작을수록 위.
+  order       Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, category, order])
+  @@map("faqs")
+}
+
+/// AI 크롤러(GPTBot, ClaudeBot 등) 방문 집계.
+///
+/// robots.txt 로 허용만 해두면 실제로 오는지 알 수 없다. AEO 작업의 효과를
+/// 판단하려면 유입 자체를 재야 하므로 (봇, 경로, 날짜) 단위로 횟수를 센다.
+/// 요청마다 행을 쌓으면 금방 불어나므로 일자별로 합산한다.
+model CrawlerVisit {
+  id         String   @id @default(uuid())
+  /// 정규화한 봇 이름. User-Agent 원문이 아니다.
+  bot        String
+  path       String
+  date       DateTime @db.Date
+  count      Int      @default(1)
+  lastSeenAt DateTime @default(now())
+
+  @@unique([bot, path, date])
+  @@index([date(sort: Desc), bot])
+  @@map("crawler_visits")
 }

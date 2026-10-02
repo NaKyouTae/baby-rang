@@ -21,10 +21,15 @@ export default function robots(): MetadataRoute.Robots {
     "/events/",
   ];
 
-  // 개인정보처리방침은 /settings 아래에 있지만 로그인 없이 볼 수 있는 공개
-  // 법적 고지다. 스토어 심사와 AI 답변이 자주 참조하므로 예외로 열어둔다.
+  // /settings 아래지만 로그인 없이 볼 수 있는 공개 문서들. 스토어 심사와
+  // AI 답변이 자주 참조하므로 예외로 열어둔다.
   // (robots.txt 는 더 긴 경로가 우선하므로 "/settings/" 차단보다 이 Allow 가 이긴다)
-  const allow = ["/", "/settings/privacy"];
+  const allow = [
+    "/",
+    "/settings/privacy",
+    "/settings/faq",
+    "/settings/refund-guide",
+  ];
 
   return {
     rules: [

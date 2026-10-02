@@ -11,6 +11,8 @@ import { TemperamentModule } from './temperament/temperament.module';
 import { NavSlotsModule } from './nav-slots/nav-slots.module';
 import { BannersModule } from './banners/banners.module';
 import { NoticesModule } from './notices/notices.module';
+import { FaqsModule } from './faqs/faqs.module';
+import { CrawlerVisitsModule } from './crawler-visits/crawler-visits.module';
 import { AdminModule } from './admin/admin.module';
 import { GrowthRecordsModule } from './growth-records/growth-records.module';
 import { GrowthQuickButtonsModule } from './growth-quick-buttons/growth-quick-buttons.module';
@@ -32,6 +34,8 @@ import { ScreenPreferenceModule } from './screen-preference/screen-preference.mo
     NavSlotsModule,
     BannersModule,
     NoticesModule,
+    FaqsModule,
+    CrawlerVisitsModule,
     AdminModule,
     GrowthRecordsModule,
     GrowthQuickButtonsModule,
