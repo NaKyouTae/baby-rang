@@ -40,3 +40,7 @@ twa/*.aab
 twa/*.apk
 twa/*.idsig
 twa/*.keystore
+
+# 네이버 로그인 검수 제출 자료 (pptx/pdf/캡처) — 저장소에 올리지 않는다.
+naver-review/
+Claude outputs/
