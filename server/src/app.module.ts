@@ -10,6 +10,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { TemperamentModule } from './temperament/temperament.module';
 import { NavSlotsModule } from './nav-slots/nav-slots.module';
 import { BannersModule } from './banners/banners.module';
+import { RoomItemsModule } from './room-items/room-items.module';
 import { NoticesModule } from './notices/notices.module';
 import { FaqsModule } from './faqs/faqs.module';
 import { CrawlerVisitsModule } from './crawler-visits/crawler-visits.module';
@@ -33,6 +34,7 @@ import { ScreenPreferenceModule } from './screen-preference/screen-preference.mo
     TemperamentModule,
     NavSlotsModule,
     BannersModule,
+    RoomItemsModule,
     NoticesModule,
     FaqsModule,
     CrawlerVisitsModule,

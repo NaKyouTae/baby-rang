@@ -59,15 +59,15 @@ enum AuthProvider {
 // 소셜 로그인 연결 — 한 user가 여러 provider를 가질 수 있도록 분리.
 // (provider, providerId)는 SNS 측 식별자로 글로벌 유니크.
 model Account {
-  id         String       @id @default(uuid())
-  userId     String
-  provider   AuthProvider
-  providerId String
+  id           String       @id @default(uuid())
+  userId       String
+  provider     AuthProvider
+  providerId   String
   // 네이버 전용. 회원탈퇴 시 연동해제(grant_type=delete)를 하려면 유효한 토큰이
   // 필요한데, 네이버는 카카오의 admin key 같은 서버 단독 해제 수단이 없다.
   // 로그인할 때마다 최신 값으로 덮어쓴다. (카카오는 KAKAO_ADMIN_KEY 를 쓰므로 null)
   refreshToken String?
-  createdAt  DateTime     @default(now())
+  createdAt    DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -537,4 +537,85 @@ model CrawlerVisit {
   @@unique([bot, path, date])
   @@index([date(sort: Desc), bot])
   @@map("crawler_visits")
+}
+
+// ===== 방 꾸미기 =====
+//
+// 방에 놓을 수 있는 것들의 마스터 카탈로그. 운영자가 어드민에서 관리하며
+// 사용자 데이터가 아니다. 사용자가 어디에 놓았는지(RoomPlacement)는 별도 테이블이고,
+// 여기에는 "그게 무엇인가"만 둔다. 둘을 한 테이블에 합치면 가격을 바꿀 때
+// 이미 산 사람 데이터까지 같이 바뀐다.
+
+enum RoomItemCategory {
+  FURNITURE
+  DECOR
+  RUG
+  WINDOW
+  TOY
+  WALLPAPER
+  FLOORING
+}
+
+// 어디에 붙는가. 벽에 거는 것과 바닥에 놓는 것은 좌표의 의미가 다르다.
+enum RoomSurface {
+  FLOOR
+  WALL
+  ON_TOP // 다른 가구 위에 올리는 소품
+}
+
+enum RoomItemUnlock {
+  FREE
+  REWARD // 기록·성장 이벤트로 해금
+  PURCHASE
+  EVENT // 기간 한정
+}
+
+// 픽셀 스프라이트는 방향별 그림이 따로 있다. 임의 각도 회전은 불가능하므로
+// 각도(0~360)가 아니라 4방향으로 둔다.
+enum RoomDirection {
+  SOUTH // 정면 — 기본값
+  EAST
+  NORTH
+  WEST
+}
+
+// 그림이 실시간 데이터로 바뀌는 슬롯. 창문은 현재 날씨·시간대를 그린다.
+enum RoomDynamicSlot {
+  WEATHER
+  PHOTO
+  GROWTH
+}
+
+model RoomItem {
+  id          String           @id @default(uuid())
+  // 코드에서 스프라이트를 찾는 키. 표시 이름이 바뀌어도 이건 고정이다.
+  spriteKey   String           @unique
+  name        String
+  category    RoomItemCategory
+  surface     RoomSurface      @default(FLOOR)
+  // 바닥에서 차지하는 칸 수. 픽셀로 두면 타일 크기를 바꿀 때 전부 깨진다.
+  tileW       Int              @default(1)
+  tileH       Int              @default(1)
+  // 그림이 바닥 칸보다 위로 솟는 높이(타일). 옷장처럼 키 큰 가구용.
+  spriteLiftY Int              @default(0)
+  // 지원하는 방향. 그림이 한 장뿐이면 [SOUTH] 만 넣는다.
+  directions  RoomDirection[]  @default([SOUTH])
+  // 방향 그림 없이 좌우 반전만 되는 아이템
+  flippable   Boolean          @default(false)
+  // 위에 소품을 올릴 수 있는가 (책상·선반)
+  canStack    Boolean          @default(false)
+  dynamicSlot RoomDynamicSlot?
+  // 스프라이트 이미지 경로. 코드로 그리는 동안은 비워 두고 spriteKey 로만 찾는다.
+  // 바이너리는 DB 에 넣지 않는다.
+  imageUrl    String?
+  unlock      RoomItemUnlock   @default(FREE)
+  priceCoins  Int?
+  sortOrder   Int              @default(0)
+  // 지우지 말고 이걸 끈다. 삭제하면 이미 배치된 방이 깨진다.
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([category, isActive])
+  @@map("room_items")
 }

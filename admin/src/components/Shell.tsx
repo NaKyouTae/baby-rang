@@ -17,6 +17,7 @@ import {
   Megaphone,
   Menu,
   Users,
+  Sofa,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/notices", label: "공지사항", icon: Megaphone },
       { href: "/faqs", label: "자주 묻는 질문", icon: HelpCircle },
       { href: "/nursing-rooms", label: "수유실 관리", icon: Baby },
+      { href: "/room-items", label: "방 꾸미기 아이템", icon: Sofa },
     ],
   },
   {

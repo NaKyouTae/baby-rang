@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import BottomSheet from '@/components/BottomSheet';
 import { calcChildAge } from '@/lib/childAge';
 import { useSelectedChild } from '@/hooks/useChildren';
 import PixelScreen from './PixelScreen';
+import DecorateSheet, { type RoomItem } from './DecorateSheet';
+import { preloadSprites, type Placement } from './placements';
+import { ROOM_W_TILES, WALL_TILES } from './tiles';
 import { POSE_LABEL, poseForMonths } from './pixelSprite';
 import type { ActionId } from './scene';
 
@@ -15,6 +18,25 @@ function demoBirthDate(monthsAgo: number) {
   const d = new Date();
   d.setMonth(d.getMonth() - monthsAgo);
   return d.toISOString().slice(0, 10);
+}
+
+/** 배치를 임시로 담아두는 브라우저 저장소 키. 서버 저장이 생기면 사라진다. */
+const STORAGE_KEY = 'babyrang.prototype.placements';
+
+/**
+ * 저장해 둔 배치를 읽는다.
+ * 첫 렌더에서 바로 쓰려고 effect 가 아니라 useState 초기값으로 넣는다 —
+ * effect 에서 setState 하면 빈 방이 한 번 그려졌다가 덮인다.
+ */
+function loadSavedPlacements(): Placement[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Placement[]) : [];
+  } catch {
+    // 저장값이 깨졌으면 빈 방으로 시작한다
+    return [];
+  }
 }
 
 const ACTION_LABEL: Record<ActionId, string> = {
@@ -29,6 +51,8 @@ const ACTION_LABEL: Record<ActionId, string> = {
 export default function PrototypeClient() {
   const { selectedChild } = useSelectedChild();
   const [openAction, setOpenAction] = useState<ActionId | null>(null);
+  const [decorating, setDecorating] = useState(false);
+  const [placements, setPlacements] = useState<Placement[]>(loadSavedPlacements);
 
   const child = selectedChild ?? DEMO;
   const isDemo = !selectedChild;
@@ -45,8 +69,52 @@ export default function PrototypeClient() {
     [isDemo],
   );
 
+  // 배치 저장 API 가 아직 없다. 새로고침에 날아가지 않도록 임시로 브라우저에 둔다.
+  // Room/RoomPlacement 테이블이 생기면 이 자리를 서버 호출로 바꾼다.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(placements));
+    } catch {
+      /* 용량 초과 등은 무시한다 — 다음 저장에서 다시 시도된다 */
+    }
+  }, [placements]);
+
+  useEffect(() => {
+    preloadSprites(placements.map((p) => p.imageUrl));
+  }, [placements]);
+
   const handleAction = useCallback((id: ActionId) => setOpenAction(id), []);
   const handlePet = useCallback(() => {}, []);
+  const handleDecorate = useCallback(() => setDecorating(true), []);
+
+  // 고른 가구를 방 가운데에 놓는다. 그다음 끌어서 옮기면 된다.
+  const handlePick = useCallback((item: RoomItem) => {
+    setDecorating(false);
+    preloadSprites([item.imageUrl]);
+    setPlacements((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        itemId: item.id,
+        name: item.name,
+        spriteKey: item.spriteKey,
+        imageUrl: item.imageUrl,
+        tileX: Math.max(0, Math.round((ROOM_W_TILES - item.tileW) / 2)),
+        tileY: WALL_TILES + 4,
+        tileW: item.tileW,
+        tileH: item.tileH,
+        spriteLiftY: item.spriteLiftY,
+      },
+    ]);
+  }, []);
+
+  const handleMovePlacement = useCallback((id: string, tileX: number, tileY: number) => {
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, tileX, tileY } : p)));
+  }, []);
+
+  const handleRemovePlacement = useCallback((id: string) => {
+    setPlacements((prev) => prev.filter((p) => p.id !== id));
+  }, []);
 
   return (
     <div className="relative h-full overflow-hidden select-none bg-[#C6DAF0]">
@@ -59,6 +127,16 @@ export default function PrototypeClient() {
         stats={stats}
         onAction={handleAction}
         onPet={handlePet}
+        onDecorate={handleDecorate}
+        placements={placements}
+        onMovePlacement={handleMovePlacement}
+        onRemovePlacement={handleRemovePlacement}
+      />
+
+      <DecorateSheet
+        open={decorating}
+        onClose={() => setDecorating(false)}
+        onPick={handlePick}
       />
 
       <BottomSheet

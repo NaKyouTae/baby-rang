@@ -149,6 +149,14 @@ export class AdminController {
     return { url };
   }
 
+  @Post('room-items/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadRoomItemSprite(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('파일이 필요합니다.');
+    const url = await this.storage.upload(file, 'room-items');
+    return { url };
+  }
+
   @Post('tests/upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadTestThumbnail(@UploadedFile() file?: Express.Multer.File) {
@@ -457,6 +465,96 @@ export class AdminController {
   @Delete('banners/:id')
   async deleteBanner(@Param('id') id: string) {
     await this.prisma.banner.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ===== Room Items (방 꾸미기 카탈로그) =====
+  //
+  // 운영자가 등록하는 마스터 데이터다. 사용자가 어디에 놓았는지는 별도 테이블이므로
+  // 여기서는 아이템을 지우지 말고 isActive 를 끈다 — 지우면 이미 배치된 방이 깨진다.
+  @Get('room-items')
+  async listRoomItems() {
+    const items = await this.prisma.roomItem.findMany({
+      orderBy: [
+        { category: 'asc' },
+        { sortOrder: 'asc' },
+        { createdAt: 'desc' },
+      ],
+    });
+    return { items };
+  }
+
+  @Post('room-items')
+  async createRoomItem(@Body() body: any) {
+    await this.assertSpriteKeyFree(body.spriteKey);
+    return this.prisma.roomItem.create({
+      data: {
+        spriteKey: body.spriteKey,
+        name: body.name,
+        category: body.category,
+        surface: body.surface ?? 'FLOOR',
+        tileW: body.tileW ?? 1,
+        tileH: body.tileH ?? 1,
+        spriteLiftY: body.spriteLiftY ?? 0,
+        directions: body.directions?.length ? body.directions : ['SOUTH'],
+        flippable: body.flippable ?? false,
+        canStack: body.canStack ?? false,
+        dynamicSlot: body.dynamicSlot || null,
+        imageUrl: body.imageUrl ?? null,
+        unlock: body.unlock ?? 'FREE',
+        priceCoins: body.priceCoins ?? null,
+        sortOrder: body.sortOrder ?? 0,
+        isActive: body.isActive ?? true,
+      },
+    });
+  }
+
+  @Patch('room-items/:id')
+  async updateRoomItem(@Param('id') id: string, @Body() body: any) {
+    if (body.spriteKey !== undefined)
+      await this.assertSpriteKeyFree(body.spriteKey, id);
+    return this.prisma.roomItem.update({
+      where: { id },
+      data: {
+        ...(body.spriteKey !== undefined && { spriteKey: body.spriteKey }),
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.surface !== undefined && { surface: body.surface }),
+        ...(body.tileW !== undefined && { tileW: body.tileW }),
+        ...(body.tileH !== undefined && { tileH: body.tileH }),
+        ...(body.spriteLiftY !== undefined && {
+          spriteLiftY: body.spriteLiftY,
+        }),
+        ...(body.directions !== undefined && { directions: body.directions }),
+        ...(body.flippable !== undefined && { flippable: body.flippable }),
+        ...(body.canStack !== undefined && { canStack: body.canStack }),
+        ...(body.dynamicSlot !== undefined && {
+          dynamicSlot: body.dynamicSlot || null,
+        }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.unlock !== undefined && { unlock: body.unlock }),
+        ...(body.priceCoins !== undefined && { priceCoins: body.priceCoins }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
+      },
+    });
+  }
+
+  /** 같은 파일명을 두 번 올리면 키가 겹친다. 어느 아이템과 겹쳤는지 알려준다. */
+  private async assertSpriteKeyFree(spriteKey: string, exceptId?: string) {
+    if (!spriteKey)
+      throw new BadRequestException('스프라이트 키가 비어 있습니다.');
+    const dup = await this.prisma.roomItem.findUnique({ where: { spriteKey } });
+    if (dup && dup.id !== exceptId) {
+      throw new BadRequestException(
+        `스프라이트 키 '${spriteKey}' 는 이미 '${dup.name}' 이 쓰고 있습니다. 파일 이름을 다르게 해서 올려주세요.`,
+      );
+    }
+  }
+
+  @Delete('room-items/:id')
+  async deleteRoomItem(@Param('id') id: string) {
+    await this.prisma.roomItem.delete({ where: { id } });
     return { ok: true };
   }
 

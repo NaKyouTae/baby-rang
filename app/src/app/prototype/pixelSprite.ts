@@ -1,30 +1,31 @@
 /**
- * 픽셀 아기 캐릭터 (40x40 스프라이트, 키 25~30px).
+ * 픽셀 아기 캐릭터 — 톱다운 쿼터뷰 4방향 스프라이트.
  *
- * 스프라이트를 손으로 찍는 대신 도형을 저해상도 격자에 찍어서 만든다.
- * 덕분에 개월수 하나로 머리:몸:팔다리 비율을 바꿀 수 있다.
+ * 톱다운에서는 위로 걸어가면 뒤통수가 보여야 한다. 그래서 down/up/side 세 벌을 만들고
+ * 왼쪽은 side 를 좌우 반전해서 쓴다(포켓몬·게더타운이 쓰는 방식).
  *
- * 사람으로 읽히게 하는 건 디테일이 아니라 순서가 있다.
+ * 사람으로 읽히게 하는 순서는 그대로다.
  *   1) 목 — 없으면 머리가 몸에 박힌 덩어리가 된다
  *   2) 옷 — 맨몸이면 팔다리와 몸통이 한 색이라 형태가 안 끊긴다
- *   3) 명암 — 왼쪽 위에서 빛이 온다고 치고 오른쪽 아래에 그늘을 깔면 덩어리가 입체가 된다
- *   4) 흰자 있는 눈과 눈썹 — 이게 들어가야 '생물'로 보인다
+ *   3) 명암 — 왼쪽 위에서 빛이 온다고 치고 오른쪽 아래에 그늘을 깐다
+ *   4) 유색 외곽선 — 검정이 아니라 그 색의 가장 어두운 톤. GBA 포켓몬 화풍의 핵심이다
  */
 
 import { ell, ellO, makeBuf, px, toCanvas, type Buf } from './pixelDraw';
 
-/** 스프라이트 한 장의 크기. */
 export const SPRITE = 40;
 /** 스프라이트 안에서 발이 닿는 y. 방 좌표에 세울 때 기준점이 된다. */
 export const GROUND = 35;
 const CX = 20;
 
 export const FRAME_COUNT = 8;
-/** 픽셀 아트는 8fps 가 제일 자연스럽다. 60fps 로 돌리면 미끄러져 보인다. */
+/** 픽셀 아트는 8fps 가 제일 자연스럽다. */
 export const FRAME_FPS = 8;
 
 export type PixelPose = 'lying' | 'sitting' | 'crawling' | 'standing';
 export type Motion = 'idle' | 'walk';
+/** side 는 오른쪽을 본 모습. 왼쪽은 렌더러가 좌우 반전해서 쓴다. */
+export type Facing = 'down' | 'up' | 'side';
 
 export function poseForMonths(months: number): PixelPose {
   if (months < 4) return 'lying';
@@ -45,31 +46,35 @@ export function canRoam(pose: PixelPose) {
   return pose === 'crawling' || pose === 'standing';
 }
 
+/** 제자리에 있는 자세는 방향이 의미 없다. 항상 정면을 본다. */
+export function facingFor(pose: PixelPose, facing: Facing): Facing {
+  return canRoam(pose) ? facing : 'down';
+}
+
 const C = {
-  skin: '#F9D3AF',
-  skinDark: '#E4B188',
-  line: '#8A5538',
-  hair: '#4A3328',
-  hairHi: '#684935',
-  suit: '#92C9EA',
-  suitDark: '#6BA3CC',
-  sock: '#FCFCFE',
-  sockDark: '#DCE3EC',
+  skin: '#FAD4AE',
+  skinDark: '#E0AE84',
+  skinLine: '#99613D',
+  hair: '#5A3C28',
+  hairHi: '#7A5438',
+  hairLine: '#3A2416',
+  suit: '#7CC4F0',
+  suitDark: '#5A9ECC',
+  suitLine: '#2F6A96',
+  sock: '#FFFFFF',
+  sockDark: '#D4DEEA',
+  sockLine: '#8C9AAC',
+  iris: '#3A2618',
+  pupil: '#1E1410',
   white: '#FFFFFF',
-  iris: '#3E2A1E',
-  pupil: '#241812',
-  cheek: '#F09A9A',
-  mouth: '#B85744',
+  cheek: '#F58C8C',
+  mouth: '#C2543F',
 } as const;
 
-const SHADOW = '#8E7A5F';
+const SHADOW = '#7A6246';
 
 type Metrics = ReturnType<typeof metrics>;
 
-/**
- * 개월수별 체형. 신생아는 4두신에 팔다리가 짧고, 36개월로 갈수록
- * 머리 비중이 줄고 팔다리가 길어진다.
- */
 function metrics(months: number) {
   const t = Math.min(Math.max(months / 36, 0), 1);
   const lerp = (a: number, b: number) => a + (b - a) * t;
@@ -82,82 +87,100 @@ function metrics(months: number) {
   };
 }
 
-/** 외곽선만 두른 타원. */
-function O(buf: Buf, cx: number, cy: number, rx: number, ry: number, fill: string) {
-  ellO(buf, cx, cy, rx, ry, fill, C.line);
-}
-
 /**
  * 명암 있는 타원. 빛은 왼쪽 위에서 온다.
- * 어두운 색으로 한 번 채우고 밝은 색을 왼쪽 위로 밀어 덮으면
- * 오른쪽 아래에만 초승달 모양 그늘이 남는다.
+ * 어두운 색으로 채우고 밝은 색을 왼쪽 위로 밀어 덮으면 오른쪽 아래에만 그늘이 남는다.
  */
-function volume(buf: Buf, cx: number, cy: number, rx: number, ry: number, light: string, dark: string) {
-  ellO(buf, cx, cy, rx, ry, dark, C.line);
+function vol(buf: Buf, cx: number, cy: number, rx: number, ry: number, light: string, dark: string, line: string) {
+  ellO(buf, cx, cy, rx, ry, dark, line);
   ell(buf, cx - 0.7, cy - 0.7, rx - 0.8, ry - 0.8, light);
 }
 
-/** 머리카락 — 윗부분 캡 + 얼굴 옆 구레나룻 + 왼쪽 위 하이라이트. */
-function hair(buf: Buf, cx: number, cy: number, r: number) {
+const skinVol = (b: Buf, x: number, y: number, rx: number, ry: number) =>
+  vol(b, x, y, rx, ry, C.skin, C.skinDark, C.skinLine);
+const suitVol = (b: Buf, x: number, y: number, rx: number, ry: number) =>
+  vol(b, x, y, rx, ry, C.suit, C.suitDark, C.suitLine);
+const sockVol = (b: Buf, x: number, y: number, rx: number, ry: number) =>
+  vol(b, x, y, rx, ry, C.sock, C.sockDark, C.sockLine);
+
+/** 머리카락. facing 에 따라 덮는 범위가 달라진다 — 뒤통수는 전부 머리카락이다. */
+function hair(buf: Buf, cx: number, cy: number, r: number, facing: Facing) {
   for (let y = Math.floor(cy - r - 1); y <= cy + r; y++) {
     for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
       const nx = (x + 0.5 - cx) / (r + 0.9);
       const ny = (y + 0.5 - cy) / (r * 0.92 + 0.9);
       if (nx * nx + ny * ny > 1) continue;
-      const cap = y < cy - r * 0.56;
-      const side = Math.abs(x + 0.5 - cx) > r * 0.78 && y < cy - r * 0.06;
-      if (!cap && !side) continue;
-      // 정수리 왼쪽 위만 밝게 — 머리가 둥글어 보인다
+
+      let covered: boolean;
+      if (facing === 'up') {
+        // 뒤통수 — 아래쪽 목덜미만 남기고 전부 덮는다
+        covered = y < cy + r * 0.55;
+      } else if (facing === 'side') {
+        // 옆모습 — 뒤쪽(왼쪽) 2/3 과 정수리를 덮고 얼굴 쪽만 비운다
+        covered = x < cx + r * 0.18 || y < cy - r * 0.5;
+      } else {
+        const cap = y < cy - r * 0.56;
+        const side = Math.abs(x + 0.5 - cx) > r * 0.78 && y < cy - r * 0.06;
+        covered = cap || side;
+      }
+      if (!covered) continue;
+
       const lit = x < cx - r * 0.1 && y < cy - r * 0.62;
       px(buf, x, y, lit ? C.hairHi : C.hair);
     }
   }
-  // 앞머리 한 가닥만 이마로 흘러내린다. 많이 내리면 눈을 먹는다.
-  px(buf, cx + Math.round(r * 0.22), cy - Math.round(r * 0.5), C.hair);
+  // 외곽선 — 머리카락 가장자리를 한 톤 더 어둡게 눌러준다
+  for (let a = 0; a < 64; a++) {
+    const th = (a / 64) * Math.PI * 2;
+    px(buf, cx + Math.cos(th) * (r + 0.6), cy + Math.sin(th) * (r * 0.92 + 0.6), C.hairLine, 120);
+  }
 }
 
-/** 머리통 + 귀 + 머리카락 + 얼굴. */
-function head(buf: Buf, cx: number, cy: number, m: Metrics, blink: boolean, shift = 0) {
-  // 귀는 머리보다 먼저 그린다. 나중에 그리면 머리 밖으로 튀어나온 혹처럼 보인다.
-  for (const s of [-1, 1] as const) {
-    O(buf, cx + s * (m.headR * 0.93), cy + 1, 1.2, 1.6, C.skinDark);
+function eye(buf: Buf, x: number, y: number, blink: boolean) {
+  if (blink) {
+    for (let d = -1; d <= 1; d++) px(buf, x + d, y, C.iris);
+    return;
   }
-  volume(buf, cx, cy, m.headR, m.headR * 0.92, C.skin, C.skinDark);
-  hair(buf, cx, cy, m.headR);
+  ell(buf, x, y, 1.4, 1.8, C.iris);
+  ell(buf, x, y + 0.4, 1.0, 1.2, C.pupil);
+  px(buf, x - 0.6, y - 0.9, C.white);
+}
 
-  const fx = cx + shift;
-  const ex = m.headR * 0.4;
+function head(buf: Buf, cx: number, cy: number, m: Metrics, blink: boolean, facing: Facing) {
+  // 귀는 머리보다 먼저 그린다. 나중에 그리면 혹처럼 튀어나온다.
+  if (facing === 'side') {
+    skinVol(buf, cx - m.headR * 0.5, cy + 1, 1.0, 1.3);
+  } else {
+    for (const s of [-1, 1] as const) skinVol(buf, cx + s * (m.headR * 0.93), cy + 1, 1.0, 1.3);
+  }
+  skinVol(buf, cx, cy, m.headR, m.headR * 0.92);
+  hair(buf, cx, cy, m.headR, facing);
+
+  if (facing === 'up') return; // 뒤통수에는 얼굴이 없다
+
   const ey = cy + m.headR * 0.3;
-
-  // 눈썹은 넣지 않는다. 이 크기에서 눈썹 픽셀은 눈에 붙어 찡그린 얼굴이 된다.
-  // 아기 눈은 흰자가 거의 안 보이고 눈동자가 눈을 꽉 채운다 — 그게 순한 인상을 만든다.
-  for (const s of [-1, 1] as const) {
-    const x = fx + s * ex;
-    if (blink) {
-      for (let d = -1; d <= 1; d++) px(buf, x + d, ey, C.iris);
-      continue;
-    }
-    ell(buf, x, ey, 1.4, 1.8, C.iris);
-    ell(buf, x, ey + 0.4, 1.0, 1.2, C.pupil);
-    // 반사광 한 점. 이것만으로 눈이 살아난다.
-    px(buf, x - 0.6, ey - 0.9, C.white);
+  if (facing === 'side') {
+    const x = cx + m.headR * 0.42;
+    eye(buf, x, ey, blink);
+    ell(buf, cx + m.headR * 0.2, ey + 1.2, 1.1, 0.7, C.cheek, 165);
+    // 옆모습은 코 실루엣이 하나 있어야 방향이 읽힌다
+    px(buf, cx + m.headR * 0.86, ey + 0.6, C.skinDark);
+    px(buf, cx + m.headR * 0.72, ey + 2.6, C.mouth);
+    return;
   }
 
-  // 코 — 한 점이면 충분하다
-  px(buf, fx, ey + 1.7, C.skinDark);
-  // 입 — 두 점이 살짝 올라간 미소. 세 점은 이 크기에서 덩어리가 된다.
-  px(buf, fx - 0.5, ey + 2.9, C.mouth);
-  px(buf, fx + 0.5, ey + 2.9, C.mouth);
-
-  // 볼터치는 눈 바로 아래 바깥. 입 옆에 두면 수염처럼 보인다.
+  const ex = m.headR * 0.4;
+  for (const s of [-1, 1] as const) eye(buf, cx + s * ex, ey, blink);
   for (const s of [-1, 1] as const) {
-    ell(buf, fx + s * (m.headR * 0.72), ey + 0.6, 1.1, 0.7, C.cheek, 165);
+    ell(buf, cx + s * (m.headR * 0.72), ey + 0.6, 1.1, 0.7, C.cheek, 165);
   }
+  px(buf, cx, ey + 1.7, C.skinDark);
+  px(buf, cx - 0.5, ey + 2.9, C.mouth);
+  px(buf, cx + 0.5, ey + 2.9, C.mouth);
 }
 
-/** 목 — 머리와 몸을 끊어주는 부분. 사람으로 보이게 하는 데 가장 효과가 크다. */
 function neck(buf: Buf, cx: number, y: number, m: Metrics) {
-  ellO(buf, cx, y, 1.8, m.neck, C.skin, C.line);
+  ellO(buf, cx, y, 1.8, m.neck, C.skin, C.skinLine);
   ell(buf, cx, y + m.neck * 0.5, 1.5, 0.6, C.skinDark);
 }
 
@@ -165,38 +188,52 @@ function floorShadow(buf: Buf, cx: number, rx: number) {
   ell(buf, cx, GROUND + 1.8, rx, 1.6, SHADOW, 60);
 }
 
-function drawStanding(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean, step: number) {
+function drawStanding(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean, step: number, facing: Facing) {
   const footY = GROUND;
   const hipY = footY - m.limb;
   const bodyCy = hipY - m.bodyH * 0.5 + bob;
   const shoulderY = bodyCy - m.bodyH * 0.62;
   const headCy = shoulderY - m.neck - m.headR * 0.85;
+  // 옆모습은 몸이 얇다. 이게 없으면 돌아선 게 아니라 그냥 정면으로 보인다.
+  const bw = facing === 'side' ? m.bodyW * 0.68 : m.bodyW;
 
-  floorShadow(buf, CX, m.bodyW + 3.4);
+  floorShadow(buf, CX, bw + 3.4);
 
-  // 다리 — 바지까지 한 벌이라 옷 색, 발만 양말 색
-  for (const s of [-1, 1] as const) {
-    const lx = CX + s * 2.2 + s * step;
-    const lift = Math.abs(step) * 0.6;
-    volume(buf, lx, (hipY + footY) / 2 - 0.6 - lift, 1.7, m.limb / 2 - 0.3, C.suit, C.suitDark);
-    volume(buf, lx + s * 0.5, footY - 0.6 - lift, 2.2, 1.4, C.sock, C.sockDark);
+  if (facing === 'side') {
+    // 뒷다리 → 몸통 → 앞다리 순서로 겹쳐야 걷는 깊이가 생긴다
+    suitVol(buf, CX - 0.6 - step, (hipY + footY) / 2 - 0.6, 1.5, m.limb / 2 - 0.3);
+    sockVol(buf, CX - 0.6 - step * 1.3, footY - 0.6, 2.0, 1.3);
+  } else {
+    for (const s of [-1, 1] as const) {
+      const lx = CX + s * 2.2 + s * step;
+      const lift = Math.abs(step) * 0.6;
+      suitVol(buf, lx, (hipY + footY) / 2 - 0.6 - lift, 1.7, m.limb / 2 - 0.3);
+      sockVol(buf, lx + s * 0.5, footY - 0.6 - lift, 2.2, 1.4);
+    }
   }
 
-  // 몸통 — 어깨 쪽이 좁아야 머리가 얹힌 것으로 보인다
-  volume(buf, CX, bodyCy, m.bodyW, m.bodyH, C.suit, C.suitDark);
-  ell(buf, CX, shoulderY + 0.6, m.bodyW * 0.74, 1.3, C.suit);
-  ell(buf, CX, bodyCy + m.bodyH * 0.45, m.bodyW * 0.82, 1.0, C.suitDark);
+  suitVol(buf, CX, bodyCy, bw, m.bodyH);
+  ell(buf, CX, shoulderY + 0.6, bw * 0.74, 1.3, C.suit);
+  ell(buf, CX, bodyCy + m.bodyH * 0.45, bw * 0.82, 1.0, C.suitDark);
 
-  // 팔 — 어깨에서 내려오고 끝에 맨살 손
-  for (const s of [-1, 1] as const) {
-    const ax = CX + s * (m.bodyW + 1.0);
-    const ay = shoulderY + m.limb * 0.36 + s * sway - step * s * 0.6;
-    volume(buf, ax, ay, 1.3, m.limb * 0.32 + 1.1, C.suit, C.suitDark);
-    volume(buf, ax + s * 0.3, ay + m.limb * 0.32 + 1.5, 1.5, 1.4, C.skin, C.skinDark);
+  if (facing === 'side') {
+    suitVol(buf, CX + 1.2 + step, (hipY + footY) / 2 - 0.6, 1.5, m.limb / 2 - 0.3);
+    sockVol(buf, CX + 1.6 + step * 1.3, footY - 0.6, 2.0, 1.3);
+    // 팔은 앞쪽 하나만 보인다
+    const ay = shoulderY + m.limb * 0.36 + sway;
+    suitVol(buf, CX + bw + 0.6, ay, 1.3, m.limb * 0.32 + 1.1);
+    skinVol(buf, CX + bw + 0.8, ay + m.limb * 0.32 + 1.5, 1.5, 1.4);
+  } else {
+    for (const s of [-1, 1] as const) {
+      const ax = CX + s * (bw + 1.0);
+      const ay = shoulderY + m.limb * 0.36 + s * sway - step * s * 0.6;
+      suitVol(buf, ax, ay, 1.3, m.limb * 0.32 + 1.1);
+      skinVol(buf, ax + s * 0.3, ay + m.limb * 0.32 + 1.5, 1.5, 1.4);
+    }
   }
 
   neck(buf, CX, shoulderY - m.neck * 0.8, m);
-  head(buf, CX, headCy, m, blink);
+  head(buf, CX, headCy, m, blink, facing);
 }
 
 function drawSitting(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean) {
@@ -207,95 +244,107 @@ function drawSitting(buf: Buf, m: Metrics, bob: number, sway: number, blink: boo
 
   floorShadow(buf, CX, m.bodyW + 7);
 
-  // 다리를 앞/옆으로 뻗고 앉은 자세
   for (const s of [-1, 1] as const) {
-    volume(buf, CX + s * 4.6, GROUND - 1.6, m.limb * 0.5, 1.7, C.suit, C.suitDark);
-    volume(buf, CX + s * (4.6 + m.limb * 0.5), GROUND - 1.6, 1.7, 1.5, C.sock, C.sockDark);
+    suitVol(buf, CX + s * 4.6, GROUND - 1.6, m.limb * 0.5, 1.7);
+    sockVol(buf, CX + s * (4.6 + m.limb * 0.5), GROUND - 1.6, 1.7, 1.5);
   }
-  volume(buf, CX, bodyCy, m.bodyW, m.bodyH * 0.92, C.suit, C.suitDark);
+  suitVol(buf, CX, bodyCy, m.bodyW, m.bodyH * 0.92);
   ell(buf, CX, shoulderY + 0.6, m.bodyW * 0.74, 1.3, C.suit);
   ell(buf, CX, bodyCy + m.bodyH * 0.42, m.bodyW * 0.82, 1.0, C.suitDark);
 
   for (const s of [-1, 1] as const) {
     const ax = CX + s * (m.bodyW + 1.0);
     const ay = shoulderY + m.limb * 0.34 + s * sway;
-    volume(buf, ax, ay, 1.3, m.limb * 0.3 + 1.1, C.suit, C.suitDark);
-    volume(buf, ax + s * 0.3, ay + m.limb * 0.3 + 1.4, 1.5, 1.4, C.skin, C.skinDark);
+    suitVol(buf, ax, ay, 1.3, m.limb * 0.3 + 1.1);
+    skinVol(buf, ax + s * 0.3, ay + m.limb * 0.3 + 1.4, 1.5, 1.4);
   }
 
   neck(buf, CX, shoulderY - m.neck * 0.8, m);
-  head(buf, CX, headCy, m, blink);
+  head(buf, CX, headCy, m, blink, 'down');
 }
 
-function drawCrawling(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean, step: number) {
-  // 오른쪽을 향한 측면 뷰. 왼쪽으로 갈 때는 스프라이트를 좌우 반전해 쓴다.
-  const torsoCx = CX - 5;
-  const torsoRx = m.bodyH * 1.02;
-  const torsoRy = m.bodyW * 0.88;
-  const torsoCy = GROUND - m.limb * 0.68 - torsoRy + bob;
+/** 옆에서 본 기기 — 오른쪽을 향한다. */
+function crawlSide(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean, step: number) {
+  const tCx = CX - 5;
+  const tRx = m.bodyH * 1.02;
+  const tRy = m.bodyW * 0.88;
+  const tCy = GROUND - m.limb * 0.68 - tRy + bob;
 
-  floorShadow(buf, CX - 2, torsoRx + 4.5);
+  floorShadow(buf, CX - 2, tRx + 4.5);
 
-  // 반대쪽 팔다리 — 몸통보다 먼저 그려 뒤로 보낸다.
-  // 앞쪽 것과 2px 넘게 떨어뜨려야 네 개가 한 덩어리로 뭉치지 않는다.
-  O(buf, torsoCx - torsoRx * 0.8 - step, GROUND - m.limb * 0.24, 1.2, m.limb * 0.28 + 1.0, C.suitDark);
-  O(buf, torsoCx + torsoRx * 0.48 + step, GROUND - m.limb * 0.24 - sway, 1.2, m.limb * 0.28 + 1.0, C.suitDark);
+  vol(buf, tCx - tRx * 0.8 - step, GROUND - m.limb * 0.24, 1.2, m.limb * 0.28 + 1.0, C.suitDark, C.suitDark, C.suitLine);
+  vol(buf, tCx + tRx * 0.48 + step, GROUND - m.limb * 0.24 - sway, 1.2, m.limb * 0.28 + 1.0, C.suitDark, C.suitDark, C.suitLine);
 
-  volume(buf, torsoCx, torsoCy, torsoRx, torsoRy, C.suit, C.suitDark);
-  ell(buf, torsoCx - torsoRx * 0.3, torsoCy + torsoRy * 0.45, torsoRx * 0.55, 1.1, C.suitDark);
+  suitVol(buf, tCx, tCy, tRx, tRy);
+  ell(buf, tCx - tRx * 0.3, tCy + tRy * 0.45, tRx * 0.55, 1.1, C.suitDark);
 
-  // 앞쪽 팔다리 — 손발이 맨살이라 바닥을 짚은 게 보인다
-  const back = { x: torsoCx - torsoRx * 0.42 + step, y: GROUND - m.limb * 0.3 + sway };
-  volume(buf, back.x, back.y, 1.4, m.limb * 0.34 + 1.0, C.suit, C.suitDark);
-  volume(buf, back.x, GROUND - 0.9, 1.7, 1.4, C.skin, C.skinDark);
-  const front = { x: torsoCx + torsoRx * 0.86 - step, y: GROUND - m.limb * 0.3 };
-  volume(buf, front.x, front.y, 1.4, m.limb * 0.34 + 1.0, C.suit, C.suitDark);
-  volume(buf, front.x, GROUND - 0.9, 1.7, 1.4, C.skin, C.skinDark);
+  const back = { x: tCx - tRx * 0.42 + step, y: GROUND - m.limb * 0.3 + sway };
+  suitVol(buf, back.x, back.y, 1.4, m.limb * 0.34 + 1.0);
+  skinVol(buf, back.x, GROUND - 0.9, 1.7, 1.4);
+  const front = { x: tCx + tRx * 0.86 - step, y: GROUND - m.limb * 0.3 };
+  suitVol(buf, front.x, front.y, 1.4, m.limb * 0.34 + 1.0);
+  skinVol(buf, front.x, GROUND - 0.9, 1.7, 1.4);
 
-  // 고개를 든 자세 — 머리가 몸통 앞 '위'에 올라가야 기어가는 걸로 읽힌다.
-  // 몸통과 같은 높이에 두면 머리가 몸을 덮어 덩어리가 된다.
-  const hx = torsoCx + torsoRx + m.headR * 0.44;
-  const hy = torsoCy - m.headR * 0.95;
-  O(buf, hx - m.headR * 0.7, hy + m.headR * 0.88, 1.6, m.neck + 0.4, C.skinDark);
-  head(buf, hx, hy, m, blink, 1);
+  const hx = tCx + tRx + m.headR * 0.44;
+  const hy = tCy - m.headR * 0.95;
+  ellO(buf, hx - m.headR * 0.7, hy + m.headR * 0.88, 1.6, m.neck + 0.4, C.skin, C.skinLine);
+  head(buf, hx, hy, m, blink, 'side');
+}
+
+/**
+ * 앞/뒤에서 본 기기. 엎드린 자세라 몸통이 머리 뒤로 거의 가려진다.
+ * up 이면 엉덩이와 발바닥이 보이고, down 이면 얼굴과 두 손이 보인다.
+ */
+function crawlFacing(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean, step: number, facing: 'down' | 'up') {
+  const bodyCy = GROUND - m.bodyW * 0.9 + bob;
+  const headCy = facing === 'down' ? bodyCy - m.headR * 0.55 : bodyCy - m.headR * 0.75;
+
+  floorShadow(buf, CX, m.bodyW + 5);
+
+  // 양옆으로 벌린 팔다리
+  for (const s of [-1, 1] as const) {
+    const off = s * step * 0.6;
+    suitVol(buf, CX + s * (m.bodyW + 0.8), bodyCy + 1.4 + off, 1.3, m.limb * 0.3 + 1.0);
+    skinVol(buf, CX + s * (m.bodyW + 1.0), GROUND - 1.0 + off, 1.6, 1.3);
+  }
+  suitVol(buf, CX, bodyCy + 1.2, m.bodyW * 1.05, m.bodyW * 0.95);
+
+  if (facing === 'up') {
+    // 엉덩이가 위로 솟고 발바닥이 보인다
+    ell(buf, CX, bodyCy - 0.5, m.bodyW * 0.8, 1.4, C.suitDark);
+    for (const s of [-1, 1] as const) sockVol(buf, CX + s * 2.6, GROUND - 1.2, 1.8, 1.3);
+  }
+  head(buf, CX, headCy, m, blink, facing);
 }
 
 function drawLying(buf: Buf, m: Metrics, bob: number, sway: number, blink: boolean) {
-  // 등을 바닥에 댄 위에서 본 자세. 신생아가 하루 대부분을 보내는 자세다.
   const cy = GROUND - 13;
-
-  // 몸 전체를 감싸는 넓은 그림자 — 이게 없으면 서 있는 자세와 구분되지 않는다
   ell(buf, CX, cy + 2, m.bodyW + 9, m.bodyH + 5.5, SHADOW, 48);
 
   for (const s of [-1, 1] as const) {
-    volume(buf, CX + s * 3.4, cy + m.bodyH + 2.2, 1.6, m.limb * 0.42 + 1.1, C.suit, C.suitDark);
-    volume(buf, CX + s * 4.6, cy + m.bodyH + m.limb * 0.6 + 2.6, 1.6, 1.4, C.sock, C.sockDark);
+    suitVol(buf, CX + s * 3.4, cy + m.bodyH + 2.2, 1.6, m.limb * 0.42 + 1.1);
+    sockVol(buf, CX + s * 4.6, cy + m.bodyH + m.limb * 0.6 + 2.6, 1.6, 1.4);
   }
-  volume(buf, CX, cy + bob * 0.5, m.bodyW, m.bodyH, C.suit, C.suitDark);
+  suitVol(buf, CX, cy + bob * 0.5, m.bodyW, m.bodyH);
   ell(buf, CX, cy + m.bodyH * 0.45, m.bodyW * 0.82, 1.0, C.suitDark);
 
   for (const s of [-1, 1] as const) {
     const ax = CX + s * (m.bodyW + 2.1);
-    volume(buf, ax, cy - 0.5 + s * sway, m.limb * 0.4 + 1.0, 1.3, C.suit, C.suitDark);
-    volume(buf, ax + s * (m.limb * 0.4 + 1.4), cy - 0.5 + s * sway, 1.4, 1.5, C.skin, C.skinDark);
+    suitVol(buf, ax, cy - 0.5 + s * sway, m.limb * 0.4 + 1.0, 1.3);
+    skinVol(buf, ax + s * (m.limb * 0.4 + 1.4), cy - 0.5 + s * sway, 1.4, 1.5);
   }
 
-  const headCy = cy - m.bodyH - m.neck - m.headR * 0.8 + bob * 0.5;
   neck(buf, CX, cy - m.bodyH - m.neck * 0.3, m);
-  head(buf, CX, headCy, m, blink);
+  head(buf, CX, cy - m.bodyH - m.neck - m.headR * 0.8 + bob * 0.5, m, blink, 'down');
 }
 
-/** 숨쉬기 — 픽셀 아트라 1px 단위로만 움직인다. */
 const BOB = [0, 0, -1, -1, 0, 0, 1, 1];
-/** 걷기 보폭 — 좌우 다리가 엇갈린다. */
 const STEP = [0, 1, 2, 1, 0, -1, -2, -1];
 
-/**
- * (개월수, 자세, 동작) 한 벌의 프레임 전체를 캔버스로 굽는다.
- * 재생 루프는 drawImage 만 하므로 매 프레임 픽셀을 다시 계산하지 않는다.
- */
-export function buildFrames(months: number, pose: PixelPose, motion: Motion): HTMLCanvasElement[] {
+/** (개월수, 자세, 동작, 방향) 한 벌의 프레임을 캔버스로 굽는다. */
+export function buildFrames(months: number, pose: PixelPose, motion: Motion, facing: Facing): HTMLCanvasElement[] {
   const m = metrics(months);
+  const f = facingFor(pose, facing);
 
   return Array.from({ length: FRAME_COUNT }, (_, i) => {
     const buf = makeBuf(SPRITE, SPRITE);
@@ -303,13 +352,14 @@ export function buildFrames(months: number, pose: PixelPose, motion: Motion): HT
     const bob = walking ? BOB[(i + 2) % BOB.length] : BOB[i];
     const sway = Math.sin((i / FRAME_COUNT) * Math.PI * 2) * 0.9;
     const step = walking ? STEP[i] : 0;
-    // 걸을 땐 깜빡이지 않는다. 멈춰 있을 때만 마지막 프레임에서 깜빡.
     const blink = !walking && i === FRAME_COUNT - 1;
 
-    if (pose === 'standing') drawStanding(buf, m, bob, sway, blink, step);
+    if (pose === 'standing') drawStanding(buf, m, bob, sway, blink, step, f);
     else if (pose === 'sitting') drawSitting(buf, m, bob, sway, blink);
-    else if (pose === 'crawling') drawCrawling(buf, m, bob, sway, blink, step);
-    else drawLying(buf, m, bob, sway, blink);
+    else if (pose === 'crawling') {
+      if (f === 'side') crawlSide(buf, m, bob, sway, blink, step);
+      else crawlFacing(buf, m, bob, sway, blink, step, f);
+    } else drawLying(buf, m, bob, sway, blink);
 
     return toCanvas(buf);
   });
