@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ROOM_W_TILES, SCALE, TILE, WALL_TILES } from './tiles';
-import { getSprite, preloadSprites, type Placement } from './placements';
+import { getSprite, overlaps, preloadSprites, type Placement } from './placements';
 import {
   BTN,
-  buildBackground,
+  buildRoom,
+  buildUi,
+  buildEditUi,
+  hitRect,
   hitDecorate,
   buildButton,
   buildButtonShadow,
@@ -34,6 +37,16 @@ interface Props {
   onAction: (id: ActionId) => void;
   onPet: () => void;
   onDecorate: () => void;
+  /** 편집(꾸미기) 모드. 기록 버튼과 정보 카드를 치우고 닫기·저장만 남긴다. */
+  editing: boolean;
+  onCloseEdit: () => void;
+  onSaveEdit: () => void;
+  /** 편집 중 빈 바닥을 탭했을 때 — 아이템 목록을 연다. */
+  onPickSpot: () => void;
+  /** 편집 모드 분류 탭을 눌렀을 때. */
+  onPickCategory: (category: string) => void;
+  /** 방 전체 배경 그림. 없으면 코드로 그린 방을 쓴다. */
+  roomImageUrl: string | null;
   placements: Placement[];
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
   onRemovePlacement: (id: string) => void;
@@ -45,11 +58,14 @@ const SPEED = 11;
 const TEXT = '#4A3B2C';
 const TEXT_DIM = '#8A775F';
 
+/** 바닥에 깔리는 분류. 그리기 순서에서 항상 맨 아래로 간다. */
+const FLAT_CATEGORIES = new Set(['RUG', 'FLOORING']);
+
 /** 떠 있는 높이(px). sin 한 주기 동안 0 → LIFT → 0. */
 const LIFT = 5;
 
 export default function PixelScreen(props: Props) {
-  const { months, pose, childName, onAction, onPet, onDecorate, placements, onMovePlacement, onRemovePlacement } = props;
+  const { months, pose, childName, onAction, onPet, onDecorate, editing, onCloseEdit, onSaveEdit, onPickSpot, onPickCategory, roomImageUrl, placements, onMovePlacement, onRemovePlacement } = props;
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -66,6 +82,17 @@ export default function PixelScreen(props: Props) {
     placementsRef.current = placements;
     preloadSprites(placements.map((p) => p.imageUrl));
   }, [placements]);
+
+  const editingRef = useRef(editing);
+  useEffect(() => {
+    editingRef.current = editing;
+  }, [editing]);
+
+  const roomImageRef = useRef(roomImageUrl);
+  useEffect(() => {
+    roomImageRef.current = roomImageUrl;
+    preloadSprites([roomImageUrl]);
+  }, [roomImageUrl]);
 
   // 렌더 루프 안에서 만들어지는 상태를 이벤트 핸들러가 집어가는 통로
   const layoutRef = useRef<Layout | null>(null);
@@ -116,7 +143,10 @@ export default function PixelScreen(props: Props) {
     };
     const L: Layout = layout(size.w, size.h, safe('--safe-area-top'), safe('--safe-area-bottom'));
 
-    const bg = buildBackground(L);
+    const roomLayer = buildRoom(L);
+    // 두 벌을 미리 구워두고 모드에 따라 골라 쓴다. 매번 다시 구우면 끊긴다.
+    const uiLayer = buildUi(L);
+    const editUiLayer = buildEditUi(L);
     const buttons = new Map(L.buttons.map((b) => [b.id, buildButton(b.id, false)]));
     const pressedSprites = new Map(L.buttons.map((b) => [b.id, buildButton(b.id, true)]));
     const shadows = Array.from({ length: LIFT + 1 }, (_, i) => buildButtonShadow(i));
@@ -187,7 +217,19 @@ export default function PixelScreen(props: Props) {
       }
 
       ctx.clearRect(0, 0, L.w, L.h);
-      ctx.drawImage(bg, 0, 0);
+
+      // 방 배경 — 고른 그림이 있으면 그걸 쓰고, 없으면 코드로 그린 방을 쓴다.
+      const roomUrl = roomImageRef.current;
+      const roomImg = roomUrl ? getSprite(roomUrl) : null;
+      if (roomImg) {
+        // 화면을 꽉 채우되 비율은 지킨다. 늘리면 픽셀이 찌그러진다.
+        const scale = Math.max(L.w / roomImg.width, L.h / roomImg.height);
+        const dw = Math.ceil(roomImg.width * scale);
+        const dh = Math.ceil(roomImg.height * scale);
+        ctx.drawImage(roomImg, Math.round((L.w - dw) / 2), Math.round((L.h - dh) / 2), dw, dh);
+      } else {
+        ctx.drawImage(roomLayer, 0, 0);
+      }
 
       // 가구와 아이를 한 목록에 모아 y 로 정렬한다.
       // 이게 없으면 아이가 항상 가구 앞이나 뒤에만 있어서 평면 그림처럼 보인다.
@@ -201,7 +243,9 @@ export default function PixelScreen(props: Props) {
         const img = p.imageUrl ? getSprite(p.imageUrl) : null;
         const dragging = dragIdRef.current === p.id;
         layers.push({
-          depth: (p.tileY + p.tileH) * TILE,
+          // 러그·바닥재는 밟고 지나가는 것이지 가려지는 게 아니다.
+          // y 로 정렬하면 아이가 러그 뒤로 사라지므로 항상 맨 아래에 깐다.
+          depth: FLAT_CATEGORIES.has(p.category) ? -1 : (p.tileY + p.tileH) * TILE,
           draw: () => {
             if (img) {
               ctx.drawImage(img, px0, py0, pw, ph);
@@ -260,10 +304,14 @@ export default function PixelScreen(props: Props) {
         ctx.globalAlpha = 1;
       }
 
+      const isEditing = editingRef.current;
+      ctx.drawImage(isEditing ? editUiLayer : uiLayer, 0, 0);
+
       if (pressed && now > pressedUntil) pressed = null;
 
-      // 떠 있는 버튼 — 그림자는 바닥에 고정하고 버튼만 올라간다
-      for (const b of L.buttons) {
+      // 떠 있는 버튼 — 그림자는 바닥에 고정하고 버튼만 올라간다.
+      // 편집 중에는 전부 치운다. 가구를 끌어야 하는데 버튼이 방해된다.
+      for (const b of isEditing ? [] : L.buttons) {
         const t = (now / 1000 + b.phase) / b.period;
         const lift = Math.round(((Math.sin(t * Math.PI * 2) + 1) / 2) * LIFT);
         ctx.drawImage(shadows[lift], Math.round(b.x + BTN / 2 - 10), b.y + BTN + 2);
@@ -275,6 +323,21 @@ export default function PixelScreen(props: Props) {
       const live = liveRef.current;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+
+      if (isEditing) {
+        ctx.font = '11px Galmuri11, monospace';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText('저장', L.save.x + L.save.w / 2, L.save.y + L.save.h / 2 + 1);
+        ctx.font = '9px Galmuri9, monospace';
+        ctx.fillStyle = TEXT;
+        for (const t of L.catTabs) {
+          ctx.fillText(t.label, t.x + t.w / 2, t.y + t.h / 2 + 1);
+        }
+        ctx.fillStyle = TEXT_DIM;
+        ctx.fillText('가구를 끌어 옮기고, 오른쪽에서 골라 놓으세요', L.w / 2, L.save.y - 10);
+        raf = requestAnimationFrame(loop);
+        return;
+      }
 
       const cardTextX = L.card.x + 29 + (L.card.w - 33) / 2;
       ctx.font = '11px Galmuri11, monospace';
@@ -353,19 +416,36 @@ export default function PixelScreen(props: Props) {
     if (!L) return;
     const { nx, ny } = toNative(e, L);
 
-    if (hitDecorate(L, nx, ny)) {
-      onDecorate();
-      return;
-    }
-    const hit = hitButton(L, nx, ny);
-    if (hit) {
-      pressRef.current(hit.id, performance.now() + 120);
-      onAction(hit.id);
-      return;
+    if (editing) {
+      if (hitRect(L.close, nx, ny)) {
+        onCloseEdit();
+        return;
+      }
+      if (hitRect(L.save, nx, ny)) {
+        onSaveEdit();
+        return;
+      }
+      const tab = L.catTabs.find((t) => hitRect(t, nx, ny));
+      if (tab) {
+        onPickCategory(tab.id);
+        return;
+      }
+    } else {
+      if (hitDecorate(L, nx, ny)) {
+        onDecorate();
+        return;
+      }
+      const hit = hitButton(L, nx, ny);
+      if (hit) {
+        pressRef.current(hit.id, performance.now() + 120);
+        onAction(hit.id);
+        return;
+      }
     }
 
-    // 놓인 가구를 집으면 드래그가 시작된다
-    const target = pickPlacement(L, nx, ny);
+    // 놓인 가구를 집으면 드래그가 시작된다. 편집 모드에서만 집힌다 —
+    // 홈에서 끌리면 아이를 쓰다듬으려다 방이 바뀐다.
+    const target = editing ? pickPlacement(L, nx, ny) : null;
     if (target) {
       e.currentTarget.setPointerCapture(e.pointerId);
       dragIdRef.current = target.id;
@@ -385,6 +465,11 @@ export default function PixelScreen(props: Props) {
       return;
     }
 
+    // 편집 중 빈 곳을 누르면 아이템 목록을 연다. 평소에는 아이를 쓰다듬는다.
+    if (editing) {
+      onPickSpot();
+      return;
+    }
     heartRef.current();
     onPet();
   };
@@ -402,11 +487,12 @@ export default function PixelScreen(props: Props) {
     const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
     const clampedX = Math.min(Math.max(tx, 0), ROOM_W_TILES - target.tileW);
     const clampedY = Math.min(Math.max(ty, WALL_TILES), Math.floor(L.h / TILE) - target.tileH);
-    if (clampedX !== target.tileX || clampedY !== target.tileY) {
-      movedRef.current = true;
-      clearLongPress();
-      onMovePlacement(id, clampedX, clampedY);
-    }
+    if (clampedX === target.tileX && clampedY === target.tileY) return;
+    movedRef.current = true;
+    clearLongPress();
+    // 겹치는 자리로는 못 간다. 끌다가 멈추는 느낌이라 어디가 막혔는지 바로 안다.
+    if (overlaps(placementsRef.current, target, clampedX, clampedY)) return;
+    onMovePlacement(id, clampedX, clampedY);
   };
 
   const handlePointerUp = () => {

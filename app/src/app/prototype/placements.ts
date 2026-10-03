@@ -10,6 +10,8 @@ export type Placement = {
   name: string;
   spriteKey: string;
   imageUrl: string | null;
+  /** 어드민 분류. 러그·바닥재를 바닥에 깔기 위해 들고 있는다. */
+  category: string;
   tileX: number;
   tileY: number;
   tileW: number;
@@ -45,4 +47,25 @@ export function preloadSprites(urls: (string | null)[], onLoaded?: () => void) {
     img.onerror = () => pending.delete(url);
     img.src = url;
   }
+}
+
+/** 러그·바닥재는 밟고 지나가는 것이라 다른 가구와 겹쳐도 된다. (서버 판정과 같은 집합) */
+export const FLAT_CATEGORIES = new Set(['RUG', 'FLOORING']);
+
+/** 그 자리에 놓으면 다른 가구와 겹치는가. 서버도 같은 검사를 한다 — 여긴 미리 막아주는 용도다. */
+export function overlaps(
+  list: Placement[],
+  moving: Placement,
+  tileX: number,
+  tileY: number,
+): boolean {
+  if (FLAT_CATEGORIES.has(moving.category)) return false;
+  const x1 = tileX + moving.tileW;
+  const y1 = tileY + moving.tileH;
+  return list.some((p) => {
+    if (p.id === moving.id || FLAT_CATEGORIES.has(p.category)) return false;
+    return (
+      tileX < p.tileX + p.tileW && p.tileX < x1 && tileY < p.tileY + p.tileH && p.tileY < y1
+    );
+  });
 }

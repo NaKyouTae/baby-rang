@@ -32,6 +32,11 @@ export interface Layout {
   offsetX: number;
   card: { x: number; y: number; w: number; h: number };
   decorate: { x: number; y: number; w: number; h: number };
+  /** 편집 모드 전용 — 닫기(취소)와 저장. 평소에는 그리지 않는다. */
+  close: { x: number; y: number; w: number; h: number };
+  save: { x: number; y: number; w: number; h: number };
+  /** 편집 모드 오른쪽 세로 분류 탭. 눌러 그 분류의 아이템 목록을 연다. */
+  catTabs: { id: string; label: string; x: number; y: number; w: number; h: number }[];
   chips: { x: number; y: number; w: number; h: number }[];
   buttons: ButtonSlot[];
   footer: { x: number; y: number; w: number; h: number };
@@ -79,6 +84,21 @@ const C = {
   panelShadow: '#5A4026',
   btnShadow: '#6B5134',
 };
+
+/**
+ * 꾸미기 분류. 아이템이 없는 분류도 전부 보여준다 —
+ * 탭이 아예 없으면 "그런 분류가 없나?" 하고 헤매게 된다.
+ */
+export const CATEGORY_TABS = [
+  { id: 'ROOM', label: '방' },
+  { id: 'FURNITURE', label: '가구' },
+  { id: 'DECOR', label: '소품' },
+  { id: 'RUG', label: '러그' },
+  { id: 'TOY', label: '장난감' },
+  { id: 'WINDOW', label: '창문' },
+  { id: 'WALLPAPER', label: '벽지' },
+  { id: 'FLOORING', label: '바닥' },
+] as const;
 
 export const TINT: Record<ActionId, string> = {
   feeding: '#FFDFB4',
@@ -130,6 +150,15 @@ export function layout(w: number, h: number, safeTop: number, safeBottom: number
     offsetX,
     card,
     decorate,
+    close: { ...decorate },
+    catTabs: CATEGORY_TABS.map((c, i) => ({
+      ...c,
+      x: w - 6 - 40,
+      y: safeTop + 46 + i * 28,
+      w: 40,
+      h: 24,
+    })),
+    save: { x: Math.round((w - 112) / 2), y: h - safeBottom - 42, w: 112, h: 30 },
     chips,
     buttons,
     footer: { x: Math.round((w - 88) / 2), y: h - safeBottom - 26, w: 88, h: 18 },
@@ -285,7 +314,7 @@ function shelf(buf: Buf, x: number, y: number) {
 
 /* ------------------------------------------------------------------ 배경 한 장 */
 
-export function buildBackground(L: Layout): HTMLCanvasElement {
+export function buildRoom(L: Layout): HTMLCanvasElement {
   const buf = makeBuf(L.w, L.h);
   const { w, h, offsetX } = L;
   // 타일 좌표 → 픽셀. 가구는 방 격자 기준, 벽·바닥은 캔버스 전체에 깐다.
@@ -339,7 +368,48 @@ export function buildBackground(L: Layout): HTMLCanvasElement {
     for (let y = 0; y < h; y++) px(buf, x, y, C.shade, alpha);
   }
 
-  // 고정 UI 패널 — 글자는 캔버스 위에 따로 얹는다
+  return toCanvas(buf);
+}
+
+/**
+ * 편집 모드 UI — 닫기(X)와 저장만 남긴다.
+ * 꾸미는 동안에는 기록 버튼·정보 카드가 전부 방해물이라 치운다.
+ */
+export function buildEditUi(L: Layout): HTMLCanvasElement {
+  const buf = makeBuf(L.w, L.h);
+
+  panel(buf, L.close.x, L.close.y, L.close.w, L.close.h, {
+    fill: C.panelFill, border: C.panelLine, shadow: C.panelShadow, cut: 3, lift: 2,
+  });
+  closeIcon(buf, L.close.x + L.close.w / 2, L.close.y + L.close.h / 2);
+
+  panel(buf, L.save.x, L.save.y, L.save.w, L.save.h, {
+    fill: C.toyB, border: C.panelLine, shadow: C.panelShadow, cut: 3, lift: 2,
+  });
+  hline(buf, L.save.x + 6, L.save.y + 2, L.save.w - 12, '#FFFFFF', 130);
+
+  // 분류 탭 — 글자는 캔버스 위에 따로 얹는다
+  for (const t of L.catTabs) {
+    panel(buf, t.x, t.y, t.w, t.h, {
+      fill: C.panelFill, border: C.panelLine, shadow: C.panelShadow, cut: 2, lift: 1,
+    });
+  }
+
+  return toCanvas(buf);
+}
+
+/** 닫기 X. 두 줄이면 충분하고, 굵게 하면 이 크기에서 뭉개진다. */
+function closeIcon(buf: Buf, cx: number, cy: number) {
+  for (let i = -4; i <= 4; i++) {
+    px(buf, cx + i, cy + i, C.panelLine);
+    px(buf, cx + i, cy - i, C.panelLine);
+  }
+}
+
+/** 고정 UI 패널만 따로. 방 배경 위에 덮어 그린다. 글자는 캔버스 위에 또 따로 얹는다. */
+export function buildUi(L: Layout): HTMLCanvasElement {
+  const buf = makeBuf(L.w, L.h);
+
   panel(buf, L.card.x, L.card.y, L.card.w, L.card.h, {
     fill: C.panelFill, border: C.panelLine, shadow: C.panelShadow, cut: 3, lift: 2,
   });
@@ -471,6 +541,11 @@ export function buildButtonShadow(lift: number): HTMLCanvasElement {
 export function hitDecorate(L: Layout, nx: number, ny: number) {
   const d = L.decorate;
   return nx >= d.x - 4 && nx <= d.x + d.w + 4 && ny >= d.y - 4 && ny <= d.y + d.h + 6;
+}
+
+/** 편집 모드의 닫기·저장 히트 테스트. */
+export function hitRect(r: { x: number; y: number; w: number; h: number }, nx: number, ny: number) {
+  return nx >= r.x - 4 && nx <= r.x + r.w + 4 && ny >= r.y - 4 && ny <= r.y + r.h + 6;
 }
 
 export function hitButton(L: Layout, nx: number, ny: number): ButtonSlot | null {

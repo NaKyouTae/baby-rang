@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,11 @@ export type RoomItem = {
   isActive: boolean;
 };
 
+/** 분류 필터의 '전체'. 실제 분류값과 겹치지 않는 값이어야 한다. */
+const ALL = "__ALL__";
+
 const CATEGORY: Record<string, string> = {
+  ROOM: "방 타입",
   FURNITURE: "가구",
   DECOR: "소품",
   RUG: "러그",
@@ -121,6 +125,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
   const [form, setForm] = useState<Form>(empty);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [filter, setFilter] = useState<string>(ALL);
 
   // 스프라이트 PNG 업로드. 배너와 같은 저장소(Supabase Storage)를 쓰고
   // 돌려받은 주소를 imageUrl 에 넣는다 — 바이너리는 DB 에 넣지 않는다.
@@ -236,6 +241,30 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
     });
   };
 
+  // 분류별 개수. 아이템이 하나도 없는 분류는 칩으로 띄우지 않는다 —
+  // 눌러도 빈 목록만 나와서 고장처럼 보인다.
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const i of initial) map.set(i.category, (map.get(i.category) ?? 0) + 1);
+    return map;
+  }, [initial]);
+
+  const chips = useMemo(
+    () => [
+      { id: ALL, label: "전체", count: initial.length },
+      ...Object.entries(CATEGORY)
+        .filter(([id]) => counts.has(id))
+        .map(([id, label]) => ({ id, label, count: counts.get(id) ?? 0 })),
+    ],
+    [counts, initial.length],
+  );
+
+  // 고른 분류의 아이템이 전부 지워졌으면 '전체'로 되돌린다
+  const activeFilter = chips.some((c) => c.id === filter) ? filter : ALL;
+  const visible = activeFilter === ALL ? initial : initial.filter((i) => i.category === activeFilter);
+
+  // 방 타입은 배경이라 칸 수·방향·놓는 위치가 전부 의미 없다
+  const isRoom = form.category === "ROOM";
   const dialogOpen = creating || !!editing;
 
   return (
@@ -256,8 +285,34 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
         </Card>
       )}
 
+      {initial.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {chips.map((c) => {
+            const on = c.id === activeFilter;
+            return (
+              <Button
+                key={c.id}
+                type="button"
+                size="sm"
+                variant={on ? "default" : "outline"}
+                onClick={() => setFilter(c.id)}
+              >
+                {c.label}
+                <span className={on ? "opacity-70" : "text-muted-foreground"}>{c.count}</span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
+
+      {initial.length > 0 && visible.length === 0 && (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          이 분류에 아이템이 없습니다.
+        </Card>
+      )}
+
       <div className="space-y-3">
-        {initial.map((item) => (
+        {visible.map((item) => (
           <Card
             key={item.id}
             className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4 transition-shadow hover:shadow-md"
@@ -295,7 +350,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground/80 truncate mt-1 font-mono">
-                {item.spriteKey} · {item.tileW}×{item.tileH}칸
+                {item.spriteKey} ·{" "}
+                {item.category === "ROOM" ? "화면 전체" : `${item.tileW}×${item.tileH}칸`}
                 {item.spriteLiftY > 0 && ` · 위로 ${item.spriteLiftY}칸`}
                 {" · "}
                 {item.directions?.map((d) => DIRECTION_LABEL[d] ?? d).join("/")}
@@ -376,6 +432,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   ))}
                 </select>
               </div>
+              {!isRoom && (
               <div className="space-y-2">
                 <Label htmlFor="surface">놓는 위치</Label>
                 <select
@@ -391,8 +448,17 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   ))}
                 </select>
               </div>
+              )}
             </div>
 
+            {isRoom ? (
+              <p className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground">
+                방 타입은 방 전체 배경입니다. 좌표도 칸 수도 없이 화면을 꽉 채우며, 한 방에
+                하나만 적용됩니다. 가로 비율이 세로보다 길면 위아래가 잘릴 수 있으니
+                세로로 긴 그림(예: 192×432)을 쓰세요.
+              </p>
+            ) : (
+            <>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="tileW">가로 칸</Label>
@@ -429,7 +495,10 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               가로·세로 칸은 바닥에서 차지하는 자리(겹침 검사용)이고, 솟는 칸은 옷장처럼
               그림이 바닥 칸보다 위로 올라가는 높이입니다.
             </p>
+            </>
+            )}
 
+            {!isRoom && (
             <div className="space-y-2">
               <Label>지원 방향</Label>
               <div className="flex gap-1.5 flex-wrap">
@@ -453,6 +522,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 있어야 해서 임의 각도 회전은 되지 않습니다.
               </p>
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

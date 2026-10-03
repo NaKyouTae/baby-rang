@@ -351,6 +351,7 @@ model Child {
   payments        Payment[]
   growthRecords   GrowthRecord[]
   physicalGrowths PhysicalGrowth[]
+  room            Room?
 
   @@index([groupId])
   @@map("children")
@@ -554,6 +555,8 @@ enum RoomItemCategory {
   TOY
   WALLPAPER
   FLOORING
+  // 방 전체 배경. 좌표가 없고 화면을 꽉 채우며, 방에 하나만 적용된다.
+  ROOM
 }
 
 // 어디에 붙는가. 벽에 거는 것과 바닥에 놓는 것은 좌표의 의미가 다르다.
@@ -616,6 +619,52 @@ model RoomItem {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  placements RoomPlacement[]
+  rooms      Room[]
+
   @@index([category, isActive])
   @@map("room_items")
+}
+
+/// 아이 한 명의 방. Child 와 1:1.
+model Room {
+  id      String @id @default(uuid())
+  childId String @unique
+  /// 방 전체 배경(방 타입). 좌표가 없어 배치가 아니라 방의 속성이다.
+  roomItemId String?
+  /// 공동 양육자가 동시에 편집할 때 덮어쓰기를 막는 낙관적 잠금
+  version   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  roomItem   RoomItem?       @relation(fields: [roomItemId], references: [id])
+  placements RoomPlacement[]
+
+  @@index([roomItemId])
+  @@map("rooms")
+}
+
+/// 방에 놓인 가구 한 개.
+/// 같은 아이템을 여러 개 놓을 수 있으므로 (roomId, itemId) 에 unique 를 걸면 안 된다.
+model RoomPlacement {
+  id     String @id @default(uuid())
+  roomId String
+  itemId String
+  /// 타일 좌표(왼쪽 위 기준). 픽셀로 저장하면 타일 크기를 바꿀 때 전부 깨진다.
+  tileX     Int
+  tileY     Int
+  direction RoomDirection @default(SOUTH)
+  flipX     Boolean       @default(false)
+  /// 같은 칸에서 그리기 순서가 꼬일 때만 쓰는 미세 조정값.
+  /// 기본 순서는 tileY 로 계산한다 — 통째로 저장하면 좌표와 어긋난다.
+  zOffset   Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  room Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  item RoomItem @relation(fields: [itemId], references: [id])
+
+  @@index([roomId])
+  @@index([itemId])
+  @@map("room_placements")
 }
