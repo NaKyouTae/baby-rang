@@ -5,6 +5,8 @@ import LoginPromptProvider from "@/components/LoginPromptProvider";
 import ViewportHeightSetter from "@/components/ViewportHeightSetter";
 import NavigationBaseline from "@/components/NavigationBaseline";
 import WidgetBridge from "@/components/WidgetBridge";
+import AdditionalInfoGate from "@/components/AdditionalInfoGate";
+import LoginErrorNotice from "@/components/LoginErrorNotice";
 import SplashProvider from "@/components/SplashProvider";
 import BottomNavServer from "@/components/BottomNavServer";
 import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
@@ -267,7 +269,11 @@ export default function RootLayout({
         <ViewportHeightSetter />
         <NavigationBaseline />
         <WidgetBridge />
+        {/* 이름·전화번호가 비어 있는 기존 회원을 추가 정보 화면으로 보낸다. */}
+        <AdditionalInfoGate />
         <LoginPromptProvider>
+          {/* 소셜 로그인 콜백 실패(?loginError=)를 로그인 안내로 되살린다. */}
+          <LoginErrorNotice />
           {/* 앱 셸: 실제 보이는 화면(screen.height)에 맞춰, 뷰포트 중앙에 배치한다.
               iPad 등에서 WebView 뷰포트가 화면보다 커서 화면이 그 가운데만 보여줄 때,
               위/아래 fixed 요소(헤더·하단 네비)가 화면 밖으로 잘리는 문제를 해결한다.

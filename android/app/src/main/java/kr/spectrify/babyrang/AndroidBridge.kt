@@ -31,6 +31,18 @@ class AndroidBridge(private val activity: MainActivity) {
         activity.runOnUiThread { activity.kakaoLogin.login(requestId) }
     }
 
+    /**
+     * 네이버 로그인. 결과는 window.__naverLoginBridge.resolve 로 돌아간다.
+     *
+     * 카카오와 달리 accessToken·refreshToken 을 함께 돌려준다 —
+     * 서버가 refresh 로 토큰 출처를 확인하기 때문이다(NaverLoginManager 참고).
+     */
+    @JavascriptInterface
+    fun naverLogin(json: String) {
+        val requestId = JSONObject(json).optString("requestId")
+        activity.runOnUiThread { activity.naverLogin.login(requestId) }
+    }
+
     /** 상품 정보 조회. 결과는 window.__playBridge.resolve 로 돌아간다. */
     @JavascriptInterface
     fun billingProducts(json: String) {

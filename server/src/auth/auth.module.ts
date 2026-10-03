@@ -5,6 +5,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { KakaoNativeService } from './kakao-native.service';
+import { KakaoTermsService } from './kakao-terms.service';
+import { NaverService } from './naver.service';
+import { OAuthCallbackErrorFilter } from './oauth-callback-error.filter';
 import { KakaoStrategy } from './strategies/kakao.strategy';
 import { AppleStrategy } from './strategies/apple.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -26,6 +29,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   providers: [
     AuthService,
     KakaoNativeService,
+    KakaoTermsService,
+    NaverService,
+    OAuthCallbackErrorFilter,
     KakaoStrategy,
     AppleStrategy,
     JwtStrategy,

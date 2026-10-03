@@ -12,7 +12,7 @@ export default function SettingsPrivacyPage() {
       <PageHeader title="개인정보처리방침" variant="back" />
 
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
-        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 4월 8일</p>
+        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 10월 3일</p>
 
         <section>
           <p>
@@ -27,10 +27,15 @@ export default function SettingsPrivacyPage() {
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>1. 수집하는 개인정보 항목</h2>
           <ol className="list-decimal pl-5 space-y-2">
             <li>
-              <p>회원가입 시</p>
+              <p>회원가입 시 (소셜 로그인 제공사로부터 제공받음)</p>
               <ul className="list-disc pl-5 -ml-5 mt-1 space-y-1">
-                <li>필수: 이메일 주소, 소셜 로그인 식별자(카카오/구글 등 제공값), 닉네임</li>
-                <li>선택: 프로필 이미지</li>
+                <li>필수: 이름, 휴대전화번호, 소셜 로그인 식별자(카카오·네이버 회원번호)</li>
+                <li>선택: 성별, 연령대, 이메일 주소, 프로필 이미지</li>
+                <li>
+                  ※ 회사는 자체 회원가입 절차를 두지 않으며, 비밀번호를 수집하지 않습니다.
+                  위 항목은 회원이 카카오·네이버의 동의 화면에서 동의한 범위에서만 제공받습니다.
+                  선택 항목에 동의하지 않아도 서비스를 이용할 수 있습니다.
+                </li>
               </ul>
             </li>
             <li>
@@ -60,18 +65,23 @@ export default function SettingsPrivacyPage() {
         <section>
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>2. 개인정보의 수집·이용 목적</h2>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>회원 식별, 회원가입 의사 확인, 본인 인증 및 계정 관리</li>
-            <li>아기 성장·발달 기록 및 맞춤형 콘텐츠 제공</li>
-            <li>유료 서비스 결제, 환불, 청구 및 분쟁 처리</li>
-            <li>공지사항 전달, 고객 문의 응대</li>
-            <li>서비스 품질 개선, 부정 이용 방지, 통계 분석</li>
+            <li>이름 · 소셜 로그인 식별자: 회원 식별, 가입 의사 확인, 계정 관리, 중복 가입 방지</li>
+            <li>휴대전화번호: 결제·환불 등 중요 안내 연락, 본인 확인, 고객 문의 응대</li>
+            <li>성별 · 연령대: 연령대에 맞는 육아 콘텐츠 추천 및 통계 분석(선택 항목)</li>
+            <li>이메일 주소 · 프로필 이미지: 공지 전달 및 프로필 표시(선택 항목)</li>
+            <li>아기 정보 및 기록: 아기 성장·발달 기록 및 맞춤형 콘텐츠 제공</li>
+            <li>결제 정보: 유료 서비스 결제, 환불, 청구 및 분쟁 처리</li>
+            <li>자동 수집 항목: 서비스 품질 개선, 부정 이용 방지, 통계 분석</li>
           </ol>
         </section>
 
         <section>
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>3. 개인정보의 보유 및 이용 기간</h2>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>회원 탈퇴 시 회사가 수집한 개인정보는 지체 없이 파기하는 것을 원칙으로 합니다.</li>
+            <li>
+              회원 탈퇴 시 회사가 수집한 개인정보는 지체 없이 파기하는 것을 원칙으로 합니다.
+              이때 카카오·네이버와의 연동(연결)도 함께 해제되어 더 이상 회원 정보를 제공받지 않습니다.
+            </li>
             <li>다만, 관련 법령에 따라 일정 기간 보관해야 하는 정보는 아래와 같이 보관합니다.
               <ul className="list-disc pl-5 -ml-5 mt-1 space-y-1">
                 <li>계약 또는 청약철회에 관한 기록: 5년 (전자상거래법)</li>
@@ -89,6 +99,46 @@ export default function SettingsPrivacyPage() {
             회사는 회원의 개인정보를 본 방침에서 명시한 목적 범위 내에서만 처리하며, 회원의 사전 동의 없이
             제3자에게 제공하지 않습니다. 다만, 관련 법령에 따라 수사기관의 요청이 있는 경우 등 법령에서 정한
             예외적인 경우는 그러하지 아니합니다.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>4-1. 소셜 로그인 제공사로부터의 개인정보 수집</h2>
+          <p>
+            회사는 아래 소셜 로그인 제공사로부터 회원이 동의한 항목을 제공받아 회원 식별 및 서비스 제공에
+            이용합니다. 제공 범위는 회원이 각 제공사의 동의 화면에서 선택한 항목에 따릅니다.
+          </p>
+          <div className="mt-2 overflow-hidden rounded-xl border border-gray-200">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 text-gray-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">제공사</th>
+                  <th className="px-3 py-2 text-left font-medium">제공받는 항목</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                <tr>
+                  <td className="px-3 py-2 align-top">주식회사 카카오</td>
+                  <td className="px-3 py-2 align-top">
+                    필수: 이름, 휴대전화번호, 회원번호 / 선택: 성별, 연령대, 이메일 주소, 프로필 이미지
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 align-top">네이버 주식회사</td>
+                  <td className="px-3 py-2 align-top">
+                    필수: 이름, 휴대전화번호, 회원 식별자 / 선택: 성별, 연령대
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 align-top">Apple Inc.</td>
+                  <td className="px-3 py-2 align-top">필수: 회원 식별자 / 선택: 이름, 이메일 주소</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2">
+            회원은 각 제공사의 설정에서 연결을 해제하여 제공을 중단할 수 있으며, 이 경우 해당 계정으로는
+            서비스에 로그인할 수 없습니다.
           </p>
         </section>
 
@@ -200,7 +250,7 @@ export default function SettingsPrivacyPage() {
         </section>
 
         <section>
-          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 4월 8일부터 시행됩니다.</p>
+          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 10월 3일부터 시행됩니다. (직전 시행일 2026년 4월 8일)</p>
         </section>
       </article>
 

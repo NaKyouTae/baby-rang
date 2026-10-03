@@ -14,6 +14,7 @@
 		CA00B1A00000000000000010 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000020 /* KakaoSDKCommon */; };
 		CA00B1A00000000000000011 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000021 /* KakaoSDKAuth */; };
 		CA00B1A00000000000000012 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000022 /* KakaoSDKUser */; };
+		NV00B1A00000000000000010 /* NaverThirdPartyLogin in Frameworks */ = {isa = PBXBuildFile; productRef = NV00B1A00000000000000020 /* NaverThirdPartyLogin */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,6 +95,7 @@
 				CA00B1A00000000000000010 /* KakaoSDKCommon in Frameworks */,
 				CA00B1A00000000000000011 /* KakaoSDKAuth in Frameworks */,
 				CA00B1A00000000000000012 /* KakaoSDKUser in Frameworks */,
+				NV00B1A00000000000000010 /* NaverThirdPartyLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,6 +167,7 @@
 				CA00B1A00000000000000020 /* KakaoSDKCommon */,
 				CA00B1A00000000000000021 /* KakaoSDKAuth */,
 				CA00B1A00000000000000022 /* KakaoSDKUser */,
+				NV00B1A00000000000000020 /* NaverThirdPartyLogin */,
 			);
 			productName = BabyRang;
 			productReference = 6E47E1FB2F88E6A600AEEA6B /* BabyRang.app */;
@@ -223,6 +226,7 @@
 			packageReferences = (
 				AD00B1A00000000000000002 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 				CA00B1A00000000000000001 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
+				NV00B1A00000000000000001 /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6E47E1FC2F88E6A600AEEA6B /* Products */;
@@ -413,6 +417,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRang/Info.plist;
 				KAKAO_NATIVE_APP_KEY = 6e650917dc42ab9d0868a18d065823c5;
+				NAVER_CONSUMER_KEY = "";
+				NAVER_CONSUMER_SECRET = "";
 				"INFOPLIST_FILE[sdk=*]" = BabyRang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
@@ -453,6 +459,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRang/Info.plist;
 				KAKAO_NATIVE_APP_KEY = 3cab8374c32c276f9ffeb4c824415544;
+				NAVER_CONSUMER_KEY = "";
+				NAVER_CONSUMER_SECRET = "";
 				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -591,6 +599,14 @@
 				minimumVersion = 2.29.0;
 			};
 		};
+		NV00B1A00000000000000001 /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/naver/naveridlogin-sdk-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.1.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -613,6 +629,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CA00B1A00000000000000001 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
 			productName = KakaoSDKUser;
+		};
+		NV00B1A00000000000000020 /* NaverThirdPartyLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = NV00B1A00000000000000001 /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios" */;
+			productName = NaverThirdPartyLogin;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

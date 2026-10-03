@@ -42,6 +42,9 @@ android {
             // 카카오 개발 앱 키. iOS 의 KAKAO_NATIVE_APP_KEY(Debug) 와 같은 값이어야 한다.
             manifestPlaceholders = [kakaoNativeAppKey: '6e650917dc42ab9d0868a18d065823c5']
             buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '"6e650917dc42ab9d0868a18d065823c5"'
+            // 네이버 개발자센터에서 발급받아 채운다. 비어 있으면 네이버 로그인만 동작하지 않는다.
+            buildConfigField "String", "NAVER_CLIENT_ID", '""'
+            buildConfigField "String", "NAVER_CLIENT_SECRET", '""'
         }
         release {
             // R8 로 코드를 줄이고 매핑 파일을 만든다(크래시 역난독화에 필요).
@@ -57,6 +60,9 @@ android {
             // 카카오 운영 앱 키. iOS 의 KAKAO_NATIVE_APP_KEY(Release) 와 같은 값이어야 한다.
             manifestPlaceholders = [kakaoNativeAppKey: '3cab8374c32c276f9ffeb4c824415544']
             buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '"3cab8374c32c276f9ffeb4c824415544"'
+            // 네이버 개발자센터에서 발급받아 채운다. 비어 있으면 네이버 로그인만 동작하지 않는다.
+            buildConfigField "String", "NAVER_CLIENT_ID", '""'
+            buildConfigField "String", "NAVER_CLIENT_SECRET", '""'
         }
     }
 
@@ -88,6 +94,8 @@ dependencies {
     implementation 'com.android.billingclient:billing:9.1.0'
     // 카카오톡 앱으로 로그인. v2-user 가 auth/common 을 함께 끌어온다.
     implementation 'com.kakao.sdk:v2-user:2.25.0'
+    // 네이버앱으로 로그인. 네이버앱이 없으면 SDK 가 인앱 웹뷰로 인증한다.
+    implementation 'com.navercorp.nid:oauth:5.10.0'
     // Android 12 이전에도 같은 스플래시가 뜨도록 한다.
     implementation 'androidx.core:core-splashscreen:1.0.1'
 }

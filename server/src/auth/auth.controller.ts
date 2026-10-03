@@ -11,10 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { UseFilters } from '@nestjs/common';
+import { OAuthCallbackErrorFilter } from './oauth-callback-error.filter';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '@prisma/client';
 import { AuthService, OAuthResult } from './auth.service';
 import { KakaoNativeService } from './kakao-native.service';
+import { KakaoTermsService } from './kakao-terms.service';
+import { NaverService } from './naver.service';
 import type { Response } from 'express';
 
 @Controller('auth')
@@ -23,7 +27,22 @@ export class AuthController {
     private authService: AuthService,
     private configService: ConfigService,
     private kakaoNativeService: KakaoNativeService,
+    private kakaoTermsService: KakaoTermsService,
+    private naverService: NaverService,
   ) {}
+
+  private clientUrl(): string {
+    return this.configService.get('CLIENT_URL') || 'http://localhost:3000';
+  }
+
+  // 소셜 로그인 결과를 프런트로 넘기는 공통 리다이렉트.
+  // 신규든 기존이든 이 시점에 user 가 이미 만들어져 있어 분기가 없다.
+  private redirectWithResult(res: Response, result: OAuthResult) {
+    const { accessToken } = this.authService.generateToken(result.userId);
+    return res.redirect(
+      `${this.clientUrl()}/api/auth/session?token=${accessToken}`,
+    );
+  }
 
   @Get('kakao')
   @UseGuards(AuthGuard('kakao'))
@@ -33,21 +52,83 @@ export class AuthController {
 
   @Get('kakao/callback')
   @UseGuards(AuthGuard('kakao'))
+  @UseFilters(OAuthCallbackErrorFilter)
   kakaoCallback(@Req() req, @Res() res: Response) {
-    const result = req.user as OAuthResult;
-    const clientUrl =
-      this.configService.get('CLIENT_URL') || 'http://localhost:3000';
+    return this.redirectWithResult(res, req.user as OAuthResult);
+  }
 
-    if (result.kind === 'existing') {
-      const { accessToken } = this.authService.generateToken(result.userId);
-      return res.redirect(`${clientUrl}/api/auth/session?token=${accessToken}`);
+  // 네이버 웹 로그인. 카카오(passport 전략)와 달리 직접 리다이렉트한다.
+  // 동의항목은 네이버 개발자센터 설정에서 정해지므로 여기서 scope 를 싣지 않는다.
+  // reconsent=1 이면 이미 동의한 사용자에게도 동의 화면을 다시 띄운다.
+  // 추가 정보 화면(/additional-info)이 쓰는 경로다 — 그 사용자는 이미 연동돼 있어서
+  // 평소 로그인으로는 동의 화면을 볼 수 없고, 그러면 전화번호를 영영 받지 못한다.
+  @Get('naver')
+  naverLogin(
+    @Req() req: { query: { reconsent?: string } },
+    @Res() res: Response,
+  ) {
+    const state = this.authService.generateOAuthState();
+    const reprompt = req.query?.reconsent === '1';
+    return res.redirect(this.naverService.buildAuthorizeUrl(state, reprompt));
+  }
+
+  @Get('naver/callback')
+  @UseFilters(OAuthCallbackErrorFilter)
+  async naverCallback(
+    @Req() req: { query: { code?: string; state?: string; error?: string } },
+    @Res() res: Response,
+  ) {
+    const { code, state, error } = req.query;
+    // 사용자가 동의 화면에서 취소하면 code 없이 error 만 돌아온다. 홈으로 되돌린다.
+    if (error || !code) {
+      return res.redirect(`${this.clientUrl()}/`);
+    }
+    this.authService.verifyOAuthState(state);
+
+    const tokens = await this.naverService.exchangeCode(code, state!);
+    const profile = await this.naverService.fetchProfile(tokens.accessToken);
+    const result = await this.authService.resolveOAuthLogin({
+      provider: AuthProvider.NAVER,
+      providerId: profile.providerId,
+      name: profile.name,
+      phone: profile.phone,
+      gender: profile.gender,
+      ageRange: profile.ageRange,
+      email: profile.email,
+      profileImage: profile.profileImage,
+      refreshToken: tokens.refreshToken,
+    });
+    return this.redirectWithResult(res, result);
+  }
+
+  // 네이티브 앱(네이버 앱 로그인) 전용. 카카오 네이티브와 같은 구조다.
+  //
+  // refreshToken 을 함께 받는 이유는 두 가지다 —
+  //   1) 갱신에 성공한다는 것이 "우리 앱이 발급한 토큰"이라는 증거가 된다(naver.service 참고)
+  //   2) 회원탈퇴 시 연동해제에 필요하다
+  @Post('naver/native')
+  async naverNativeLogin(@Body() body: { refreshToken?: string }) {
+    if (!body?.refreshToken) {
+      throw new BadRequestException('refreshToken 이 필요합니다.');
     }
 
-    // 신규: user를 만들지 않고 signup_token만 발급. 회원가입 버튼 클릭 시점에 user 생성.
-    const signupToken = this.authService.generateSignupToken(result.profile);
-    return res.redirect(
-      `${clientUrl}/api/auth/session?signupToken=${signupToken}`,
+    const tokens = await this.naverService.verifyNativeTokens(
+      body.refreshToken,
     );
+    const profile = await this.naverService.fetchProfile(tokens.accessToken);
+    const result = await this.authService.resolveOAuthLogin({
+      provider: AuthProvider.NAVER,
+      providerId: profile.providerId,
+      name: profile.name,
+      phone: profile.phone,
+      gender: profile.gender,
+      ageRange: profile.ageRange,
+      email: profile.email,
+      profileImage: profile.profileImage,
+      refreshToken: tokens.refreshToken,
+    });
+
+    return this.authService.generateToken(result.userId);
   }
 
   // 네이티브 앱(카카오톡 앱 로그인) 전용.
@@ -64,20 +145,23 @@ export class AuthController {
     const profile = await this.kakaoNativeService.resolveProfile(
       body.accessToken,
     );
+    // 간편가입에서 받은 약관 동의. 카카오싱크 미사용이면 빈 객체라 앱이 직접 받는다.
+    const consents = await this.kakaoTermsService.fetchConsents(
+      body.accessToken,
+    );
     const result = await this.authService.resolveOAuthLogin({
       provider: AuthProvider.KAKAO,
       providerId: profile.providerId,
-      nickname: profile.nickname,
+      name: profile.name,
+      phone: profile.phone,
+      gender: profile.gender,
+      ageRange: profile.ageRange,
       email: profile.email,
       profileImage: profile.profileImage,
+      consents,
     });
 
-    if (result.kind === 'existing') {
-      return this.authService.generateToken(result.userId);
-    }
-    return {
-      signupToken: this.authService.generateSignupToken(result.profile),
-    };
+    return this.authService.generateToken(result.userId);
   }
 
   @Get('apple')
@@ -89,58 +173,9 @@ export class AuthController {
   // Apple 은 name/email scope 요청 시 form_post 로 콜백하므로 POST.
   @Post('apple/callback')
   @UseGuards(AuthGuard('apple'))
+  @UseFilters(OAuthCallbackErrorFilter)
   appleCallback(@Req() req, @Res() res: Response) {
-    const result = req.user as OAuthResult;
-    const clientUrl =
-      this.configService.get('CLIENT_URL') || 'http://localhost:3000';
-
-    if (result.kind === 'existing') {
-      const { accessToken } = this.authService.generateToken(result.userId);
-      return res.redirect(`${clientUrl}/api/auth/session?token=${accessToken}`);
-    }
-
-    const signupToken = this.authService.generateSignupToken(result.profile);
-    return res.redirect(
-      `${clientUrl}/api/auth/session?signupToken=${signupToken}`,
-    );
-  }
-
-  // signup_token으로 소셜 프로필 미리보기 (온보딩 화면에 이메일 등 표시용).
-  @Post('signup/context')
-  signupContext(@Body() body: { signupToken: string }) {
-    const payload = this.authService.verifySignupToken(body.signupToken);
-    return {
-      provider: payload.provider,
-      nickname: payload.nickname ?? null,
-      email: payload.email ?? null,
-      profileImage: payload.profileImage ?? null,
-    };
-  }
-
-  @Post('signup')
-  signup(
-    @Body()
-    body: {
-      signupToken: string;
-      nickname: string;
-      parentRole: string;
-      birthYear?: number | null;
-      consents?: {
-        terms?: boolean;
-        privacy?: boolean;
-        marketing?: boolean;
-        thirdParty?: boolean;
-      };
-      children?: Array<{
-        name: string;
-        gender: string;
-        birthDate: string;
-        dueDate?: string;
-      }>;
-    },
-  ) {
-    const { signupToken, ...dto } = body;
-    return this.authService.signup(signupToken, dto);
+    return this.redirectWithResult(res, req.user as OAuthResult);
   }
 
   // 카드사 심사관용 테스트 로그인. 하드코딩된 자격증명 검증 후 access_token 반환.
@@ -152,7 +187,7 @@ export class AuthController {
   @Get('profile')
   @UseGuards(AuthGuard('jwt'))
   getProfile(@Req() req) {
-    return req.user;
+    return this.authService.getProfile(req.user.id);
   }
 
   // 슬라이딩 세션: 유효한 토큰 소지자에게 새 토큰을 재발급 → 활동 중이면 만료 없이 갱신.
@@ -172,15 +207,7 @@ export class AuthController {
 
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
-  updateProfile(
-    @Req() req,
-    @Body()
-    body: {
-      nickname?: string;
-      parentRole?: string;
-      birthYear?: number | null;
-    },
-  ) {
+  updateProfile(@Req() req, @Body() body: { parentRole?: string }) {
     return this.authService.updateProfile(req.user.id, body);
   }
 

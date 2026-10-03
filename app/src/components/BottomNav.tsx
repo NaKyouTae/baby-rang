@@ -222,7 +222,9 @@ export default function BottomNav({
     ) ||
     pathname === "/settings/import-data" ||
     pathname === "/menu" ||
-    pathname === "/onboarding";
+    // 추가 정보 화면은 여기서 빠져나가면 안 되는 흐름이라 네비를 숨긴다.
+    pathname === "/additional-info" ||
+    pathname === "/prototype";
   if (hideNav) return null;
 
   return (

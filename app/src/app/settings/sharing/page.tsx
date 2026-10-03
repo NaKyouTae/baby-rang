@@ -36,7 +36,7 @@ const ROLE_ICONS: Record<string, string> = {
 
 interface GroupMemberUser {
   id: string;
-  nickname: string | null;
+  name: string | null;
   email: string | null;
   profileImage: string | null;
   parentRole: string | null;
@@ -91,7 +91,7 @@ function MemberRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <p className="text-[16px] font-medium text-black truncate">
-            {member.user.nickname ?? '사용자'}
+            {member.user.name ?? '사용자'}
           </p>
           {roleLabel && (
             <span
@@ -161,7 +161,7 @@ function GroupCard({
         <p className="text-sm font-medium text-black">{childrenLabel}</p>
         {!group.isOwner && owner && (
           <span className="text-xs text-gray-500">
-            소유자: {owner.user.nickname ?? '사용자'}
+            소유자: {owner.user.name ?? '사용자'}
           </span>
         )}
       </div>
@@ -397,7 +397,7 @@ export default function SharingPage() {
                     setRemoveTarget({
                       groupId,
                       userId: member.userId,
-                      name: member.user.nickname ?? '사용자',
+                      name: member.user.name ?? '사용자',
                     })
                   }
                   onLeave={(g) => setLeaveTarget(g)}

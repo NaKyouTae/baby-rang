@@ -15,9 +15,10 @@ const BUSINESS_INFO_PATHS = ["/settings"];
 // 아래 화면들은 스크롤이 없는 전체화면(또는 overflow-hidden) 레이아웃이라
 // 하단 여백조차 흐름을 깨므로 아무것도 렌더하지 않는다.
 const EXCLUDED_PREFIXES = [
-  "/onboarding", // 가입 플로우 (전체화면 스텝)
+  "/additional-info", // 추가 정보 확인 (전체화면 흐름)
   "/auth", // OAuth 콜백 (리다이렉트 전용 화면)
   "/dev", // 개발용 트리거 페이지
+  "/prototype", // 캐릭터 프로토타입 (전체화면)
   "/growth-pattern", // h-[100dvh] + overflow-hidden
   "/nursing-room", // 전체화면 지도
   // 결제 플로우(checkout/success/fail). checkout 은 자체 하단 패딩(120px)이 있고

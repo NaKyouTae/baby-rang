@@ -24,6 +24,9 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.kakao.sdk.common.KakaoSdk
+import com.navercorp.nid.NaverIdLoginSDK
+import com.kakao.sdk.common.util.Utility
+import com.kakao.sdk.user.UserApiClient
 import kr.spectrify.babyrang.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -32,17 +35,6 @@ class MainActivity : AppCompatActivity() {
 
     /** 웹이 실행되는 주소. iOS 앱과 동일하게 프로덕션을 본다. */
     private val startUrl = "https://baby-rang.spectrify.kr/home"
-
-    /** 서비스 도메인. 이 밖의 http(s) 링크는 외부 브라우저로 넘긴다. */
-    private val serviceHost = "spectrify.kr"
-
-    /**
-     * 앱이 로드하는 주소의 호스트. 내부로 취급한다.
-     *
-     * 개발 중에는 로컬 dev 서버(10.0.2.2)를 보는데, 이 호스트를 내부로 인정하지 않으면
-     * 앱 자신의 페이지 이동이 전부 외부 브라우저로 튕겨 나간다.
-     */
-    private val startHost: String? by lazy { Uri.parse(startUrl).host }
 
     private var geoOrigin: String? = null
     private var geoCallback: GeolocationPermissions.Callback? = null
@@ -53,6 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     /** 카카오 로그인. AndroidBridge 가 웹 요청을 여기로 넘긴다. */
     lateinit var kakaoLogin: KakaoLoginManager
+    lateinit var naverLogin: NaverLoginManager
         private set
 
     private var adView: AdView? = null
@@ -136,12 +129,14 @@ class MainActivity : AppCompatActivity() {
                 if (scheme != "http" && scheme != "https") {
                     return openExternal(url)
                 }
-                // 서비스 외 도메인은 외부 브라우저로 넘긴다.
-                val host = url.host ?: return false
-                val internal = host.endsWith(serviceHost) || host == startHost
-                if (!internal) {
-                    return openExternal(url)
-                }
+
+                // http(s) 는 전부 WebView 안에서 처리한다. iOS(WebView.swift)와 같은 규칙이다.
+                //
+                // ⚠️ 예전에는 spectrify.kr 이 아닌 호스트를 외부 브라우저로 넘겼는데,
+                //    그러면 카카오 로그인(kauth.kakao.com)·카드사 인증처럼 외부 도메인을
+                //    거치는 흐름이 통째로 브라우저로 빠져나간다. 브라우저에서 로그인이
+                //    끝나면 세션 쿠키는 브라우저에 심기고 앱은 로그아웃 상태로 남는다.
+                //    사용자에게는 "웹으로 넘어가서 다시 앱으로 돌아오지 않는다"로 보인다.
                 return false
             }
         }
@@ -205,11 +200,43 @@ class MainActivity : AppCompatActivity() {
         //    그래서 양쪽 모두 build.gradle 의 한 값에서 온다.
         KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)
 
+        // 카카오 개발자 콘솔(플랫폼 > Android)에 등록해야 하는 값. 하나라도 어긋나면
+        // 카카오톡 로그인이 거부되고 계정 웹 로그인으로 빠진다. 릴리스 빌드는
+        // 플레이 앱 서명 키로 다시 서명되므로 기기에서 직접 찍어봐야 알 수 있다.
+        android.util.Log.i(
+            TAG_AUTH,
+            "패키지=$packageName 키해시=${Utility.getKeyHash(this)} " +
+                "카카오톡로그인가능=${UserApiClient.instance.isKakaoTalkLoginAvailable(this)}",
+        )
+
         kakaoLogin = KakaoLoginManager(this) { requestId, payload ->
             val js = "window.__kakaoLoginBridge && window.__kakaoLoginBridge.resolve(" +
                 org.json.JSONObject.quote(requestId) + "," + payload.toString() + ")"
             // 카카오 콜백은 메인 스레드로 오지만, evaluateJavascript 를 UI 스레드 밖에서
             // 부르면 조용히 무시되므로 결제와 같은 방식으로 한 번 더 보장한다.
+            runOnUiThread { binding.webView.evaluateJavascript(js, null) }
+        }
+
+        // 네이버 SDK 초기화. 키는 build.gradle 의 buildConfigField 에서 온다.
+        // 비어 있으면(아직 발급 전) 초기화를 건너뛴다 — 네이버 로그인만 실패하고
+        // 나머지 기능은 그대로 쓸 수 있어야 한다.
+        if (BuildConfig.NAVER_CLIENT_ID.isNotEmpty() &&
+            BuildConfig.NAVER_CLIENT_SECRET.isNotEmpty()
+        ) {
+            NaverIdLoginSDK.initialize(
+                this,
+                BuildConfig.NAVER_CLIENT_ID,
+                BuildConfig.NAVER_CLIENT_SECRET,
+                "아기랑",
+            )
+        } else {
+            android.util.Log.w(TAG_AUTH, "NAVER_CLIENT_ID/SECRET 이 비어 있어 초기화를 건너뛴다.")
+        }
+
+        naverLogin = NaverLoginManager(this) { requestId, payload ->
+            val js = "window.__naverLoginBridge && window.__naverLoginBridge.resolve(" +
+                org.json.JSONObject.quote(requestId) + "," + payload.toString() + ")"
+            // 카카오와 같은 이유로 UI 스레드에서 호출한다.
             runOnUiThread { binding.webView.evaluateJavascript(js, null) }
         }
 
@@ -246,8 +273,39 @@ class MainActivity : AppCompatActivity() {
         geoCallback = null
     }
 
-    /** 외부 앱/브라우저로 넘긴다. 처리할 앱이 없으면 WebView 안에 그대로 둔다. */
+    /**
+     * 외부 앱으로 넘긴다. 처리할 앱이 없으면 WebView 안에 그대로 둔다.
+     *
+     * intent:// 는 ACTION_VIEW 로 그냥 던지면 열리지 않는다. 안드로이드 전용 형식이라
+     * parseUri 로 풀어야 실제 대상 앱(패키지·액션)이 나온다. 카카오 웹 로그인 페이지의
+     * "카카오톡으로 로그인" 버튼이 이 형식이라, 풀지 않으면 그 버튼이 먹지 않는다.
+     * 앱이 없으면 페이지가 심어둔 browser_fallback_url 로 이어간다.
+     */
     private fun openExternal(uri: Uri): Boolean {
+        if (uri.scheme == "intent") {
+            val intent = try {
+                Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+            } catch (e: java.net.URISyntaxException) {
+                return false
+            }
+            return try {
+                // 브라우저에서 넘어온 인텐트라 선택기 정보를 지워야 안전하다.
+                intent.addCategory(Intent.CATEGORY_BROWSABLE)
+                intent.component = null
+                intent.selector = null
+                startActivity(intent)
+                true
+            } catch (e: android.content.ActivityNotFoundException) {
+                val fallback = intent.getStringExtra("browser_fallback_url")
+                if (fallback != null) {
+                    binding.webView.loadUrl(fallback)
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+
         return try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
             true
@@ -356,5 +414,8 @@ class MainActivity : AppCompatActivity() {
 
         const val REQ_LOCATION = 1001
         const val TAG = "BabyRangAd"
+
+        /** 카카오 로그인 진단 로그 태그. `adb logcat -s BabyRangAuth` 로 본다. */
+        const val TAG_AUTH = "BabyRangAuth"
     }
 }

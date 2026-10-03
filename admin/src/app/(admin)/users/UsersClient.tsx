@@ -17,7 +17,11 @@ import Modal from "@/components/Modal";
 
 export type UserRow = {
   id: string;
-  nickname: string | null;
+  // 소셜(카카오/네이버) 동의항목으로 받은 값. 서비스 안에서 입력받는 항목이 아니다.
+  name: string | null;
+  phone: string | null;
+  gender: string | null;
+  ageRange: string | null;
   email: string | null;
   profileImage: string | null;
   parentRole: string | null;
@@ -51,7 +55,6 @@ type PaymentRow = {
   createdAt: string;
 };
 type UserDetail = UserRow & {
-  birthYear: number | null;
   onboardedAt: string | null;
   updatedAt: string;
   termsAgreedAt: string | null;
@@ -102,6 +105,30 @@ const PAYMENT_STATUS: Record<
 function roleLabel(role: string | null) {
   if (!role) return "-";
   return ROLE_LABELS[role] ?? role;
+}
+
+// 소셜에서 받은 값의 표기. 저장 형식은 서버에서 한 가지로 통일해 둔다
+// (server/src/auth/social-profile.ts).
+function fmtPhone(phone: string | null | undefined) {
+  if (!phone) return "-";
+  const d = phone.replace(/\D/g, "");
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  return phone;
+}
+
+function genderLabel(gender: string | null | undefined) {
+  if (gender === "male") return "남성";
+  if (gender === "female") return "여성";
+  // 선택 동의항목이라 비어 있는 것이 정상이다. 결측과 구분해 보여준다.
+  return "미제공";
+}
+
+function ageRangeLabel(ageRange: string | null | undefined) {
+  if (!ageRange) return "미제공";
+  const start = ageRange.split("-")[0];
+  if (!start) return "미제공";
+  return ageRange.endsWith("-") ? `${start}대 이상` : `${start}대`;
 }
 
 function fmtDate(v: string | null | undefined) {
@@ -205,10 +232,10 @@ export default function UsersClient({
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 {u.profileImage && <AvatarImage src={u.profileImage} alt="" />}
-                <AvatarFallback>{(u.nickname ?? "?")[0]}</AvatarFallback>
+                <AvatarFallback>{(u.name ?? "?")[0]}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <div className="truncate font-medium">{u.nickname ?? "(이름없음)"}</div>
+                <div className="truncate font-medium">{u.name ?? "(이름없음)"}</div>
                 <div className="truncate text-xs text-muted-foreground">{u.email ?? "-"}</div>
               </div>
             </div>
@@ -252,10 +279,10 @@ export default function UsersClient({
                     <Avatar className="h-8 w-8">
                       {u.profileImage && <AvatarImage src={u.profileImage} alt="" />}
                       <AvatarFallback className="text-xs">
-                        {(u.nickname ?? "?")[0]}
+                        {(u.name ?? "?")[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium">{u.nickname ?? "(이름없음)"}</span>
+                    <span className="font-medium">{u.name ?? "(이름없음)"}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{u.email ?? "-"}</TableCell>
@@ -298,12 +325,12 @@ export default function UsersClient({
               <Avatar className="h-14 w-14">
                 {detail.profileImage && <AvatarImage src={detail.profileImage} alt="" />}
                 <AvatarFallback className="text-lg">
-                  {(detail.nickname ?? "?")[0]}
+                  {(detail.name ?? "?")[0]}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
                 <div className="text-lg font-semibold">
-                  {detail.nickname ?? "(이름없음)"}
+                  {detail.name ?? "(이름없음)"}
                 </div>
                 <div className="truncate text-sm text-muted-foreground">
                   {detail.email ?? "-"}
@@ -315,10 +342,9 @@ export default function UsersClient({
             <Section title="기본 정보">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <Field label="역할" value={roleLabel(detail.parentRole)} />
-                <Field
-                  label="출생연도"
-                  value={detail.birthYear ? `${detail.birthYear}년` : "-"}
-                />
+                <Field label="전화번호" value={fmtPhone(detail.phone)} />
+                <Field label="성별" value={genderLabel(detail.gender)} />
+                <Field label="연령대" value={ageRangeLabel(detail.ageRange)} />
                 <Field label="가입일" value={fmtDateTime(detail.createdAt)} />
                 <Field label="온보딩" value={fmtDateTime(detail.onboardedAt)} />
                 <Field

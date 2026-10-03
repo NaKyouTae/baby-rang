@@ -41,6 +41,16 @@ services:
         sync: false
       - key: KAKAO_CALLBACK_URL
         sync: false
+      # Naver OAuth
+      # 네이티브 앱(네이버) 로그인 토큰 검증에도 같은 값을 쓴다 —
+      # 네이버는 토큰의 출처를 되묻는 API 가 없어서, 우리 client_id·secret 으로
+      # refresh 가 되는지로 확인한다(naver.service.ts).
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      - key: NAVER_CALLBACK_URL
+        sync: false
       # 네이티브 앱(카카오톡) 로그인 토큰 검증용 카카오 앱 ID.
       # KAKAO_CLIENT_ID 와 같은 카카오 앱의 값이어야 한다
       # (회원번호가 앱마다 다르게 발급되므로, 어긋나면 기존 계정을 못 찾는다).

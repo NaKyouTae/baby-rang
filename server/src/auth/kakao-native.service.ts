@@ -5,6 +5,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  normalizeAgeRange,
+  normalizeGender,
+  normalizeName,
+  normalizePhone,
+} from './social-profile';
 
 // 네이티브 앱(카카오톡 앱 로그인)이 받아온 access token 을 검증하고 프로필을 읽는다.
 //
@@ -21,7 +27,10 @@ const USER_ME_URL = 'https://kapi.kakao.com/v2/user/me';
 export interface KakaoNativeProfile {
   /** 카카오 회원번호. 웹 로그인의 providerId 와 같은 값이어야 계정이 이어진다. */
   providerId: string;
-  nickname?: string;
+  name?: string;
+  phone?: string;
+  gender?: string;
+  ageRange?: string;
   email?: string;
   profileImage?: string;
 }
@@ -36,6 +45,10 @@ interface UserMeResponse {
   properties?: { nickname?: string; profile_image?: string };
   kakao_account?: {
     email?: string;
+    name?: string;
+    phone_number?: string;
+    gender?: string;
+    age_range?: string;
     profile?: { nickname?: string; profile_image_url?: string };
   };
 }
@@ -85,8 +98,13 @@ export class KakaoNativeService {
     const account = me.kakao_account;
     return {
       providerId,
-      // passport-kakao 의 displayName 과 같은 값을 우선 쓴다(웹/앱 프로필 일치).
-      nickname: account?.profile?.nickname ?? me.properties?.nickname,
+      // 이름·전화번호는 필수 동의항목이지만, 여기서 막지는 않는다.
+      // 어느 항목이 비었는지 판단하는 곳은 가입/로그인 흐름(auth.service)이고,
+      // 이 서비스는 "카카오가 준 것을 그대로 옮긴다"만 책임진다.
+      name: normalizeName(account?.name),
+      phone: normalizePhone(account?.phone_number),
+      gender: normalizeGender(account?.gender),
+      ageRange: normalizeAgeRange(account?.age_range),
       email: account?.email,
       profileImage:
         account?.profile?.profile_image_url ?? me.properties?.profile_image,

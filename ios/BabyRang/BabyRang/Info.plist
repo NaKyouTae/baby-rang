@@ -29,17 +29,41 @@
 				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>naver</string>
+			<!-- 네이버앱이 인증을 마친 뒤 이 스킴으로 앱에 돌아온다.
+			     네이버 개발자센터의 'iOS URL Scheme' 값과 반드시 같아야 한다.
+			     SDK 초기화 때 serviceUrlScheme 으로도 같은 값을 넘긴다(BabyRangApp.swift). -->
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>babyrangnaver</string>
+			</array>
+		</dict>
 	</array>
 	<!-- 카카오 네이티브 앱 키. 빌드 구성별로 다른 값이 들어간다.
 	     BabyRangApp 이 KakaoSDK.initSDK 에 넘길 때 읽는다. -->
 	<key>KakaoNativeAppKey</key>
 	<string>$(KAKAO_NATIVE_APP_KEY)</string>
+	<!-- 네이버 로그인 키. 빌드 설정에서 주입한다(카카오와 같은 방식).
+	     비밀값이 아니다 — 앱 바이너리에 그대로 실려 나가고, 네이버의 보안 경계는
+	     개발자센터에 등록한 번들 ID 와 URL 스킴이다. -->
+	<key>NaverConsumerKey</key>
+	<string>$(NAVER_CONSUMER_KEY)</string>
+	<key>NaverConsumerSecret</key>
+	<string>$(NAVER_CONSUMER_SECRET)</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6008464533427245~7115583932</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>kakaokompassauth</string>
 		<string>kakaotalk</string>
+		<!-- 네이버앱 설치 여부 확인. 이 선언이 없으면 네이버앱이 깔려 있어도
+		     인앱 웹뷰 로그인으로 빠진다(iOS 는 선언 없이 다른 앱을 조회할 수 없다). -->
+		<string>naversearchapp</string>
+		<string>naversearchthirdlogin</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>주변 수유실을 찾기 위해 위치 정보가 필요합니다.</string>

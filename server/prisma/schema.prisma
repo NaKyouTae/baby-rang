@@ -8,11 +8,15 @@ datasource db {
 
 model User {
   id                     String                  @id @default(uuid())
-  nickname               String?
+  // 소셜(카카오/네이버)에서 받는 회원 정보. 자체 입력 경로는 없다 —
+  // 동의항목으로만 채워지므로, 값이 비었다는 건 아직 동의를 받지 못했다는 뜻이다.
+  name                   String? // 실명. 필수 동의항목이라 가입 완료된 회원은 항상 존재.
+  phone                  String? // 01012345678 형태로 정규화. 필수 동의항목.
+  gender                 String? // 'male' | 'female'. 선택 동의항목이라 null 가능.
+  ageRange               String? // '20-29' 형태(10년 단위). 선택 동의항목이라 null 가능.
   email                  String?
   profileImage           String?
   parentRole             String? // 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other'
-  birthYear              Int?
   onboardedAt            DateTime?
   // 동의 시각 — null이면 미동의 또는 철회됨. 필수(terms/privacy)는 회원가입 시 항상 기록.
   termsAgreedAt          DateTime?
@@ -59,6 +63,10 @@ model Account {
   userId     String
   provider   AuthProvider
   providerId String
+  // 네이버 전용. 회원탈퇴 시 연동해제(grant_type=delete)를 하려면 유효한 토큰이
+  // 필요한데, 네이버는 카카오의 admin key 같은 서버 단독 해제 수단이 없다.
+  // 로그인할 때마다 최신 값으로 덮어쓴다. (카카오는 KAKAO_ADMIN_KEY 를 쓰므로 null)
+  refreshToken String?
   createdAt  DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

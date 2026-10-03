@@ -8,6 +8,7 @@
 import GoogleMobileAds
 import KakaoSDKAuth
 import KakaoSDKCommon
+import NaverThirdPartyLogin
 import SwiftUI
 
 /// 카카오 네이티브 앱 키.
@@ -33,11 +34,42 @@ private let kakaoNativeAppKey: String = {
     return key
 }()
 
+/// 네이버앱이 인증을 마치고 돌아올 때 쓰는 URL 스킴.
+/// Info.plist 의 CFBundleURLSchemes, 네이버 개발자센터의 'iOS URL Scheme' 과 같아야 한다.
+private let naverServiceUrlScheme = "babyrangnaver"
+
+/// 네이버 로그인 키. 카카오와 같은 방식으로 빌드 설정에서 읽는다.
+///
+/// 카카오 키처럼 assertionFailure 로 막지 않는 이유: 네이버 키는 개발자센터에서
+/// 발급받아 빌드 설정(NAVER_CONSUMER_KEY/SECRET)에 채워 넣어야 하는데, 비어 있다고
+/// 앱 실행을 멈추면 네이버 로그인과 무관한 작업까지 막힌다. 키가 없으면 SDK 초기화를
+/// 건너뛰고, 네이버 로그인을 눌렀을 때만 실패한다.
+private func naverValue(_ key: String) -> String {
+    let value = Bundle.main.object(forInfoDictionaryKey: key) as? String
+    guard let value, !value.isEmpty, !value.hasPrefix("$(") else { return "" }
+    return value
+}
+
 @main
 struct BabyRangApp: App {
     init() {
         // 카카오 SDK 는 로그인 요청 전에 반드시 초기화돼 있어야 한다.
         KakaoSDK.initSDK(appKey: kakaoNativeAppKey)
+
+        // 네이버 SDK 초기화. 로그인 요청 때마다 하지 않고 앱 시작에 한 번만 한다.
+        let naverKey = naverValue("NaverConsumerKey")
+        let naverSecret = naverValue("NaverConsumerSecret")
+        if naverKey.isEmpty || naverSecret.isEmpty {
+            print("[naver] NAVER_CONSUMER_KEY/SECRET 빌드 설정이 비어 있어 초기화를 건너뛴다.")
+        } else if let naver = NaverThirdPartyLoginConnection.getSharedInstance() {
+            // 네이버앱이 깔려 있으면 앱으로, 없으면 인앱 웹뷰로 인증한다.
+            naver.isNaverAppOauthEnable = true
+            naver.isInAppOauthEnable = true
+            naver.serviceUrlScheme = naverServiceUrlScheme
+            naver.consumerKey = naverKey
+            naver.consumerSecret = naverSecret
+            naver.appName = "아기랑"
+        }
     }
 
     @State private var isWebViewLoaded = false
@@ -110,6 +142,14 @@ struct BabyRangApp: App {
             .onOpenURL { url in
                 if AuthApi.isKakaoTalkLoginUrl(url) {
                     _ = AuthController.handleOpenUrl(url: url)
+                    return
+                }
+                // 네이버앱이 babyrangnaver:// 스킴으로 돌아오는 지점.
+                // 이 처리가 없으면 네이버앱까지는 열리지만 로그인이 끝나지 않는다.
+                if url.scheme == naverServiceUrlScheme {
+                    NaverThirdPartyLoginConnection
+                        .getSharedInstance()?
+                        .receiveAccessToken(url)
                 }
             }
             .onAppear {

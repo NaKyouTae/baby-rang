@@ -13,11 +13,21 @@ import type { ChildData } from './appCache';
 
 export type AuthUser = {
   id: string;
-  nickname: string | null;
+  /** 실명. 소셜 필수 동의항목이라 가입을 마친 회원은 값이 있다. */
+  name: string | null;
+  /** 01012345678 형태. 소셜 필수 동의항목. */
+  phone: string | null;
+  /** 'male' | 'female'. 선택 동의항목이라 비어 있을 수 있다. */
+  gender?: string | null;
+  /** '20-29' 형태. 선택 동의항목이라 비어 있을 수 있다. */
+  ageRange?: string | null;
   email: string | null;
   profileImage: string | null;
   parentRole?: string | null;
   onboardedAt?: string | null;
+  providers?: string[];
+  /** 이름·전화번호 동의항목 도입 전에 가입해 추가 정보가 필요한 회원인지. */
+  needsAdditionalInfo?: boolean;
 };
 
 import { toKstYmd } from '@/lib/childAge';

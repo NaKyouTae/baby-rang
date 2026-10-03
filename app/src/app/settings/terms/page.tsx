@@ -12,7 +12,7 @@ export default function SettingsTermsPage() {
       <PageHeader title="이용약관" variant="back" />
 
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
-        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 4월 8일</p>
+        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 10월 3일</p>
 
         <section>
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>제1조 (목적)</h2>
@@ -45,6 +45,7 @@ export default function SettingsTermsPage() {
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>제4조 (회원가입 및 계정)</h2>
           <ol className="list-decimal pl-5 space-y-1">
             <li>회원가입은 이용자가 약관에 동의하고 회사가 정한 절차에 따라 가입을 신청한 후, 회사가 이를 승낙함으로써 성립됩니다.</li>
+            <li>회원가입은 카카오·네이버 등 소셜 로그인으로만 이루어지며, 회사는 별도의 아이디·비밀번호를 수집하지 않습니다. 이용자가 소셜 로그인을 진행하는 것은 본 약관 및 개인정보처리방침에 동의하는 것으로 봅니다.</li>
             <li>회원은 자신의 계정 정보를 제3자에게 양도, 대여할 수 없으며, 계정 관리에 대한 책임은 회원 본인에게 있습니다.</li>
           </ol>
         </section>
@@ -108,7 +109,7 @@ export default function SettingsTermsPage() {
         </section>
 
         <section>
-          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 약관은 2026년 4월 8일부터 시행됩니다.</p>
+          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 약관은 2026년 10월 3일부터 시행됩니다. (직전 시행일 2026년 4월 8일)</p>
         </section>
       </article>
 

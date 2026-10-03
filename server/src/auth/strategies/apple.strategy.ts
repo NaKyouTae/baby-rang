@@ -54,14 +54,15 @@ export class AppleStrategy extends PassportStrategy(Strategy, 'apple') {
     done: (...args: unknown[]) => void,
   ) {
     // 한국식 표기(성+이름). 이름은 최초 1회만 제공되므로 없으면 undefined.
-    const nickname = profile.name
+    const name = profile.name
       ? [profile.name.lastName, profile.name.firstName].filter(Boolean).join('')
       : undefined;
 
     const result = await this.authService.resolveOAuthLogin({
       provider: AuthProvider.APPLE,
       providerId: profile.id,
-      nickname: nickname || undefined,
+      // 애플은 전화번호를 주지 않는다. 필수 검사에서 제외되는 제공자다(auth.service 참고).
+      name: name || undefined,
       email: profile.email,
     });
     done(null, result);

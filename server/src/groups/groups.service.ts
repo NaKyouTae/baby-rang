@@ -33,7 +33,7 @@ async function generateUniqueCode(
 
 const MEMBER_USER_SELECT = {
   id: true,
-  nickname: true,
+  name: true,
   email: true,
   profileImage: true,
   parentRole: true,

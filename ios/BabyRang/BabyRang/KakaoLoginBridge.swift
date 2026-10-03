@@ -13,6 +13,10 @@ import WebKit
 /// 처리하는 메시지:
 ///   · kakaoLogin { requestId } → { ok, accessToken } / { ok: false, cancelled } / { ok: false, message }
 ///
+/// 로그인 뒤에는 이름·전화번호 동의 여부를 확인하고, 빠져 있으면 추가 동의를 한 번 더 받는다.
+/// 카카오톡 앱 로그인은 "이미 연결된 앱"이면 동의 화면을 건너뛰기 때문에, 나중에 추가한
+/// 동의항목은 이 단계가 없으면 영원히 받을 수 없다(서버는 이름·전화번호 없이는 가입을 막는다).
+///
 /// 돌려준 토큰은 웹이 서버(/auth/kakao/native)로 보내 우리 토큰으로 교환한다.
 /// 여기서 우리 세션까지 만들지 않는 이유는, 세션 쿠키는 반드시 웹의 navigation
 /// 응답으로 심어야 WKWebView 가 영속화하기 때문이다(session/route.ts 참고).
@@ -22,6 +26,11 @@ final class KakaoLoginBridge {
     weak var webView: WKWebView?
 
     static let handlerName = "kakaoLogin"
+
+    /// 서버가 요구하는 동의항목. 하나라도 비어 있으면 추가 동의를 요청한다.
+    /// (선택 항목인 성별·연령대도 함께 묻되, 거절해도 로그인은 계속된다)
+    private static let requiredScopes = ["name", "phone_number"]
+    private static let optionalScopes = ["gender", "age_range"]
 
     func handle(_ message: WKScriptMessage) {
         let body = message.body as? [String: Any] ?? [:]
@@ -36,9 +45,16 @@ final class KakaoLoginBridge {
             // 카카오톡이 깔려 있으면 앱으로, 아니면 카카오계정 웹 로그인으로.
             // isKakaoTalkLoginAvailable 은 Info.plist 의 LSApplicationQueriesSchemes 에
             // kakaokompassauth 가 있어야 제대로 판정한다.
-            let token: OAuthToken = try await UserApi.isKakaoTalkLoginAvailable()
+            var token: OAuthToken = try await UserApi.isKakaoTalkLoginAvailable()
                 ? loginWithKakaoTalk()
                 : loginWithKakaoAccount()
+
+            // 아직 동의받지 못한 항목이 있으면 그 항목만 다시 묻는다.
+            let missing = await missingScopes()
+            if !missing.isEmpty {
+                token = try await loginWithKakaoAccount(scopes: missing)
+            }
+
             reply(requestId, ["ok": true, "accessToken": token.accessToken])
         } catch {
             if isCancelled(error) {
@@ -63,6 +79,35 @@ final class KakaoLoginBridge {
         return false
     }
 
+    /// 아직 동의받지 않은 동의항목 목록.
+    ///
+    /// 조회에 실패하면 빈 배열을 돌려준다 — 추가 동의 화면을 띄우는 것보다
+    /// 일단 로그인을 진행시키고 서버 응답에 맡기는 편이 사용자에게 덜 번거롭다.
+    private func missingScopes() async -> [String] {
+        guard let account = try? await me()?.kakaoAccount else { return [] }
+
+        var scopes: [String] = []
+        if account.nameNeedsAgreement == true { scopes.append("name") }
+        if account.phoneNumberNeedsAgreement == true { scopes.append("phone_number") }
+        if account.genderNeedsAgreement == true { scopes.append("gender") }
+        if account.ageRangeNeedsAgreement == true { scopes.append("age_range") }
+        return scopes.filter {
+            Self.requiredScopes.contains($0) || Self.optionalScopes.contains($0)
+        }
+    }
+
+    private func me() async throws -> User? {
+        try await withCheckedThrowingContinuation { continuation in
+            UserApi.shared.me { user, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                continuation.resume(returning: user)
+            }
+        }
+    }
+
     // MARK: - SDK 콜백 → async
 
     private func loginWithKakaoTalk() async throws -> OAuthToken {
@@ -73,8 +118,15 @@ final class KakaoLoginBridge {
         }
     }
 
-    private func loginWithKakaoAccount() async throws -> OAuthToken {
+    /// scopes 를 넘기면 그 항목만 다시 동의받는 화면이 뜬다(카카오 '추가 항목 동의 받기').
+    private func loginWithKakaoAccount(scopes: [String]? = nil) async throws -> OAuthToken {
         try await withCheckedThrowingContinuation { continuation in
+            if let scopes {
+                UserApi.shared.loginWithKakaoAccount(scopes: scopes) { token, error in
+                    Self.resume(continuation, token, error)
+                }
+                return
+            }
             UserApi.shared.loginWithKakaoAccount { token, error in
                 Self.resume(continuation, token, error)
             }

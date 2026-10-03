@@ -38,6 +38,8 @@ struct WebView: UIViewRepresentable {
         }
         // 카카오톡 앱 로그인 브릿지
         contentController.add(context.coordinator, name: KakaoLoginBridge.handlerName)
+        // 네이버앱 로그인 브릿지
+        contentController.add(context.coordinator, name: NaverLoginBridge.handlerName)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -52,6 +54,7 @@ struct WebView: UIViewRepresentable {
         // 브릿지가 결과를 돌려보낼 대상. WebView 가 Coordinator 를 소유하므로 약한 참조다.
         context.coordinator.storeKit.webView = webView
         context.coordinator.kakaoLogin.webView = webView
+        context.coordinator.naverLogin.webView = webView
         // 앱 밖에서 확정된 거래(보호자 승인, 중단 후 복구)를 받아 웹에 넘긴다.
         context.coordinator.storeKit.startTransactionListener()
 
@@ -71,6 +74,8 @@ struct WebView: UIViewRepresentable {
         let storeKit = StoreKitBridge()
         /// 카카오톡 앱 로그인을 처리한다.
         let kakaoLogin = KakaoLoginBridge()
+        /// 네이버앱 로그인을 처리한다.
+        let naverLogin = NaverLoginBridge()
 
         init(adSlot: AdSlotModel, onLoad: @escaping () -> Void) {
             self.adSlot = adSlot
@@ -98,6 +103,10 @@ struct WebView: UIViewRepresentable {
             }
             if message.name == KakaoLoginBridge.handlerName {
                 MainActor.assumeIsolated { kakaoLogin.handle(message) }
+                return
+            }
+            if message.name == NaverLoginBridge.handlerName {
+                MainActor.assumeIsolated { naverLogin.handle(message) }
                 return
             }
 

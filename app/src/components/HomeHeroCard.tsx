@@ -438,11 +438,11 @@ function getTimeGreeting(): string {
 }
 
 function WelcomeHeader({
-  nickname,
+  name,
 }: {
-  nickname: string | null | undefined;
+  name: string | null | undefined;
 }) {
-  const displayName = nickname ? `${nickname}님` : '보호자님';
+  const displayName = name ? `${name}님` : '보호자님';
   const [greeting] = useState(() => getTimeGreeting());
   return (
     <div>
@@ -522,7 +522,7 @@ export default function HomeHeroCard() {
   if (!childrenLoaded) {
     return (
       <>
-        <WelcomeHeader nickname={user?.nickname} />
+        <WelcomeHeader name={user?.name} />
         <div>
           <div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse p-3">
             <div className="flex items-center gap-3">
@@ -566,7 +566,7 @@ export default function HomeHeroCard() {
 
   return (
     <>
-      <WelcomeHeader nickname={user?.nickname} />
+      <WelcomeHeader name={user?.name} />
       <div>
         <ChildrenCarousel children={children} onActiveChange={setActiveChildIdx} />
       </div>

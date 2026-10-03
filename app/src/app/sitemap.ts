@@ -7,7 +7,7 @@ const BASE_URL = "https://baby-rang.spectrify.kr";
  * 공개 페이지만 사이트맵에 포함합니다.
  *
  * 제외 대상:
- * - /onboarding     : robots.txt 가 차단한 경로다. 사이트맵에 함께 올리면
+ * - /additional-info : robots.txt 가 차단한 경로다. 사이트맵에 함께 올리면
  *                     "색인해 달라"와 "읽지 말라"를 동시에 보내는 꼴이라 경고가 난다.
  * - /auth/*         : 인증 콜백 등 비공개
  * - /settings/*     : 로그인 사용자 전용

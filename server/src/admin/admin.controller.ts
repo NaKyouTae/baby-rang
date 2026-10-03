@@ -387,7 +387,7 @@ export class AdminController {
         skip: (p - 1) * l,
         take: l,
         include: {
-          user: { select: { id: true, nickname: true, email: true } },
+          user: { select: { id: true, name: true, email: true } },
         },
       }),
       this.prisma.payment.count({ where }),

@@ -32,6 +32,10 @@ function mockKakaoResponses(appId: number) {
         id: 42,
         kakao_account: {
           email: 'a@b.com',
+          name: '김아기',
+          phone_number: '+82 10-1234-5678',
+          gender: 'female',
+          age_range: '30~39',
           profile: { nickname: '아기랑', profile_image_url: 'https://img' },
         },
       }),
@@ -49,7 +53,11 @@ describe('KakaoNativeService', () => {
 
     expect(profile).toEqual({
       providerId: '42',
-      nickname: '아기랑',
+      // 동의항목 값은 저장 형식으로 정규화해서 넘어온다(social-profile.ts).
+      name: '김아기',
+      phone: '01012345678',
+      gender: 'female',
+      ageRange: '30-39',
       email: 'a@b.com',
       profileImage: 'https://img',
     });

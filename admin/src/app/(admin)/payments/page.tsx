@@ -24,7 +24,7 @@ type PaymentRow = {
   method: string | null;
   receiptUrl: string | null;
   createdAt: string;
-  user: { id: string; nickname: string | null; email: string | null } | null;
+  user: { id: string; name: string | null; email: string | null } | null;
 };
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "purple"> = {
@@ -82,7 +82,7 @@ export default async function PaymentsPage({
               <div className="min-w-0">
                 <div className="font-medium truncate">{p.productName}</div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {p.user?.nickname ?? p.user?.email ?? "-"}
+                  {p.user?.name ?? p.user?.email ?? "-"}
                 </div>
               </div>
               <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"} className="text-[10px]">
@@ -135,7 +135,7 @@ export default async function PaymentsPage({
                   <div className="text-xs text-muted-foreground">{p.productType}</div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {p.user?.nickname ?? p.user?.email ?? "-"}
+                  {p.user?.name ?? p.user?.email ?? "-"}
                 </TableCell>
                 <TableCell className="text-right font-semibold">
                   {p.amount.toLocaleString()}원

@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -15,6 +16,7 @@ import {
   SubmissionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NaverService } from './naver.service';
 import { SCALE, getQuestions } from '../temperament/data/questions';
 import {
   buildFreeContentByType,
@@ -52,26 +54,43 @@ function calcMarketingExpiresAt(agreedAt: Date): Date {
 export interface OAuthProfile {
   provider: AuthProvider;
   providerId: string;
-  nickname?: string;
+  /** 실명. 카카오·네이버 필수 동의항목. */
+  name?: string;
+  /** 01012345678 형태. 카카오·네이버 필수 동의항목. */
+  phone?: string;
+  /** 'male' | 'female'. 선택 동의항목이라 비어 있을 수 있다. */
+  gender?: string;
+  /** '20-29' 형태. 선택 동의항목이라 비어 있을 수 있다. */
+  ageRange?: string;
   email?: string;
   profileImage?: string;
+  /**
+   * 소셜 동의 화면에서 이미 받은 약관 동의.
+   *
+   * 카카오 간편가입(카카오싱크)만 내려준다. 네이버에는 약관 동의 기능이 없어
+   * 항상 비어 있고, 그때는 앱의 약관 화면에서 직접 받아야 한다.
+   */
+  consents?: ConsentInput;
+  /** 네이버 연동해제용. 로그인할 때마다 최신 값으로 갱신한다. */
+  refreshToken?: string;
 }
 
-export type OAuthResult =
-  | { kind: 'existing'; userId: string }
-  | { kind: 'pending'; profile: OAuthProfile };
+/** 로그인 결과. 신규·기존 구분 없이 항상 user 가 존재한다. */
+export type OAuthResult = { userId: string };
 
-export interface SignupTokenPayload {
-  type: 'signup';
-  provider: AuthProvider;
-  providerId: string;
-  nickname?: string;
-  email?: string;
-  profileImage?: string;
+// 이름·전화번호를 필수 동의항목으로 받는 제공자.
+//
+// 애플은 전화번호를 주지 않는다(이름도 최초 1회뿐). 애플 로그인은 App Store
+// 심사 지침 4.8 때문에 반드시 유지해야 하므로, 같은 기준을 적용하면 애플로는
+// 가입 자체가 불가능해진다. 그래서 필수 검사는 이 두 곳에만 건다.
+const PROVIDERS_REQUIRING_PHONE: AuthProvider[] = [
+  AuthProvider.KAKAO,
+  AuthProvider.NAVER,
+];
+
+export function requiresPhone(provider: AuthProvider): boolean {
+  return PROVIDERS_REQUIRING_PHONE.includes(provider);
 }
-
-// signup_token 만료. 사용자가 약관 읽고 정보 입력하는 시간을 고려해 30분.
-const SIGNUP_TOKEN_TTL = '30m';
 
 // 토스페이먼츠 카드사 심사관용 테스트 계정. 카카오 외 로그인 경로가 없어서 심사 진행이 막히는 경우에만 사용.
 // 심사 종료 후 제거 예정.
@@ -85,12 +104,20 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private naverService: NaverService,
   ) {}
 
   // 소셜 로그인 결과 분기:
   // - 이미 회원가입을 끝낸 user → existing (정식 access_token 발급)
   // - 미온보딩(과거 흐름 잔재) 또는 신규 → pending (DB 미생성, signup_token 발급)
   // 사용자가 "회원가입" 버튼을 누르기 전에는 user 레코드를 만들지 않음.
+  /**
+   * 소셜 로그인 결과를 user 로 바꾼다. 신규면 이 자리에서 가입까지 끝낸다.
+   *
+   * 예전에는 로그인과 가입을 나눠 signup_token 을 발급하고 가입 화면에서 추가 정보를
+   * 받았지만, 받을 정보가 모두 소셜 동의항목으로 들어오게 되면서 그 화면이 할 일이
+   * 없어졌다. 지금은 "로그인 = 가입"이고, 사용자는 동의 화면만 거친다.
+   */
   async resolveOAuthLogin(profile: OAuthProfile): Promise<OAuthResult> {
     const existingAccount = await this.prisma.account.findUnique({
       where: {
@@ -99,20 +126,108 @@ export class AuthService {
           providerId: profile.providerId,
         },
       },
-      include: { user: true },
     });
 
-    if (existingAccount && existingAccount.user.onboardedAt) {
-      return { kind: 'existing', userId: existingAccount.userId };
-    }
-
-    // 이전 흐름에서 만들어진 미온보딩 user는 정리 — 회원가입 미완료 상태를 DB에 남겨두지 않음.
-    // user를 지우면 account는 onDelete: Cascade로 같이 제거됨.
     if (existingAccount) {
-      await this.prisma.user.delete({ where: { id: existingAccount.userId } });
+      // 로그인할 때마다 소셜이 준 값으로 회원 정보를 맞춘다.
+      // 이름·전화번호 동의항목을 뒤늦게 추가했기 때문에, 이미 가입한 회원은
+      // 이 경로(추가 정보 화면 → 재로그인)로만 빈 칸을 채울 수 있다.
+      await this.syncSocialProfile(existingAccount.userId, profile);
+      if (profile.refreshToken) {
+        await this.prisma.account.update({
+          where: { id: existingAccount.id },
+          data: { refreshToken: profile.refreshToken },
+        });
+      }
+      return { userId: existingAccount.userId };
     }
 
-    return { kind: 'pending', profile };
+    return { userId: await this.createUserFromSocial(profile) };
+  }
+
+  /**
+   * 소셜 프로필만으로 회원을 만든다.
+   *
+   * 약관 동의는 소셜 쪽에서 받는다 —
+   *   · 카카오: 간편가입 동의 화면에서 받은 내역을 그대로 가져온다(kakao-terms.service.ts)
+   *   · 네이버: 약관 동의 기능이 없다. 로그인 화면에 띄운 고지("계속하면 이용약관·
+   *     개인정보처리방침에 동의하게 됩니다")가 동의의 근거다.
+   * 그래서 필수 약관(terms·privacy)은 가입 시각으로 기록하고, 선택 약관은
+   * 소셜에서 받은 값이 있을 때만 동의로 남긴다(기본은 미동의).
+   */
+  private async createUserFromSocial(profile: OAuthProfile): Promise<string> {
+    // 이름·전화번호는 사용자가 입력할 수 없고 소셜 동의항목으로만 들어온다.
+    // 비어 있다면 동의 화면에서 그 항목을 건너뛴 것이라 가입을 진행할 수 없다.
+    if (requiresPhone(profile.provider) && (!profile.name || !profile.phone)) {
+      throw new BadRequestException({
+        code: 'SOCIAL_CONSENT_REQUIRED',
+        missing: [
+          ...(profile.name ? [] : ['name']),
+          ...(profile.phone ? [] : ['phone']),
+        ],
+        message: '이름과 전화번호 제공에 동의해야 가입할 수 있어요.',
+      });
+    }
+
+    const consents: ConsentInput = {
+      terms: true,
+      privacy: true,
+      marketing: !!profile.consents?.marketing,
+      thirdParty: !!profile.consents?.thirdParty,
+    };
+    const now = new Date();
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: profile.email,
+          profileImage: profile.profileImage,
+          name: profile.name ?? null,
+          phone: profile.phone ?? null,
+          gender: profile.gender ?? null,
+          ageRange: profile.ageRange ?? null,
+          onboardedAt: now,
+          termsAgreedAt: now,
+          privacyAgreedAt: now,
+          marketingAgreedAt: consents.marketing ? now : null,
+          marketingExpiresAt: consents.marketing
+            ? calcMarketingExpiresAt(now)
+            : null,
+          thirdPartyAgreedAt: consents.thirdParty ? now : null,
+          accounts: {
+            create: {
+              provider: profile.provider,
+              providerId: profile.providerId,
+              refreshToken: profile.refreshToken ?? null,
+            },
+          },
+        },
+      });
+
+      // 1인 그룹 자동 생성 — 본인이 owner.
+      // 공유는 이 그룹에 다른 사람을 초대하는 것이고, 다른 그룹 합류는 별도 group_members 추가.
+      await tx.group.create({
+        data: {
+          ownerId: user.id,
+          code: await this.generateUniqueGroupCode(tx),
+          members: { create: { userId: user.id } },
+        },
+      });
+
+      await tx.consentLog.createMany({
+        data: (['terms', 'privacy', 'marketing', 'thirdParty'] as const).map(
+          (key) => ({
+            userId: user.id,
+            type: CONSENT_TYPE[key],
+            agreed: !!consents[key],
+            occurredAt: now,
+          }),
+        ),
+      });
+      return user;
+    });
+
+    return created.id;
   }
 
   generateToken(userId: string) {
@@ -135,161 +250,26 @@ export class AuthService {
     };
   }
 
-  generateSignupToken(profile: OAuthProfile): string {
-    const payload: SignupTokenPayload = {
-      type: 'signup',
-      provider: profile.provider,
-      providerId: profile.providerId,
-      nickname: profile.nickname,
-      email: profile.email,
-      profileImage: profile.profileImage,
-    };
-    return this.jwtService.sign(payload, { expiresIn: SIGNUP_TOKEN_TTL });
+  /**
+   * 네이버 웹 로그인용 state. CSRF 방지로 쓰인다.
+   *
+   * 세션 저장소가 없으므로 서버에 보관하지 않고 JWT 로 서명해 왕복시킨다.
+   * 콜백에서 서명이 맞고 만료되지 않았다면 우리가 시작시킨 로그인이 맞다.
+   */
+  generateOAuthState(): string {
+    return this.jwtService.sign(
+      { type: 'oauth_state', nonce: randomUUID() },
+      { expiresIn: '10m' },
+    );
   }
 
-  verifySignupToken(token: string): SignupTokenPayload {
-    let payload: SignupTokenPayload;
+  verifyOAuthState(state?: string): void {
     try {
-      payload = this.jwtService.verify<SignupTokenPayload>(token);
+      const payload = this.jwtService.verify<{ type?: string }>(state ?? '');
+      if (payload?.type !== 'oauth_state') throw new Error('type mismatch');
     } catch {
-      throw new BadRequestException('invalid or expired signup token');
+      throw new BadRequestException('invalid oauth state');
     }
-    if (
-      payload?.type !== 'signup' ||
-      !payload.provider ||
-      !payload.providerId
-    ) {
-      throw new BadRequestException('invalid signup token');
-    }
-    return payload;
-  }
-
-  // 회원가입(신규): signup_token 검증 → user 생성 → 정식 access_token 발급.
-  // user 레코드는 이 시점에 최초로 생성됨 (카카오 로그인 시점에는 만들지 않음).
-  async signup(
-    signupToken: string,
-    dto: {
-      nickname: string;
-      parentRole: string;
-      birthYear?: number | null;
-      consents?: ConsentInput;
-      children?: Array<{
-        name: string;
-        gender: string;
-        birthDate: string;
-        dueDate?: string;
-      }>;
-    },
-  ) {
-    const profile = this.verifySignupToken(signupToken);
-
-    const nickname = dto.nickname?.trim();
-    if (!nickname) {
-      throw new BadRequestException('nickname is required');
-    }
-    const validRoles = [
-      'mom',
-      'dad',
-      'grandmother',
-      'grandfather',
-      'caregiver',
-      'other',
-    ];
-    if (!validRoles.includes(dto.parentRole)) {
-      throw new BadRequestException('invalid parentRole');
-    }
-
-    // 필수 동의(이용약관, 개인정보 수집·이용) 검증.
-    // UI 신뢰만으로 충분하지 않은 이유: 회원가입은 법적 효력이 있는 동의 행위로,
-    // 클라이언트 변조/오류로 동의 없이 가입되는 경로를 서버에서 차단해야 함.
-    const consents: ConsentInput = dto.consents ?? {};
-    if (!consents.terms || !consents.privacy) {
-      throw new BadRequestException('required consents missing');
-    }
-
-    const childrenData = (dto.children ?? [])
-      .filter((c) => c && c.name && c.gender && c.birthDate)
-      .map((c) => ({
-        name: c.name.trim(),
-        gender: c.gender,
-        birthDate: new Date(`${c.birthDate.slice(0, 10)}T12:00:00.000Z`),
-        dueDate: c.dueDate
-          ? new Date(`${c.dueDate.slice(0, 10)}T12:00:00.000Z`)
-          : null,
-      }));
-
-    const now = new Date();
-
-    // 중복 가입 방어: signup_token 발급 후 다른 탭에서 이미 회원가입을 끝냈을 수도 있음.
-    const duplicate = await this.prisma.account.findUnique({
-      where: {
-        provider_providerId: {
-          provider: profile.provider,
-          providerId: profile.providerId,
-        },
-      },
-    });
-    if (duplicate) {
-      throw new BadRequestException('already signed up');
-    }
-
-    const created = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: profile.email,
-          profileImage: profile.profileImage,
-          nickname,
-          parentRole: dto.parentRole,
-          birthYear: dto.birthYear ?? null,
-          onboardedAt: now,
-          termsAgreedAt: now,
-          privacyAgreedAt: now,
-          marketingAgreedAt: consents.marketing ? now : null,
-          marketingExpiresAt: consents.marketing
-            ? calcMarketingExpiresAt(now)
-            : null,
-          thirdPartyAgreedAt: consents.thirdParty ? now : null,
-          accounts: {
-            create: {
-              provider: profile.provider,
-              providerId: profile.providerId,
-            },
-          },
-        },
-      });
-
-      // 1인 그룹 자동 생성 — 본인이 owner.
-      // 공유는 이 그룹에 다른 사람을 초대하는 것이고, 다른 그룹 합류는 별도 group_members 추가.
-      const group = await tx.group.create({
-        data: {
-          ownerId: user.id,
-          code: await this.generateUniqueGroupCode(tx),
-          members: { create: { userId: user.id } },
-        },
-      });
-
-      if (childrenData.length > 0) {
-        await tx.child.createMany({
-          data: childrenData.map((c) => ({ ...c, groupId: group.id })),
-        });
-      }
-      await tx.consentLog.createMany({
-        data: (['terms', 'privacy', 'marketing', 'thirdParty'] as const).map(
-          (key) => ({
-            userId: user.id,
-            type: CONSENT_TYPE[key],
-            agreed: !!consents[key],
-            occurredAt: now,
-          }),
-        ),
-      });
-      return user;
-    });
-
-    return {
-      accessToken: this.jwtService.sign({ sub: created.id }),
-      user: created,
-    };
   }
 
   // 카드사 심사관용 테스트 로그인. 하드코딩된 자격증명을 검증하고, 미리 만들어둔 테스트 user가 없으면 생성한다.
@@ -314,7 +294,8 @@ export class AuthService {
       const user = await this.prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
           data: {
-            nickname: '테스트 계정',
+            name: '테스트 계정',
+            phone: '01000000000',
             parentRole: 'mom',
             onboardedAt: now,
             termsAgreedAt: now,
@@ -491,16 +472,55 @@ export class AuthService {
     });
   }
 
-  async updateProfile(
-    userId: string,
-    dto: { nickname?: string; parentRole?: string; birthYear?: number | null },
-  ) {
+  /**
+   * 소셜이 준 값으로 회원 정보를 덮어쓴다.
+   *
+   * 값이 있는 항목만 반영한다. 사용자가 카카오에서 선택 동의(성별·연령대)를
+   * 철회하면 그 항목이 응답에서 빠지는데, 그때 null 로 지워버리면 "동의를 유지한
+   * 다른 로그인 경로"에서 받은 값까지 사라진다. 지우는 것은 회원탈퇴로만 한다.
+   */
+  private async syncSocialProfile(userId: string, profile: OAuthProfile) {
     const data: Prisma.UserUpdateInput = {};
-    if (typeof dto.nickname === 'string') {
-      const nickname = dto.nickname.trim();
-      if (!nickname) throw new BadRequestException('nickname is required');
-      data.nickname = nickname;
-    }
+    if (profile.name) data.name = profile.name;
+    if (profile.phone) data.phone = profile.phone;
+    if (profile.gender) data.gender = profile.gender;
+    if (profile.ageRange) data.ageRange = profile.ageRange;
+    if (profile.email) data.email = profile.email;
+    if (profile.profileImage) data.profileImage = profile.profileImage;
+    if (Object.keys(data).length === 0) return;
+
+    await this.prisma.user.update({ where: { id: userId }, data });
+  }
+
+  /**
+   * 내 정보 + 추가 정보가 필요한지 여부.
+   *
+   * needsAdditionalInfo 는 "이름·전화번호 동의항목을 도입하기 전에 가입한 회원"을
+   * 가려낸다. 클라이언트가 직접 판단하지 않고 서버가 내려주는 이유는, 애플 로그인
+   * 전용 회원처럼 전화번호를 받을 수 없는 예외를 한 곳에서만 다루기 위해서다.
+   */
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { accounts: { select: { provider: true } } },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const { accounts, ...rest } = user;
+    const canReceivePhone = accounts.some((a) => requiresPhone(a.provider));
+    return {
+      ...rest,
+      providers: accounts.map((a) => a.provider),
+      needsAdditionalInfo:
+        !!user.onboardedAt && canReceivePhone && (!user.name || !user.phone),
+    };
+  }
+
+  // 이름·전화번호·성별·연령대는 여기서 바꿀 수 없다.
+  // 소셜 동의항목으로만 들어오는 값이라, 앱에서 고치면 소셜 쪽과 어긋난 채
+  // 다음 로그인 때 다시 덮어써진다(syncSocialProfile). 바꾸려면 소셜에서 바꿔야 한다.
+  async updateProfile(userId: string, dto: { parentRole?: string }) {
+    const data: Prisma.UserUpdateInput = {};
     if (typeof dto.parentRole === 'string') {
       const valid = [
         'mom',
@@ -514,9 +534,6 @@ export class AuthService {
         throw new BadRequestException('invalid parentRole');
       }
       data.parentRole = dto.parentRole;
-    }
-    if (dto.birthYear !== undefined) {
-      data.birthYear = dto.birthYear;
     }
     if (Object.keys(data).length === 0) {
       throw new BadRequestException('no profile fields to update');
@@ -660,6 +677,16 @@ export class AuthService {
         const text = await res.text();
         throw new InternalServerErrorException(`Kakao unlink failed: ${text}`);
       }
+    }
+
+    // 네이버 연동해제. 저장해 둔 refresh token 으로만 가능하고, 실패해도 탈퇴는 계속한다.
+    // (카카오처럼 서버가 admin key 로 단독 해제하는 수단이 네이버에는 없다 —
+    //  토큰이 만료됐다고 탈퇴를 막으면 사용자가 계정에서 빠져나갈 수 없다)
+    const naverAccount = user.accounts.find(
+      (a) => a.provider === AuthProvider.NAVER,
+    );
+    if (naverAccount?.refreshToken) {
+      await this.naverService.unlink(naverAccount.refreshToken);
     }
 
     // 그룹 정리:

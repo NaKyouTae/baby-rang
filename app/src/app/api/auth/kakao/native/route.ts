@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 // 네이티브 앱(카카오톡 앱 로그인) 프록시.
 //
 // 앱이 카카오 SDK 로 받은 access token 을 넘기면 서버가 검증 후
-// 우리 토큰(accessToken) 또는 회원가입 토큰(signupToken)을 돌려준다.
+// 우리 토큰(accessToken)을 돌려준다. 신규 회원이면 이 시점에 가입까지 끝난다.
 //
 // 여기서 쿠키를 set 하지 않는 이유는 test-login 과 같다 — WKWebView 가 fetch 응답의
 // Set-Cookie 를 영속화하지 못하는 경우가 있어, 클라이언트가 /api/auth/session 으로
@@ -24,8 +24,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: res.status });
   }
 
-  return NextResponse.json({
-    accessToken: data.accessToken ?? null,
-    signupToken: data.signupToken ?? null,
-  });
+  return NextResponse.json({ accessToken: data.accessToken ?? null });
 }

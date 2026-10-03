@@ -8,19 +8,6 @@ function AuthCallback() {
 
   useEffect(() => {
     const accessToken = searchParams.get("token");
-    const signupToken = searchParams.get("signupToken");
-
-    if (signupToken) {
-      (async () => {
-        await fetch("/api/auth/signup-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: signupToken }),
-        });
-        window.location.replace("/onboarding");
-      })();
-      return;
-    }
 
     if (accessToken) {
       (async () => {
@@ -29,16 +16,6 @@ function AuthCallback() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: accessToken }),
         });
-        try {
-          const res = await fetch("/api/auth/token", { cache: "no-store" });
-          const data = await res.json();
-          if (data?.user && !data.user.onboardedAt) {
-            window.location.replace("/onboarding");
-            return;
-          }
-        } catch {
-          /* ignore */
-        }
         window.location.replace("/home");
       })();
       return;
@@ -49,7 +26,7 @@ function AuthCallback() {
 
   return (
     <div className="flex flex-1 items-center justify-center min-h-dvh">
-      <p className="text-gray-500">로그인 중...</p>
+      <p className="text-gray-500">로그인하는 중</p>
     </div>
   );
 }

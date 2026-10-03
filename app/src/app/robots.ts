@@ -17,8 +17,10 @@ export default function robots(): MetadataRoute.Robots {
     "/tests/*/test/",
     "/tests/*/result/",
     "/api/",
-    "/onboarding",
+    // 로그인한 회원만 보는 화면. 색인될 이유가 없다.
+    "/additional-info",
     "/events/",
+    "/prototype",
   ];
 
   // /settings 아래지만 로그인 없이 볼 수 있는 공개 문서들. 스토어 심사와

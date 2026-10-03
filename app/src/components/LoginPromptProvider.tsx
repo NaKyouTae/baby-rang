@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 import { useAppOverlayLock } from './ads/appOverlay';
@@ -8,6 +9,11 @@ import {
   isKakaoNativeLoginAvailable,
   runKakaoNativeLogin,
 } from '@/lib/kakaoNativeLogin';
+import {
+  isNaverNativeLoginAvailable,
+  runNaverNativeLogin,
+} from '@/lib/naverNativeLogin';
+import { isNativeApp } from '@/lib/isNativeApp';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
@@ -33,6 +39,12 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   const [message, setMessage] = useState<string | undefined>(undefined);
   // 네이티브 카카오 로그인이 진행 중인지. 카카오톡으로 전환된 동안 중복 탭을 막는다.
   const [kakaoLoading, setKakaoLoading] = useState(false);
+  // 네이티브 카카오 로그인이 실패한 이유. 앱에서는 웹 OAuth 로 넘기지 않으므로
+  // 실패를 화면에 남겨야 한다(그러지 않으면 버튼이 아무 반응 없는 것처럼 보인다).
+  const [kakaoError, setKakaoError] = useState<string | null>(null);
+  // 네이버도 카카오와 같다 — 앱에서는 웹 OAuth 로 되돌릴 수 없어 실패를 화면에 남긴다.
+  const [naverLoading, setNaverLoading] = useState(false);
+  const [naverError, setNaverError] = useState<string | null>(null);
   // 애플 로그인 / 계정으로 로그인 미사용 (주석 처리)
   // const [testFormOpen, setTestFormOpen] = useState(false);
   // const [testUsername, setTestUsername] = useState('');
@@ -43,6 +55,8 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   const openLoginPrompt = useCallback((msg?: string) => {
     setMessage(msg);
     setOpen(true);
+    setKakaoError(null);
+    setNaverError(null);
     // setTestFormOpen(false);
     // setTestError(null);
   }, []);
@@ -112,25 +126,48 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 type="button"
                 disabled={kakaoLoading}
                 onClick={() => {
+                  setKakaoError(null);
+                  setNaverError(null);
+
                   // 앱에 브릿지가 있으면 카카오톡 앱으로 인증한다.
-                  // 웹 브라우저나 브릿지 없는 구 빌드는 기존 웹 OAuth 로 간다.
-                  if (!isKakaoNativeLoginAvailable()) {
-                    setOpen(false);
-                    window.location.href = `${API_URL}/auth/kakao`;
+                  if (isKakaoNativeLoginAvailable()) {
+                    setKakaoLoading(true);
+                    void runKakaoNativeLogin()
+                      .then((done) => {
+                        // done=false 는 사용자가 카카오톡에서 취소한 경우. 시트를 그대로 둔다.
+                        if (done) setOpen(false);
+                        setKakaoLoading(false);
+                      })
+                      .catch((e) => {
+                        // ⚠️ 앱에서는 웹 OAuth 로 되돌리지 않는다.
+                        //    카카오 웹 로그인은 로그인이 끝나면 우리 홈으로 리다이렉트하는데,
+                        //    그 흐름은 WebView 밖(브라우저)에서 끝나거나 WebView 안에서
+                        //    네이티브 세션과 어긋나, 사용자는 "웹으로 넘어가서 앱으로
+                        //    돌아오지 못하는" 상태에 놓인다. 실패는 실패로 알리고
+                        //    카카오톡으로 다시 시도하게 하는 쪽이 낫다.
+                        console.error('[kakao] 네이티브 로그인 실패:', e);
+                        // 서버가 이유를 준 경우(동의 항목 부족 등)에는 그대로 보여준다.
+                        // 일반 문구로 덮으면 사용자가 무엇을 고쳐야 할지 알 수 없다.
+                        setKakaoError(
+                          e instanceof Error && e.message
+                            ? e.message
+                            : '로그인을 완료하지 못했어요. 다시 시도해 주세요.',
+                        );
+                        setKakaoLoading(false);
+                      });
                     return;
                   }
-                  setKakaoLoading(true);
-                  void runKakaoNativeLogin()
-                    .then((done) => {
-                      // done=false 는 사용자가 카카오톡에서 취소한 경우. 시트를 그대로 둔다.
-                      if (done) setOpen(false);
-                      setKakaoLoading(false);
-                    })
-                    .catch(() => {
-                      // 네이티브 경로가 실패해도 로그인 자체는 되게 한다.
-                      // 웹 OAuth 는 같은 계정으로 이어지므로(providerId 동일) 안전하다.
-                      window.location.href = `${API_URL}/auth/kakao`;
-                    });
+
+                  // 브릿지가 없는데 앱 안이라면 카카오 로그인이 빠진 구 빌드다.
+                  // 이때도 웹 OAuth 로 보내면 안 된다(앱으로 돌아오지 못한다).
+                  if (isNativeApp()) {
+                    setKakaoError('앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
+                    return;
+                  }
+
+                  // 여기까지 오면 브라우저로 접속한 경우다. 웹 카카오 로그인은 이때만 쓴다.
+                  setOpen(false);
+                  window.location.href = `${API_URL}/auth/kakao`;
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80 disabled:opacity-60"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}
@@ -140,6 +177,72 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 </svg>
                 {kakaoLoading ? '카카오톡으로 이동 중' : '카카오로 시작하기'}
               </button>
+              {kakaoError && (
+                <p
+                  role="alert"
+                  className="text-center font-medium leading-relaxed"
+                  style={{ fontSize: 12, color: palette.red }}
+                >
+                  {kakaoError}
+                </p>
+              )}
+              {/* 네이버 로그인. 카카오와 완전히 같은 흐름이다 —
+                  앱이면 네이티브 브릿지, 브라우저면 웹 OAuth. */}
+              <button
+                type="button"
+                disabled={naverLoading}
+                onClick={() => {
+                  setKakaoError(null);
+                  setNaverError(null);
+
+                  if (isNaverNativeLoginAvailable()) {
+                    setNaverLoading(true);
+                    void runNaverNativeLogin()
+                      .then((done) => {
+                        if (done) setOpen(false);
+                        setNaverLoading(false);
+                      })
+                      .catch((e) => {
+                        console.error('[naver] 네이티브 로그인 실패:', e);
+                        // 서버가 이유를 준 경우(동의 항목 부족 등)에는 그대로 보여준다.
+                        // 일반 문구로 덮으면 사용자가 무엇을 고쳐야 할지 알 수 없다.
+                        setNaverError(
+                          e instanceof Error && e.message
+                            ? e.message
+                            : '로그인을 완료하지 못했어요. 다시 시도해 주세요.',
+                        );
+                        setNaverLoading(false);
+                      });
+                    return;
+                  }
+
+                  // 앱인데 브릿지가 없으면 네이버 로그인이 빠진 구 빌드다.
+                  // 웹 OAuth 로 보내면 앱으로 돌아오지 못하므로 업데이트를 안내한다.
+                  if (isNativeApp()) {
+                    setNaverError('앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
+                    return;
+                  }
+
+                  setOpen(false);
+                  window.location.href = `${API_URL}/auth/naver`;
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80 disabled:opacity-60"
+                style={{ height: 40, fontSize: 14, backgroundColor: '#03C75A', color: '#FFFFFF' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="#FFFFFF" aria-hidden="true">
+                  <path d="M11.6 10.7 8.2 5.8H5.3v8.4h3.1V9.3l3.4 4.9h2.9V5.8h-3.1v4.9z" />
+                </svg>
+                {naverLoading ? '네이버로 이동 중' : '네이버로 시작하기'}
+              </button>
+              {naverError && (
+                <p
+                  role="alert"
+                  className="text-center font-medium leading-relaxed"
+                  style={{ fontSize: 12, color: palette.red }}
+                >
+                  {naverError}
+                </p>
+              )}
               {/* Apple 심사 가이드라인 4.8: 서드파티 로그인(카카오)을 제공하면
                   개인정보 보호형 로그인도 함께 제공해야 한다.
                   이 버튼을 빼면 4.8 위반으로 심사에서 거절된다. */}
@@ -215,6 +318,38 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                 나중에
               </button>
             </div>
+
+            {/* 약관 고지.
+                가입 화면을 없애면서 앱에서 약관 동의를 받는 단계가 사라졌다.
+                카카오는 간편가입 동의 화면에서 약관 동의를 받아오지만, 네이버는
+                약관 동의 기능 자체가 없어 받아올 값이 없다. 그래서 이 고지가
+                네이버 가입자의 필수 약관 동의 근거가 된다 — 지우면 안 된다. */}
+            <p
+              className="text-center leading-relaxed"
+              style={{ fontSize: 11, color: palette.gray400, marginTop: 12 }}
+            >
+              로그인하면{' '}
+              <Link
+                href="/terms"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+                style={{ color: palette.gray500 }}
+              >
+                이용약관
+              </Link>
+              {' 및 '}
+              <Link
+                href="/settings/privacy"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+                style={{ color: palette.gray500 }}
+              >
+                개인정보처리방침
+              </Link>
+              에 동의하게 됩니다.
+            </p>
           </div>
         </div>
       )}

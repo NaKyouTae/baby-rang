@@ -1,76 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { palette } from '@/lib/colors';
 import PageHeader from '@/components/PageHeader';
 import FormInput from '@/components/FormInput';
+import {
+  ageRangeLabel,
+  formatPhone,
+  genderLabel,
+  optionalValue,
+} from '@/lib/socialProfile';
 
-type ParentRole = 'mom' | 'dad' | 'grandmother' | 'grandfather' | 'caregiver' | 'other' | '';
-
-const ROLE_OPTIONS: { value: ParentRole; label: string }[] = [
-  { value: 'mom', label: '엄마' },
-  { value: 'dad', label: '아빠' },
-  { value: 'grandmother', label: '할머니' },
-  { value: 'grandfather', label: '할아버지' },
-  { value: 'caregiver', label: '돌보미' },
-  { value: 'other', label: '기타' },
-];
-
+// 내 정보 — 전부 읽기 전용이다.
+//
+// 네 항목 모두 카카오·네이버 동의항목으로만 들어온다. 앱에서 고치면 소셜 쪽과
+// 어긋난 채 다음 로그인에 그대로 덮어써지므로(syncSocialProfile), 입력란을 두지 않는다.
+// 바꾸려면 해당 소셜 서비스에서 바꾼 뒤 다시 로그인해야 한다.
+//
+// 보호자 관계(parentRole)는 DB·API 에 그대로 두되 화면에서만 뺐다. 나중에 쓴다.
 export default function ProfileSettingsPage() {
   const router = useRouter();
-  const { user, isLoaded, isAuthenticated, refresh } = useAuth();
-
-  const [nickname, setNickname] = useState('');
-  const [parentRole, setParentRole] = useState<ParentRole>('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const { user, isLoaded, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!isAuthenticated) {
-      router.replace('/home');
-      return;
-    }
-    setNickname(user?.nickname ?? '');
-    setParentRole(((user?.parentRole as ParentRole) ?? '') || '');
-  }, [isLoaded, isAuthenticated, user, router]);
-
-  const canSubmit = nickname.trim().length > 0 && parentRole !== '' && !submitting;
-
-  const handleSave = async () => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nickname: nickname.trim(),
-          parentRole,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || '저장 중 오류가 발생했어요.');
-      }
-      await refresh();
-      setToast('저장되었어요');
-      setTimeout(() => setToast(null), 1500);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '오류가 발생했어요.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    if (!isAuthenticated) router.replace('/home');
+  }, [isLoaded, isAuthenticated, router]);
 
   if (!isLoaded) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-dvh">
-        <p className="text-sm text-gray-400">로딩 중...</p>
+        <p className="text-sm text-gray-400">불러오는 중</p>
       </div>
     );
   }
@@ -83,78 +44,30 @@ export default function ProfileSettingsPage() {
         onAction={() => router.push('/settings')}
       />
 
-      <main className="flex-1 px-6 pt-4 space-y-[16px]">
-        {/* 이메일 */}
-        <section>
-          <p className="text-xs font-medium text-gray-500 mb-[8px]">이메일</p>
-          <FormInput
-            value={user?.email || '-'}
-            disabled
-          />
-        </section>
+      <main className="flex-1 px-6 pt-4 pb-10 space-y-[16px]">
+        <Field label="이름" value={user?.name || '-'} />
+        <Field label="연락처" value={formatPhone(user?.phone) || '-'} />
+        <Field label="성별" value={optionalValue(genderLabel(user?.gender))} />
+        <Field
+          label="연령대"
+          value={optionalValue(ageRangeLabel(user?.ageRange))}
+        />
 
-        {/* 닉네임 */}
-        <section>
-          <p className="text-xs font-medium text-gray-500 mb-[8px]">
-            닉네임 <span className="text-red-500">*</span>
-          </p>
-          <FormInput
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="앱에서 사용할 닉네임"
-            maxLength={20}
-          />
-        </section>
-
-        {/* 관계 */}
-        <section>
-          <p className="text-xs font-medium text-gray-500 mb-[8px]">
-            관계 <span className="text-red-500">*</span>
-          </p>
-          <div className="flex flex-wrap gap-[8px]">
-            {ROLE_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setParentRole(value)}
-                className={`min-w-[45px] h-[28px] rounded-[20px] text-xs border transition-colors ${
-                  parentRole === value
-                    ? 'font-medium text-white border-transparent'
-                    : 'font-normal bg-white border-gray-200 text-gray-400'
-                }`}
-                style={{
-                  paddingLeft: 12, paddingRight: 12,
-                  ...(parentRole === value
-                    ? { backgroundColor: palette.teal, borderColor: palette.teal }
-                    : {}),
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          카카오·네이버에서 제공받은 정보예요. 바꾸려면 해당 서비스에서 수정한 뒤 다시
+          로그인해 주세요. 성별·연령대는 선택 제공 항목이라 동의하지 않으면 미제공으로
+          표시됩니다.
+        </p>
       </main>
-
-      {/* 하단 고정 저장 버튼 — BottomNav 위 24px 간격 */}
-      <div className="fixed bottom-[calc(var(--bottom-nav-space)+24px)] left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6">
-        <button
-          onClick={handleSave}
-          disabled={!canSubmit}
-          className="w-full py-3.5 rounded-[4px] text-white text-sm font-bold disabled:opacity-40"
-          style={{ backgroundColor: palette.teal }}
-        >
-          {submitting ? '저장 중...' : '저장'}
-        </button>
-      </div>
-
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-gray-900/90 px-4 py-2 text-xs font-semibold text-white shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <section>
+      <p className="text-xs font-medium text-gray-500 mb-[8px]">{label}</p>
+      <FormInput value={value} disabled readOnly />
+    </section>
   );
 }

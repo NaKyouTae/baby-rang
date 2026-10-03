@@ -31,7 +31,7 @@ export class ChildrenService {
         group: {
           include: {
             children: { orderBy: { createdAt: 'asc' } },
-            owner: { select: { id: true, nickname: true } },
+            owner: { select: { id: true, name: true } },
           },
         },
       },
@@ -42,8 +42,7 @@ export class ChildrenService {
         ...c,
         groupId: m.groupId,
         isShared: m.group.ownerId !== userId,
-        ownerNickname:
-          m.group.ownerId === userId ? null : m.group.owner.nickname,
+        ownerNickname: m.group.ownerId === userId ? null : m.group.owner.name,
       })),
     );
   }

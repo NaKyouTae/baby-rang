@@ -25,7 +25,9 @@ interface BridgeWindow extends Window {
 
 type BridgeResponse =
   | { ok: true; accessToken: string }
-  | { ok: false; cancelled?: boolean; message?: string };
+  // detail 은 네이티브가 넘기는 원인 문자열(카카오 SDK 에러). 사용자에게 보이지 않고
+  // 로그로만 쓴다 — 실패하면 웹 OAuth 로 되돌아가므로 흔적이 남지 않는다.
+  | { ok: false; cancelled?: boolean; message?: string; detail?: string };
 
 /**
  * 네이티브에 요청을 보내는 함수를 돌려준다. 브릿지가 없으면 null.
@@ -98,6 +100,9 @@ export function loginWithKakaoNative(): Promise<string | null> {
         resolve(null);
         return;
       }
+      if (payload.detail) {
+        console.error('[kakao] 네이티브 로그인 실패:', payload.detail);
+      }
       reject(new Error(payload.message ?? '로그인을 완료하지 못했습니다.'));
     });
     send(requestId);
@@ -127,13 +132,9 @@ export async function runKakaoNativeLogin(): Promise<boolean> {
     throw new Error(data?.message ?? '로그인에 실패했습니다.');
   }
 
-  if (data.accessToken) {
-    window.location.href = `/api/auth/session?token=${encodeURIComponent(data.accessToken)}`;
-    return true;
+  if (!data.accessToken) {
+    throw new Error('로그인에 실패했습니다.');
   }
-  if (data.signupToken) {
-    window.location.href = `/api/auth/session?signupToken=${encodeURIComponent(data.signupToken)}`;
-    return true;
-  }
-  throw new Error('로그인에 실패했습니다.');
+  window.location.href = `/api/auth/session?token=${encodeURIComponent(data.accessToken)}`;
+  return true;
 }

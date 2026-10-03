@@ -439,7 +439,7 @@ export default function SettingsPage() {
                 {user?.profileImage ? (
                   <img
                     src={user.profileImage}
-                    alt={user.nickname ?? "프로필"}
+                    alt={user.name ?? "프로필"}
                     className="rounded-[30px] object-cover"
                     style={{ width: 60, height: 60 }}
                   />
@@ -455,7 +455,7 @@ export default function SettingsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <p className="text-[16px] font-medium text-app-black truncate">
-                    {user?.nickname ?? "아기랑 회원"} 님
+                    {user?.name ?? "아기랑 회원"} 님
                   </p>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.black} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 18 15 12 9 6" />
