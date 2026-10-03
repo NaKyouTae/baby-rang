@@ -11,7 +11,7 @@ async function bootstrap() {
       'https://baby-rang.spectrify.kr',
       'https://baby-rang-admin.spectrify.kr',
       'http://localhost:13000',
-      'http://localhost:18000',
+      'http://localhost:13001',
     ],
     credentials: true,
   });

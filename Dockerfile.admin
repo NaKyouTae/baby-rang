@@ -38,9 +38,9 @@ COPY --from=builder /build/admin/public ./admin/public
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-EXPOSE 18000
+EXPOSE 13001
 
 ENV HOSTNAME=0.0.0.0
-ENV PORT=18000
+ENV PORT=13001
 
 CMD ["node", "admin/server.js"]
