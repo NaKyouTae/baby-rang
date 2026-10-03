@@ -158,7 +158,7 @@ export default function AdditionalInfoClient() {
       </ul>
 
       <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-        동의 화면에서 이름과 전화번호 항목을 모두 선택해야 저장돼요. 선택 항목(성별·연령대)은
+        동의 화면에서 이름과 전화번호 항목을 모두 선택해야 저장돼요. 선택 항목(성별)은
         동의하지 않아도 이용에 지장이 없어요.
       </p>
 

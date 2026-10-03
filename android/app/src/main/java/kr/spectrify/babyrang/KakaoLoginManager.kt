@@ -136,7 +136,8 @@ class KakaoLoginManager(
             if (account?.nameNeedsAgreement == true) scopes.add("name")
             if (account?.phoneNumberNeedsAgreement == true) scopes.add("phone_number")
             if (account?.genderNeedsAgreement == true) scopes.add("gender")
-            if (account?.ageRangeNeedsAgreement == true) scopes.add("age_range")
+            // 연령대(age_range)는 카카오 콘솔에서 '사용 안 함'이라 요청하지 않는다.
+            // 콘솔에 없는 항목을 scope 로 보내면 로그인 전체가 KOE205 로 막힌다.
 
             if (scopes.isEmpty()) {
                 replyToken(requestId, accessToken)

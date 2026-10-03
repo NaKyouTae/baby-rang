@@ -28,9 +28,12 @@ final class KakaoLoginBridge {
     static let handlerName = "kakaoLogin"
 
     /// 서버가 요구하는 동의항목. 하나라도 비어 있으면 추가 동의를 요청한다.
-    /// (선택 항목인 성별·연령대도 함께 묻되, 거절해도 로그인은 계속된다)
+    /// (선택 항목인 성별도 함께 묻되, 거절해도 로그인은 계속된다)
+    ///
+    /// ⚠️ 연령대(age_range)는 카카오 콘솔에서 '사용 안 함'이라 뺐다. 콘솔에 없는 항목을
+    ///    scope 로 보내면 로그인 전체가 KOE205 로 막힌다. 콘솔에서 켜는 날 다시 넣는다.
     private static let requiredScopes = ["name", "phone_number"]
-    private static let optionalScopes = ["gender", "age_range"]
+    private static let optionalScopes = ["gender"]
 
     func handle(_ message: WKScriptMessage) {
         let body = message.body as? [String: Any] ?? [:]
@@ -90,7 +93,6 @@ final class KakaoLoginBridge {
         if account.nameNeedsAgreement == true { scopes.append("name") }
         if account.phoneNumberNeedsAgreement == true { scopes.append("phone_number") }
         if account.genderNeedsAgreement == true { scopes.append("gender") }
-        if account.ageRangeNeedsAgreement == true { scopes.append("age_range") }
         return scopes.filter {
             Self.requiredScopes.contains($0) || Self.optionalScopes.contains($0)
         }

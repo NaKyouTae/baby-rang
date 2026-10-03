@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -100,6 +101,8 @@ const TEST_ACCOUNT_PROVIDER_ID = 'test-toss-review';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -142,7 +145,60 @@ export class AuthService {
       return { userId: existingAccount.userId };
     }
 
+    // 처음 보는 소셜 계정이지만, 같은 전화번호를 가진 회원이 이미 있으면
+    // 새 회원을 만들지 않고 그 회원에 이 소셜 계정을 덧붙인다.
+    const linked = await this.linkToUserByPhone(profile);
+    if (linked) return { userId: linked };
+
     return { userId: await this.createUserFromSocial(profile) };
+  }
+
+  /**
+   * 전화번호가 같은 기존 회원에 소셜 계정을 연결한다. 없으면 null.
+   *
+   * 카카오·네이버가 주는 전화번호는 각 서비스가 본인확인을 마친 값이라,
+   * 같은 번호면 같은 사람으로 본다. 이게 없으면 한 사람이 카카오로 한 번,
+   * 네이버로 한 번 가입해 아이 기록이 두 계정으로 쪼개진다.
+   *
+   * ⚠️ 애플은 전화번호를 주지 않아 이 경로를 탈 수 없다. 애플로 먼저 가입한
+   *    사람이 나중에 카카오로 로그인하면 별도 회원이 된다(합칠 방법이 없다).
+   */
+  private async linkToUserByPhone(
+    profile: OAuthProfile,
+  ): Promise<string | null> {
+    if (!profile.phone) return null;
+
+    // 번호가 같은 회원이 둘 이상이면 가장 먼저 가입한 쪽에 붙인다.
+    // 통신사 번호 재사용 등으로 생길 수 있는 상황이라 조용히 넘기지 않고 남긴다.
+    const owners = await this.prisma.user.findMany({
+      where: { phone: profile.phone },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+      take: 2,
+    });
+    if (owners.length === 0) return null;
+    if (owners.length > 1) {
+      this.logger.warn(
+        `같은 전화번호를 쓰는 회원이 둘 이상이다. 가장 먼저 가입한 회원에 연결한다. userId=${owners[0].id}`,
+      );
+    }
+
+    const userId = owners[0].id;
+    await this.prisma.account.create({
+      data: {
+        userId,
+        provider: profile.provider,
+        providerId: profile.providerId,
+        refreshToken: profile.refreshToken ?? null,
+      },
+    });
+    // 새로 연결한 제공자가 더 많은 정보를 줄 수 있다(성별·연령대 등).
+    await this.syncSocialProfile(userId, profile);
+
+    this.logger.log(
+      `전화번호가 같아 기존 회원에 ${profile.provider} 계정을 연결했다. userId=${userId}`,
+    );
+    return userId;
   }
 
   /**

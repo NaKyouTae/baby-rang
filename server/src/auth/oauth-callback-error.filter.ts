@@ -26,19 +26,28 @@ export class OAuthCallbackErrorFilter implements ExceptionFilter {
     const clientUrl =
       this.configService.get('CLIENT_URL') || 'http://localhost:3000';
 
-    const isConsentError =
-      exception instanceof BadRequestException &&
-      (exception.getResponse() as { code?: string })?.code ===
-        'SOCIAL_CONSENT_REQUIRED';
+    const body =
+      exception instanceof BadRequestException
+        ? (exception.getResponse() as { code?: string; missing?: string[] })
+        : undefined;
+    const isConsentError = body?.code === 'SOCIAL_CONSENT_REQUIRED';
 
     if (!isConsentError) {
-      // 동의 부족은 사용자가 해결할 수 있는 상황이라 로그를 남기지 않는다.
-      // 그 외는 설정 오류일 가능성이 높아 원인을 남겨야 한다.
       this.logger.error('소셜 로그인 콜백 실패', exception as Error);
+      return res.redirect(`${clientUrl}/home?loginError=login_failed`);
     }
 
-    return res.redirect(
-      `${clientUrl}/home?loginError=${isConsentError ? 'social_consent' : 'login_failed'}`,
+    // 어떤 항목이 비었는지 로그로 남긴다.
+    // 사용자가 동의 화면에서 건너뛴 경우도 있지만, 개발자 콘솔에서 그 동의항목을
+    // 아예 '사용 안 함'으로 둔 경우가 더 흔하다. 둘은 화면상 구분이 안 되므로
+    // 항목 이름이 남아야 어디를 고칠지 알 수 있다. (개인정보는 담기지 않는다)
+    const missing = body?.missing ?? [];
+    this.logger.warn(
+      `소셜 동의 항목 부족으로 가입 중단: ${missing.join(', ') || '알 수 없음'}`,
     );
+
+    const query = new URLSearchParams({ loginError: 'social_consent' });
+    if (missing.length > 0) query.set('missing', missing.join(','));
+    return res.redirect(`${clientUrl}/home?${query.toString()}`);
   }
 }

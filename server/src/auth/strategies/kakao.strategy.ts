@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, StrategyOption } from 'passport-kakao';
+import { Strategy } from 'passport-kakao';
 import { ConfigService } from '@nestjs/config';
 import { AuthProvider } from '@prisma/client';
 import { AuthService } from '../auth.service';
@@ -12,19 +12,16 @@ import {
   normalizePhone,
 } from '../social-profile';
 
-// 요청할 카카오 동의항목.
+// 동의항목(scope)을 인증 요청에 싣지 않는다.
 //
-// ⚠️ 카카오 개발자 콘솔 > 카카오 로그인 > 동의항목에 같은 항목이 켜져 있어야 한다.
-//    켜지지 않은 scope 를 요청하면 로그인 자체가 KOE006 으로 막힌다.
-// ⚠️ name·phone_number 는 비즈니스 앱(비즈앱) + 검수 승인이 있어야 열린다.
-const KAKAO_SCOPES = [
-  'account_email',
-  'profile_image',
-  'name',
-  'phone_number',
-  'gender',
-  'age_range',
-];
+// 카카오는 scope 를 생략하면 콘솔(카카오 로그인 > 동의항목)에 켜 둔 항목을 그대로
+// 동의 화면에 띄운다. 반대로 scope 를 적어 보내면 콘솔에서 '사용 안 함'인 항목이
+// 하나라도 섞이는 순간 로그인 전체가 KOE205 로 막힌다 — 코드와 콘솔을 양쪽에서
+// 맞춰야 하는데, 콘솔 쪽은 검수·비즈앱 승인에 따라 수시로 바뀌므로 어긋나기 쉽다.
+//
+// 그래서 "무엇을 받을지"는 콘솔 한 곳에서만 정한다. 네이버도 같은 방식이다.
+// 서버가 요구하는 항목(이름·전화번호)이 콘솔에서 꺼져 있으면 로그인은 되지만
+// 가입이 SOCIAL_CONSENT_REQUIRED 로 막히고, 그 사실이 사용자에게 안내된다.
 
 @Injectable()
 export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
@@ -37,11 +34,7 @@ export class KakaoStrategy extends PassportStrategy(Strategy, 'kakao') {
       clientID: configService.get('KAKAO_CLIENT_ID')!,
       clientSecret: configService.get('KAKAO_CLIENT_SECRET')!,
       callbackURL: configService.get('KAKAO_CALLBACK_URL')!,
-      // @types/passport-kakao 의 StrategyOption 에는 scope 가 빠져 있지만,
-      // passport-kakao 는 passport-oauth2 를 그대로 상속하고 scopeSeparator 를
-      // ',' 로 지정해 두어 동작한다(dist/Strategy.js). 타입만 보정한다.
-      scope: KAKAO_SCOPES,
-    } as StrategyOption);
+    });
   }
 
   async validate(

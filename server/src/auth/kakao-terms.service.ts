@@ -65,6 +65,15 @@ export class KakaoTermsService {
     const data = (await res.json().catch(() => ({}))) as ServiceTermsResponse;
     const items = data.service_terms ?? data.allowed_service_terms ?? [];
 
+    // 어떤 태그가 넘어왔는지 남긴다. 간편가입 설정이 제대로 됐는지 확인할 방법이
+    // 이 로그뿐이다 — 콘솔에 약관을 등록하지 않으면 200 에 빈 목록이 와서,
+    // 오류 없이 "동의를 하나도 못 받은" 상태가 조용히 지나간다.
+    this.logger.log(
+      items.length > 0
+        ? `카카오 약관 동의내역: ${items.map((i) => i?.tag).join(', ')}`
+        : '카카오 약관 동의내역이 비어 있다 — 간편가입에 약관이 등록됐는지 확인할 것.',
+    );
+
     const consents: KakaoConsents = {};
     for (const item of items) {
       const tag = item?.tag?.toLowerCase();

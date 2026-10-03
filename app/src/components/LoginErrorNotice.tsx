@@ -17,6 +17,23 @@ const MESSAGES: Record<string, string> = {
   login_failed: '로그인을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',
 };
 
+// 서버가 어떤 항목이 비었는지 알려주면 그 항목만 짚어 준다.
+// "둘 다 선택하라"는 안내는 하나만 빠진 사용자에게는 무엇을 고쳐야 할지 알려주지 못한다.
+const FIELD_LABELS: Record<string, string> = {
+  name: '이름',
+  phone: '전화번호',
+};
+
+function consentMessage(missing: string | null): string {
+  const labels = (missing ?? '')
+    .split(',')
+    .map((f) => FIELD_LABELS[f.trim()])
+    .filter(Boolean);
+
+  if (labels.length === 0) return MESSAGES.social_consent;
+  return `${labels.join('·')} 제공에 동의해야 로그인할 수 있어요. 동의 화면에서 해당 항목을 선택해 주세요.`;
+}
+
 export default function LoginErrorNotice() {
   const { openLoginPrompt } = useLoginPrompt();
 
@@ -25,10 +42,15 @@ export default function LoginErrorNotice() {
     const code = params.get('loginError');
     if (!code) return;
 
-    openLoginPrompt(MESSAGES[code] ?? MESSAGES.login_failed);
+    openLoginPrompt(
+      code === 'social_consent'
+        ? consentMessage(params.get('missing'))
+        : (MESSAGES[code] ?? MESSAGES.login_failed),
+    );
 
     // 주소에서 지운다. 남겨두면 새로고침·뒤로가기마다 같은 안내가 다시 뜬다.
     params.delete('loginError');
+    params.delete('missing');
     const query = params.toString();
     window.history.replaceState(
       null,
