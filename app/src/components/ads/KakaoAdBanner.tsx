@@ -6,7 +6,7 @@ import { isNativeApp, useIsNativeApp } from "@/lib/isNativeApp";
 type Props = {
   /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
   unit: string;
-  /** 광고 너비 강제값. 미지정 시 디바이스 너비(최대 430)에 맞춤 */
+  /** 요청할 소재 규격의 너비. 미지정 시 320(AdFit 기본 배너 규격) */
   width?: number;
   /** 광고 높이 (기본: 50) */
   height?: number;
@@ -27,7 +27,6 @@ type Props = {
   stretch?: boolean;
 };
 
-const APP_MAX_WIDTH = 430;
 const DEFAULT_WIDTH = 320;
 // 카카오 광고 응답이 이 시간 내에 안 오면 no-fill 로 간주하고 영역을 접는다.
 const FILL_TIMEOUT_MS = 4000;
@@ -55,7 +54,8 @@ type WindowWithCallbacks = Window & Record<string, (() => void) | undefined>;
  *   두 광고를 동시에 띄우면 화면도 잡아먹고 광고 밀도 정책에도 걸린다.
  *   슬롯을 접지 않는 이유: 접으면 네이티브 배너가 하단 네비를 덮어버린다.
  *
- * width 미지정 시 디바이스 너비(앱 max-width 430까지)에 맞춰 data-ad-width를 설정한다.
+ * data-ad-width 는 항상 유닛에 등록된 소재 규격(기본 320)으로 보낸다. 자세한 이유는
+ * stretch 프로퍼티 주석 참고.
  * 광고가 채워지지 않으면 onFilledChange(false)로 알려 빈 영역을 접게 한다.
  */
 export default function KakaoAdBanner({
@@ -105,7 +105,9 @@ export default function KakaoAdBanner({
     if (!ins) return;
 
     const win = window as unknown as WindowWithCallbacks;
-    let filled = false;
+    // ⚠️ 초기값은 false 가 아니라 null(아직 모름)이어야 한다.
+    //    false 로 두면 첫 no-fill 보고가 "값이 그대로"로 걸러져 영역이 접히지 않는다.
+    let filled: boolean | null = null;
     const report = (next: boolean) => {
       if (filled === next) return;
       filled = next;
@@ -113,19 +115,20 @@ export default function KakaoAdBanner({
       onFilledChange?.(next);
     };
 
-    // stretch 모드는 규격대로(320) 요청하고 확대는 CSS 가 담당한다.
-    // 비-stretch 모드는 기존 동작(디바이스 너비 요청)을 유지한다.
-    const w = stretch
-      ? baseWidth
-      : (widthOverride ??
-        Math.min(window.innerWidth || DEFAULT_WIDTH, APP_MAX_WIDTH));
-    ins.setAttribute("data-ad-width", String(w));
+    // ⚠️ data-ad-width 는 유닛에 등록된 규격 그대로여야 한다.
+    //
+    // 예전에는 비-stretch 모드에서 디바이스 너비(390 등)를 넣었는데, AdFit 은
+    // 등록 규격(320x50)의 소재만 가지고 있어 요청 규격이 어긋나면 맞는 소재를
+    // 찾지 못하고 no-fill 로 답한다. 화면을 꽉 채우고 싶으면 요청 규격은 그대로 두고
+    // stretch 로 받은 소재를 CSS 확대한다.
+    //
+    // (JSX 에서 이미 같은 값을 넣으므로 여기서 다시 세팅하지 않는다)
 
     // SPA 재마운트 진단: ba.min.js 가 이미 로드돼 있으면 새 <ins> 를 다시 스캔하지
     // 않아 광고가 안 채워지는 흔한 케이스. 스크립트 존재 여부/네트워크 상태를 함께 본다.
     const sdkAlready = !!document.querySelector(`script[src="${KAKAO_SDK_SRC}"]`);
     adLog(unit, "effect 시작", {
-      width: w,
+      width: baseWidth,
       online: typeof navigator !== "undefined" ? navigator.onLine : "n/a",
       sdkAlreadyLoaded: sdkAlready,
       visibility: typeof document !== "undefined" ? document.visibilityState : "n/a",
@@ -151,7 +154,7 @@ export default function KakaoAdBanner({
 
     // 타임아웃 폴백: 아직 안 채워졌으면 접는다.
     const timer = window.setTimeout(() => {
-      if (!filled) {
+      if (filled !== true) {
         adLog(unit, `⏱️ ${FILL_TIMEOUT_MS}ms 타임아웃 — 응답 없음(no-fail/no-fill)`, {
           hasIframe: !!ins.querySelector("iframe"),
           insHTMLLength: ins.innerHTML.length,
@@ -180,7 +183,7 @@ export default function KakaoAdBanner({
         // 이미 제거됐거나 못 찾는 경우 무시
       }
     };
-  }, [unit, widthOverride, onFilledChange, stretch, baseWidth]);
+  }, [unit, onFilledChange, stretch, baseWidth]);
 
   if (!unit) return null;
   // 앱에서는 네이티브 AdMob 배너가 노출되므로 웹 광고는 렌더하지 않는다.
