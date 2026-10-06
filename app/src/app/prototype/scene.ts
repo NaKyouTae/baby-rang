@@ -11,7 +11,7 @@
  */
 
 import { ell, hline, makeBuf, panel, px, rect, toCanvas, vline, type Buf } from './pixelDraw';
-import { FLOOR_TOP, ROOM_W_TILES, TILE, WALL_TILES, roomOffsetX } from './tiles';
+import { FLOOR_TOP, ROOM_W_TILES, TILE, WALL_TILES } from './tiles';
 
 export const BTN = 28;
 
@@ -112,7 +112,8 @@ export const TINT: Record<ActionId, string> = {
 /* ------------------------------------------------------------------ 레이아웃 */
 
 export function layout(w: number, h: number, safeTop: number, safeBottom: number): Layout {
-  const offsetX = roomOffsetX(w);
+  // 방이 캔버스 가로를 꽉 채우므로 가운데 정렬 오프셋이 필요 없다
+  const offsetX = 0;
   // 오른쪽 끝에 꾸미기 버튼 자리를 비우느라 카드를 중앙이 아니라 왼쪽에 붙인다.
   const decorate = { x: w - 6 - 30, y: safeTop + 7, w: 30, h: 31 };
   const card = { x: 6, y: safeTop + 7, w: decorate.x - 12, h: 31 };
@@ -164,8 +165,8 @@ export function layout(w: number, h: number, safeTop: number, safeBottom: number
     footer: { x: Math.round((w - 88) / 2), y: h - safeBottom - 26, w: 88, h: 18 },
     // 가구를 피해 바닥 아래쪽에서만 돌아다닌다. 타일 좌표를 픽셀로 환산한다.
     walk: {
-      x0: offsetX + 1.5 * TILE,
-      x1: offsetX + (ROOM_W_TILES - 1.5) * TILE,
+      x0: 1.5 * TILE,
+      x1: w - 1.5 * TILE,
       y0: (WALL_TILES + 5) * TILE,
       y1: h - safeBottom - 46,
     },

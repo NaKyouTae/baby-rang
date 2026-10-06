@@ -19,6 +19,8 @@ export default function robots(): MetadataRoute.Robots {
     "/api/",
     // 로그인한 회원만 보는 화면. 색인될 이유가 없다.
     "/additional-info",
+    // 로그인 수단만 있는 얇은 페이지.
+    "/login",
     "/events/",
     "/prototype",
   ];

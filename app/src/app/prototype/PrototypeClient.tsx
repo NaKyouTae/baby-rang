@@ -6,6 +6,7 @@ import { calcChildAge } from '@/lib/childAge';
 import { useSelectedChild } from '@/hooks/useChildren';
 import PixelScreen from './PixelScreen';
 import DecorateSheet, { type RoomItem } from './DecorateSheet';
+import RemoveSheet from './RemoveSheet';
 import { preloadSprites, type Placement } from './placements';
 import { ROOM_W_TILES, WALL_TILES } from './tiles';
 import { POSE_LABEL, poseForMonths } from './pixelSprite';
@@ -22,21 +23,37 @@ function demoBirthDate(monthsAgo: number) {
 
 /** 배치를 임시로 담아두는 브라우저 저장소 키. 서버 저장이 생기면 사라진다. */
 const STORAGE_KEY = 'babyrang.prototype.placements';
-/** 방 타입은 좌표가 없는 배경이라 배치와 따로 저장한다. 한 방에 하나뿐이다. */
+/** 자리가 고정된 슬롯(방·벽지·바닥·창문). 좌표가 없어 배치와 따로 저장한다. */
 const ROOM_KEY = 'babyrang.prototype.room';
+
+type Slot = { id: string; imageUrl: string | null } | null;
+type Slots = { room: Slot; wallpaper: Slot; flooring: Slot; window: Slot };
+const EMPTY_SLOTS: Slots = { room: null, wallpaper: null, flooring: null, window: null };
+
+/** 어드민 분류 → 고정 슬롯 이름. 여기 없는 분류는 자유 배치 가구다. */
+const SLOT_OF: Record<string, keyof Slots> = {
+  ROOM: 'room',
+  WALLPAPER: 'wallpaper',
+  FLOORING: 'flooring',
+  WINDOW: 'window',
+};
 
 /**
  * 저장해 둔 배치를 읽는다.
  * 첫 렌더에서 바로 쓰려고 effect 가 아니라 useState 초기값으로 넣는다 —
  * effect 에서 setState 하면 빈 방이 한 번 그려졌다가 덮인다.
  */
-function loadSavedRoom(): { id: string; imageUrl: string | null } | null {
-  if (typeof window === 'undefined') return null;
+function loadSavedSlots(): Slots {
+  if (typeof window === 'undefined') return EMPTY_SLOTS;
   try {
     const raw = localStorage.getItem(ROOM_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return EMPTY_SLOTS;
+    const parsed = JSON.parse(raw);
+    // 예전 형식은 방 배경 하나만 들고 있었다
+    if (parsed && 'imageUrl' in parsed) return { ...EMPTY_SLOTS, room: parsed };
+    return { ...EMPTY_SLOTS, ...parsed };
   } catch {
-    return null;
+    return EMPTY_SLOTS;
   }
 }
 
@@ -65,20 +82,16 @@ export default function PrototypeClient() {
   const [openAction, setOpenAction] = useState<ActionId | null>(null);
   const [decorating, setDecorating] = useState(false);
   const [sheetCategory, setSheetCategory] = useState('ROOM');
+  const [removeTarget, setRemoveTarget] = useState<Placement | null>(null);
   const [editing, setEditing] = useState(false);
   // 편집에 들어갈 때의 방 상태. X 로 나가면 여기로 되돌린다.
-  const snapshotRef = useRef<{
-    placements: Placement[];
-    roomItem: { id: string; imageUrl: string | null } | null;
-  } | null>(null);
+  const snapshotRef = useRef<{ placements: Placement[]; slots: Slots } | null>(null);
   const [placements, setPlacements] = useState<Placement[]>(loadSavedPlacements);
-  const [roomItem, setRoomItem] = useState<{ id: string; imageUrl: string | null } | null>(
-    loadSavedRoom,
-  );
+  const [slots, setSlots] = useState<Slots>(loadSavedSlots);
   // 서버의 방 버전. 공동 양육자가 먼저 바꿨으면 저장이 거절된다.
   const [version, setVersion] = useState(0);
   const [saving, setSaving] = useState(false);
-  const roomImageUrl = roomItem?.imageUrl ?? null;
+
 
   const child = selectedChild ?? DEMO;
   const isDemo = !selectedChild;
@@ -171,13 +184,20 @@ export default function PrototypeClient() {
           spriteLiftY: p.item.spriteLiftY,
         }));
         setPlacements(loaded);
-        setRoomItem(
-          data.room?.roomItem
-            ? { id: data.room.roomItem.id, imageUrl: data.room.roomItem.imageUrl }
-            : null,
-        );
+        const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
+          it ? { id: it.id, imageUrl: it.imageUrl } : null;
+        const nextSlots: Slots = {
+          room: toSlot(data.room?.roomItem),
+          wallpaper: toSlot(data.room?.wallpaper),
+          flooring: toSlot(data.room?.flooring),
+          window: toSlot(data.room?.window),
+        };
+        setSlots(nextSlots);
         setVersion(data.version ?? 0);
-        preloadSprites([...loaded.map((p) => p.imageUrl), data.room?.roomItem?.imageUrl ?? null]);
+        preloadSprites([
+          ...loaded.map((p) => p.imageUrl),
+          ...Object.values(nextSlots).map((v) => v?.imageUrl ?? null),
+        ]);
       })
       .catch(() => {
         /* 불러오기 실패는 빈 방으로 둔다 — 저장은 여전히 가능하다 */
@@ -189,28 +209,26 @@ export default function PrototypeClient() {
 
   useEffect(() => {
     try {
-      if (roomItem) localStorage.setItem(ROOM_KEY, JSON.stringify(roomItem));
-      else localStorage.removeItem(ROOM_KEY);
+      localStorage.setItem(ROOM_KEY, JSON.stringify(slots));
     } catch {
       /* 용량 초과 등은 무시한다 */
     }
-  }, [roomItem]);
+  }, [slots]);
 
   const handleAction = useCallback((id: ActionId) => setOpenAction(id), []);
   const handlePet = useCallback(() => {}, []);
   // 꾸미기 버튼 — 바로 적용하지 않고 편집 모드로 들어간다.
   const handleDecorate = useCallback(() => {
-    snapshotRef.current = { placements, roomItem };
+    snapshotRef.current = { placements, slots };
     setEditing(true);
-    setDecorating(true);
-  }, [placements, roomItem]);
+  }, [placements, slots]);
 
   // X — 편집 중 바꾼 것을 전부 되돌린다
   const handleCloseEdit = useCallback(() => {
     const snap = snapshotRef.current;
     if (snap) {
       setPlacements(snap.placements);
-      setRoomItem(snap.roomItem);
+      setSlots(snap.slots);
     }
     snapshotRef.current = null;
     setDecorating(false);
@@ -236,7 +254,10 @@ export default function PrototypeClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           version,
-          roomItemId: roomItem?.id ?? null,
+          roomItemId: slots.room?.id ?? null,
+          wallpaperItemId: slots.wallpaper?.id ?? null,
+          flooringItemId: slots.flooring?.id ?? null,
+          windowItemId: slots.window?.id ?? null,
           placements: placements.map((p) => ({
             itemId: p.itemId,
             tileX: p.tileX,
@@ -256,9 +277,7 @@ export default function PrototypeClient() {
     } finally {
       setSaving(false);
     }
-  }, [saving, childId, version, roomItem, placements]);
-
-  const handlePickSpot = useCallback(() => setDecorating(true), []);
+  }, [saving, childId, version, slots, placements]);
 
   const handlePickCategory = useCallback((category: string) => {
     setSheetCategory(category);
@@ -270,9 +289,11 @@ export default function PrototypeClient() {
     setDecorating(false);
     preloadSprites([item.imageUrl]);
 
-    // 방 타입은 배경이라 '놓는' 게 아니라 '바꾸는' 것이다. 항상 하나만 적용된다.
-    if (item.category === 'ROOM') {
-      setRoomItem({ id: item.id, imageUrl: item.imageUrl });
+    // 방·벽지·바닥·창문은 자리가 고정돼 있다. '놓는' 게 아니라 '바꾸는' 것이고
+    // 각각 하나씩만 적용된다.
+    const slot = SLOT_OF[item.category];
+    if (slot) {
+      setSlots((prev) => ({ ...prev, [slot]: { id: item.id, imageUrl: item.imageUrl } }));
       return;
     }
 
@@ -300,6 +321,7 @@ export default function PrototypeClient() {
 
   const handleRemovePlacement = useCallback((id: string) => {
     setPlacements((prev) => prev.filter((p) => p.id !== id));
+    setRemoveTarget(null);
   }, []);
 
   return (
@@ -317,12 +339,14 @@ export default function PrototypeClient() {
         editing={editing}
         onCloseEdit={handleCloseEdit}
         onSaveEdit={handleSaveEdit}
-        onPickSpot={handlePickSpot}
         onPickCategory={handlePickCategory}
-        roomImageUrl={roomImageUrl}
+        roomImageUrl={slots.room?.imageUrl ?? null}
+        wallpaperUrl={slots.wallpaper?.imageUrl ?? null}
+        flooringUrl={slots.flooring?.imageUrl ?? null}
+        windowUrl={slots.window?.imageUrl ?? null}
         placements={placements}
         onMovePlacement={handleMovePlacement}
-        onRemovePlacement={handleRemovePlacement}
+        onLongPressPlacement={setRemoveTarget}
       />
 
       <DecorateSheet
@@ -331,6 +355,12 @@ export default function PrototypeClient() {
         onPick={handlePick}
         category={sheetCategory}
         onChangeCategory={setSheetCategory}
+      />
+
+      <RemoveSheet
+        target={removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onRemove={handleRemovePlacement}
       />
 
       <BottomSheet

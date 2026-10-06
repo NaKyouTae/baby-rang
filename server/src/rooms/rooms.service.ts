@@ -2,15 +2,16 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
 
-/** 방의 논리 크기(타일). 클라이언트의 tiles.ts 와 같은 값이어야 한다. */
-const ROOM_W_TILES = 12;
-/** 위에서 몇 줄이 벽인가. 바닥 가구는 이 아래로만 놓을 수 있다. */
-const WALL_TILES = 8;
-/** 세로는 기기마다 보이는 높이가 달라, 저장만 허용하는 넉넉한 상한을 둔다. */
+/**
+ * 가로 타일 수 상한. 클라이언트가 화면 폭에 맞춰 배율을 정하므로
+ * 기기에 따라 12~13칸 사이에서 움직인다. 넉넉히 둔다.
+ */
+const MAX_TILE_X = 16;
+/** 세로도 기기마다 보이는 높이가 달라 저장만 허용하는 상한을 둔다. */
 const MAX_TILE_Y = 40;
 
-/** 러그·바닥재는 밟고 지나가는 것이라 다른 가구와 겹쳐도 된다. */
-const FLAT_CATEGORIES = new Set(['RUG', 'FLOORING']);
+/** 자리가 고정된 분류. 배치가 아니라 방의 속성이라 좌표를 받지 않는다. */
+const FIXED_CATEGORIES = new Set(['ROOM', 'WALLPAPER', 'FLOORING', 'WINDOW']);
 
 type PlacementInput = {
   itemId: string;
@@ -32,12 +33,24 @@ export class RoomsService {
     await this.children.assertAccess(userId, childId);
     const room = await this.prisma.room.findUnique({
       where: { childId },
-      include: { placements: { include: { item: true } }, roomItem: true },
+      include: {
+        placements: { include: { item: true } },
+        roomItem: true,
+        wallpaper: true,
+        flooring: true,
+        window: true,
+      },
     });
     // 아직 꾸민 적이 없으면 빈 방을 돌려준다. 여기서 행을 만들 이유는 없다.
     if (!room) return { room: null, placements: [], version: 0 };
     return {
-      room: { id: room.id, roomItem: room.roomItem },
+      room: {
+        id: room.id,
+        roomItem: room.roomItem,
+        wallpaper: room.wallpaper,
+        flooring: room.flooring,
+        window: room.window,
+      },
       placements: room.placements,
       version: room.version,
     };
@@ -46,8 +59,7 @@ export class RoomsService {
   /**
    * 방 전체를 한 번에 덮어쓴다.
    *
-   * 가구 하나씩 PATCH 하지 않는 이유는 겹침 검사 때문이다. 겹침은 방 전체를
-   * 봐야 알 수 있어서, 부분 수정마다 전체를 다시 검사하느니 통째로 받는 편이 낫다.
+   * 가구 하나씩 PATCH 하지 않고 통째로 받는다. 부분 수정은 순서가 꼬이기 쉽고,
    * 공동 양육자가 동시에 편집하는 경우도 version 하나로 막을 수 있다.
    */
   async replaceLayout(
@@ -56,6 +68,9 @@ export class RoomsService {
     input: {
       version: number;
       roomItemId?: string | null;
+      wallpaperItemId?: string | null;
+      flooringItemId?: string | null;
+      windowItemId?: string | null;
       placements: PlacementInput[];
     },
   ) {
@@ -68,14 +83,13 @@ export class RoomsService {
     });
     const byId = new Map(items.map((i) => [i.id, i]));
 
-    const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
     for (const p of input.placements) {
       const item = byId.get(p.itemId);
       if (!item)
         throw new BadRequestException('등록되지 않은 아이템이 있습니다.');
-      if (item.category === 'ROOM') {
+      if (FIXED_CATEGORIES.has(item.category)) {
         throw new BadRequestException(
-          '방 타입은 배치가 아니라 방 배경으로 지정합니다.',
+          `'${item.name}' 은 자리가 고정된 분류라 놓는 게 아니라 바꾸는 것입니다.`,
         );
       }
 
@@ -84,35 +98,17 @@ export class RoomsService {
       const w = turned ? item.tileH : item.tileW;
       const h = turned ? item.tileW : item.tileH;
 
-      if (p.tileX < 0 || p.tileX + w > ROOM_W_TILES) {
+      if (p.tileX < 0 || p.tileX + w > MAX_TILE_X) {
         throw new BadRequestException(`'${item.name}' 이 방 밖으로 나갑니다.`);
       }
-      if (p.tileY < WALL_TILES || p.tileY + h > MAX_TILE_Y) {
+      if (p.tileY < 0 || p.tileY + h > MAX_TILE_Y) {
         throw new BadRequestException(
           `'${item.name}' 을 놓을 수 없는 자리입니다.`,
         );
       }
 
-      if (FLAT_CATEGORIES.has(item.category)) continue;
-
-      const box = {
-        x0: p.tileX,
-        y0: p.tileY,
-        x1: p.tileX + w,
-        y1: p.tileY + h,
-      };
-      for (const other of boxes) {
-        const overlap =
-          box.x0 < other.x1 &&
-          other.x0 < box.x1 &&
-          box.y0 < other.y1 &&
-          other.y0 < box.y1;
-        if (overlap)
-          throw new BadRequestException(
-            `'${item.name}' 이 다른 가구와 겹칩니다.`,
-          );
-      }
-      boxes.push(box);
+      // 겹침은 막지 않는다. 가구를 포개 놓는 건 꾸미는 사람의 선택이고,
+      // 칸 단위로 밀어내면 오히려 사이가 크게 벌어진다.
     }
 
     const existing = await this.prisma.room.findUnique({ where: { childId } });
@@ -128,11 +124,21 @@ export class RoomsService {
             where: { id: existing.id },
             data: {
               roomItemId: input.roomItemId ?? null,
+              wallpaperItemId: input.wallpaperItemId ?? null,
+              flooringItemId: input.flooringItemId ?? null,
+              windowItemId: input.windowItemId ?? null,
               version: { increment: 1 },
             },
           })
         : await tx.room.create({
-            data: { childId, roomItemId: input.roomItemId ?? null, version: 1 },
+            data: {
+              childId,
+              roomItemId: input.roomItemId ?? null,
+              wallpaperItemId: input.wallpaperItemId ?? null,
+              flooringItemId: input.flooringItemId ?? null,
+              windowItemId: input.windowItemId ?? null,
+              version: 1,
+            },
           });
 
       await tx.roomPlacement.deleteMany({ where: { roomId: room.id } });

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ROOM_W_TILES, SCALE, TILE, WALL_TILES } from './tiles';
-import { getSprite, overlaps, preloadSprites, type Placement } from './placements';
+import { TILE, scaleFor, tilesAcross } from './tiles';
+import { getSprite, preloadSprites, type Placement } from './placements';
 import {
   BTN,
   buildRoom,
@@ -41,15 +41,18 @@ interface Props {
   editing: boolean;
   onCloseEdit: () => void;
   onSaveEdit: () => void;
-  /** 편집 중 빈 바닥을 탭했을 때 — 아이템 목록을 연다. */
-  onPickSpot: () => void;
   /** 편집 모드 분류 탭을 눌렀을 때. */
   onPickCategory: (category: string) => void;
   /** 방 전체 배경 그림. 없으면 코드로 그린 방을 쓴다. */
   roomImageUrl: string | null;
+  /** 자리가 고정된 슬롯. 좌표가 없어 배치가 아니라 방의 속성이다. */
+  wallpaperUrl: string | null;
+  flooringUrl: string | null;
+  windowUrl: string | null;
   placements: Placement[];
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
-  onRemovePlacement: (id: string) => void;
+  /** 가구를 길게 눌렀을 때 — 치울지 바텀시트로 묻는다. */
+  onLongPressPlacement: (placement: Placement) => void;
 }
 
 /** 방 좌표계 기준 이동 속도(픽셀/초). 아기 걸음이라 느리다. */
@@ -65,7 +68,7 @@ const FLAT_CATEGORIES = new Set(['RUG', 'FLOORING']);
 const LIFT = 5;
 
 export default function PixelScreen(props: Props) {
-  const { months, pose, childName, onAction, onPet, onDecorate, editing, onCloseEdit, onSaveEdit, onPickSpot, onPickCategory, roomImageUrl, placements, onMovePlacement, onRemovePlacement } = props;
+  const { months, pose, childName, onAction, onPet, onDecorate, editing, onCloseEdit, onSaveEdit, onPickCategory, roomImageUrl, wallpaperUrl, flooringUrl, windowUrl, placements, onMovePlacement, onLongPressPlacement } = props;
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
@@ -88,11 +91,11 @@ export default function PixelScreen(props: Props) {
     editingRef.current = editing;
   }, [editing]);
 
-  const roomImageRef = useRef(roomImageUrl);
+  const slotsRef = useRef({ roomImageUrl, wallpaperUrl, flooringUrl, windowUrl });
   useEffect(() => {
-    roomImageRef.current = roomImageUrl;
-    preloadSprites([roomImageUrl]);
-  }, [roomImageUrl]);
+    slotsRef.current = { roomImageUrl, wallpaperUrl, flooringUrl, windowUrl };
+    preloadSprites([roomImageUrl, wallpaperUrl, flooringUrl, windowUrl]);
+  }, [roomImageUrl, wallpaperUrl, flooringUrl, windowUrl]);
 
   // 렌더 루프 안에서 만들어지는 상태를 이벤트 핸들러가 집어가는 통로
   const layoutRef = useRef<Layout | null>(null);
@@ -122,7 +125,8 @@ export default function PixelScreen(props: Props) {
     if (!host) return;
     const measure = () => {
       const r = host.getBoundingClientRect();
-      setSize({ w: Math.floor(r.width / SCALE), h: Math.floor(r.height / SCALE) });
+      const scale = scaleFor(r.width);
+      setSize({ w: Math.floor(r.width / scale), h: Math.floor(r.height / scale) });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -137,9 +141,10 @@ export default function PixelScreen(props: Props) {
     if (!canvas || !ctx) return;
 
     const css = getComputedStyle(document.documentElement);
+    const scale = scaleFor(canvas.getBoundingClientRect().width || size.w);
     const safe = (name: string) => {
       const v = parseFloat(css.getPropertyValue(name));
-      return Number.isFinite(v) ? Math.round(v / SCALE) : 0;
+      return Number.isFinite(v) ? Math.round(v / scale) : 0;
     };
     const L: Layout = layout(size.w, size.h, safe('--safe-area-top'), safe('--safe-area-bottom'));
 
@@ -219,7 +224,8 @@ export default function PixelScreen(props: Props) {
       ctx.clearRect(0, 0, L.w, L.h);
 
       // 방 배경 — 고른 그림이 있으면 그걸 쓰고, 없으면 코드로 그린 방을 쓴다.
-      const roomUrl = roomImageRef.current;
+      const slots = slotsRef.current;
+      const roomUrl = slots.roomImageUrl;
       const roomImg = roomUrl ? getSprite(roomUrl) : null;
       if (roomImg) {
         // 화면을 꽉 채우되 비율은 지킨다. 늘리면 픽셀이 찌그러진다.
@@ -229,6 +235,25 @@ export default function PixelScreen(props: Props) {
         ctx.drawImage(roomImg, Math.round((L.w - dw) / 2), Math.round((L.h - dh) / 2), dw, dh);
       } else {
         ctx.drawImage(roomLayer, 0, 0);
+      }
+
+      // 벽지·바닥재 — 자리가 고정돼 있어 '놓는' 게 아니라 벽/바닥 전체를 '바꾼다'.
+      // 16x16 타일을 반복해 채운다.
+      const tileFill = (url: string | null, y0: number, y1: number) => {
+        const img = url ? getSprite(url) : null;
+        if (!img) return;
+        for (let y = y0; y < y1; y += TILE) {
+          for (let x = 0; x < L.w; x += TILE) ctx.drawImage(img, x, y, TILE, TILE);
+        }
+      };
+      const wallBottom = Math.round(L.h * 0.3);
+      tileFill(slots.wallpaperUrl, 0, wallBottom);
+      tileFill(slots.flooringUrl, wallBottom, L.h);
+
+      // 창문 — 벽의 정해진 자리에 걸린다. 옮길 수 없고 교체만 된다.
+      const windowImg = slots.windowUrl ? getSprite(slots.windowUrl) : null;
+      if (windowImg) {
+        ctx.drawImage(windowImg, TILE, Math.round(wallBottom * 0.35), TILE * 3, TILE * 2);
       }
 
       // 가구와 아이를 한 목록에 모아 y 로 정렬한다.
@@ -460,16 +485,13 @@ export default function PixelScreen(props: Props) {
       longPressRef.current = setTimeout(() => {
         if (movedRef.current) return;
         dragIdRef.current = null;
-        if (confirm(`'${target.name}' 을 치울까요?`)) onRemovePlacement(target.id);
+        onLongPressPlacement(target);
       }, 600);
       return;
     }
 
-    // 편집 중 빈 곳을 누르면 아이템 목록을 연다. 평소에는 아이를 쓰다듬는다.
-    if (editing) {
-      onPickSpot();
-      return;
-    }
+    // 편집 중에는 빈 곳을 눌러도 아무 일도 없다. 아이템은 오른쪽 분류 탭에서 고른다.
+    if (editing) return;
     heartRef.current();
     onPet();
   };
@@ -485,13 +507,13 @@ export default function PixelScreen(props: Props) {
     // 타일 격자에 붙인다. 자유 배치로 두면 가구가 미세하게 어긋나 지저분해진다.
     const tx = Math.round((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
     const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
-    const clampedX = Math.min(Math.max(tx, 0), ROOM_W_TILES - target.tileW);
-    const clampedY = Math.min(Math.max(ty, WALL_TILES), Math.floor(L.h / TILE) - target.tileH);
+    // 캔버스 안이면 어디든 놓을 수 있다. 벽 쪽 위로도 올라간다.
+    const clampedX = Math.min(Math.max(tx, 0), tilesAcross(L.w) - target.tileW);
+    const clampedY = Math.min(Math.max(ty, 0), Math.floor(L.h / TILE) - target.tileH);
     if (clampedX === target.tileX && clampedY === target.tileY) return;
     movedRef.current = true;
     clearLongPress();
-    // 겹치는 자리로는 못 간다. 끌다가 멈추는 느낌이라 어디가 막혔는지 바로 안다.
-    if (overlaps(placementsRef.current, target, clampedX, clampedY)) return;
+    // 겹침은 막지 않는다. 포개 놓을지는 꾸미는 사람이 정한다.
     onMovePlacement(id, clampedX, clampedY);
   };
 

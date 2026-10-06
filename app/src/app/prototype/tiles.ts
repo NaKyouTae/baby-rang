@@ -9,8 +9,16 @@
 /** 타일 한 칸의 논리 픽셀. 에셋도 이 배수로 그린다. */
 export const TILE = 16;
 
-/** CSS 픽셀 한 칸이 화면에서 차지하는 크기. 정수여야 픽셀이 균일하다. */
-export const SCALE = 2;
+/**
+ * 화면 폭에 맞춘 확대 배율.
+ *
+ * 2로 고정해 두면 화면이 넓을수록 방 좌우에 여백이 크게 남고, 그 여백에는
+ * 가구를 놓을 수 없어 "왜 여기까지 안 가지" 하게 된다. 방이 가로를 꽉 채우도록
+ * 배율을 계산한다. 정수여야 픽셀이 균일하다.
+ */
+export function scaleFor(cssWidth: number) {
+  return Math.max(1, Math.floor(cssWidth / ROOM_W));
+}
 
 /** 방의 논리 크기(타일). 기기가 달라도 이 값은 변하지 않는다. */
 export const ROOM_W_TILES = 12;
@@ -24,11 +32,11 @@ export const WALL_TILES = 8;
 export const FLOOR_TOP = WALL_TILES * TILE; // 64
 
 /**
- * 방을 캔버스 가로 가운데에 놓기 위한 오프셋.
- * 세로는 벽이 항상 위에 붙으므로 0 이다 — 화면이 길면 바닥이 더 보일 뿐이다.
+ * 가로로 놓을 수 있는 칸 수.
+ * 배율을 폭에 맞춰 잡으므로 기기와 상관없이 대개 12~13칸이 된다.
  */
-export function roomOffsetX(canvasW: number) {
-  return Math.round((canvasW - ROOM_W) / 2);
+export function tilesAcross(canvasW: number) {
+  return Math.floor(canvasW / TILE);
 }
 
 /** 타일 좌표 → 캔버스 픽셀 좌표(왼쪽 위). */

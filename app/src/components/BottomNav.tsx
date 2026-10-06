@@ -224,6 +224,8 @@ export default function BottomNav({
     pathname === "/menu" ||
     // 추가 정보 화면은 여기서 빠져나가면 안 되는 흐름이라 네비를 숨긴다.
     pathname === "/additional-info" ||
+    // 로그인 진입 화면도 같다. 심사자가 주소로 바로 들어오는 입구다.
+    pathname === "/login" ||
     pathname === "/prototype";
   if (hideNav) return null;
 

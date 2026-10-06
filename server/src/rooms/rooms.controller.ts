@@ -26,6 +26,9 @@ export class RoomsController {
     return this.service.replaceLayout(req.user.id, childId, {
       version: Number(body?.version ?? 0),
       roomItemId: body?.roomItemId ?? null,
+      wallpaperItemId: body?.wallpaperItemId ?? null,
+      flooringItemId: body?.flooringItemId ?? null,
+      windowItemId: body?.windowItemId ?? null,
       placements: Array.isArray(body?.placements) ? body.placements : [],
     });
   }

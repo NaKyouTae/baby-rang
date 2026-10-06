@@ -15,6 +15,7 @@ const BUSINESS_INFO_PATHS = ["/settings", "/home"];
 // 하단 여백조차 흐름을 깨므로 아무것도 렌더하지 않는다.
 const EXCLUDED_PREFIXES = [
   "/additional-info", // 추가 정보 확인 (전체화면 흐름)
+  "/login", // 로그인 진입 (전체화면 흐름)
   "/auth", // OAuth 콜백 (리다이렉트 전용 화면)
   "/dev", // 개발용 트리거 페이지
   "/prototype", // 캐릭터 프로토타입 (전체화면)
