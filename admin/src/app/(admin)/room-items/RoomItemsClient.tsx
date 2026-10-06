@@ -43,7 +43,7 @@ export type RoomItem = {
 const ALL = "__ALL__";
 
 const CATEGORY: Record<string, string> = {
-  ROOM: "방 타입",
+  BED: "침대",
   FURNITURE: "가구",
   DECOR: "소품",
   RUG: "러그",
@@ -263,8 +263,6 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
   const activeFilter = chips.some((c) => c.id === filter) ? filter : ALL;
   const visible = activeFilter === ALL ? initial : initial.filter((i) => i.category === activeFilter);
 
-  // 방 타입은 배경이라 칸 수·방향·놓는 위치가 전부 의미 없다
-  const isRoom = form.category === "ROOM";
   const dialogOpen = creating || !!editing;
 
   return (
@@ -350,8 +348,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground/80 truncate mt-1 font-mono">
-                {item.spriteKey} ·{" "}
-                {item.category === "ROOM" ? "화면 전체" : `${item.tileW}×${item.tileH}칸`}
+                {item.spriteKey} · {item.tileW}×{item.tileH}칸
                 {item.spriteLiftY > 0 && ` · 위로 ${item.spriteLiftY}칸`}
                 {" · "}
                 {item.directions?.map((d) => DIRECTION_LABEL[d] ?? d).join("/")}
@@ -432,7 +429,6 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   ))}
                 </select>
               </div>
-              {!isRoom && (
               <div className="space-y-2">
                 <Label htmlFor="surface">놓는 위치</Label>
                 <select
@@ -448,17 +444,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   ))}
                 </select>
               </div>
-              )}
             </div>
 
-            {isRoom ? (
-              <p className="rounded-md bg-muted px-3 py-2 text-[11px] text-muted-foreground">
-                방 타입은 방 전체 배경입니다. 좌표도 칸 수도 없이 화면을 꽉 채우며, 한 방에
-                하나만 적용됩니다. 가로 비율이 세로보다 길면 위아래가 잘릴 수 있으니
-                세로로 긴 그림(예: 192×432)을 쓰세요.
-              </p>
-            ) : (
-            <>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="tileW">가로 칸</Label>
@@ -495,10 +482,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               가로·세로 칸은 바닥에서 차지하는 자리(겹침 검사용)이고, 솟는 칸은 옷장처럼
               그림이 바닥 칸보다 위로 올라가는 높이입니다.
             </p>
-            </>
-            )}
 
-            {!isRoom && (
             <div className="space-y-2">
               <Label>지원 방향</Label>
               <div className="flex gap-1.5 flex-wrap">
@@ -522,7 +506,6 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 있어야 해서 임의 각도 회전은 되지 않습니다.
               </p>
             </div>
-            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

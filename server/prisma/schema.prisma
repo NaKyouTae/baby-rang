@@ -266,6 +266,14 @@ enum PaymentStatus {
 }
 
 enum PaymentProductType {
+  // 꾸미기 재화(보석) 충전 묶음. 금액과 지급량은 서버 카탈로그가 정한다.
+  COINS_10
+  COINS_20
+  COINS_30
+  COINS_50
+  COINS_100
+  COINS_200
+  COINS_300
   TEMPERAMENT_REPORT
   WONDER_WEEKS_PREMIUM
   NURSING_ROOM_PREMIUM
@@ -456,6 +464,8 @@ model Group {
   id        String   @id @default(uuid())
   ownerId   String
   code      String   @unique
+  /// 꾸미기 재화 잔액. 아이가 아니라 그룹이 갖는다.
+  coins     Int      @default(0)
   createdAt DateTime @default(now())
 
   // NoAction: owner 탈퇴 전에 코드 레벨에서 명시적으로 다른 멤버로 이양해야 함.
@@ -465,6 +475,9 @@ model Group {
   children Child[]
 
   @@index([ownerId])
+  roomItemOwnerships RoomItemOwnership[]
+  coinLedgers        CoinLedger[]
+
   @@map("groups")
 }
 
@@ -555,8 +568,8 @@ enum RoomItemCategory {
   TOY
   WALLPAPER
   FLOORING
-  // 방 전체 배경. 좌표가 없고 화면을 꽉 채우며, 방에 하나만 적용된다.
-  ROOM
+  // 침대. 가구와 따로 두는 건 꾸미기 화면에서 탭이 분리돼 있기 때문이다.
+  BED
 }
 
 // 어디에 붙는가. 벽에 거는 것과 바닥에 놓는 것은 좌표의 의미가 다르다.
@@ -620,10 +633,9 @@ model RoomItem {
   updatedAt   DateTime         @updatedAt
 
   placements      RoomPlacement[]
-  roomBackgrounds Room[]         @relation("roomBackground")
+  ownerships      RoomItemOwnership[]
   roomWallpapers  Room[]         @relation("roomWallpaper")
   roomFloorings   Room[]         @relation("roomFlooring")
-  roomWindows     Room[]         @relation("roomWindow")
 
   @@index([category, isActive])
   @@map("room_items")
@@ -633,26 +645,21 @@ model RoomItem {
 model Room {
   id      String @id @default(uuid())
   childId String @unique
-  /// 방 전체 배경(방 타입). 좌표가 없어 배치가 아니라 방의 속성이다.
-  roomItemId String?
-  /// 벽지·바닥재·창문도 자리가 고정돼 있어 '놓는' 게 아니라 '바꾸는' 것이다.
-  /// 배치(RoomPlacement)가 아니라 방의 속성으로 둔다.
+  /// 벽지·바닥재는 자리가 고정돼 있어 '놓는' 게 아니라 '바꾸는' 것이다.
+  /// 방은 하나뿐이고 그 안의 벽지·바닥만 교체된다.
+  /// 창문은 벽 아무 데나 걸 수 있어 배치(RoomPlacement)로 다룬다.
   wallpaperItemId String?
   flooringItemId  String?
-  windowItemId    String?
   /// 공동 양육자가 동시에 편집할 때 덮어쓰기를 막는 낙관적 잠금
   version   Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   child      Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
-  roomItem   RoomItem?       @relation("roomBackground", fields: [roomItemId], references: [id])
   wallpaper  RoomItem?       @relation("roomWallpaper", fields: [wallpaperItemId], references: [id])
   flooring   RoomItem?       @relation("roomFlooring", fields: [flooringItemId], references: [id])
-  window     RoomItem?       @relation("roomWindow", fields: [windowItemId], references: [id])
   placements RoomPlacement[]
 
-  @@index([roomItemId])
   @@map("rooms")
 }
 
@@ -678,4 +685,44 @@ model RoomPlacement {
   @@index([roomId])
   @@index([itemId])
   @@map("room_placements")
+}
+
+/// 그룹이 보유한 꾸미기 아이템.
+/// 무료(FREE) 아이템은 행 없이도 보유로 본다 — 모두가 갖는 것을 행으로 쌓을 이유가 없다.
+model RoomItemOwnership {
+  id         String         @id @default(uuid())
+  groupId    String
+  itemId     String
+  source     RoomItemUnlock @default(PURCHASE)
+  /// 살 때 낸 금액. 나중에 가격이 바뀌어도 거래 기록은 그대로 남아야 한다.
+  pricePaid  Int?
+  acquiredAt DateTime       @default(now())
+
+  group Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  item  RoomItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, itemId])
+  @@index([groupId])
+  @@map("room_item_ownerships")
+}
+
+/// 꾸미기 재화 입출금 원장.
+///
+/// Group.coins 는 빨리 읽으려고 둔 잔액 캐시이고, 사실은 이 원장이다.
+/// 결제 한 건이 두 번 적립되는 사고를 막으려고 paymentId 에 유니크를 건다.
+model CoinLedger {
+  id        String   @id @default(uuid())
+  groupId   String
+  /// 적립은 양수, 사용은 음수.
+  delta     Int
+  /// 'PURCHASE'(충전) | 'SPEND'(아이템 구매) | 'REWARD'(기록 보상) 등
+  reason    String
+  paymentId String?  @unique
+  itemId    String?
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("coin_ledgers")
 }

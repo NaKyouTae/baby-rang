@@ -21,7 +21,6 @@ export default function RemoveSheet({ target, onClose, onRemove }: Props) {
     >
       <div
         className="px-5 pt-3 pb-[max(var(--safe-area-bottom),20px)]"
-        style={{ fontFamily: 'Galmuri11, monospace' }}
       >
         <div className="w-10 h-1 bg-[#7A5A36] mx-auto mb-4" />
 

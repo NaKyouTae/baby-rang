@@ -3,20 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TILE, scaleFor, tilesAcross } from './tiles';
 import { getSprite, preloadSprites, type Placement } from './placements';
-import {
-  BTN,
-  buildRoom,
-  buildUi,
-  buildEditUi,
-  hitRect,
-  hitDecorate,
-  buildButton,
-  buildButtonShadow,
-  hitButton,
-  layout,
-  type ActionId,
-  type Layout,
-} from './scene';
+import { buildRoom, layout, type Layout } from './scene';
 import {
   FRAME_FPS,
   GROUND,
@@ -31,48 +18,43 @@ interface Props {
   months: number;
   pose: PixelPose;
   childName: string;
-  ageLabel: string;
-  poseLabel: string;
-  stats: { label: string; value: string }[];
-  onAction: (id: ActionId) => void;
-  onPet: () => void;
-  onDecorate: () => void;
-  /** 편집(꾸미기) 모드. 기록 버튼과 정보 카드를 치우고 닫기·저장만 남긴다. */
-  editing: boolean;
-  onCloseEdit: () => void;
-  onSaveEdit: () => void;
-  /** 편집 모드 분류 탭을 눌렀을 때. */
-  onPickCategory: (category: string) => void;
-  /** 방 전체 배경 그림. 없으면 코드로 그린 방을 쓴다. */
-  roomImageUrl: string | null;
   /** 자리가 고정된 슬롯. 좌표가 없어 배치가 아니라 방의 속성이다. */
   wallpaperUrl: string | null;
   flooringUrl: string | null;
-  windowUrl: string | null;
   placements: Placement[];
+  /** 꾸미기 모드에서만 가구를 집을 수 있다. */
+  editing: boolean;
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
-  /** 가구를 길게 눌렀을 때 — 치울지 바텀시트로 묻는다. */
   onLongPressPlacement: (placement: Placement) => void;
+  onPet: () => void;
 }
 
 /** 방 좌표계 기준 이동 속도(픽셀/초). 아기 걸음이라 느리다. */
 const SPEED = 11;
 
-const TEXT = '#4A3B2C';
-const TEXT_DIM = '#8A775F';
-
-/** 바닥에 깔리는 분류. 그리기 순서에서 항상 맨 아래로 간다. */
-const FLAT_CATEGORIES = new Set(['RUG', 'FLOORING']);
-
-/** 떠 있는 높이(px). sin 한 주기 동안 0 → LIFT → 0. */
-const LIFT = 5;
-
+/**
+ * 아이 방 캔버스.
+ *
+ * UI(카드·버튼·탭바)는 전부 DOM 으로 올라간다. 캔버스는 방·가구·아이만 그린다.
+ * 둘을 한 캔버스에 그리면 한글 글자를 픽셀로 찍어야 하고, 접근성도 잃는다.
+ */
 export default function PixelScreen(props: Props) {
-  const { months, pose, childName, onAction, onPet, onDecorate, editing, onCloseEdit, onSaveEdit, onPickCategory, roomImageUrl, wallpaperUrl, flooringUrl, windowUrl, placements, onMovePlacement, onLongPressPlacement } = props;
+  const {
+    months,
+    pose,
+    childName,
+    wallpaperUrl,
+    flooringUrl,
+    placements,
+    editing,
+    onMovePlacement,
+    onLongPressPlacement,
+    onPet,
+  } = props;
+
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
-  const [fontReady, setFontReady] = useState(false);
 
   // 드래그 중인 가구. 렌더 루프가 테두리를 그리려고 읽는다.
   const dragIdRef = useRef<string | null>(null);
@@ -80,46 +62,24 @@ export default function PixelScreen(props: Props) {
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const movedRef = useRef(false);
 
+  const layoutRef = useRef<Layout | null>(null);
+  const petRef = useRef<() => void>(() => {});
+
+  // 배치와 슬롯을 ref 로 들고 있는다. deps 에 넣으면 가구를 놓을 때마다
+  // 렌더 루프가 다시 서면서 아이 위치가 초기화된다.
   const placementsRef = useRef(placements);
   useEffect(() => {
     placementsRef.current = placements;
     preloadSprites(placements.map((p) => p.imageUrl));
   }, [placements]);
 
-  const editingRef = useRef(editing);
+  const slotsRef = useRef({ wallpaperUrl, flooringUrl });
   useEffect(() => {
-    editingRef.current = editing;
-  }, [editing]);
+    slotsRef.current = { wallpaperUrl, flooringUrl };
+    preloadSprites([wallpaperUrl, flooringUrl]);
+  }, [wallpaperUrl, flooringUrl]);
 
-  const slotsRef = useRef({ roomImageUrl, wallpaperUrl, flooringUrl, windowUrl });
-  useEffect(() => {
-    slotsRef.current = { roomImageUrl, wallpaperUrl, flooringUrl, windowUrl };
-    preloadSprites([roomImageUrl, wallpaperUrl, flooringUrl, windowUrl]);
-  }, [roomImageUrl, wallpaperUrl, flooringUrl, windowUrl]);
-
-  // 렌더 루프 안에서 만들어지는 상태를 이벤트 핸들러가 집어가는 통로
-  const layoutRef = useRef<Layout | null>(null);
-  const pressRef = useRef<(id: ActionId, until: number) => void>(() => {});
-  const heartRef = useRef<() => void>(() => {});
-
-  // 최신 props 를 렌더 루프에 넘긴다. 루프를 다시 세우지 않으려고 ref 로 들고 있는다.
-  const liveRef = useRef(props);
-  useEffect(() => {
-    liveRef.current = props;
-  });
-
-  // 픽셀 폰트가 로드되기 전에 그리면 글자가 기본 폰트로 한 번 깜빡인다
-  useEffect(() => {
-    let alive = true;
-    const done = () => alive && setFontReady(true);
-    if (typeof document === 'undefined') return;
-    document.fonts.load('11px Galmuri11').then(() => document.fonts.load('9px Galmuri9')).then(done, done);
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // 화면을 꽉 채우되 픽셀이 균일하도록, 네이티브 크기는 정수로 내림한다
+  // 화면을 꽉 채우되 픽셀이 균일하도록, 배율을 폭에서 계산하고 크기는 내림한다
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -135,26 +95,22 @@ export default function PixelScreen(props: Props) {
   }, []);
 
   useEffect(() => {
-    if (!size || !fontReady) return;
+    if (!size) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
     const css = getComputedStyle(document.documentElement);
     const scale = scaleFor(canvas.getBoundingClientRect().width || size.w);
-    const safe = (name: string) => {
-      const v = parseFloat(css.getPropertyValue(name));
+    const safeBottom = (() => {
+      const v = parseFloat(css.getPropertyValue('--safe-area-bottom'));
       return Number.isFinite(v) ? Math.round(v / scale) : 0;
-    };
-    const L: Layout = layout(size.w, size.h, safe('--safe-area-top'), safe('--safe-area-bottom'));
+    })();
+
+    const L: Layout = layout(size.w, size.h, safeBottom);
+    layoutRef.current = L;
 
     const roomLayer = buildRoom(L);
-    // 두 벌을 미리 구워두고 모드에 따라 골라 쓴다. 매번 다시 구우면 끊긴다.
-    const uiLayer = buildUi(L);
-    const editUiLayer = buildEditUi(L);
-    const buttons = new Map(L.buttons.map((b) => [b.id, buildButton(b.id, false)]));
-    const pressedSprites = new Map(L.buttons.map((b) => [b.id, buildButton(b.id, true)]));
-    const shadows = Array.from({ length: LIFT + 1 }, (_, i) => buildButtonShadow(i));
     const FACINGS: Facing[] = ['down', 'up', 'side'];
     const idle = new Map(FACINGS.map((f) => [f, buildFrames(months, pose, 'idle', f)]));
     const walk = new Map(FACINGS.map((f) => [f, buildFrames(months, pose, 'walk', f)]));
@@ -164,21 +120,14 @@ export default function PixelScreen(props: Props) {
     let y = (L.walk.y0 + L.walk.y1) / 2;
     let targetX = x;
     let targetY = y;
-    // 톱다운이라 방향이 넷이다. side 스프라이트는 오른쪽 기준이고 왼쪽은 좌우 반전해서 쓴다.
+    // 톱다운이라 방향이 넷이다. side 스프라이트는 오른쪽 기준이고 왼쪽은 반전해서 쓴다.
     let facing: Facing = 'down';
     let flip = false;
     let walking = false;
     let restUntil = 0;
-    let pressed: ActionId | null = null;
-    let pressedUntil = 0;
     const hearts: { x: number; y: number; at: number }[] = [];
 
-    layoutRef.current = L;
-    pressRef.current = (id, until) => {
-      pressed = id;
-      pressedUntil = until;
-    };
-    heartRef.current = () => {
+    petRef.current = () => {
       hearts.push({ x, y, at: performance.now() });
       walking = false;
       restUntil = performance.now() + 1800;
@@ -223,38 +172,22 @@ export default function PixelScreen(props: Props) {
 
       ctx.clearRect(0, 0, L.w, L.h);
 
-      // 방 배경 — 고른 그림이 있으면 그걸 쓰고, 없으면 코드로 그린 방을 쓴다.
+      // 기본 방 — 회색 벽과 바닥. 벽지·바닥재를 고르면 그 위에 덮인다.
       const slots = slotsRef.current;
-      const roomUrl = slots.roomImageUrl;
-      const roomImg = roomUrl ? getSprite(roomUrl) : null;
-      if (roomImg) {
-        // 화면을 꽉 채우되 비율은 지킨다. 늘리면 픽셀이 찌그러진다.
-        const scale = Math.max(L.w / roomImg.width, L.h / roomImg.height);
-        const dw = Math.ceil(roomImg.width * scale);
-        const dh = Math.ceil(roomImg.height * scale);
-        ctx.drawImage(roomImg, Math.round((L.w - dw) / 2), Math.round((L.h - dh) / 2), dw, dh);
-      } else {
-        ctx.drawImage(roomLayer, 0, 0);
-      }
+      ctx.drawImage(roomLayer, 0, 0);
 
-      // 벽지·바닥재 — 자리가 고정돼 있어 '놓는' 게 아니라 벽/바닥 전체를 '바꾼다'.
-      // 16x16 타일을 반복해 채운다.
+      // 벽지·바닥재 — 자리가 고정돼 있어 벽/바닥 전체를 타일로 채운다
       const tileFill = (url: string | null, y0: number, y1: number) => {
         const img = url ? getSprite(url) : null;
         if (!img) return;
-        for (let y = y0; y < y1; y += TILE) {
-          for (let x = 0; x < L.w; x += TILE) ctx.drawImage(img, x, y, TILE, TILE);
+        for (let ty = y0; ty < y1; ty += TILE) {
+          for (let tx = 0; tx < L.w; tx += TILE) ctx.drawImage(img, tx, ty, TILE, TILE);
         }
       };
-      const wallBottom = Math.round(L.h * 0.3);
+      // 디자인 비율 — 벽지 4 : 바닥 6 (338px : 506px)
+      const wallBottom = Math.round(L.h * 0.4);
       tileFill(slots.wallpaperUrl, 0, wallBottom);
       tileFill(slots.flooringUrl, wallBottom, L.h);
-
-      // 창문 — 벽의 정해진 자리에 걸린다. 옮길 수 없고 교체만 된다.
-      const windowImg = slots.windowUrl ? getSprite(slots.windowUrl) : null;
-      if (windowImg) {
-        ctx.drawImage(windowImg, TILE, Math.round(wallBottom * 0.35), TILE * 3, TILE * 2);
-      }
 
       // 가구와 아이를 한 목록에 모아 y 로 정렬한다.
       // 이게 없으면 아이가 항상 가구 앞이나 뒤에만 있어서 평면 그림처럼 보인다.
@@ -268,9 +201,8 @@ export default function PixelScreen(props: Props) {
         const img = p.imageUrl ? getSprite(p.imageUrl) : null;
         const dragging = dragIdRef.current === p.id;
         layers.push({
-          // 러그·바닥재는 밟고 지나가는 것이지 가려지는 게 아니다.
-          // y 로 정렬하면 아이가 러그 뒤로 사라지므로 항상 맨 아래에 깐다.
-          depth: FLAT_CATEGORIES.has(p.category) ? -1 : (p.tileY + p.tileH) * TILE,
+          // 러그는 밟고 지나가는 것이라 항상 맨 아래에 깐다
+          depth: p.category === 'RUG' ? -1 : (p.tileY + p.tileH) * TILE,
           draw: () => {
             if (img) {
               ctx.drawImage(img, px0, py0, pw, ph);
@@ -329,86 +261,15 @@ export default function PixelScreen(props: Props) {
         ctx.globalAlpha = 1;
       }
 
-      const isEditing = editingRef.current;
-      ctx.drawImage(isEditing ? editUiLayer : uiLayer, 0, 0);
-
-      if (pressed && now > pressedUntil) pressed = null;
-
-      // 떠 있는 버튼 — 그림자는 바닥에 고정하고 버튼만 올라간다.
-      // 편집 중에는 전부 치운다. 가구를 끌어야 하는데 버튼이 방해된다.
-      for (const b of isEditing ? [] : L.buttons) {
-        const t = (now / 1000 + b.phase) / b.period;
-        const lift = Math.round(((Math.sin(t * Math.PI * 2) + 1) / 2) * LIFT);
-        ctx.drawImage(shadows[lift], Math.round(b.x + BTN / 2 - 10), b.y + BTN + 2);
-        const sprite = pressed === b.id ? pressedSprites.get(b.id)! : buttons.get(b.id)!;
-        ctx.drawImage(sprite, b.x, b.y - lift);
-      }
-
-      /* ---------------- 글자 ---------------- */
-      const live = liveRef.current;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      if (isEditing) {
-        ctx.font = '11px Galmuri11, monospace';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText('저장', L.save.x + L.save.w / 2, L.save.y + L.save.h / 2 + 1);
-        ctx.font = '9px Galmuri9, monospace';
-        ctx.fillStyle = TEXT;
-        for (const t of L.catTabs) {
-          ctx.fillText(t.label, t.x + t.w / 2, t.y + t.h / 2 + 1);
-        }
-        ctx.fillStyle = TEXT_DIM;
-        ctx.fillText('가구를 끌어 옮기고, 오른쪽에서 골라 놓으세요', L.w / 2, L.save.y - 10);
-        raf = requestAnimationFrame(loop);
-        return;
-      }
-
-      const cardTextX = L.card.x + 29 + (L.card.w - 33) / 2;
-      ctx.font = '11px Galmuri11, monospace';
-      ctx.fillStyle = TEXT;
-      ctx.fillText(live.childName, cardTextX, L.card.y + 11);
-      ctx.font = '9px Galmuri9, monospace';
-      ctx.fillStyle = TEXT_DIM;
-      ctx.fillText(live.ageLabel, cardTextX, L.card.y + 22);
-
-      live.stats.forEach((s, i) => {
-        const chip = L.chips[i];
-        if (!chip) return;
-        ctx.font = '9px Galmuri9, monospace';
-        ctx.fillStyle = TEXT_DIM;
-        ctx.fillText(s.label, chip.x + chip.w / 2, chip.y + 7);
-        ctx.font = '11px Galmuri11, monospace';
-        ctx.fillStyle = TEXT;
-        ctx.fillText(s.value, chip.x + chip.w / 2, chip.y + 18);
-      });
-
-      ctx.font = '9px Galmuri9, monospace';
-      for (const b of L.buttons) {
-        // 라벨은 버튼과 같이 뜨지 않는다. 바닥에 붙어 있어야 버튼이 떠오른 게 보인다.
-        // 가장자리 버튼은 라벨이 화면 밖으로 나가므로 안쪽으로 당긴다.
-        const half = ctx.measureText(b.label).width / 2;
-        const cx = Math.min(Math.max(b.x + BTN / 2, half + 2), L.w - half - 2);
-        const ly = b.y + BTN + 12;
-        ctx.fillStyle = '#FFFDF8';
-        ctx.fillText(b.label, cx, ly + 1);
-        ctx.fillStyle = TEXT;
-        ctx.fillText(b.label, cx, ly);
-      }
-
-      ctx.font = '9px Galmuri9, monospace';
-      ctx.fillStyle = TEXT_DIM;
-      ctx.fillText(live.poseLabel, L.footer.x + L.footer.w / 2, L.footer.y + 9);
-
       raf = requestAnimationFrame(loop);
     };
 
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [size, fontReady, months, pose]);
+  }, [size, months, pose]);
 
+  /* ---------------- 입력 ---------------- */
 
-  /** 화면 좌표 → 캔버스(네이티브) 좌표. */
   const toNative = (e: React.PointerEvent<HTMLCanvasElement>, L: Layout) => {
     const r = e.currentTarget.getBoundingClientRect();
     return {
@@ -441,46 +302,17 @@ export default function PixelScreen(props: Props) {
     if (!L) return;
     const { nx, ny } = toNative(e, L);
 
-    if (editing) {
-      if (hitRect(L.close, nx, ny)) {
-        onCloseEdit();
-        return;
-      }
-      if (hitRect(L.save, nx, ny)) {
-        onSaveEdit();
-        return;
-      }
-      const tab = L.catTabs.find((t) => hitRect(t, nx, ny));
-      if (tab) {
-        onPickCategory(tab.id);
-        return;
-      }
-    } else {
-      if (hitDecorate(L, nx, ny)) {
-        onDecorate();
-        return;
-      }
-      const hit = hitButton(L, nx, ny);
-      if (hit) {
-        pressRef.current(hit.id, performance.now() + 120);
-        onAction(hit.id);
-        return;
-      }
-    }
-
-    // 놓인 가구를 집으면 드래그가 시작된다. 편집 모드에서만 집힌다 —
-    // 홈에서 끌리면 아이를 쓰다듬으려다 방이 바뀐다.
+    // 가구를 집는 건 꾸미기 모드에서만. 홈에서 끌리면 실수로 방이 바뀐다.
     const target = editing ? pickPlacement(L, nx, ny) : null;
     if (target) {
       e.currentTarget.setPointerCapture(e.pointerId);
       dragIdRef.current = target.id;
       movedRef.current = false;
-      // 집은 지점과 가구 왼쪽 위의 차이를 기억해야 가구가 손가락으로 순간이동하지 않는다
+      // 집은 지점과 가구 왼쪽 위의 차이를 기억해야 손가락으로 순간이동하지 않는다
       dragOffsetRef.current = {
         tx: (nx - (L.offsetX + target.tileX * TILE)) / TILE,
         ty: (ny - target.tileY * TILE) / TILE,
       };
-      // 제자리에서 길게 누르면 치운다
       clearLongPress();
       longPressRef.current = setTimeout(() => {
         if (movedRef.current) return;
@@ -490,9 +322,8 @@ export default function PixelScreen(props: Props) {
       return;
     }
 
-    // 편집 중에는 빈 곳을 눌러도 아무 일도 없다. 아이템은 오른쪽 분류 탭에서 고른다.
     if (editing) return;
-    heartRef.current();
+    petRef.current();
     onPet();
   };
 
@@ -507,7 +338,6 @@ export default function PixelScreen(props: Props) {
     // 타일 격자에 붙인다. 자유 배치로 두면 가구가 미세하게 어긋나 지저분해진다.
     const tx = Math.round((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
     const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
-    // 캔버스 안이면 어디든 놓을 수 있다. 벽 쪽 위로도 올라간다.
     const clampedX = Math.min(Math.max(tx, 0), tilesAcross(L.w) - target.tileW);
     const clampedY = Math.min(Math.max(ty, 0), Math.floor(L.h / TILE) - target.tileH);
     if (clampedX === target.tileX && clampedY === target.tileY) return;
@@ -524,8 +354,6 @@ export default function PixelScreen(props: Props) {
 
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
-      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다 */}
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
       {size && (
         <canvas
           ref={canvasRef}

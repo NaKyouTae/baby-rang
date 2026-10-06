@@ -11,7 +11,7 @@ const MAX_TILE_X = 16;
 const MAX_TILE_Y = 40;
 
 /** 자리가 고정된 분류. 배치가 아니라 방의 속성이라 좌표를 받지 않는다. */
-const FIXED_CATEGORIES = new Set(['ROOM', 'WALLPAPER', 'FLOORING', 'WINDOW']);
+const FIXED_CATEGORIES = new Set(['WALLPAPER', 'FLOORING']);
 
 type PlacementInput = {
   itemId: string;
@@ -35,10 +35,8 @@ export class RoomsService {
       where: { childId },
       include: {
         placements: { include: { item: true } },
-        roomItem: true,
         wallpaper: true,
         flooring: true,
-        window: true,
       },
     });
     // 아직 꾸민 적이 없으면 빈 방을 돌려준다. 여기서 행을 만들 이유는 없다.
@@ -46,10 +44,8 @@ export class RoomsService {
     return {
       room: {
         id: room.id,
-        roomItem: room.roomItem,
         wallpaper: room.wallpaper,
         flooring: room.flooring,
-        window: room.window,
       },
       placements: room.placements,
       version: room.version,
@@ -67,10 +63,8 @@ export class RoomsService {
     childId: string,
     input: {
       version: number;
-      roomItemId?: string | null;
       wallpaperItemId?: string | null;
       flooringItemId?: string | null;
-      windowItemId?: string | null;
       placements: PlacementInput[];
     },
   ) {
@@ -123,20 +117,16 @@ export class RoomsService {
         ? await tx.room.update({
             where: { id: existing.id },
             data: {
-              roomItemId: input.roomItemId ?? null,
               wallpaperItemId: input.wallpaperItemId ?? null,
               flooringItemId: input.flooringItemId ?? null,
-              windowItemId: input.windowItemId ?? null,
               version: { increment: 1 },
             },
           })
         : await tx.room.create({
             data: {
               childId,
-              roomItemId: input.roomItemId ?? null,
               wallpaperItemId: input.wallpaperItemId ?? null,
               flooringItemId: input.flooringItemId ?? null,
-              windowItemId: input.windowItemId ?? null,
               version: 1,
             },
           });

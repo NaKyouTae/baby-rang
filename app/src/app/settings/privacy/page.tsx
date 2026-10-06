@@ -12,7 +12,7 @@ export default function SettingsPrivacyPage() {
       <PageHeader title="개인정보처리방침" variant="back" />
 
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
-        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 10월 3일</p>
+        <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>시행일자: 2026년 10월 6일</p>
 
         <section>
           <p>
@@ -29,8 +29,8 @@ export default function SettingsPrivacyPage() {
             <li>
               <p>회원가입 시 (소셜 로그인 제공사로부터 제공받음)</p>
               <ul className="list-disc pl-5 -ml-5 mt-1 space-y-1">
-                <li>필수: 이름, 휴대전화번호, 소셜 로그인 식별자(카카오·네이버 회원번호)</li>
-                <li>선택: 성별, 연령대, 이메일 주소, 프로필 이미지</li>
+                <li>필수: 이름, 휴대전화번호, 성별, 소셜 로그인 식별자(카카오·네이버 회원번호)</li>
+                <li>선택: 연령대</li>
                 <li>
                   ※ 회사는 자체 회원가입 절차를 두지 않으며, 비밀번호를 수집하지 않습니다.
                   위 항목은 회원이 카카오·네이버의 동의 화면에서 동의한 범위에서만 제공받습니다.
@@ -67,8 +67,8 @@ export default function SettingsPrivacyPage() {
           <ol className="list-decimal pl-5 space-y-1">
             <li>이름 · 소셜 로그인 식별자: 회원 식별, 가입 의사 확인, 계정 관리, 중복 가입 방지</li>
             <li>휴대전화번호: 결제·환불 등 중요 안내 연락, 본인 확인, 고객 문의 응대</li>
-            <li>성별 · 연령대: 연령대에 맞는 육아 콘텐츠 추천 및 통계 분석(선택 항목)</li>
-            <li>이메일 주소 · 프로필 이미지: 공지 전달 및 프로필 표시(선택 항목)</li>
+            <li>성별: 양육자 구분에 따른 육아 콘텐츠·문구 제공 및 통계 분석</li>
+            <li>연령대: 양육자 연령대에 맞는 육아 콘텐츠 추천 및 통계 분석(선택 항목)</li>
             <li>아기 정보 및 기록: 아기 성장·발달 기록 및 맞춤형 콘텐츠 제공</li>
             <li>결제 정보: 유료 서비스 결제, 환불, 청구 및 분쟁 처리</li>
             <li>자동 수집 항목: 서비스 품질 개선, 부정 이용 방지, 통계 분석</li>
@@ -120,13 +120,13 @@ export default function SettingsPrivacyPage() {
                 <tr>
                   <td className="px-3 py-2 align-top">주식회사 카카오</td>
                   <td className="px-3 py-2 align-top">
-                    필수: 이름, 휴대전화번호, 회원번호 / 선택: 성별, 연령대, 이메일 주소, 프로필 이미지
+                    필수: 이름, 휴대전화번호, 성별, 회원번호 / 선택: 연령대
                   </td>
                 </tr>
                 <tr>
                   <td className="px-3 py-2 align-top">네이버 주식회사</td>
                   <td className="px-3 py-2 align-top">
-                    필수: 이름, 휴대전화번호, 회원 식별자 / 선택: 성별, 연령대
+                    필수: 이름, 휴대전화번호, 성별, 회원 식별자 / 선택: 연령대
                   </td>
                 </tr>
                 <tr>
@@ -250,7 +250,7 @@ export default function SettingsPrivacyPage() {
         </section>
 
         <section>
-          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 10월 3일부터 시행됩니다. (직전 시행일 2026년 4월 8일)</p>
+          <p className="text-[12px] font-normal" style={{ color: palette.gray500, textAlign: 'right' }}>부칙: 본 개인정보처리방침은 2026년 10월 6일부터 시행됩니다. (직전 시행일 2026년 10월 3일)</p>
         </section>
       </article>
 

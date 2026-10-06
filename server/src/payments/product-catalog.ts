@@ -40,6 +40,53 @@ export interface ProductSpec {
  */
 export const PRODUCT_CATALOG: Partial<Record<PaymentProductType, ProductSpec>> =
   {
+    // 꾸미기 재화(보석) 충전.
+    //
+    // ⚠️ 금액과 지급량은 서버만 믿는다. 클라이언트가 보낸 수량으로 적립하면
+    //    요청 본문만 고쳐서 공짜로 보석을 받을 수 있다.
+    // ⚠️ 보석 1개는 광고를 보고 받는 보상이라 결제 상품이 아니다.
+    COINS_10: {
+      name: '보석 10개',
+      price: 1200,
+      playSku: 'coins_10',
+      iosSku: 'kr.spectrify.baby_rang.coins_10',
+    },
+    COINS_20: {
+      name: '보석 20개',
+      price: 2400,
+      playSku: 'coins_20',
+      iosSku: 'kr.spectrify.baby_rang.coins_20',
+    },
+    COINS_30: {
+      name: '보석 30개',
+      price: 3600,
+      playSku: 'coins_30',
+      iosSku: 'kr.spectrify.baby_rang.coins_30',
+    },
+    COINS_50: {
+      name: '보석 50개',
+      price: 6000,
+      playSku: 'coins_50',
+      iosSku: 'kr.spectrify.baby_rang.coins_50',
+    },
+    COINS_100: {
+      name: '보석 100개',
+      price: 12000,
+      playSku: 'coins_100',
+      iosSku: 'kr.spectrify.baby_rang.coins_100',
+    },
+    COINS_200: {
+      name: '보석 200개',
+      price: 24000,
+      playSku: 'coins_200',
+      iosSku: 'kr.spectrify.baby_rang.coins_200',
+    },
+    COINS_300: {
+      name: '보석 300개',
+      price: 36000,
+      playSku: 'coins_300',
+      iosSku: 'kr.spectrify.baby_rang.coins_300',
+    },
     TEMPERAMENT_REPORT: {
       name: '기질 검사 상세 리포트',
       price: 990,
@@ -114,4 +161,47 @@ export function resolveProduct(
     );
   }
   return spec;
+}
+
+/**
+ * 충전 상품이 주는 보석 수.
+ *
+ * base 는 묶음 이름에 적힌 수, bonus 는 덤이다. 실제 적립은 base + bonus.
+ * 가격과 마찬가지로 서버가 정한다.
+ */
+export const COIN_GRANTS: Partial<
+  Record<PaymentProductType, { base: number; bonus: number }>
+> = {
+  COINS_10: { base: 10, bonus: 0 },
+  COINS_20: { base: 20, bonus: 2 },
+  COINS_30: { base: 30, bonus: 0 },
+  COINS_50: { base: 50, bonus: 0 },
+  COINS_100: { base: 100, bonus: 0 },
+  COINS_200: { base: 200, bonus: 0 },
+  COINS_300: { base: 300, bonus: 0 },
+};
+
+/** 충전 상품 타입 목록. 결제 조회 조건으로 쓴다 — 하드코딩하면 묶음이 늘 때 빠진다. */
+export const COIN_PRODUCT_TYPES = Object.keys(
+  COIN_GRANTS,
+) as PaymentProductType[];
+
+export function coinsFor(productType: PaymentProductType): number {
+  const g = COIN_GRANTS[productType];
+  return g ? g.base + g.bonus : 0;
+}
+
+/** 충전용으로 노출할 상품 목록. 보석함의 '보석 충전' 탭이 쓴다. */
+export function listCoinPacks() {
+  return (Object.keys(COIN_GRANTS) as PaymentProductType[]).map((type) => {
+    const g = COIN_GRANTS[type];
+    return {
+      productType: type,
+      base: g?.base ?? 0,
+      bonus: g?.bonus ?? 0,
+      coins: (g?.base ?? 0) + (g?.bonus ?? 0),
+      name: PRODUCT_CATALOG[type]?.name ?? '',
+      price: PRODUCT_CATALOG[type]?.price ?? 0,
+    };
+  });
 }

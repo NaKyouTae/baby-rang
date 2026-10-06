@@ -8,5 +8,12 @@ export const metadata: Metadata = {
 };
 
 export default function PrototypePage() {
-  return <PrototypeClient />;
+  return (
+    <>
+      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 이 링크가 없으면
+          fontFamily: Galmuri11 이 전부 monospace 로 떨어진다. */}
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
+      <PrototypeClient />
+    </>
+  );
 }
