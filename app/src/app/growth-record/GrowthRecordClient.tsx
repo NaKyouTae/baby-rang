@@ -143,7 +143,9 @@ function SwipeableRow({
     <div
       data-swipe-row
       data-row-id={rowId}
-      className={`relative overflow-hidden bg-[#FDFDFE] border-b border-[#121212] ${
+      // 가로만 자른다(스와이프로 밀린 내용·삭제 버튼). 세로까지 자르면 행 아래로 3px 걸쳐 그리는
+      // 손그림 구분선이 반쯤 잘려 지지직거린다. 선은 다음 행 배경에 덮이지 않게 z 를 올린다.
+      className={`relative overflow-x-clip [&::after]:z-[1] bg-[#FDFDFE] border-b border-[#121212] ${
         isLast ? 'border-b-0' : ''
       }`}
     >

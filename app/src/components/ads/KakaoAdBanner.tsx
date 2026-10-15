@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isNativeApp, useIsNativeApp } from "@/lib/isNativeApp";
+import { APP_ADMOB_ENABLED } from "./adConfig";
 
 type Props = {
   /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
@@ -99,7 +100,7 @@ export default function KakaoAdBanner({
     // 상태(inNativeApp)가 아니라 함수를 직접 호출한다.
     // 상태는 이 effect 다음 렌더에 반영되므로, 그 사이에 애드핏 SDK 가
     // 한 번 로드되어 앱에서도 광고가 요청되는 것을 막아야 한다.
-    if (isNativeApp()) return;
+    if (APP_ADMOB_ENABLED && isNativeApp()) return;
 
     const ins = insRef.current;
     if (!ins) return;
@@ -186,8 +187,8 @@ export default function KakaoAdBanner({
   }, [unit, onFilledChange, stretch, baseWidth]);
 
   if (!unit) return null;
-  // 앱에서는 네이티브 AdMob 배너가 노출되므로 웹 광고는 렌더하지 않는다.
-  if (inNativeApp) return null;
+  // 앱에서는 네이티브 AdMob 배너가 노출되므로 웹 광고는 렌더하지 않는다(AdMob 을 끈 동안은 앱도 카카오).
+  if (APP_ADMOB_ENABLED && inNativeApp) return null;
 
   // style 은 AdFit SDK 가 채움 시점에 직접 건드린다(display 등).
   // 그래서 확대 transform 은 ins 가 아니라 바깥 래퍼에 건다.

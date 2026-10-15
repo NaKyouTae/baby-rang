@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { APP_ADMOB_ENABLED } from "./adConfig";
 import { isAppOverlayOpen, subscribeAppOverlay } from "./appOverlay";
 
 /** BottomAdBar 가 비워 두는 앱 배너 슬롯의 DOM id. */
@@ -79,6 +80,12 @@ export default function AppAdSlotReporter() {
         left: rect.left,
       });
     };
+
+    // AdMob 을 끈 동안은 슬롯 자리에 카카오가 들어오므로 네이티브 배너는 늘 숨긴다.
+    if (!APP_ADMOB_ENABLED) {
+      send({ visible: false });
+      return;
+    }
 
     report();
 
