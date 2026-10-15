@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import KakaoAdBanner from "./ads/KakaoAdBanner";
 import { APP_AD_SLOT_ID } from "./ads/AppAdSlotReporter";
 
@@ -14,14 +14,39 @@ const BOTTOM_AD_UNIT = "DAN-go0noPJx8cIt6SU7";
  * --bottom-nav-space 만큼 띄워서 이 바에 가리지 않게 한다.
  */
 export default function BottomAdBar() {
-  // 광고 미노출(no-fill) 시 배너 높이를 0으로 접어 흰 여백 제거.
-  // --bottom-nav-space 도 같은 변수를 쓰므로 콘텐츠 하단 패딩까지 함께 줄어든다.
-  const handleAdFilled = useCallback((filled: boolean) => {
-    document.documentElement.style.setProperty(
-      "--bottom-ad-banner-height",
-      filled ? "50px" : "0px",
-    );
+  const contentRef = useRef<HTMLDivElement>(null);
+  const filledRef = useRef(false);
+
+  // 슬롯 높이를 실제 소재 높이에 맞춘다. 미노출(no-fill)이면 0 으로 접어 흰 여백을 없앤다.
+  // 애드핏 소재는 50px 고정이 아니다. 일부는 가로폭 비율로 높이를 정하고, iOS 에서는 가로폭을
+  // 100% 가 아닌 소재 최소 폭으로 잡아 50px 보다 낮게 그려진다. 50px 로 박아 두면 그 차이만큼
+  // 배너 아래에 빈 띠가 남는다.
+  // --bottom-nav-space 도 같은 변수를 쓰므로 콘텐츠 하단 패딩까지 함께 맞춰진다.
+  const applyHeight = useCallback(() => {
+    const measured = Math.ceil(contentRef.current?.getBoundingClientRect().height ?? 0);
+    // 채워졌는데 아직 크기가 안 잡혔으면 기본 50px 를 유지한다.
+    const height = filledRef.current ? measured || 50 : 0;
+    document.documentElement.style.setProperty("--bottom-ad-banner-height", `${height}px`);
   }, []);
+
+  const handleAdFilled = useCallback(
+    (filled: boolean) => {
+      filledRef.current = filled;
+      applyHeight();
+    },
+    [applyHeight],
+  );
+
+  // 소재가 늦게 커지거나 회전으로 폭이 바뀌어도 따라간다.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      if (filledRef.current) applyHeight();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [applyHeight]);
 
   return (
     <div
@@ -32,10 +57,13 @@ export default function BottomAdBar() {
     >
       <div
         id={APP_AD_SLOT_ID}
-        className="w-full flex justify-center"
+        className="w-full"
         style={{ height: "var(--bottom-ad-banner-height)", overflow: "hidden" }}
       >
-        <KakaoAdBanner unit={BOTTOM_AD_UNIT} onFilledChange={handleAdFilled} />
+        {/* 슬롯은 높이를 변수로 고정하므로, 소재 자체 높이는 안쪽 래퍼로 잰다 */}
+        <div ref={contentRef} className="w-full flex justify-center">
+          <KakaoAdBanner unit={BOTTOM_AD_UNIT} onFilledChange={handleAdFilled} />
+        </div>
       </div>
     </div>
   );

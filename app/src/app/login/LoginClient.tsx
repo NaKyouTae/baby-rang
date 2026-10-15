@@ -76,7 +76,7 @@ export default function LoginClient() {
 
   return (
     <div
-      className="flex min-h-dvh flex-col items-center gap-[24px] overflow-x-hidden px-[20px]"
+      className="relative flex min-h-dvh flex-col items-center gap-[24px] overflow-x-hidden px-[20px]"
       style={{
         backgroundColor: palette.white,
         fontFamily: 'Galmuri11Fig, Galmuri11, monospace',
@@ -88,6 +88,18 @@ export default function LoginClient() {
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
       {/* 로그인 화면은 앱 진입 전 단계라 하단 탭을 보여주지 않는다. */}
       <style>{`[data-bottom-nav-root]{display:none !important}`}</style>
+
+      {/* 닫기 — 로그인하지 않고 홈(미리보기)으로 돌아간다 */}
+      <button
+        type="button"
+        onClick={() => router.replace('/home')}
+        aria-label="닫기"
+        className="absolute right-[10px] flex size-[44px] items-center justify-center active:opacity-60"
+        style={{ top: 'calc(var(--safe-area-top) + 10px)' }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/close.svg" alt="" width={24} height={24} className="block" />
+      </button>
 
       <div className="flex w-full flex-1 flex-col items-center justify-center gap-[24px] pt-[36px]">
         {/* 화면보다 넓은 줄을 가운데 정렬해 양 끝이 잘려 보이게 한다. */}

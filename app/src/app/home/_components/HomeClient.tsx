@@ -36,7 +36,8 @@ type DemoChild = { id: string; name: string; gender: string; birthDate: string }
 
 /**
  * 로그인/아이 등록 전에도 화면을 볼 수 있게 두는 미리보기용 아이.
- * 주소에 ?kids=twins 나 ?kids=multi 를 붙이면 쌍둥이·여러 아이 화면을 볼 수 있다.
+ * 로그인 전에는 다섯 쌍둥이(quints), 로그인했지만 아이가 없으면 한 명(single)을 보여 준다.
+ * 주소에 ?kids=single · twins · multi · quints 를 붙이면 그 구성으로 볼 수 있다.
  */
 const DEMO_SETS: Record<string, DemoChild[]> = {
   single: [{ id: 'demo', name: '아기', gender: '', birthDate: demoBirthDate(14) }],
@@ -50,6 +51,14 @@ const DEMO_SETS: Record<string, DemoChild[]> = {
     { id: 'demo-c', name: '박우주', gender: 'male', birthDate: demoBirthDate(20) },
     { id: 'demo-d', name: '김선유', gender: 'female', birthDate: demoBirthDate(26) },
     { id: 'demo-e', name: '강나윤', gender: 'female', birthDate: demoBirthDate(32) },
+  ],
+  // 생일이 같아 한 묶음(쌍둥이 카드)으로 묶이고, 방에 다섯 명이 함께 나온다
+  quints: [
+    { id: 'demo-q1', name: '하늘', gender: 'female', birthDate: demoBirthDate(10) },
+    { id: 'demo-q2', name: '바다', gender: 'male', birthDate: demoBirthDate(10) },
+    { id: 'demo-q3', name: '구름', gender: 'male', birthDate: demoBirthDate(10) },
+    { id: 'demo-q4', name: '햇살', gender: 'female', birthDate: demoBirthDate(10) },
+    { id: 'demo-q5', name: '새봄', gender: 'female', birthDate: demoBirthDate(10) },
   ],
 };
 
@@ -204,8 +213,9 @@ export default function HomeClient() {
   const { children, selectedChild, selectChild } = useSelectedChild();
   const { isAuthenticated, isLoaded: isAuthLoaded } = useAuth();
   const router = useRouter();
-  const [demoSet, setDemoSet] = useState<DemoChild[]>(DEMO_SETS.single);
-  const [demoId, setDemoId] = useState(DEMO_SETS.single[0].id);
+  // 주소(?kids=)로 고른 미리보기 구성. 없으면 로그인 여부로 정한다(아래 demoSet).
+  const [urlDemoSet, setUrlDemoSet] = useState<DemoChild[] | null>(null);
+  const [demoId, setDemoId] = useState('');
   const [openAction, setOpenAction] = useState<ActionId | null>(null);
   const [decorating, setDecorating] = useState(false);
   // 편집 모드에 들어갈 때는 고른 탭 없이 시작한다. 탭을 눌러야 시트가 열린다.
@@ -233,9 +243,10 @@ export default function HomeClient() {
   useEffect(() => {
     const set = DEMO_SETS[new URLSearchParams(location.search).get('kids') ?? ''];
     if (!set) return;
-    setDemoSet(set);
+    setUrlDemoSet(set);
     setDemoId(set[0].id);
   }, []);
+  const demoSet = urlDemoSet ?? (isAuthenticated ? DEMO_SETS.single : DEMO_SETS.quints);
 
   const isDemo = !selectedChild;
   const kidList: DemoChild[] = isDemo ? demoSet : children;
