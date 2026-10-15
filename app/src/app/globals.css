@@ -136,6 +136,8 @@ body > div {
  *      그림은 3배 해상도로 만들어 줄여 쓴다 — 1배 화면에서 1px 남짓한 선이 픽셀 사이에 걸려 끊겨 보이지 않게.
  *   3) 사방 테두리 박스는 요소 자체도 같은 흔들림으로 채운 모양으로 잘라낸다 — 배경이 선 밖으로 비치지 않고 선이 가장자리가 된다.
  *      잘라내는 모양은 선보다 조금 굵게 둔다. 딱 맞추면 1배 화면에서 반올림 차이로 선 바깥이 깎여 끊겨 보인다.
+ *      slice 뒤의 fill 을 빼면 안 된다. 표준 mask-border 는 fill 이 없으면 가운데를 버려 내용이 통째로 사라진다
+ *      (크롬은 가운데를 늘 채우는 -webkit- 쪽만 써서 멀쩡하고, iOS Safari 에서만 박스 안이 비어 보인다).
  *      overflow-hidden 박스도 이 마스크가 내용을 잘라 주므로 overflow 를 풀어 선이 잘리지 않게 한다.
  * 모서리 둥글기마다 마스크가 따로 있다(0·4·8·12·16px). 완전한 원(rounded-full)은 그대로 둔다.
  * input·textarea 처럼 ::after 를 못 다는 요소는 아래에서 픽셀 UI 입력칸 색만 border-image 로 따로 칠한다.
@@ -179,8 +181,8 @@ body > div {
 }
 /* 사방 테두리 박스 — 요소를 물결 모양으로 잘라 선이 가장자리가 되게 한다(::after 와 같은 자리·같은 흔들림) */
 :is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
-  -webkit-mask-box-image: var(--wobble-fill-r0) 24 / 8px / 3px stretch;
-  mask-border: var(--wobble-fill-r0) 24 / 8px / 3px stretch;
+  -webkit-mask-box-image: var(--wobble-fill-r0) 24 fill / 8px / 3px stretch;
+  mask-border: var(--wobble-fill-r0) 24 fill / 8px / 3px stretch;
 }
 :is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)[class~="overflow-hidden"] {
   overflow: visible;
@@ -190,32 +192,32 @@ body > div {
   mask-border: var(--wobble-r4) 36 / 12px stretch;
 }
 :is([class~="rounded"], [class~="rounded-[4px]"], [class~="rounded-sm"], [class~="rounded-md"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
-  -webkit-mask-box-image: var(--wobble-fill-r4) 36 / 12px / 3px stretch;
-  mask-border: var(--wobble-fill-r4) 36 / 12px / 3px stretch;
+  -webkit-mask-box-image: var(--wobble-fill-r4) 36 fill / 12px / 3px stretch;
+  mask-border: var(--wobble-fill-r4) 36 fill / 12px / 3px stretch;
 }
 :is([class~="rounded-lg"], [class~="rounded-[8px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
   -webkit-mask-box-image: var(--wobble-r8) 48 / 16px stretch;
   mask-border: var(--wobble-r8) 48 / 16px stretch;
 }
 :is([class~="rounded-lg"], [class~="rounded-[8px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
-  -webkit-mask-box-image: var(--wobble-fill-r8) 48 / 16px / 3px stretch;
-  mask-border: var(--wobble-fill-r8) 48 / 16px / 3px stretch;
+  -webkit-mask-box-image: var(--wobble-fill-r8) 48 fill / 16px / 3px stretch;
+  mask-border: var(--wobble-fill-r8) 48 fill / 16px / 3px stretch;
 }
 :is([class~="rounded-xl"], [class~="rounded-[12px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
   -webkit-mask-box-image: var(--wobble-r12) 60 / 20px stretch;
   mask-border: var(--wobble-r12) 60 / 20px stretch;
 }
 :is([class~="rounded-xl"], [class~="rounded-[12px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
-  -webkit-mask-box-image: var(--wobble-fill-r12) 60 / 20px / 3px stretch;
-  mask-border: var(--wobble-fill-r12) 60 / 20px / 3px stretch;
+  -webkit-mask-box-image: var(--wobble-fill-r12) 60 fill / 20px / 3px stretch;
+  mask-border: var(--wobble-fill-r12) 60 fill / 20px / 3px stretch;
 }
 :is([class~="rounded-2xl"], [class~="rounded-[16px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
   -webkit-mask-box-image: var(--wobble-r16) 72 / 24px stretch;
   mask-border: var(--wobble-r16) 72 / 24px stretch;
 }
 :is([class~="rounded-2xl"], [class~="rounded-[16px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
-  -webkit-mask-box-image: var(--wobble-fill-r16) 72 / 24px / 3px stretch;
-  mask-border: var(--wobble-fill-r16) 72 / 24px / 3px stretch;
+  -webkit-mask-box-image: var(--wobble-fill-r16) 72 fill / 24px / 3px stretch;
+  mask-border: var(--wobble-fill-r16) 72 fill / 24px / 3px stretch;
 }
 /* 한 변만 있는 구분선 — 그 변만 남긴다 */
 /* 선 방향으로는 내밀지 않는다 — 내밀면 줄 끝이 부모 밖으로 넘쳐 가로·세로 스크롤이 생긴다.
@@ -245,8 +247,8 @@ body > div {
 /* 입력칸 — ::after 를 못 달아서 색을 박은 물결 선을 border-image 로 직접 깔고, 같은 모양으로 잘라낸다(픽셀 UI 입력칸 색만) */
 :is(input, textarea, select):is([class~="border-[#808991]"], [class~="border-[#121212]"], [class~="border-[#FF4040]"]) {
   border-image: var(--wobble-input-gray) 30 / 10px / 2px stretch;
-  -webkit-mask-box-image: var(--wobble-input-fill) 30 / 10px / 2px stretch;
-  mask-border: var(--wobble-input-fill) 30 / 10px / 2px stretch;
+  -webkit-mask-box-image: var(--wobble-input-fill) 30 fill / 10px / 2px stretch;
+  mask-border: var(--wobble-input-fill) 30 fill / 10px / 2px stretch;
 }
 :is(input, textarea, select)[class~="border-[#121212]"],
 :is(input, textarea, select)[class~="focus:border-[#121212]"]:focus {
