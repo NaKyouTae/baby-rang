@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
+import RoomItemPreview from "./RoomItemPreview";
 
 export type RoomItem = {
   id: string;
@@ -27,15 +28,11 @@ export type RoomItem = {
   surface: string;
   tileW: number;
   tileH: number;
-  spriteLiftY: number;
-  directions: string[];
-  flippable: boolean;
-  canStack: boolean;
+  /** 아기가 이 아이템으로 할 수 있는 것. 비우면 앱이 분류로 짐작한다. */
+  affordances?: string[];
   dynamicSlot: string | null;
   imageUrl: string | null;
-  unlock: string;
-  priceCoins: number | null;
-  sortOrder: number;
+  priceCoins: number;
   isActive: boolean;
 };
 
@@ -59,25 +56,25 @@ const SURFACE: Record<string, string> = {
   ON_TOP: "가구 위",
 };
 
-const UNLOCK: Record<string, string> = {
-  FREE: "기본 제공",
-  REWARD: "기록 보상",
-  PURCHASE: "구매",
-  EVENT: "이벤트",
+/** 쓰임새 — 홈 아기가 방에 놓인 아이템에 맞춰 행동을 고르는 데 쓴다 */
+const AFFORDANCE: Record<string, string> = {
+  HOLD: "붙잡고 서기",
+  SOFT_FLOOR: "푹신한 바닥",
+  PLAY: "앉아서 놀기",
+  BALL: "공",
+  PUSH_WALKER: "보행기",
+  SLEEP: "침대에서 자기",
+};
+/** 비워 뒀을 때 앱이 분류로 짐작하는 쓰임새 — 폼에 안내로 보여준다 */
+const DEFAULT_AFFORDANCE: Record<string, string[]> = {
+  FURNITURE: ["HOLD"],
+  BED: ["HOLD", "SLEEP"],
+  RUG: ["SOFT_FLOOR"],
+  TOY: ["PLAY"],
 };
 
 const DYNAMIC: Record<string, string> = {
   WEATHER: "날씨(창문)",
-  PHOTO: "아이 사진",
-  GROWTH: "성장 기록",
-};
-
-const DIRECTIONS = ["SOUTH", "EAST", "NORTH", "WEST"] as const;
-const DIRECTION_LABEL: Record<string, string> = {
-  SOUTH: "정면",
-  EAST: "오른쪽",
-  NORTH: "뒤",
-  WEST: "왼쪽",
 };
 
 /**
@@ -104,15 +101,10 @@ const empty = {
   surface: "FLOOR",
   tileW: 1,
   tileH: 1,
-  spriteLiftY: 0,
-  directions: ["SOUTH"] as string[],
-  flippable: false,
-  canStack: false,
+  affordances: [] as string[],
   dynamicSlot: "",
   imageUrl: "",
-  unlock: "FREE",
-  priceCoins: null as number | null,
-  sortOrder: 0,
+  priceCoins: 0,
   isActive: true,
 };
 
@@ -123,6 +115,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
   const [editing, setEditing] = useState<RoomItem | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<Form>(empty);
+  // 쓰임새가 생기기 전에 열어 둔 폼(핫 리로드로 남은 상태)이나 예전 서버 응답에는 이 값이 없다
+  const affordances = form.affordances ?? [];
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState<string>(ALL);
@@ -168,15 +162,10 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       surface: item.surface,
       tileW: item.tileW,
       tileH: item.tileH,
-      spriteLiftY: item.spriteLiftY,
-      directions: item.directions?.length ? item.directions : ["SOUTH"],
-      flippable: item.flippable,
-      canStack: item.canStack,
+      affordances: item.affordances ?? [],
       dynamicSlot: item.dynamicSlot ?? "",
       imageUrl: item.imageUrl ?? "",
-      unlock: item.unlock,
       priceCoins: item.priceCoins,
-      sortOrder: item.sortOrder,
       isActive: item.isActive,
     });
     setCreating(false);
@@ -220,25 +209,21 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
     }
   };
 
-  // 아이템을 지우면 이미 그 가구를 놓아둔 방이 깨진다. 숨기는 쪽을 먼저 안내한다.
+  // 누군가 쓰고 있는 아이템은 서버가 삭제를 거부한다. 숨기는 쪽을 먼저 안내한다.
   const remove = async (item: RoomItem) => {
     if (
       !confirm(
-        `'${item.name}' 을 삭제할까요?\n\n이미 이 가구를 놓아둔 방이 깨집니다. 노출만 막으려면 삭제 대신 '노출'을 끄세요.`,
+        `'${item.name}' 을 삭제할까요?\n\n방에 놓였거나 구매된 아이템은 삭제할 수 없습니다. 노출만 막으려면 삭제 대신 '노출'을 끄세요.`,
       )
     )
       return;
-    await fetch(`/api/room-items/${item.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/room-items/${item.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.message || "삭제에 실패했습니다.");
+      return;
+    }
     router.refresh();
-  };
-
-  const toggleDirection = (dir: string) => {
-    setForm((prev) => {
-      const has = prev.directions.includes(dir);
-      const next = has ? prev.directions.filter((d) => d !== dir) : [...prev.directions, dir];
-      // 방향이 하나도 없으면 렌더러가 그릴 그림을 못 고른다
-      return { ...prev, directions: next.length ? next : ["SOUTH"] };
-    });
   };
 
   // 분류별 개수. 아이템이 하나도 없는 분류는 칩으로 띄우지 않는다 —
@@ -343,23 +328,23 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                     {DYNAMIC[item.dynamicSlot] ?? item.dynamicSlot}
                   </Badge>
                 )}
+                {item.affordances?.map((a) => (
+                  <Badge key={a} variant="outline" className="text-[10px]">
+                    {AFFORDANCE[a] ?? a}
+                  </Badge>
+                ))}
                 <Badge variant={item.isActive ? "success" : "secondary"} className="text-[10px]">
                   {item.isActive ? "노출" : "숨김"}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground/80 truncate mt-1 font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
-                {item.spriteLiftY > 0 && ` · 위로 ${item.spriteLiftY}칸`}
                 {" · "}
-                {item.directions?.map((d) => DIRECTION_LABEL[d] ?? d).join("/")}
-                {" · "}
-                {UNLOCK[item.unlock] ?? item.unlock}
-                {item.priceCoins != null && ` ${item.priceCoins}코인`}
+                {item.priceCoins > 0 ? `${item.priceCoins}코인` : "무료"}
               </p>
             </div>
 
             <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-center">
-              <span className="text-xs text-muted-foreground tabular-nums">#{item.sortOrder}</span>
               <div className="flex gap-1.5">
                 <Button variant="outline" size="sm" onClick={() => startEdit(item)}>
                   <Pencil className="h-3 w-3" />
@@ -376,8 +361,9 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
+        {/* 본문만 스크롤하고 머리·버튼은 고정한다. 폼이 길어 저장하려고 끝까지 내리지 않게. */}
+        <DialogContent className="max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:max-w-3xl">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>{editing ? "아이템 수정" : "새 아이템"}</DialogTitle>
             <DialogDescription>
               칸 수는 픽셀이 아니라 타일 기준입니다. 저장된 방이 기기마다 달라지지 않도록
@@ -385,277 +371,242 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="name">이름</Label>
-                <Input
-                  id="name"
-                  value={form.name}
-                  onChange={(e) => set("name", e.target.value)}
-                  placeholder="아기침대"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="spriteKey">스프라이트 키</Label>
-                <Input
-                  id="spriteKey"
-                  value={form.spriteKey}
-                  readOnly
-                  placeholder="이미지를 올리면 자동으로 채워집니다"
-                  className="font-mono bg-muted text-muted-foreground"
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-[11px] text-muted-foreground">
-              {editing
-                ? "스프라이트 키는 코드가 그림을 찾는 이름이라 바꿀 수 없습니다. 다른 그림으로 교체해도 키는 그대로 유지됩니다."
-                : "올린 파일 이름에서 자동으로 만들어집니다. (crib_wood.png → crib_wood) 파일 이름이 한글이면 알아볼 수 없는 키가 생기니 영문으로 지어주세요."}
-            </p>
+          {/* 왼쪽 폼만 스크롤하고 오른쪽 미리보기는 고정한다 */}
+          <div className="flex min-h-0 overflow-hidden px-6">
+            <div className="flex min-h-0 flex-1 gap-6">
+              <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pt-1 pb-6 pr-1">
+                <div className="space-y-2">
+                  <Label>스프라이트 이미지</Label>
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-20 h-20 shrink-0 rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center overflow-hidden">
+                      {form.imageUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={form.imageUrl}
+                            alt=""
+                            className="max-w-full max-h-full"
+                            style={{ imageRendering: "pixelated" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => set("imageUrl", "")}
+                            className="absolute top-0.5 right-0.5 rounded bg-black/55 p-0.5 text-white"
+                            aria-label="이미지 지우기"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">코드 생성</span>
+                      )}
+                    </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="category">분류</Label>
-                <select
-                  id="category"
-                  value={form.category}
-                  onChange={(e) => set("category", e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                >
-                  {Object.entries(CATEGORY).map(([v, label]) => (
-                    <option key={v} value={v}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="surface">놓는 위치</Label>
-                <select
-                  id="surface"
-                  value={form.surface}
-                  onChange={(e) => set("surface", e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                >
-                  {Object.entries(SURFACE).map(([v, label]) => (
-                    <option key={v} value={v}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="tileW">가로 칸</Label>
-                <Input
-                  id="tileW"
-                  type="number"
-                  min={1}
-                  value={form.tileW}
-                  onChange={(e) => set("tileW", Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tileH">세로 칸</Label>
-                <Input
-                  id="tileH"
-                  type="number"
-                  min={1}
-                  value={form.tileH}
-                  onChange={(e) => set("tileH", Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="spriteLiftY">위로 솟는 칸</Label>
-                <Input
-                  id="spriteLiftY"
-                  type="number"
-                  min={0}
-                  value={form.spriteLiftY}
-                  onChange={(e) => set("spriteLiftY", Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-[11px] text-muted-foreground">
-              가로·세로 칸은 바닥에서 차지하는 자리(겹침 검사용)이고, 솟는 칸은 옷장처럼
-              그림이 바닥 칸보다 위로 올라가는 높이입니다.
-            </p>
-
-            <div className="space-y-2">
-              <Label>지원 방향</Label>
-              <div className="flex gap-1.5 flex-wrap">
-                {DIRECTIONS.map((d) => {
-                  const on = form.directions.includes(d);
-                  return (
-                    <Button
-                      key={d}
-                      type="button"
-                      size="sm"
-                      variant={on ? "default" : "outline"}
-                      onClick={() => toggleDirection(d)}
-                    >
-                      {DIRECTION_LABEL[d]}
-                    </Button>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                그림이 한 장뿐이면 정면만 켜 두세요. 픽셀 스프라이트는 방향별 그림이 따로
-                있어야 해서 임의 각도 회전은 되지 않습니다.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="unlock">획득 방법</Label>
-                <select
-                  id="unlock"
-                  value={form.unlock}
-                  onChange={(e) => set("unlock", e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                >
-                  {Object.entries(UNLOCK).map(([v, label]) => (
-                    <option key={v} value={v}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="priceCoins">가격(코인)</Label>
-                <Input
-                  id="priceCoins"
-                  type="number"
-                  min={0}
-                  value={form.priceCoins ?? ""}
-                  onChange={(e) =>
-                    set("priceCoins", e.target.value === "" ? null : Number(e.target.value))
-                  }
-                  placeholder="기본 제공이면 비움"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="dynamicSlot">실시간 슬롯</Label>
-                <select
-                  id="dynamicSlot"
-                  value={form.dynamicSlot}
-                  onChange={(e) => set("dynamicSlot", e.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                >
-                  <option value="">없음</option>
-                  {Object.entries(DYNAMIC).map(([v, label]) => (
-                    <option key={v} value={v}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sortOrder">정렬 순서</Label>
-                <Input
-                  id="sortOrder"
-                  type="number"
-                  value={form.sortOrder}
-                  onChange={(e) => set("sortOrder", Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-[11px] text-muted-foreground">
-              실시간 슬롯은 그림이 데이터에 따라 바뀌는 자리입니다. 창문에 날씨를 넣으면
-              현재 날씨·시간대에 맞춰 하늘이 바뀝니다.
-            </p>
-
-            <div className="space-y-2">
-              <Label>스프라이트 이미지</Label>
-              <div className="flex items-start gap-3">
-                <div className="relative w-20 h-20 shrink-0 rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center overflow-hidden">
-                  {form.imageUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={form.imageUrl}
-                        alt=""
-                        className="max-w-full max-h-full"
-                        style={{ imageRendering: "pixelated" }}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
+                          <Upload className="h-3.5 w-3.5" />
+                          {uploading ? "업로드 중" : "PNG 올리기"}
+                          <input
+                            type="file"
+                            accept="image/png,image/webp"
+                            className="hidden"
+                            disabled={uploading}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) uploadSprite(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="isActive"
+                            checked={form.isActive}
+                            onCheckedChange={(v: boolean) => set("isActive", v)}
+                          />
+                          <Label htmlFor="isActive">노출</Label>
+                        </div>
+                      </div>
+                      <Input
+                        value={form.imageUrl}
+                        onChange={(e) => set("imageUrl", e.target.value)}
+                        placeholder="비우면 코드로 그립니다"
+                        className="font-mono text-xs"
                       />
-                      <button
-                        type="button"
-                        onClick={() => set("imageUrl", "")}
-                        className="absolute top-0.5 right-0.5 rounded bg-black/55 p-0.5 text-white"
-                        aria-label="이미지 지우기"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">코드 생성</span>
-                  )}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    배경이 투명한 PNG 를 올리세요. 크기는 타일 16px 기준으로 (가로 칸 × 16) ×
+                    (세로 칸 × 16) 입니다. 예: 3×3칸이면 48×48.
+                  </p>
                 </div>
 
-                <div className="flex-1 space-y-2">
-                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
-                    <Upload className="h-3.5 w-3.5" />
-                    {uploading ? "업로드 중" : "PNG 올리기"}
-                    <input
-                      type="file"
-                      accept="image/png,image/webp"
-                      className="hidden"
-                      disabled={uploading}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) uploadSprite(f);
-                        e.target.value = "";
-                      }}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">이름</Label>
+                    <Input
+                      id="name"
+                      value={form.name}
+                      onChange={(e) => set("name", e.target.value)}
+                      placeholder="아기침대"
                     />
-                  </label>
-                  <Input
-                    value={form.imageUrl}
-                    onChange={(e) => set("imageUrl", e.target.value)}
-                    placeholder="비우면 코드로 그립니다"
-                    className="font-mono text-xs"
-                  />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="spriteKey">스프라이트 키</Label>
+                    <Input
+                      id="spriteKey"
+                      value={form.spriteKey}
+                      readOnly
+                      placeholder="이미지를 올리면 자동으로 채워집니다"
+                      className="font-mono bg-muted text-muted-foreground"
+                    />
+                  </div>
+                </div>
+                <p className="-mt-2 text-[11px] text-muted-foreground">
+                  {editing
+                    ? "스프라이트 키는 코드가 그림을 찾는 이름이라 바꿀 수 없습니다. 다른 그림으로 교체해도 키는 그대로 유지됩니다."
+                    : "올린 파일 이름에서 자동으로 만들어집니다. (crib_wood.png → crib_wood) 파일 이름이 한글이면 알아볼 수 없는 키가 생기니 영문으로 지어주세요."}
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">분류</Label>
+                    <select
+                      id="category"
+                      value={form.category}
+                      onChange={(e) => set("category", e.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                      {Object.entries(CATEGORY).map(([v, label]) => (
+                        <option key={v} value={v}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="surface">생성 위치</Label>
+                    <select
+                      id="surface"
+                      value={form.surface}
+                      onChange={(e) => set("surface", e.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                      {Object.entries(SURFACE).map(([v, label]) => (
+                        <option key={v} value={v}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="tileW">가로 칸</Label>
+                    <Input
+                      id="tileW"
+                      type="number"
+                      min={1}
+                      value={form.tileW}
+                      onChange={(e) => set("tileW", Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tileH">세로 칸</Label>
+                    <Input
+                      id="tileH"
+                      type="number"
+                      min={1}
+                      value={form.tileH}
+                      onChange={(e) => set("tileH", Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <p className="-mt-2 text-[11px] text-muted-foreground">
+                  가로·세로 칸은 그림 크기이자, 아기가 이 아이템을 쓸 때 다가가는 자리입니다.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceCoins">가격(코인) · 0이면 무료</Label>
+                    <Input
+                      id="priceCoins"
+                      type="number"
+                      min={0}
+                      value={form.priceCoins}
+                      onChange={(e) => set("priceCoins", Math.max(0, Number(e.target.value) || 0))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dynamicSlot">실시간 슬롯</Label>
+                    <select
+                      id="dynamicSlot"
+                      value={form.dynamicSlot}
+                      onChange={(e) => set("dynamicSlot", e.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                      <option value="">없음</option>
+                      {Object.entries(DYNAMIC).map(([v, label]) => (
+                        <option key={v} value={v}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="-mt-2 text-[11px] text-muted-foreground">
+                  실시간 슬롯은 그림이 데이터에 따라 바뀌는 자리입니다. 날씨는 창문 하늘을
+                  현재 날씨·시간대에 맞춰 바꾸려는 것으로, 앱에는 아직 연결되지 않았습니다.
+                </p>
+
+                <div className="space-y-2">
+                  <Label>아기 쓰임새</Label>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="아기 쓰임새">
+                    {Object.entries(AFFORDANCE).map(([v, label]) => {
+                      const on = affordances.includes(v);
+                      return (
+                        <Button
+                          key={v}
+                          type="button"
+                          size="sm"
+                          variant={on ? "default" : "outline"}
+                          onClick={() =>
+                            set(
+                              "affordances",
+                              on ? affordances.filter((a) => a !== v) : [...affordances, v],
+                            )
+                          }
+                        >
+                          {label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    홈의 아기가 이 아이템으로 할 수 있는 행동을 정합니다. 공·보행기는 꼭 골라야 아기가 가지고 놉니다.
+                    {affordances.length === 0 &&
+                      (DEFAULT_AFFORDANCE[form.category]
+                        ? ` 비워 두면 분류에 따라 '${DEFAULT_AFFORDANCE[form.category].map((a) => AFFORDANCE[a]).join("·")}'(으)로 씁니다.`
+                        : " 비워 두면 아기가 쓰지 않는 장식으로 둡니다.")}
+                  </p>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                배경이 투명한 PNG 를 올리세요. 크기는 타일 16px 기준으로 (가로 칸 × 16) ×
-                ((세로 칸 + 솟는 칸) × 16) 입니다. 예: 3×3칸이면 48×48.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-5 pt-1">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="flippable"
-                  checked={form.flippable}
-                  onCheckedChange={(v: boolean) => set("flippable", v)}
+              <div className="shrink-0 overflow-hidden pt-1 pb-6">
+                <RoomItemPreview
+                  category={form.category}
+                  surface={form.surface}
+                  tileW={form.tileW}
+                  tileH={form.tileH}
+                  imageUrl={form.imageUrl}
+                  affordances={affordances}
                 />
-                <Label htmlFor="flippable">좌우 반전 가능</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="canStack"
-                  checked={form.canStack}
-                  onCheckedChange={(v: boolean) => set("canStack", v)}
-                />
-                <Label htmlFor="canStack">위에 소품 올리기</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="isActive"
-                  checked={form.isActive}
-                  onCheckedChange={(v: boolean) => set("isActive", v)}
-                />
-                <Label htmlFor="isActive">노출</Label>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="items-center">
+          <DialogFooter className="items-center border-t px-6 py-4">
             {!form.name && (
               <p className="mr-auto text-[11px] text-muted-foreground">
                 이름을 입력해야 저장할 수 있습니다.

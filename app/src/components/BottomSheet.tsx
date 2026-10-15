@@ -21,6 +21,8 @@ interface BottomSheetProps {
    * 'sheet': 화면 하단에 붙는 진짜 바텀시트(상단 모서리만 둥글고 좌우/하단 여백 없음)
    */
   variant?: Variant;
+  /** 픽셀 화면(아기랑 홈·기록 등)용 — 흰 바탕 #FDFDFE, 위 모서리 16px, 픽셀 폰트 */
+  pixel?: boolean;
 }
 
 const Z_CLASS: Record<ZIndex, string> = {
@@ -41,6 +43,7 @@ export default function BottomSheet({
   closeOnBackdrop = true,
   ariaLabel,
   variant = 'floating',
+  pixel = false,
 }: BottomSheetProps) {
   // 열려 있는 동안 네이티브 앱 배너를 숨긴다(배너가 시트를 덮는 것 방지).
   useAppOverlayLock(open);
@@ -60,8 +63,14 @@ export default function BottomSheet({
     variant === 'sheet'
       ? ''
       : 'px-4 pb-[max(var(--safe-area-bottom),16px)]';
-  const surfaceRounded =
-    variant === 'sheet' ? 'rounded-t-3xl' : 'rounded-3xl';
+  const surfaceRounded = pixel
+    ? variant === 'sheet'
+      ? 'rounded-t-[16px]'
+      : 'rounded-[16px]'
+    : variant === 'sheet'
+      ? 'rounded-t-3xl'
+      : 'rounded-3xl';
+  const surface = pixel ? 'bg-[#FDFDFE]' : surfaceClassName;
 
   return (
     <div
@@ -71,10 +80,13 @@ export default function BottomSheet({
       aria-label={ariaLabel}
       onClick={closeOnBackdrop ? onClose : undefined}
     >
-      <div className="absolute inset-0 bg-black/40 -z-10" />
+      <div className="absolute inset-0 bg-black/50 -z-10" />
       <div
-        className={`relative w-full max-w-[430px] ${surfaceClassName} ${surfaceRounded} shadow-2xl flex flex-col overflow-hidden`}
-        style={{ maxHeight }}
+        className={`relative w-full max-w-[430px] ${surface} ${surfaceRounded} shadow-2xl flex flex-col overflow-hidden`}
+        style={{
+          maxHeight,
+          ...(pixel ? { fontFamily: 'Galmuri11Fig, Galmuri11, monospace' } : null),
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

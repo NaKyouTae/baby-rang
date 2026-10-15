@@ -6,11 +6,12 @@ import {
   GrowthRecord,
   GrowthType,
   TYPE_CONFIG,
+  recordTitle,
 } from './types';
 import TimePickerModal from './TimePickerModal';
 import WheelPickerModal from './WheelPickerModal';
 import BottomSheet from '@/components/BottomSheet';
-import ConfirmModal from '@/components/ConfirmModal';
+import ConfirmModal from '../home/_components/ConfirmModal';
 import RecordDefaultsSheet, { RecordDefaultsMode } from './RecordDefaultsSheet';
 import {
   getBabyFoodDefaultUnit,
@@ -18,6 +19,7 @@ import {
   isWithinNightRange,
 } from './recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
+import Loading from '@/components/Loading';
 
 function rangeFor(
   field: FieldDef,
@@ -95,7 +97,49 @@ function fmtLocal(y: number, mo: number, d: number, h: number, mi: number) {
 function formatDisplayDate(s: string): string {
   const { y, mo, d, h, mi } = parseLocal(s);
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${y}. ${p(mo)}. ${p(d)}. ${p(h)}:${p(mi)}`;
+  // Figma: "26.04.23 13:01"
+  return `${p(y % 100)}.${p(mo)}.${p(d)} ${p(h)}:${p(mi)}`;
+}
+
+/** 입력칸 — 높이 52, 회색 테두리, 16px 글자 (Figma button_large) */
+const FIELD_BOX =
+  'h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] flex items-center text-left text-[16px] leading-none text-[#121212] tabular-nums active:bg-[#F7F8F9]';
+/** 입력 이름(측정일시·수유량 등) */
+const FIELD_LABEL = 'text-[14px] leading-[1.4] text-[#808991]';
+/** 입력칸 옆 52px 정사각 '지금 완료' 버튼 */
+const NOW_BUTTON =
+  'shrink-0 size-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[16px] leading-[1.4] text-[#121212] text-center active:translate-y-px';
+
+/** 소변/대변/둘다, 낮잠/밤잠 같은 고르기 칸 */
+function Segmented({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: string; label: string }[];
+  value: string | undefined;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex rounded-[4px] border border-[#808991] overflow-hidden">
+      {options.map((o, idx) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          className={`flex-1 min-w-0 h-[50px] px-[10px] text-[16px] leading-none transition ${
+            idx > 0 ? 'border-l border-[#808991]' : ''
+          } ${
+            value === o.value
+              ? 'bg-[#2C2C2C] text-[#FDFDFE]'
+              : 'bg-[#FDFDFE] text-[#808991] active:bg-[#F7F8F9]'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 type FieldRow =
@@ -544,48 +588,47 @@ export default function EntrySheet({
     const running = timers[f.key]?.startMs != null;
     const seconds = getDisplaySeconds(f.key);
     const toggleKeys = mirrorKey ? [f.key, mirrorKey] : [f.key];
+    // 한 줄: [값] [재생/일시정지] [지금 완료] — Figma 모유수유·유축
     return (
-      <div>
+      <div className="flex items-stretch gap-[10px]">
         <button
           type="button"
           onClick={() => setPickerField(f)}
-          className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
+          className={`${FIELD_BOX} flex-1 min-w-0`}
         >
           {seconds > 0 ? (
-            <span className="text-app-black">{fmtMmSs(seconds)}</span>
+            <span className="text-[#121212]">{fmtMmSs(seconds)}</span>
           ) : (
-            <span className="text-gray-400">00:00</span>
+            <span className="text-[#BBC0C5]">0</span>
           )}
         </button>
-        <div className="mt-2 flex items-stretch gap-2">
-          <button
-            type="button"
-            onClick={() => toggleTimer(...toggleKeys)}
-            className={`flex-1 h-11 rounded-[4px] flex items-center justify-center transition ${
-              running
-                ? 'bg-primary-500/10 border border-primary-500 text-primary-500'
-                : 'bg-gray-200 text-gray-500 active:bg-gray-300'
-            }`}
-            aria-label={running ? '타이머 일시정지' : '타이머 시작'}
-          >
-            {running ? (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M1.3335 4.00016C1.3335 2.74283 1.3335 2.11483 1.72416 1.72416C2.11483 1.3335 2.74283 1.3335 4.00016 1.3335C5.2575 1.3335 5.8855 1.3335 6.27616 1.72416C6.66683 2.11483 6.66683 2.74283 6.66683 4.00016V12.0002C6.66683 13.2575 6.66683 13.8855 6.27616 14.2762C5.8855 14.6668 5.2575 14.6668 4.00016 14.6668C2.74283 14.6668 2.11483 14.6668 1.72416 14.2762C1.3335 13.8855 1.3335 13.2575 1.3335 12.0002V4.00016ZM9.3335 4.00016C9.3335 2.74283 9.3335 2.11483 9.72416 1.72416C10.1148 1.3335 10.7428 1.3335 12.0002 1.3335C13.2575 1.3335 13.8855 1.3335 14.2762 1.72416C14.6668 2.11483 14.6668 2.74283 14.6668 4.00016V12.0002C14.6668 13.2575 14.6668 13.8855 14.2762 14.2762C13.8855 14.6668 13.2575 14.6668 12.0002 14.6668C10.7428 14.6668 10.1148 14.6668 9.72416 14.2762C9.3335 13.8855 9.3335 13.2575 9.3335 12.0002V4.00016Z" fill="currentColor" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M14.2725 6.23521C14.5927 6.40549 14.8605 6.65967 15.0473 6.97054C15.2341 7.2814 15.3328 7.63722 15.3328 7.99988C15.3328 8.36254 15.2341 8.71836 15.0473 9.02922C14.8605 9.34009 14.5927 9.59427 14.2725 9.76455L5.73117 14.4092C4.35584 15.1579 2.6665 14.1845 2.6665 12.6452V3.35521C2.6665 1.81521 4.35584 0.842546 5.73117 1.58988L14.2725 6.23521Z" fill="currentColor" />
-              </svg>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => fillNow(f, mirrorKey)}
-            className="flex-1 h-11 rounded-[4px] bg-gray-200 text-sm font-normal text-gray-600 active:bg-gray-300 leading-tight"
-          >
-            지금<br />완료
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => toggleTimer(...toggleKeys)}
+          className={`shrink-0 size-[52px] rounded-[4px] border flex items-center justify-center active:translate-y-px ${
+            running
+              ? 'border-[#3078C9] bg-[rgba(48,120,201,0.1)]'
+              : 'border-[#121212] bg-[#EEF0F1]'
+          }`}
+          aria-label={running ? '타이머 일시정지' : '타이머 시작'}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={running ? '/icons/pause-solid.svg' : '/icons/play.svg'}
+            alt=""
+            width={20}
+            height={20}
+            className="block"
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => fillNow(f, mirrorKey)}
+          className={NOW_BUTTON}
+        >
+          지금<br />완료
+        </button>
       </div>
     );
   }
@@ -600,21 +643,21 @@ export default function EntrySheet({
     const hasValue = data[f.key] && data[f.key] !== '' && data[f.key] !== '0';
     const placeholder = f.placeholder ?? '0';
     return (
-      <div className="flex items-stretch gap-2">
+      <div className="flex items-stretch gap-[10px]">
         <button
           type="button"
           onClick={() => setPickerField(f)}
-          className="flex-1 min-w-0 px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
+          className={`${FIELD_BOX} flex-1 min-w-0`}
         >
           {hasValue ? (
-            <span className="text-app-black">{formatFieldValue(f, data[f.key])}</span>
+            <span className="text-[#121212]">{formatFieldValue(f, data[f.key])}</span>
           ) : (
-            <span className="text-gray-400">{placeholder}</span>
+            <span className="text-[#BBC0C5]">{placeholder}</span>
           )}
         </button>
         {f.units && f.units.length > 0 && (
-          <div className="shrink-0 flex rounded-[4px] border border-gray-200 overflow-hidden">
-            {f.units.map((u) => {
+          <div className="shrink-0 flex rounded-[4px] border border-[#808991] overflow-hidden">
+            {f.units.map((u, idx) => {
               const active = selectedUnits[f.key] === u;
               return (
                 <button
@@ -623,10 +666,12 @@ export default function EntrySheet({
                   onClick={() =>
                     setSelectedUnits((prev) => ({ ...prev, [f.key]: u }))
                   }
-                  className={`px-4 text-sm font-normal text-gray-600 transition ${
+                  className={`h-[50px] px-[16px] text-[16px] leading-none transition ${
+                    idx > 0 ? 'border-l border-[#808991]' : ''
+                  } ${
                     active
-                      ? 'bg-primary-500/10'
-                      : 'bg-white active:bg-gray-50'
+                      ? 'bg-[#2C2C2C] text-[#FDFDFE]'
+                      : 'bg-[#FDFDFE] text-[#808991] active:bg-[#F7F8F9]'
                   }`}
                 >
                   {u}
@@ -646,7 +691,7 @@ export default function EntrySheet({
     const sorted = [...recentAmounts].sort((a, b) => b.value - a.value);
     const hasUnits = !!cfg.fields.find((f) => f.key === fieldKey)?.units?.length;
     return (
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-[10px] gap-y-[4px]">
         {sorted.map((a) => (
           <button
             key={`${a.value}-${a.unit}`}
@@ -658,7 +703,7 @@ export default function EntrySheet({
                 setSelectedUnits((prev) => ({ ...prev, [fieldKey]: a.unit }));
               }
             }}
-            className="text-xs font-medium text-primary-500 underline underline-offset-2 active:opacity-60 tabular-nums"
+            className="text-[14px] leading-[1.4] text-[#3078C9] underline active:opacity-60 tabular-nums"
           >
             {a.value}
             {a.unit}
@@ -668,26 +713,25 @@ export default function EntrySheet({
     );
   }
 
+  /** 입력 이름 — "수유량(ml)", "왼쪽(분)" 처럼 단위를 괄호로 붙이고, 설정이 있으면 오른쪽에 '설정' 링크. */
   function renderFieldHeader(f: FieldDef) {
-    const showUnitInHeader = !f.units && !!f.unit;
+    const unit = f.units ? (selectedUnits[f.key] ?? f.units[0]) : f.unit;
     const mode = getSettingsModeFor(f.key);
     return (
-      <div className="flex items-baseline justify-between mb-2">
-        <span className="text-xs font-medium text-gray-500">{f.label}</span>
-        <div className="flex items-baseline gap-2">
-          {showUnitInHeader && (
-            <span className="text-xs font-medium text-gray-400">({f.unit})</span>
-          )}
-          {f.showSettingsLink && mode && (
-            <button
-              type="button"
-              onClick={() => setSettingsMode(mode)}
-              className="text-xs font-medium text-gray-400 underline active:text-gray-600"
-            >
-              설정
-            </button>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-[10px] text-[14px] leading-[1.4] text-[#808991]">
+        <span className="flex-1 min-w-0">
+          {f.label}
+          {unit ? `(${unit})` : ''}
+        </span>
+        {f.showSettingsLink && mode && (
+          <button
+            type="button"
+            onClick={() => setSettingsMode(mode)}
+            className="shrink-0 underline active:text-[#121212]"
+          >
+            설정
+          </button>
+        )}
       </div>
     );
   }
@@ -696,43 +740,22 @@ export default function EntrySheet({
 
   return (
     <>
-    <BottomSheet open onClose={onClose} variant="sheet" ariaLabel={cfg.label}>
-        <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <h2 className="text-base font-medium text-app-black">{cfg.label}</h2>
-          {initial ? (
-            <button
-              onClick={handleDelete}
-              className="w-9 h-9 -mr-2 flex items-center justify-center text-app-black active:text-app-red"
-              aria-label="삭제"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.0832 4.99993H2.9165M15.694 7.08326L15.3107 12.8333C15.1632 15.0449 15.0898 16.1508 14.369 16.8249C13.6482 17.4991 12.539 17.4999 10.3223 17.4999H9.67734C7.46067 17.4999 6.3515 17.4999 5.63067 16.8249C4.90984 16.1508 4.83567 15.0449 4.689 12.8333L4.30567 7.08326M7.6415 3.33326C7.81367 2.84532 8.13295 2.42279 8.55534 2.12392C8.97772 1.82505 9.48241 1.66455 9.99984 1.66455C10.5173 1.66455 11.022 1.82505 11.4443 2.12392C11.8667 2.42279 12.186 2.84532 12.3582 3.33326" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              onClick={onClose}
-              className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400 active:text-gray-600"
-              aria-label="닫기"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
+    <BottomSheet pixel open onClose={onClose} variant="sheet" ariaLabel={recordTitle(type)}>
+        {/* 손잡이 + 제목 */}
+        <div className="shrink-0 flex flex-col items-center gap-[16px] pt-[8px] px-[20px]">
+          <div className="h-[4px] w-[36px] rounded-full bg-[#121212]" aria-hidden="true" />
+          <h2 className="w-full text-center text-[16px] leading-[1.4] font-normal text-[#121212]">
+            {recordTitle(type)}
+          </h2>
         </div>
 
-        <div className="overflow-y-auto px-4 py-2 space-y-3">
-          <div>
-            <div className="flex items-baseline mb-2">
-              <span className="text-xs font-medium text-gray-500">측정일시</span>
-              <span className="ml-1 text-xs font-medium text-app-red">*</span>
-            </div>
+        <div className="overflow-y-auto px-[20px] pt-[24px] pb-[8px] flex flex-col gap-[10px]">
+          <div className="flex flex-col gap-[8px]">
+            <span className={FIELD_LABEL}>측정일시</span>
             <button
               type="button"
               onClick={() => setShowStartModal(true)}
-              className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
+              className={`${FIELD_BOX} w-full`}
             >
               {formatDisplayDate(startAt)}
             </button>
@@ -754,14 +777,12 @@ export default function EntrySheet({
           )}
 
           {cfg.showEndPicker && (
-            <div>
-              <div className="flex items-baseline mb-2">
-                <span className="text-xs font-medium text-gray-500">종료일시</span>
-              </div>
+            <div className="flex flex-col gap-[8px]">
+              <span className={FIELD_LABEL}>종료일시</span>
               <button
                 type="button"
                 onClick={() => setShowEndModal(true)}
-                className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
+                className={`${FIELD_BOX} w-full`}
               >
                 {formatDisplayDate(endAt || startAt)}
               </button>
@@ -787,32 +808,24 @@ export default function EntrySheet({
           })()}
 
           {cfg.showDuration && (
-            <div>
-              <div className="flex items-baseline mb-2">
-                <span className="text-xs font-medium text-gray-500">시간</span>
-              </div>
-              <div className="flex items-stretch gap-2">
+            <div className="flex flex-col gap-[8px]">
+              <span className={FIELD_LABEL}>시간</span>
+              <div className="flex items-stretch gap-[10px]">
                 <button
                   type="button"
                   onClick={() => setShowDurationPicker(true)}
-                  className="flex-1 min-w-0 px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-left text-sm font-normal text-app-black tabular-nums active:bg-gray-50"
+                  className={`${FIELD_BOX} flex-1 min-w-0`}
                 >
                   {(() => {
                     const mins = durationMinutes();
-                    return (
-                      <span className={mins > 0 ? 'text-app-black' : 'text-gray-400'}>
-                        {mins}
-                        <span className="ml-0.5 text-gray-400">분</span>
-                      </span>
+                    return mins > 0 ? (
+                      <span className="text-[#121212]">{mins}분</span>
+                    ) : (
+                      <span className="text-[#BBC0C5]">0</span>
                     );
                   })()}
                 </button>
-                <button
-                  type="button"
-                  onClick={fillNowEnd}
-                  className="shrink-0 px-3 rounded-[4px] bg-gray-200 text-sm font-normal text-gray-600 active:bg-gray-300 leading-tight"
-                  style={{ minWidth: 56 }}
-                >
+                <button type="button" onClick={fillNowEnd} className={NOW_BUTTON}>
                   지금<br />완료
                 </button>
               </div>
@@ -843,12 +856,14 @@ export default function EntrySheet({
               label: '왼쪽 유축량',
               kind: 'number',
               unit: 'ml',
+              placeholder: '왼쪽',
             };
             const rightMlField: FieldDef = {
               key: 'rightMl',
               label: '오른쪽 유축량',
               kind: 'number',
               unit: 'ml',
+              placeholder: '오른쪽',
             };
             const amountMlField: FieldDef = {
               key: 'amountMl',
@@ -882,11 +897,6 @@ export default function EntrySheet({
               setData((prev) => ({ ...prev, volumeMode: value }));
             };
 
-            const segOption = (active: boolean, idx: number) =>
-              `flex-1 py-3 text-sm font-normal text-gray-600 transition ${
-                idx > 0 ? 'border-l border-gray-200' : ''
-              } ${active ? 'bg-primary-500/10' : 'bg-white active:bg-gray-50'}`;
-
             const MODE_OPTIONS: { value: 'LR' | 'BOTH'; label: string }[] = [
               { value: 'LR', label: '좌우' },
               { value: 'BOTH', label: '동시' },
@@ -894,73 +904,51 @@ export default function EntrySheet({
 
             return (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex items-baseline justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-500">유축</span>
-                    </div>
-                    <div className="flex rounded-[4px] border border-gray-200 overflow-hidden">
-                      {MODE_OPTIONS.map((o, idx) => (
-                        <button
-                          key={o.value}
-                          type="button"
-                          onClick={() => changePumpingMode(o.value)}
-                          className={segOption(pumpingMode === o.value, idx)}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
+                {/* 좌우/동시 고르기 — Figma 에는 없지만 기존 기능이라 같은 모양으로 둔다 */}
+                <div className="grid grid-cols-2 gap-[8px]">
+                  <div className="flex flex-col gap-[8px]">
+                    <span className={FIELD_LABEL}>유축</span>
+                    <Segmented
+                      options={MODE_OPTIONS}
+                      value={pumpingMode}
+                      onChange={(v) => changePumpingMode(v as 'LR' | 'BOTH')}
+                    />
                   </div>
-                  <div>
-                    <div className="flex items-baseline justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-500">유축량</span>
-                    </div>
-                    <div className="flex rounded-[4px] border border-gray-200 overflow-hidden">
-                      {MODE_OPTIONS.map((o, idx) => (
-                        <button
-                          key={o.value}
-                          type="button"
-                          onClick={() => changeVolumeMode(o.value)}
-                          className={segOption(volumeMode === o.value, idx)}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="flex flex-col gap-[8px]">
+                    <span className={FIELD_LABEL}>유축량</span>
+                    <Segmented
+                      options={MODE_OPTIONS}
+                      value={volumeMode}
+                      onChange={(v) => changeVolumeMode(v as 'LR' | 'BOTH')}
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    {renderFieldHeader(leftMinField)}
-                    {renderNumberField(leftMinField, {
-                      showNowButton: true,
-                      mirrorKey: pumpingMode === 'BOTH' ? 'rightMin' : undefined,
-                    })}
-                  </div>
-                  <div>
-                    {renderFieldHeader(rightMinField)}
-                    {renderNumberField(rightMinField, {
-                      showNowButton: true,
-                      mirrorKey: pumpingMode === 'BOTH' ? 'leftMin' : undefined,
-                    })}
-                  </div>
+                <div className="flex flex-col gap-[8px]">
+                  {renderFieldHeader(leftMinField)}
+                  {renderNumberField(leftMinField, {
+                    showNowButton: true,
+                    mirrorKey: pumpingMode === 'BOTH' ? 'rightMin' : undefined,
+                  })}
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  {renderFieldHeader(rightMinField)}
+                  {renderNumberField(rightMinField, {
+                    showNowButton: true,
+                    mirrorKey: pumpingMode === 'BOTH' ? 'leftMin' : undefined,
+                  })}
                 </div>
 
                 {volumeMode === 'LR' ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      {renderFieldHeader(leftMlField)}
+                  <div className="flex flex-col gap-[8px]">
+                    {renderFieldHeader(amountMlField)}
+                    <div className="grid grid-cols-2 gap-[8px]">
                       {renderNumberField(leftMlField)}
-                    </div>
-                    <div>
-                      {renderFieldHeader(rightMlField)}
                       {renderNumberField(rightMlField)}
                     </div>
                   </div>
                 ) : (
-                  <div>
+                  <div className="flex flex-col gap-[8px]">
                     {renderFieldHeader(amountMlField)}
                     {renderNumberField(amountMlField)}
                     {renderRecentAmounts('amountMl')}
@@ -973,13 +961,14 @@ export default function EntrySheet({
           {type !== 'PUMPING' && fieldRows.map((row, idx) => {
             if (row.kind === 'pair') {
               const showNow = row.left.unit === '분';
+              // 왼쪽·오른쪽은 위아래로 한 줄씩 (Figma 모유수유)
               return (
-                <div key={`pair-${idx}`} className="grid grid-cols-2 gap-3">
-                  <div>
+                <div key={`pair-${idx}`} className="flex flex-col gap-[10px]">
+                  <div className="flex flex-col gap-[8px]">
                     {renderFieldHeader(row.left)}
                     {renderNumberField(row.left, { showNowButton: showNow })}
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-[8px]">
                     {renderFieldHeader(row.right)}
                     {renderNumberField(row.right, { showNowButton: showNow })}
                   </div>
@@ -988,27 +977,14 @@ export default function EntrySheet({
             }
             const f = row.field;
             return (
-              <div key={f.key}>
+              <div key={f.key} className="flex flex-col gap-[8px]">
                 {renderFieldHeader(f)}
                 {f.kind === 'segmented' && f.options ? (
-                  <div className="flex rounded-[4px] border border-gray-200 overflow-hidden">
-                    {f.options.map((o, idx) => (
-                      <button
-                        key={o.value}
-                        type="button"
-                        onClick={() => setData({ ...data, [f.key]: o.value })}
-                        className={`flex-1 py-3 text-sm font-normal text-gray-600 transition ${
-                          idx > 0 ? 'border-l border-gray-200' : ''
-                        } ${
-                          data[f.key] === o.value
-                            ? 'bg-primary-500/10'
-                            : 'bg-white active:bg-gray-50'
-                        }`}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
+                  <Segmented
+                    options={f.options}
+                    value={data[f.key]}
+                    onChange={(v) => setData({ ...data, [f.key]: v })}
+                  />
                 ) : f.kind === 'number' ? (
                   <>
                     {renderNumberField(f)}
@@ -1023,43 +999,53 @@ export default function EntrySheet({
                       setData({ ...data, [f.key]: e.target.value })
                     }
                     placeholder={f.placeholder}
-                    className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-sm font-normal text-app-black placeholder:text-gray-400 placeholder:font-normal"
+                    className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
                   />
                 )}
               </div>
             );
           })}
 
-          <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">메모</div>
+          {/* 메모 — Figma 에는 없지만 기존 기능이라 같은 모양으로 둔다 */}
+          <div className="flex flex-col gap-[8px]">
+            <span className={FIELD_LABEL}>메모</span>
             <input
               type="text"
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-sm font-normal text-app-black placeholder:text-gray-400 placeholder:font-normal"
+              className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
               placeholder=""
             />
           </div>
         </div>
 
         <div
-          className="px-4 pt-2 flex gap-[10px]"
-          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
+          className="shrink-0 px-[20px] pt-[16px] flex gap-[10px]"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 20px)' }}
         >
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+            className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
           >
             취소
           </button>
+          {initial && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
+            >
+              삭제
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold disabled:opacity-50 active:opacity-90"
+            className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none flex items-center justify-center active:translate-y-px disabled:opacity-60"
           >
-            {saving ? '저장 중...' : '저장'}
+            {saving ? <Loading size={18} label="저장 중" /> : '저장하기'}
           </button>
         </div>
     </BottomSheet>
@@ -1149,18 +1135,12 @@ export default function EntrySheet({
 
       <ConfirmModal
         open={deleteConfirmOpen}
-        icon={
-          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon-trash.svg" alt="" width={32} height={32} />
-          </div>
-        }
-        title="기록 삭제하기"
-        description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
+        showThumbnail={false}
+        title="기록을 삭제할까요?"
+        description={'삭제한 기록은 다시 불러올 수 없어요.\n삭제 후에는 패턴에 반영되지 않아요.'}
         confirmLabel="삭제하기"
-        cancelLabel="취소"
         onConfirm={confirmDelete}
-        onClose={() => setDeleteConfirmOpen(false)}
+        onCancel={() => setDeleteConfirmOpen(false)}
       />
 
       {settingsMode && (

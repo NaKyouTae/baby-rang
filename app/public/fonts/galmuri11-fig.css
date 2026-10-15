@@ -1,0 +1,30 @@
+/*
+ * Galmuri11 세로 위치 보정 — 디자인(피그마)과 글자 높이를 맞춘다.
+ *
+ * 이 폰트는 윗여백 1200·아랫여백 200·lineGap 200(단위 1200)이다. 브라우저는 lineGap 을 빼고 글자를 놓아
+ * 피그마보다 글자가 약 0.7px(16px 기준) 위에 뜬다. 윗여백을 105% 로 늘려 내린다(줄 높이는 그대로).
+ * 편집 모드 탭 버튼(50px·16px·줄높이 1.4)에서 글자 위·아래 여백이 피그마와 같은 17px·18px 이 되는 값이다.
+ *
+ * 화면에서는 'Galmuri11Fig, Galmuri11, monospace' 순서로 쓴다. 폰트 파일은 galmuri.css 와 같은 CDN 이다.
+ * globals.css 에 두면 Turbopack 빌드가 이 @font-face 를 빼 버려서, 루트 레이아웃에서 <link> 로 따로 불러온다.
+ */
+@font-face {
+  font-family: Galmuri11Fig;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11.woff2') format('woff2');
+  ascent-override: 105%;
+  descent-override: 16.667%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: Galmuri11Fig;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11-Bold.woff2') format('woff2');
+  ascent-override: 105%;
+  descent-override: 16.667%;
+  line-gap-override: 0%;
+}

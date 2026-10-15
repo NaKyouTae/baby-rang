@@ -19,6 +19,13 @@ export class NoticesController {
     return { hasUnread };
   }
 
+  @Get('read-ids')
+  @UseGuards(AuthGuard('jwt'))
+  async readIds(@Req() req: { user: { id: string } }) {
+    const ids = await this.noticesService.findReadIds(req.user.id);
+    return { ids };
+  }
+
   @Post(':id/read')
   @UseGuards(AuthGuard('jwt'))
   async markAsRead(

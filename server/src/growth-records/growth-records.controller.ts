@@ -83,12 +83,15 @@ export class GrowthRecordsController {
     @Body('endAt') endAt?: string,
     @Body('memo') memo?: string,
     @Body('data') data?: string,
+    // 다른 앱에서 옮겨 오는 기록은 'import'. 직접 남긴 기록만 보석을 준다.
+    @Body('source') source?: string,
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
     return this.service.create(
       req.user.id,
       { childId, type, startAt, endAt, memo, data },
       files,
+      { reward: source !== 'import' },
     );
   }
 

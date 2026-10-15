@@ -110,17 +110,32 @@ extension NaverLoginBridge: NaverThirdPartyLoginConnectionDelegate {
         _ oauthConnection: NaverThirdPartyLoginConnection!,
         didFailWithError error: Error!,
     ) {
-        // 사용자가 동의 화면을 닫은 경우를 실패로 다루면 "로그인 실패" 문구가 뜬다.
-        // 스스로 닫은 것뿐이므로 조용히 원래 화면으로 돌아가야 한다.
-        if oauthConnection?.lastErrorCode == .cancelByUser {
+        // 네트워크 오류 등. 사용자가 동의 화면을 닫은 경우는 이쪽이 아니라
+        // didFailAuthorizationWithReceiveType 으로 온다.
+        finish([
+            "ok": false,
+            "message": "로그인을 완료하지 못했습니다.",
+            // 웹은 이 실패를 화면에 표시만 한다. 원인은 콘솔 로그로만 남는다.
+            "detail": error?.localizedDescription ?? "unknown",
+        ])
+    }
+
+    /// 인증 자체가 거절된 경우. 취소를 가려내는 유일한 통로다(@optional 이지만 반드시 구현한다).
+    ///
+    /// 취소를 실패로 다루면 "로그인 실패" 문구가 뜬다. 사용자가 스스로 닫은 것뿐이므로
+    /// 조용히 원래 화면으로 돌려보내야 한다.
+    func oauth20Connection(
+        _ oauthConnection: NaverThirdPartyLoginConnection!,
+        didFailAuthorizationWithReceive receiveType: THIRDPARTYLOGIN_RECEIVE_TYPE,
+    ) {
+        if receiveType == CANCELBYUSER {
             finish(["ok": false, "cancelled": true])
             return
         }
         finish([
             "ok": false,
             "message": "로그인을 완료하지 못했습니다.",
-            // 웹은 이 실패를 화면에 표시만 한다. 원인은 콘솔 로그로만 남는다.
-            "detail": error?.localizedDescription ?? "unknown",
+            "detail": "receiveType=\(receiveType.rawValue)",
         ])
     }
 }

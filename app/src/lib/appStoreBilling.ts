@@ -163,6 +163,50 @@ export function useAppStoreProduct(sku: string): IosProductState {
   return state;
 }
 
+export type IosProductsState =
+  | { status: "loading" }
+  | { status: "unavailable" }
+  | { status: "ready"; products: Map<string, IosProduct> };
+
+/** 여러 상품을 한 번에 미리 받아둔다. 보석 충전처럼 묶음이 여럿일 때 쓴다. */
+export function useAppStoreProducts(skus: string[]): IosProductsState {
+  const key = skus.join(",");
+  // 조회 대상이 바뀌면 이전 결과를 쓰지 않도록 어떤 목록의 결과인지 함께 둔다.
+  const [state, setState] = useState<{ key: string; value: IosProductsState }>({
+    key: "",
+    value: { status: "loading" },
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const list = key ? key.split(",") : [];
+    const done = (value: IosProductsState) => {
+      if (!cancelled) setState({ key, value });
+    };
+    void (async () => {
+      if (!list.length || !isAppStoreBillingAvailable()) {
+        return done({ status: "unavailable" });
+      }
+      try {
+        const res = await call("iapProducts", { productIds: list });
+        const products = new Map(
+          (res.ok ? (res.products ?? []) : [])
+            .filter((p) => list.includes(p.id))
+            .map((p) => [p.id, p]),
+        );
+        done(products.size ? { status: "ready", products } : { status: "unavailable" });
+      } catch {
+        done({ status: "unavailable" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  return state.key === key ? state.value : { status: "loading" };
+}
+
 /**
  * 결제 시트를 띄우고 트랜잭션 ID를 돌려준다.
  * 사용자가 취소하면 null 을 돌려준다(에러가 아니다).
@@ -200,17 +244,16 @@ export function finishAppStoreTransaction(transactionId: string): void {
 // 결제 도중 앱 종료 후 나중에 처리 완료). 네이티브는 그걸 Transaction.updates 로
 // 받아 여기로 넘겨준다(StoreKitBridge.startTransactionListener).
 //
-// 문제는 서버 승인에 "어떤 검사 결과에 대한 결제인지"(submissionId)가 필요한데
-// 네이티브는 그 값을 모른다는 것이다. 그래서 결제를 시작할 때 웹이 저장해 두고,
+// 문제는 서버 승인에 "무엇에 대한 결제인지"가 필요한데 네이티브는 그 값을 모른다는
+// 것이다. 기질 리포트는 어떤 검사 결과인지(submissionId), 보석 충전은 어느 아이의
+// 가족에게 적립할지(childId)가 필요하다. 그래서 결제를 시작할 때 웹이 저장해 두고,
 // 거래가 돌아오면 그 맥락으로 승인을 마친다.
 
 const PENDING_KEY = "app-store-pending-purchase";
 
-export interface PendingPurchase {
-  sku: string;
-  submissionId: string;
-  productType: string;
-}
+export type PendingPurchase =
+  | { sku: string; productType: string; submissionId: string; childId?: undefined }
+  | { sku: string; productType: string; childId: string; submissionId?: undefined };
 
 /**
  * 결제 시작 시 맥락을 남긴다.
@@ -240,9 +283,8 @@ export function readPendingPurchase(): PendingPurchase | null {
     const raw = localStorage.getItem(PENDING_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PendingPurchase>;
-    if (!parsed?.sku || !parsed?.submissionId || !parsed?.productType) {
-      return null;
-    }
+    if (!parsed?.sku || !parsed?.productType) return null;
+    if (!parsed.submissionId && !parsed.childId) return null;
     return parsed as PendingPurchase;
   } catch {
     return null;

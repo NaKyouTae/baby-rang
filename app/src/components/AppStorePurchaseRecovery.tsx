@@ -42,7 +42,11 @@ export default function AppStorePurchaseRecovery() {
             body: JSON.stringify({
               transactionId,
               productType: pending.productType,
-              productMeta: { submissionId: pending.submissionId },
+              // 보석 충전은 아이로 가족을 찾아 적립한다. 리포트는 검사 결과를 연다.
+              childId: pending.childId,
+              productMeta: pending.submissionId
+                ? { submissionId: pending.submissionId }
+                : undefined,
             }),
           });
           const data = (await res.json().catch(() => ({}))) as {
@@ -50,7 +54,10 @@ export default function AppStorePurchaseRecovery() {
           };
           if (!res.ok || !data.orderId) return;
 
-          await unlockResult(pending.submissionId, data.orderId);
+          // 보석은 결제가 저장되면 잔액을 읽을 때 서버가 적립한다. 따로 열 것이 없다.
+          if (pending.submissionId) {
+            await unlockResult(pending.submissionId, data.orderId);
+          }
 
           // ⚠️ 리포트가 실제로 열린 뒤에야 거래를 완료한다.
           // 먼저 완료해 버리면 unlock 이 실패했을 때 복구할 방법이 사라진다.

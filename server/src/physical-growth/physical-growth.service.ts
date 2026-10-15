@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
+import { rewardRecord } from '../coins/coin-rewards';
 
 @Injectable()
 export class PhysicalGrowthService {
@@ -52,16 +53,20 @@ export class PhysicalGrowthService {
       );
     }
 
-    return this.prisma.physicalGrowth.create({
-      data: {
-        userId,
-        childId: input.childId,
-        measuredAt: new Date(`${input.measuredAt}T12:00:00.000Z`),
-        heightCm: input.heightCm ?? null,
-        weightKg: input.weightKg ?? null,
-        headCircumCm: input.headCircumCm ?? null,
-        memo: input.memo ?? null,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const record = await tx.physicalGrowth.create({
+        data: {
+          userId,
+          childId: input.childId,
+          measuredAt: new Date(`${input.measuredAt}T12:00:00.000Z`),
+          heightCm: input.heightCm ?? null,
+          weightKg: input.weightKg ?? null,
+          headCircumCm: input.headCircumCm ?? null,
+          memo: input.memo ?? null,
+        },
+      });
+      await rewardRecord(tx, input.childId);
+      return record;
     });
   }
 

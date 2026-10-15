@@ -207,7 +207,10 @@ export class AuthController {
 
   @Patch('profile')
   @UseGuards(AuthGuard('jwt'))
-  updateProfile(@Req() req, @Body() body: { parentRole?: string }) {
+  updateProfile(
+    @Req() req,
+    @Body() body: { parentRole?: string; gender?: string },
+  ) {
     return this.authService.updateProfile(req.user.id, body);
   }
 

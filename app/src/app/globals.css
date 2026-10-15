@@ -36,10 +36,9 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
-  --bottom-nav-gap: 24px;
-  --bottom-nav-height: 64px;
   --bottom-ad-banner-height: 50px;
-  --bottom-nav-space: calc(var(--bottom-nav-height) + var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 16px));
+  /* 하단 네비게이션은 없앴다. 이름은 그대로 두고 하단 광고 바 높이만 잡는다. */
+  --bottom-nav-space: calc(var(--bottom-ad-banner-height) + var(--safe-area-bottom));
 }
 
 body {
@@ -123,6 +122,138 @@ body {
 }
 body > div {
   overflow-y: auto;
+}
+
+/* 손그림 테두리 — 디자인(피그마)은 모든 테두리에 다이내믹 스트로크(Frequency 75% · Wiggle 30% · Smoothen 50%)를 걸었다.
+ * 부드럽게 물결치는 선이다. solid 로 두면 기계적으로 보인다. 흔들림 세기는 scale(지금 2.42).
+ *
+ * 컴포넌트마다 고치지 않고 테두리가 있는 요소 전부에 건다(클래스 border·border-2·border-t/b/l/r, 인라인 border).
+ * 색은 요소마다 달라서(기록 버튼은 버튼마다 다른 색) 색을 그림에 박지 않는다.
+ *   1) 요소의 원래 테두리는 투명한 border-image 로 덮어 숨긴다 — 두께·레이아웃과 border-color 값은 그대로 남는다.
+ *   2) ::after 가 그 border-color 를 물려받은 굵은 띠를 두르고, 물결치는 선 모양 마스크(9-slice)로 띠를 잘라 선만 남긴다.
+ *      변 조각은 반복(round)하지 않고 늘인다(stretch) — 반복하면 조각 이음매마다 물결이 끊겨 흰 눈금이 생긴다.
+ *      늘여도 물결이 너무 길어지지 않게 변 조각 원본을 160px 로 넉넉히 둔다.
+ *      그림은 3배 해상도로 만들어 줄여 쓴다 — 1배 화면에서 1px 남짓한 선이 픽셀 사이에 걸려 끊겨 보이지 않게.
+ *   3) 사방 테두리 박스는 요소 자체도 같은 흔들림으로 채운 모양으로 잘라낸다 — 배경이 선 밖으로 비치지 않고 선이 가장자리가 된다.
+ *      잘라내는 모양은 선보다 조금 굵게 둔다. 딱 맞추면 1배 화면에서 반올림 차이로 선 바깥이 깎여 끊겨 보인다.
+ *      overflow-hidden 박스도 이 마스크가 내용을 잘라 주므로 overflow 를 풀어 선이 잘리지 않게 한다.
+ * 모서리 둥글기마다 마스크가 따로 있다(0·4·8·12·16px). 완전한 원(rounded-full)은 그대로 둔다.
+ * input·textarea 처럼 ::after 를 못 다는 요소는 아래에서 픽셀 UI 입력칸 색만 border-image 로 따로 칠한다.
+ */
+:root {
+  --wobble-r0: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='528' height='528'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='513.0' height='513.0' rx='0.03' fill='none' stroke='white' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-r4: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='552' height='552'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='537.0' height='537.0' rx='12' fill='none' stroke='white' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-r8: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='576' height='576'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='561.0' height='561.0' rx='24' fill='none' stroke='white' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-r12: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='585.0' height='585.0' rx='36' fill='none' stroke='white' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-r16: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='624' height='624'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='609.0' height='609.0' rx='48' fill='none' stroke='white' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-fill-r0: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='528' height='528'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='513.0' height='513.0' rx='0.03' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-fill-r4: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='552' height='552'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='537.0' height='537.0' rx='12' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-fill-r8: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='576' height='576'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='561.0' height='561.0' rx='24' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-fill-r12: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='585.0' height='585.0' rx='36' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-fill-r16: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='624' height='624'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='609.0' height='609.0' rx='48' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-input-gray: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='540'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='525.0' height='525.0' rx='15' fill='none' stroke='%23808991' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-input-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='540'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='525.0' height='525.0' rx='15' fill='none' stroke='%23121212' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-input-red: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='540'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='525.0' height='525.0' rx='15' fill='none' stroke='%23FF4040' stroke-width='3.3' filter='url%28%23w%29'/%3E%3C/svg%3E");
+  --wobble-input-fill: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='540' height='540'%3E%3Cfilter id='w' x='-10%25' y='-10%25' width='120%25' height='120%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.03333' numOctaves='1' seed='5'/%3E%3CfeDisplacementMap in='SourceGraphic' scale='6.6' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Crect x='7.5' y='7.5' width='525.0' height='525.0' rx='15' fill='white' stroke='white' stroke-width='6' filter='url%28%23w%29'/%3E%3C/svg%3E");
+}
+@layer base {
+  :is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+    /* ::after 의 기준점. absolute·fixed 같은 유틸리티 클래스가 있으면 그쪽이 이긴다(base 레이어). */
+    position: relative;
+  }
+}
+:is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  border-image: linear-gradient(transparent, transparent) 1;
+}
+:is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  border-style: solid;
+  border-color: inherit;
+  border-width: 6px;
+  border-radius: 0;
+  -webkit-mask-box-image: var(--wobble-r0) 24 / 8px stretch;
+  mask-border: var(--wobble-r0) 24 / 8px stretch;
+}
+/* 사방 테두리 박스 — 요소를 물결 모양으로 잘라 선이 가장자리가 되게 한다(::after 와 같은 자리·같은 흔들림) */
+:is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  -webkit-mask-box-image: var(--wobble-fill-r0) 24 / 8px / 3px stretch;
+  mask-border: var(--wobble-fill-r0) 24 / 8px / 3px stretch;
+}
+:is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)[class~="overflow-hidden"] {
+  overflow: visible;
+}
+:is([class~="rounded"], [class~="rounded-[4px]"], [class~="rounded-sm"], [class~="rounded-md"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
+  -webkit-mask-box-image: var(--wobble-r4) 36 / 12px stretch;
+  mask-border: var(--wobble-r4) 36 / 12px stretch;
+}
+:is([class~="rounded"], [class~="rounded-[4px]"], [class~="rounded-sm"], [class~="rounded-md"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  -webkit-mask-box-image: var(--wobble-fill-r4) 36 / 12px / 3px stretch;
+  mask-border: var(--wobble-fill-r4) 36 / 12px / 3px stretch;
+}
+:is([class~="rounded-lg"], [class~="rounded-[8px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
+  -webkit-mask-box-image: var(--wobble-r8) 48 / 16px stretch;
+  mask-border: var(--wobble-r8) 48 / 16px stretch;
+}
+:is([class~="rounded-lg"], [class~="rounded-[8px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  -webkit-mask-box-image: var(--wobble-fill-r8) 48 / 16px / 3px stretch;
+  mask-border: var(--wobble-fill-r8) 48 / 16px / 3px stretch;
+}
+:is([class~="rounded-xl"], [class~="rounded-[12px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
+  -webkit-mask-box-image: var(--wobble-r12) 60 / 20px stretch;
+  mask-border: var(--wobble-r12) 60 / 20px stretch;
+}
+:is([class~="rounded-xl"], [class~="rounded-[12px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  -webkit-mask-box-image: var(--wobble-fill-r12) 60 / 20px / 3px stretch;
+  mask-border: var(--wobble-fill-r12) 60 / 20px / 3px stretch;
+}
+:is([class~="rounded-2xl"], [class~="rounded-[16px]"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr)::after {
+  -webkit-mask-box-image: var(--wobble-r16) 72 / 24px stretch;
+  mask-border: var(--wobble-r16) 72 / 24px stretch;
+}
+:is([class~="rounded-2xl"], [class~="rounded-[16px]"]):is([class~="border"], [class~="border-2"], [style*="border:"]):not([class*="rounded-full"], input, textarea, select, img, video, iframe, canvas, hr) {
+  -webkit-mask-box-image: var(--wobble-fill-r16) 72 / 24px / 3px stretch;
+  mask-border: var(--wobble-fill-r16) 72 / 24px / 3px stretch;
+}
+/* 한 변만 있는 구분선 — 그 변만 남긴다 */
+/* 선 방향으로는 내밀지 않는다 — 내밀면 줄 끝이 부모 밖으로 넘쳐 가로·세로 스크롤이 생긴다.
+   마스크도 그 변의 직선 조각만 쓴다 — 모서리 조각까지 쓰면 줄 양 끝에 짧은 세로 눈금이 생긴다. */
+[class~="border-t"]:not([class~="border"])::after { border-width: 6px 0 0 0; inset: -3px 0 0 0; -webkit-mask-box-image-width: 8px 0 0 0; mask-border-width: 8px 0 0 0; }
+[class~="border-b"]:not([class~="border"])::after { border-width: 0 0 6px 0; inset: 0 0 -3px 0; -webkit-mask-box-image-width: 0 0 8px 0; mask-border-width: 0 0 8px 0; }
+[class~="border-l"]:not([class~="border"])::after { border-width: 0 0 0 6px; inset: 0 0 0 -3px; -webkit-mask-box-image-width: 0 0 0 8px; mask-border-width: 0 0 0 8px; }
+[class~="border-r"]:not([class~="border"])::after { border-width: 0 6px 0 0; inset: 0 -3px 0 0; -webkit-mask-box-image-width: 0 8px 0 0; mask-border-width: 0 8px 0 0; }
+
+/* 스크롤 영역 — ::after 는 내용과 같이 스크롤되고 잘려서 못 쓴다. 테두리 자체에 물결 선을 그린다.
+ * 픽셀 UI 진한 테두리(border-[#121212])만 그리고, 다른 색은 원래 테두리(solid)로 둔다. */
+/* 우선순위를 기본 ::after 규칙과 같게 맞춰야 꺼진다(약하면 선이 두 줄로 겹친다) */
+:is([class~="overflow-auto"], [class~="overflow-y-auto"], [class~="overflow-x-auto"], [class~="overflow-scroll"], [class~="overflow-y-scroll"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"])::after {
+  content: none;
+}
+/* 세로 스크롤 영역은 가로로 밀리지 않게 — 안쪽 줄의 손그림 선이 옆으로 조금 삐져나와 가로 스크롤이 생긴다 */
+:is([class~="overflow-y-auto"], [class~="overflow-y-scroll"]):is([class~="border"], [class~="border-2"], [class~="border-t"], [class~="border-b"], [class~="border-l"], [class~="border-r"], [style*="border:"]) {
+  overflow-x: hidden;
+}
+:is([class~="overflow-auto"], [class~="overflow-y-auto"], [class~="overflow-x-auto"], [class~="overflow-scroll"], [class~="overflow-y-scroll"]):is([class~="border"], [class~="border-2"], [style*="border:"]) {
+  border-image: none;
+}
+:is([class~="overflow-auto"], [class~="overflow-y-auto"], [class~="overflow-x-auto"], [class~="overflow-scroll"], [class~="overflow-y-scroll"])[class~="border-[#121212]"]:is([class~="border"], [class~="border-2"]) {
+  border-image: var(--wobble-input-dark) 30 / 10px / 2px stretch;
+}
+
+/* 입력칸 — ::after 를 못 달아서 색을 박은 물결 선을 border-image 로 직접 깔고, 같은 모양으로 잘라낸다(픽셀 UI 입력칸 색만) */
+:is(input, textarea, select):is([class~="border-[#808991]"], [class~="border-[#121212]"], [class~="border-[#FF4040]"]) {
+  border-image: var(--wobble-input-gray) 30 / 10px / 2px stretch;
+  -webkit-mask-box-image: var(--wobble-input-fill) 30 / 10px / 2px stretch;
+  mask-border: var(--wobble-input-fill) 30 / 10px / 2px stretch;
+}
+:is(input, textarea, select)[class~="border-[#121212]"],
+:is(input, textarea, select)[class~="focus:border-[#121212]"]:focus {
+  border-image-source: var(--wobble-input-dark);
+}
+:is(input, textarea, select)[class~="border-[#FF4040]"] {
+  border-image-source: var(--wobble-input-red);
 }
 
 /* 네이버 지도 저작권·축척 컨트롤이 바텀시트/바텀네비 위로 뜨지 않도록 */

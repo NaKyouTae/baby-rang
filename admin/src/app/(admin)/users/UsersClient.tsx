@@ -237,6 +237,9 @@ export default function UsersClient({
               <div className="min-w-0">
                 <div className="truncate font-medium">{u.name ?? "(이름없음)"}</div>
                 <div className="truncate text-xs text-muted-foreground">{u.email ?? "-"}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {fmtPhone(u.phone)} · {genderLabel(u.gender)} · {ageRangeLabel(u.ageRange)}
+                </div>
               </div>
             </div>
             <div className="mt-3 flex justify-between text-xs text-muted-foreground">
@@ -260,6 +263,9 @@ export default function UsersClient({
             <TableRow>
               <TableHead>사용자</TableHead>
               <TableHead>이메일</TableHead>
+              <TableHead>전화번호</TableHead>
+              <TableHead>성별</TableHead>
+              <TableHead>연령대</TableHead>
               <TableHead>역할</TableHead>
               <TableHead className="text-right">그룹</TableHead>
               <TableHead className="text-right">결제</TableHead>
@@ -286,6 +292,11 @@ export default function UsersClient({
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{u.email ?? "-"}</TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">
+                  {fmtPhone(u.phone)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{genderLabel(u.gender)}</TableCell>
+                <TableCell className="text-muted-foreground">{ageRangeLabel(u.ageRange)}</TableCell>
                 <TableCell className="text-muted-foreground">{roleLabel(u.parentRole)}</TableCell>
                 <TableCell className="text-right">{u._count.groupMemberships}</TableCell>
                 <TableCell className="text-right">{u._count.payments}</TableCell>
@@ -299,7 +310,7 @@ export default function UsersClient({
             ))}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
                   사용자가 없습니다.
                 </TableCell>
               </TableRow>

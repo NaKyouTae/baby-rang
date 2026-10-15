@@ -11,7 +11,8 @@ interface Props {
   icon?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
-  confirmLabel?: string;
+  /** 처리 중에는 로딩 아이콘(components/Loading)을 넘길 수 있다 */
+  confirmLabel?: React.ReactNode;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
   hideCancel?: boolean;

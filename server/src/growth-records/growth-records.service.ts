@@ -7,6 +7,7 @@ import { GrowthRecordType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { ChildrenService } from '../children/children.service';
+import { rewardRecord } from '../coins/coin-rewards';
 
 const ALLOWED_TYPES = new Set<GrowthRecordType>([
   'BREASTFEEDING',
@@ -233,6 +234,7 @@ export class GrowthRecordsService {
     userId: string,
     input: UpsertInput,
     files?: Express.Multer.File[],
+    { reward = true }: { reward?: boolean } = {},
   ) {
     await this.assertChildAccess(userId, input.childId);
     const type = this.validateType(input.type);
@@ -244,18 +246,23 @@ export class GrowthRecordsService {
       limited.map((file) => this.storage.upload(file, 'growth-records')),
     );
 
-    return this.prisma.growthRecord.create({
-      data: {
-        userId,
-        childId: input.childId,
-        type,
-        startAt: new Date(input.startAt),
-        endAt: input.endAt ? new Date(input.endAt) : null,
-        memo: input.memo ?? null,
-        imageUrl: uploaded[0] ?? null,
-        imageUrls: uploaded,
-        data: this.parseData(input.data),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const record = await tx.growthRecord.create({
+        data: {
+          userId,
+          childId: input.childId,
+          type,
+          startAt: new Date(input.startAt),
+          endAt: input.endAt ? new Date(input.endAt) : null,
+          memo: input.memo ?? null,
+          imageUrl: uploaded[0] ?? null,
+          imageUrls: uploaded,
+          data: this.parseData(input.data),
+        },
+      });
+      // 가져오기는 수천 건이 한 번에 들어온다. 그만큼 보석을 주면 재화가 무너진다.
+      if (reward) await rewardRecord(tx, input.childId);
+      return record;
     });
   }
 

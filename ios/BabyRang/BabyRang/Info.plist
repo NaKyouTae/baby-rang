@@ -54,6 +54,11 @@
 	<string>$(NAVER_CONSUMER_KEY)</string>
 	<key>NaverConsumerSecret</key>
 	<string>$(NAVER_CONSUMER_SECRET)</string>
+	<!-- 수출 규정: 표준 TLS(HTTPS) 외에 암호화를 쓰지 않으므로 해당 없음.
+	     이 선언이 없으면 빌드를 올릴 때마다 App Store Connect 가 수출 규정 답변을
+	     요구하고, 답하기 전까지는 심사 제출이 막힌다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-6008464533427245~7115583932</string>
 	<key>LSApplicationQueriesSchemes</key>

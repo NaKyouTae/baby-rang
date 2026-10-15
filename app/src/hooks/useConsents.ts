@@ -81,23 +81,3 @@ export function useConsents() {
 
   return { consents, loading, updating, setConsent, refresh };
 }
-
-export function formatAgreedAt(iso: string | null): string {
-  if (!iso) return '동의 안 함';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '동의 안 함';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}. ${m}. ${day}. 동의`;
-}
-
-export function formatExpiresAt(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}. ${m}. ${day}. 만료`;
-}

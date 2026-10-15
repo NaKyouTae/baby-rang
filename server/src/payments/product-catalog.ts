@@ -202,6 +202,10 @@ export function listCoinPacks() {
       coins: (g?.base ?? 0) + (g?.bonus ?? 0),
       name: PRODUCT_CATALOG[type]?.name ?? '',
       price: PRODUCT_CATALOG[type]?.price ?? 0,
+      // 앱 인앱결제는 스토어 제품 ID 로 결제 시트를 띄운다. 앱이 따로 들고 있으면
+      // 묶음이 늘 때 한쪽만 바뀌어 결제가 안 열리므로 여기서 같이 내려준다.
+      playSku: PRODUCT_CATALOG[type]?.playSku ?? null,
+      iosSku: PRODUCT_CATALOG[type]?.iosSku ?? null,
     };
   });
 }

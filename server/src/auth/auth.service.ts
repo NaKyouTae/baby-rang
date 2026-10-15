@@ -27,6 +27,7 @@ import {
   computeScores,
   determineType,
 } from '../temperament/scoring';
+import { signupCoins } from '../coins/coin-rewards';
 import { RESULT_ACCESS_DAYS } from '../temperament/temperament.service';
 
 export type ConsentInput = {
@@ -212,8 +213,19 @@ export class AuthService {
    * 소셜에서 받은 값이 있을 때만 동의로 남긴다(기본은 미동의).
    */
   private async createUserFromSocial(profile: OAuthProfile): Promise<string> {
+    // 성별은 카카오·네이버 모두 필수 동의항목이지만(2026-10-07 승인), 가입을 막지 않는다.
+    // 네이버는 사용자가 동의해도 성별을 모르면 'U'(미확인)를 주고, 그 값은 저장 형식으로
+    // 정규화하면서 버려진다. 동의를 마친 사용자가 제공자 사정으로 가입을 거부당하면
+    // 스스로 해결할 방법이 없다. 대신 콘솔 설정이 틀어진 경우를 알아챌 수 있게 로그만 남긴다.
+    if (requiresPhone(profile.provider) && !profile.gender) {
+      this.logger.warn(
+        `${profile.provider} 가 성별을 주지 않았다(필수 동의항목). 콘솔 설정 또는 제공자 미보유.`,
+      );
+    }
+
     // 이름·전화번호는 사용자가 입력할 수 없고 소셜 동의항목으로만 들어온다.
     // 비어 있다면 동의 화면에서 그 항목을 건너뛴 것이라 가입을 진행할 수 없다.
+    // (이 둘은 제공자가 본인확인을 마친 값이라 '동의했는데 값이 없는' 경우가 없다)
     if (requiresPhone(profile.provider) && (!profile.name || !profile.phone)) {
       throw new BadRequestException({
         code: 'SOCIAL_CONSENT_REQUIRED',
@@ -267,6 +279,7 @@ export class AuthService {
           ownerId: user.id,
           code: await this.generateUniqueGroupCode(tx),
           members: { create: { userId: user.id } },
+          ...signupCoins,
         },
       });
 
@@ -370,6 +383,7 @@ export class AuthService {
             ownerId: created.id,
             code: await this.generateUniqueGroupCode(tx),
             members: { create: { userId: created.id } },
+            ...signupCoins,
           },
         });
 
@@ -534,12 +548,21 @@ export class AuthService {
    * 값이 있는 항목만 반영한다. 사용자가 카카오에서 선택 동의(성별·연령대)를
    * 철회하면 그 항목이 응답에서 빠지는데, 그때 null 로 지워버리면 "동의를 유지한
    * 다른 로그인 경로"에서 받은 값까지 사라진다. 지우는 것은 회원탈퇴로만 한다.
+   *
+   * 성별은 앱(내 정보)에서 바꿀 수 있어서 비어 있을 때만 채운다.
+   * 매번 덮어쓰면 앱에서 고친 값이 다음 로그인 때 소셜 값으로 되돌아간다.
    */
   private async syncSocialProfile(userId: string, profile: OAuthProfile) {
     const data: Prisma.UserUpdateInput = {};
     if (profile.name) data.name = profile.name;
     if (profile.phone) data.phone = profile.phone;
-    if (profile.gender) data.gender = profile.gender;
+    if (profile.gender) {
+      const current = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { gender: true },
+      });
+      if (!current?.gender) data.gender = profile.gender;
+    }
     if (profile.ageRange) data.ageRange = profile.ageRange;
     if (profile.email) data.email = profile.email;
     if (profile.profileImage) data.profileImage = profile.profileImage;
@@ -572,11 +595,21 @@ export class AuthService {
     };
   }
 
-  // 이름·전화번호·성별·연령대는 여기서 바꿀 수 없다.
+  // 이름·전화번호·연령대는 여기서 바꿀 수 없다.
   // 소셜 동의항목으로만 들어오는 값이라, 앱에서 고치면 소셜 쪽과 어긋난 채
   // 다음 로그인 때 다시 덮어써진다(syncSocialProfile). 바꾸려면 소셜에서 바꿔야 한다.
-  async updateProfile(userId: string, dto: { parentRole?: string }) {
+  // 성별만 예외 — 내 정보에서 남자/여자로 고를 수 있고, 로그인 때는 비어 있을 때만 소셜 값으로 채운다.
+  async updateProfile(
+    userId: string,
+    dto: { parentRole?: string; gender?: string },
+  ) {
     const data: Prisma.UserUpdateInput = {};
+    if (dto.gender !== undefined) {
+      if (dto.gender !== 'male' && dto.gender !== 'female') {
+        throw new BadRequestException('invalid gender');
+      }
+      data.gender = dto.gender;
+    }
     if (typeof dto.parentRole === 'string') {
       const valid = [
         'mom',

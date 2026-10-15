@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { RECORD_EMOJI } from './pixelUi';
 import BottomSheet from '@/components/BottomSheet';
 import {
   DndContext,
@@ -126,32 +127,36 @@ function SortableRow({
         transition,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className={`flex items-center gap-4 py-3 bg-white ${
-        isLast ? '' : 'border-b border-dotted border-gray-200'
+      className={`flex items-center gap-4 py-3 bg-[#FDFDFE] ${
+        isLast ? '' : 'border-b border-[#EEF0F1]'
       } ${
         isDragging
-          ? 'shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] rounded-[8px]'
+          ? 'shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] rounded-[4px]'
           : ''
       }`}
     >
+      {/* 기록 화면 버튼과 같은 네모 칩·이모지. 숨긴 항목은 회색으로 흐리게 */}
       <div
-        className="w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden shrink-0"
-        style={{ borderColor: style.border, backgroundColor: style.bg }}
+        className="size-[40px] rounded-[4px] border flex items-center justify-center shrink-0"
+        style={{
+          borderColor: item.visible ? style.border : '#BBC0C5',
+          background: item.visible ? `linear-gradient(${style.bg}, ${style.bg}), #FDFDFE` : '#F7F8F9',
+        }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={RECORD_ICONS[item.type]}
-          alt=""
-          width={24}
-          height={24}
-          aria-hidden="true"
+        <span
+          className="flex items-center justify-center scale-[0.75]"
           style={item.visible ? undefined : { filter: 'grayscale(1) opacity(0.5)' }}
-        />
+        >
+          {RECORD_EMOJI[item.type] ?? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={RECORD_ICONS[item.type]} alt="" width={32} height={32} aria-hidden="true" className="block" />
+          )}
+        </span>
       </div>
-      <span className="flex-1 text-sm font-medium text-app-black">
+      <span className="flex-1 text-sm font-normal text-[#121212]">
         {cfg.label}
       </span>
-      <div className="flex items-center gap-[10px] text-gray-500">
+      <div className="flex items-center gap-[10px] text-[#808991]">
         <button
           type="button"
           onClick={() => onToggle(item.type)}
@@ -227,12 +232,12 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
   }
 
   return (
-    <BottomSheet open onClose={onClose} variant="sheet" ariaLabel="설정">
+    <BottomSheet pixel open onClose={onClose} variant="sheet" ariaLabel="설정">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <h2 className="text-base font-medium text-app-black">설정</h2>
+          <h2 className="text-base font-normal text-[#121212]">설정</h2>
           <button
             onClick={onClose}
-            className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400 active:text-gray-600"
+            className="w-9 h-9 -mr-2 flex items-center justify-center text-[#BBC0C5] active:text-[#808991]"
             aria-label="닫기"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -269,14 +274,14 @@ export default function QuickTypeSettingsSheet({ current, onClose, onSave }: Pro
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-12 rounded-[4px] bg-gray-200 text-gray-600 text-sm font-semibold active:bg-gray-300"
+            className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
           >
             취소
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 h-12 rounded-[4px] bg-primary-500 text-white text-sm font-semibold active:bg-primary-600"
+            className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px disabled:opacity-60"
           >
             저장
           </button>

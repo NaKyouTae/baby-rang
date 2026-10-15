@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { HOME_QUICK_MENUS, MENU_CATALOG } from "@/components/menuCatalog";
-import { palette } from "@/lib/colors";
-import HomeHeaderActions from "@/components/HomeHeaderActions";
-import InitialScreenRedirect from "@/components/InitialScreenRedirect";
-import HomeRegionLinks from "@/components/HomeRegionLinks";
-import AppStoreCta from "@/components/AppStoreCta";
+import HomeClient from "./_components/HomeClient";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -15,106 +8,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/home" },
 };
 
-const HomeHeroCard = dynamic(() => import("@/components/HomeHeroCard"), {
-  loading: () => (
-    <div>
-      <div><div className="h-[32px] flex items-center"><div className="w-48 h-5 rounded bg-gray-200 animate-pulse" /></div><div className="h-[32px] flex items-center"><div className="w-56 h-5 rounded bg-gray-200 animate-pulse" /></div></div>
-      <div className="pt-4"><div className="h-[208px] rounded-lg border border-gray-200 bg-white animate-pulse" /></div>
-    </div>
-  ),
-});
-const BannerCarousel = dynamic(() => import("@/components/BannerCarousel"), {
-  loading: () => <div style={{ height: 56 }} className="rounded-[4px] bg-gray-200 animate-pulse" />,
-});
-const HomeWeatherStrip = dynamic(() => import("@/components/HomeWeatherStrip"), {
-  loading: () => (
-    <div className="bg-white rounded-2xl border border-gray-200 px-4 py-5">
-      <div className="flex items-center">
-        <div className="flex items-center gap-2.5"><div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" /><div className="space-y-1"><div className="w-10 h-4 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-2.5 rounded bg-gray-200 animate-pulse" /></div></div>
-        <div className="w-px h-12 bg-gray-200 mx-4" />
-        <div className="flex-1 flex gap-4"><div className="flex-1 flex flex-col items-center gap-1"><div className="w-12 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-14 h-2.5 rounded bg-gray-200 animate-pulse" /></div><div className="flex-1 flex flex-col items-center gap-1"><div className="w-14 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-8 h-3 rounded bg-gray-200 animate-pulse" /><div className="w-14 h-2.5 rounded bg-gray-200 animate-pulse" /></div></div>
-      </div>
-    </div>
-  ),
-});
-const NearbyNursingRoomsStrip = dynamic(() => import("@/components/NearbyNursingRoomsStrip"), {
-  loading: () => (
-    <section>
-      <div className="flex items-center justify-between mb-3"><div className="w-24 h-4 rounded bg-gray-200 animate-pulse" /><div className="w-12 h-3 rounded bg-gray-200 animate-pulse" /></div>
-      <div className="flex flex-col gap-2">{[0,1,2].map(i => <div key={i} className="rounded-[8px] bg-white border border-gray-200 p-[10px] animate-pulse" style={{minHeight:56}}><div className="flex flex-col gap-[6px]"><div className="w-32 h-3 rounded bg-gray-200" /><div className="w-48 h-3 rounded bg-gray-200" /></div></div>)}</div>
-    </section>
-  ),
-});
-
 export default function HomePage() {
   return (
-    <div className="flex flex-col bg-white">
-      {/* 초기 화면 설정에 따라 홈 첫 진입 시 지정 화면으로 이동 */}
-      <InitialScreenRedirect />
-      {/* 홈 헤더 */}
-      <header
-        className="sticky top-0 z-30 bg-white flex items-center justify-between px-6 shrink-0"
-        style={{
-          minHeight: 56,
-          paddingTop: 'calc(var(--safe-area-top) + 12px)',
-          paddingBottom: 12,
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/header-logo.png" alt="아기랑" width={32} height={32} />
-        <HomeHeaderActions />
-      </header>
-
-      <main className="flex-1 px-6 pt-2 pb-4 flex flex-col gap-4">
-        <HomeHeroCard />
-
-        <div className="flex flex-col gap-4">
-          {/* 퀵 메뉴 */}
-          <section>
-            <div className="flex justify-between">
-              {HOME_QUICK_MENUS.map((id) => {
-                const item = MENU_CATALOG[id];
-                return (
-                  <Link
-                    key={id}
-                    href={item.href}
-                    className="flex flex-col items-center gap-2 active:opacity-70"
-                    style={{ width: '56px' }}
-                  >
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white border border-gray-200">
-                      {item.icon(true, palette.black)}
-                    </div>
-                    <span className="text-[12px] text-black font-medium text-center leading-tight">
-                      {item.label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          <div>
-            <HomeWeatherStrip />
-          </div>
-
-          <div>
-            <BannerCarousel />
-          </div>
-
-          <div>
-            <NearbyNursingRoomsStrip />
-          </div>
-
-          <div>
-            <HomeRegionLinks />
-          </div>
-
-          <div>
-            <AppStoreCta />
-          </div>
-        </div>
-      </main>
-
-    </div>
+    <>
+      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 이 링크가 없으면
+          fontFamily: Galmuri11 이 전부 monospace 로 떨어진다. */}
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
+      <HomeClient />
+    </>
   );
 }

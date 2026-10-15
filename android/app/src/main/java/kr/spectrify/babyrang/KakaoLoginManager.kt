@@ -136,8 +136,10 @@ class KakaoLoginManager(
             if (account?.nameNeedsAgreement == true) scopes.add("name")
             if (account?.phoneNumberNeedsAgreement == true) scopes.add("phone_number")
             if (account?.genderNeedsAgreement == true) scopes.add("gender")
-            // 연령대(age_range)는 카카오 콘솔에서 '사용 안 함'이라 요청하지 않는다.
-            // 콘솔에 없는 항목을 scope 로 보내면 로그인 전체가 KOE205 로 막힌다.
+            // 선택 항목(연령대)은 다시 묻지 않는다. 최초 동의 화면에서 한 번 묻고 끝낸다 —
+            // 거절한 사용자에게 매 로그인마다 띄우면 선택이라고 해놓고 계속 조르는 꼴이 된다.
+            // ⚠️ 콘솔에서 '사용 안 함'인 항목을 scope 로 보내면 로그인이 KOE205 로 막힌다.
+            //    콘솔 설정을 바꾸면 이 목록도 같이 맞춰야 한다.
 
             if (scopes.isEmpty()) {
                 replyToken(requestId, accessToken)

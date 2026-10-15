@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Loading from '@/components/Loading';
 
 export default function PaymentSuccessPage() {
   return (
@@ -90,8 +91,7 @@ function PaymentSuccessContent() {
         </>
       ) : (
         <>
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
-          <p className="text-sm text-neutral-600">결제를 승인 중입니다...</p>
+          <Loading size={32} className="text-black" label="결제를 승인하는 중" />
         </>
       )}
     </main>

@@ -63,7 +63,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '🍼',
     color: 'bg-amber-50 text-amber-600',
     hasEnd: false,
-    fields: [{ key: 'amountMl', label: '먹은 양', kind: 'number', unit: 'ml' }],
+    fields: [{ key: 'amountMl', label: '수유량', kind: 'number', unit: 'ml' }],
   },
   BREASTFEEDING: {
     label: '모유',
@@ -80,7 +80,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     emoji: '🤱',
     color: 'bg-rose-50 text-rose-600',
     hasEnd: true,
-    fields: [{ key: 'amountMl', label: '먹은 양', kind: 'number', unit: 'ml' }],
+    fields: [{ key: 'amountMl', label: '수유량', kind: 'number', unit: 'ml' }],
   },
   PUMPING: {
     label: '유축',
@@ -152,7 +152,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     fields: [
       {
         key: 'amount',
-        label: '먹은양',
+        label: '먹은 양',
         kind: 'number',
         units: ['ml', 'g'],
         showSettingsLink: true,
@@ -260,16 +260,24 @@ export const RECORD_ICONS: Record<GrowthType, string> = {
   ETC: '/icon-record-etc.svg',
 };
 
+/** 기록 화면(리스트 행·입력 시트 제목)에서 쓰는 이름 — 홈 버튼 등은 TYPE_CONFIG.label 을 그대로 쓴다. */
+export function recordTitle(type: GrowthType): string {
+  if (type === 'FORMULA') return '분유수유';
+  if (type === 'BREASTFEEDING') return '모유수유';
+  return TYPE_CONFIG[type].label;
+}
+
 export const CATEGORY_STYLE: Record<GrowthType, { border: string; bg: string }> = {
-  FORMULA: { border: '#FF5675', bg: 'rgba(255, 86, 117, 0.05)' },
-  BREASTFEEDING: { border: '#FF7C5A', bg: 'rgba(255, 124, 90, 0.05)' },
-  PUMPED_FEEDING: { border: '#FFC951', bg: 'rgba(255, 201, 81, 0.05)' },
-  PUMPING: { border: '#ACE070', bg: 'rgba(172, 224, 112, 0.05)' },
-  BABY_FOOD: { border: '#6CC68A', bg: 'rgba(108, 198, 138, 0.05)' },
-  SLEEP: { border: '#6A92EA', bg: 'rgba(106, 146, 234, 0.05)' },
+  // 픽셀 리뉴얼 기록 색(Figma 5189:4596) — 진한 색은 테두리·점, 연한 색은 버튼 바탕
+  FORMULA: { border: '#FF5675', bg: '#FFF7F8' },
+  BREASTFEEDING: { border: '#FF7C5A', bg: '#FFF8F7' },
+  PUMPED_FEEDING: { border: '#FFC951', bg: '#FFFCF6' },
+  PUMPING: { border: '#6CC68A', bg: '#F8FCF9' },
+  BABY_FOOD: { border: '#6A92EA', bg: '#F8FAFE' },
+  SLEEP: { border: '#B67CF0', bg: '#FBF8FE' },
   BATH: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
   MEDICATION: { border: '#B67CF0', bg: 'rgba(182, 124, 240, 0.05)' },
-  DIAPER: { border: '#A8837F', bg: 'rgba(168, 131, 127, 0.05)' },
+  DIAPER: { border: '#A8837F', bg: '#FBF9F9' },
   TEMPERATURE: { border: '#515C66', bg: 'rgba(81, 92, 102, 0.05)' },
   MILK: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
   WATER: { border: '#58B1FA', bg: 'rgba(88, 177, 250, 0.05)' },
@@ -297,8 +305,10 @@ export function summarizeRecord(r: GrowthRecord): string {
       const ls = Number(data.leftSec) || 0;
       const rm = Number(data.rightMin) || 0;
       const rs = Number(data.rightSec) || 0;
-      if (lm > 0 || ls > 0) parts.push(`좌 ${fmtMinSec(lm, ls)}`);
-      if (rm > 0 || rs > 0) parts.push(`우 ${fmtMinSec(rm, rs)}`);
+      const sides: string[] = [];
+      if (lm > 0 || ls > 0) sides.push(`왼쪽 ${fmtMinSec(lm, ls)}`);
+      if (rm > 0 || rs > 0) sides.push(`오른쪽 ${fmtMinSec(rm, rs)}`);
+      if (sides.length) parts.push(sides.join(', '));
       break;
     }
     case 'FORMULA':
@@ -326,18 +336,18 @@ export function summarizeRecord(r: GrowthRecord): string {
       if (pumpingMode === 'BOTH') {
         if (lm > 0 || ls > 0) min.push(`동시 ${fmtMinSec(lm, ls)}`);
       } else {
-        if (lm > 0 || ls > 0) min.push(`좌 ${fmtMinSec(lm, ls)}`);
-        if (rm > 0 || rs > 0) min.push(`우 ${fmtMinSec(rm, rs)}`);
+        if (lm > 0 || ls > 0) min.push(`왼쪽 ${fmtMinSec(lm, ls)}`);
+        if (rm > 0 || rs > 0) min.push(`오른쪽 ${fmtMinSec(rm, rs)}`);
       }
-      if (min.length) parts.push(min.join(' '));
+      if (min.length) parts.push(min.join(', '));
       const ml: string[] = [];
       if (volumeMode === 'BOTH') {
         if (data.amountMl) ml.push(`${data.amountMl}ml`);
       } else {
-        if (data.leftMl) ml.push(`좌 ${data.leftMl}ml`);
-        if (data.rightMl) ml.push(`우 ${data.rightMl}ml`);
+        if (data.leftMl) ml.push(`왼쪽 ${data.leftMl}ml`);
+        if (data.rightMl) ml.push(`오른쪽 ${data.rightMl}ml`);
       }
-      if (ml.length) parts.push(ml.join(' '));
+      if (ml.length) parts.push(ml.join(', '));
       break;
     }
     case 'MEDICATION':
@@ -349,6 +359,14 @@ export function summarizeRecord(r: GrowthRecord): string {
         data.kind === 'POO' ? '대변' : data.kind === 'BOTH' ? '소+대' : '소변',
       );
       break;
+  }
+  // 값이 아직 없는 기록도 0 으로 보여준다(Figma '각 데이터 기본값')
+  if (parts.length === 0) {
+    if (r.type === 'BREASTFEEDING' || r.type === 'PUMPING') parts.push('0분');
+    else if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') parts.push('0ml');
+    else if (r.type === 'BABY_FOOD') {
+      parts.push(`0${data.amountUnit === 'g' || data.amountUnit === 'ml' ? data.amountUnit : 'ml'}`);
+    }
   }
   if (cfg.hasEnd) {
     // 최초 입력 시 종료 시간이 없을 수 있음 → 경과 시간 0분으로 표시

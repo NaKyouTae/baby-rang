@@ -14,15 +14,12 @@ export default function robots(): MetadataRoute.Robots {
     "/auth/",
     "/settings/",
     "/payment/",
-    "/tests/*/test/",
-    "/tests/*/result/",
     "/api/",
     // 로그인한 회원만 보는 화면. 색인될 이유가 없다.
     "/additional-info",
     // 로그인 수단만 있는 얇은 페이지.
     "/login",
     "/events/",
-    "/prototype",
   ];
 
   // /settings 아래지만 로그인 없이 볼 수 있는 공개 문서들. 스토어 심사와
@@ -31,8 +28,6 @@ export default function robots(): MetadataRoute.Robots {
   const allow = [
     "/",
     "/settings/privacy",
-    "/settings/faq",
-    "/settings/refund-guide",
   ];
 
   return {

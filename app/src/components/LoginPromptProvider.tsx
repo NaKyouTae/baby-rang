@@ -1,21 +1,13 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { palette } from '@/lib/colors';
 import { useAppOverlayLock } from './ads/appOverlay';
-import {
-  isKakaoNativeLoginAvailable,
-  runKakaoNativeLogin,
-} from '@/lib/kakaoNativeLogin';
-import {
-  isNaverNativeLoginAvailable,
-  runNaverNativeLogin,
-} from '@/lib/naverNativeLogin';
-import { isNativeApp } from '@/lib/isNativeApp';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
+import { useSocialLogin } from '@/hooks/useSocialLogin';
+import { commitPendingLoginProvider } from '@/lib/lastLoginProvider';
+import Loading from '@/components/Loading';
 
 type LoginPromptContextValue = {
   /** Returns true if already logged in. Otherwise opens the login prompt and returns false. */
@@ -37,14 +29,16 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   // 로그인 시트가 열려 있는 동안 네이티브 앱 배너를 숨긴다.
   useAppOverlayLock(open);
   const [message, setMessage] = useState<string | undefined>(undefined);
-  // 네이티브 카카오 로그인이 진행 중인지. 카카오톡으로 전환된 동안 중복 탭을 막는다.
-  const [kakaoLoading, setKakaoLoading] = useState(false);
-  // 네이티브 카카오 로그인이 실패한 이유. 앱에서는 웹 OAuth 로 넘기지 않으므로
-  // 실패를 화면에 남겨야 한다(그러지 않으면 버튼이 아무 반응 없는 것처럼 보인다).
-  const [kakaoError, setKakaoError] = useState<string | null>(null);
-  // 네이버도 카카오와 같다 — 앱에서는 웹 OAuth 로 되돌릴 수 없어 실패를 화면에 남긴다.
-  const [naverLoading, setNaverLoading] = useState(false);
-  const [naverError, setNaverError] = useState<string | null>(null);
+  const closePrompt = useCallback(() => setOpen(false), []);
+  const { login, loading, error, resetError } = useSocialLogin(closePrompt);
+  const kakaoError = error?.provider === 'kakao' ? error.message : null;
+  const naverError = error?.provider === 'naver' ? error.message : null;
+
+  // 로그인이 실제로 끝난 뒤에야 "최근 로그인" 수단을 확정한다.
+  // 이 Provider 는 앱 전역에 한 번 깔려 있어 어느 경로로 로그인해도 여기를 지난다.
+  useEffect(() => {
+    if (isAuthenticated) commitPendingLoginProvider();
+  }, [isAuthenticated]);
   // 애플 로그인 / 계정으로 로그인 미사용 (주석 처리)
   // const [testFormOpen, setTestFormOpen] = useState(false);
   // const [testUsername, setTestUsername] = useState('');
@@ -55,11 +49,10 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
   const openLoginPrompt = useCallback((msg?: string) => {
     setMessage(msg);
     setOpen(true);
-    setKakaoError(null);
-    setNaverError(null);
+    resetError();
     // setTestFormOpen(false);
     // setTestError(null);
-  }, []);
+  }, [resetError]);
 
   // 계정으로 로그인 미사용 (주석 처리)
   //   const handleTestLogin = useCallback(async () => {
@@ -124,58 +117,15 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
             <div className="flex flex-col" style={{ marginTop: 16, gap: 8 }}>
               <button
                 type="button"
-                disabled={kakaoLoading}
-                onClick={() => {
-                  setKakaoError(null);
-                  setNaverError(null);
-
-                  // 앱에 브릿지가 있으면 카카오톡 앱으로 인증한다.
-                  if (isKakaoNativeLoginAvailable()) {
-                    setKakaoLoading(true);
-                    void runKakaoNativeLogin()
-                      .then((done) => {
-                        // done=false 는 사용자가 카카오톡에서 취소한 경우. 시트를 그대로 둔다.
-                        if (done) setOpen(false);
-                        setKakaoLoading(false);
-                      })
-                      .catch((e) => {
-                        // ⚠️ 앱에서는 웹 OAuth 로 되돌리지 않는다.
-                        //    카카오 웹 로그인은 로그인이 끝나면 우리 홈으로 리다이렉트하는데,
-                        //    그 흐름은 WebView 밖(브라우저)에서 끝나거나 WebView 안에서
-                        //    네이티브 세션과 어긋나, 사용자는 "웹으로 넘어가서 앱으로
-                        //    돌아오지 못하는" 상태에 놓인다. 실패는 실패로 알리고
-                        //    카카오톡으로 다시 시도하게 하는 쪽이 낫다.
-                        console.error('[kakao] 네이티브 로그인 실패:', e);
-                        // 서버가 이유를 준 경우(동의 항목 부족 등)에는 그대로 보여준다.
-                        // 일반 문구로 덮으면 사용자가 무엇을 고쳐야 할지 알 수 없다.
-                        setKakaoError(
-                          e instanceof Error && e.message
-                            ? e.message
-                            : '로그인을 완료하지 못했어요. 다시 시도해 주세요.',
-                        );
-                        setKakaoLoading(false);
-                      });
-                    return;
-                  }
-
-                  // 브릿지가 없는데 앱 안이라면 카카오 로그인이 빠진 구 빌드다.
-                  // 이때도 웹 OAuth 로 보내면 안 된다(앱으로 돌아오지 못한다).
-                  if (isNativeApp()) {
-                    setKakaoError('앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
-                    return;
-                  }
-
-                  // 여기까지 오면 브라우저로 접속한 경우다. 웹 카카오 로그인은 이때만 쓴다.
-                  setOpen(false);
-                  window.location.href = `${API_URL}/auth/kakao`;
-                }}
+                disabled={loading !== null}
+                onClick={() => login('kakao')}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80 disabled:opacity-60"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#FEE500', color: '#191919' }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
                   <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7-.2.7-.7 2.7-.8 3.1-.1.5.2.5.4.4.2-.1 2.7-1.8 3.7-2.5.6.1 1.2.1 1.9.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3z" />
                 </svg>
-                {kakaoLoading ? '카카오톡으로 이동 중' : '카카오로 시작하기'}
+                {loading === 'kakao' ? '카카오톡으로 이동 중' : '카카오로 시작하기'}
               </button>
               {kakaoError && (
                 <p
@@ -190,49 +140,15 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                   앱이면 네이티브 브릿지, 브라우저면 웹 OAuth. */}
               <button
                 type="button"
-                disabled={naverLoading}
-                onClick={() => {
-                  setKakaoError(null);
-                  setNaverError(null);
-
-                  if (isNaverNativeLoginAvailable()) {
-                    setNaverLoading(true);
-                    void runNaverNativeLogin()
-                      .then((done) => {
-                        if (done) setOpen(false);
-                        setNaverLoading(false);
-                      })
-                      .catch((e) => {
-                        console.error('[naver] 네이티브 로그인 실패:', e);
-                        // 서버가 이유를 준 경우(동의 항목 부족 등)에는 그대로 보여준다.
-                        // 일반 문구로 덮으면 사용자가 무엇을 고쳐야 할지 알 수 없다.
-                        setNaverError(
-                          e instanceof Error && e.message
-                            ? e.message
-                            : '로그인을 완료하지 못했어요. 다시 시도해 주세요.',
-                        );
-                        setNaverLoading(false);
-                      });
-                    return;
-                  }
-
-                  // 앱인데 브릿지가 없으면 네이버 로그인이 빠진 구 빌드다.
-                  // 웹 OAuth 로 보내면 앱으로 돌아오지 못하므로 업데이트를 안내한다.
-                  if (isNativeApp()) {
-                    setNaverError('앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
-                    return;
-                  }
-
-                  setOpen(false);
-                  window.location.href = `${API_URL}/auth/naver`;
-                }}
+                disabled={loading !== null}
+                onClick={() => login('naver')}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80 disabled:opacity-60"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#03C75A', color: '#FFFFFF' }}
               >
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="#FFFFFF" aria-hidden="true">
                   <path d="M11.6 10.7 8.2 5.8H5.3v8.4h3.1V9.3l3.4 4.9h2.9V5.8h-3.1v4.9z" />
                 </svg>
-                {naverLoading ? '네이버로 이동 중' : '네이버로 시작하기'}
+                {loading === 'naver' ? '네이버로 이동 중' : '네이버로 시작하기'}
               </button>
               {naverError && (
                 <p
@@ -248,10 +164,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                   이 버튼을 빼면 4.8 위반으로 심사에서 거절된다. */}
               <button
                 type="button"
-                onClick={() => {
-                  setOpen(false);
-                  window.location.href = `${API_URL}/auth/apple`;
-                }}
+                onClick={() => login('apple')}
                 className="flex w-full items-center justify-center gap-2 rounded-[4px] font-semibold active:opacity-80"
                 style={{ height: 40, fontSize: 14, backgroundColor: '#000000', color: '#FFFFFF' }}
               >
@@ -304,7 +217,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
                     className="w-full rounded-[4px] font-semibold active:opacity-80 disabled:opacity-50"
                     style={{ height: 36, fontSize: 13, backgroundColor: '#3078C9', color: '#FFFFFF' }}
                   >
-                    {testLoading ? '로그인 중...' : '로그인'}
+                    {testLoading ? <Loading size={18} label="로그인 중" /> : '로그인'}
                   </button>
                 </div>
               )}

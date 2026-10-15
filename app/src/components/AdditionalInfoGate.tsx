@@ -27,7 +27,6 @@ const EXEMPT_PREFIXES = [
   '/settings/privacy',
   '/settings/marketing',
   '/settings/third-party',
-  '/settings/refund-guide',
 ];
 
 export default function AdditionalInfoGate() {

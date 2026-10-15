@@ -4,15 +4,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSelectedChild, type Child } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import BottomSheet from '@/components/BottomSheet';
-import ChildSelector from '@/components/ChildSelector';
-import ConfirmModal from '@/components/ConfirmModal';
-import NoChildCard from '@/components/NoChildCard';
+import ConfirmModal from '../home/_components/ConfirmModal';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
-import PageHeader from '@/components/PageHeader';
 import WheelDatePickerModal from '@/components/WheelDatePickerModal';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import GrowthChart from './GrowthChart';
+import PixelTabBar, { TAB_BAR_HEIGHT } from '../home/_components/PixelTabBar';
+import ChildSwitcher from '../home/_components/ChildSwitcher';
+import { BOX, NoChildBox, PIXEL_FONT, PIXEL_FONT_HREF } from '../growth-record/pixelUi';
+import { calcChildAge } from '@/lib/childAge';
+import { groupTwins } from '@/lib/twins';
+
+/** 선택된 칸 — #FFD200 10% 를 흰 바탕 위에 겹쳐 불투명하게 칠한다(패턴 탭과 같은 색). */
+const SELECTED_BG = 'linear-gradient(rgba(255,210,0,0.1), rgba(255,210,0,0.1)), #FDFDFE';
 import type { MetricType, Gender } from './growthStandards';
+import Loading from '@/components/Loading';
 
 interface PhysicalGrowthRecord {
   id: string;
@@ -25,18 +31,13 @@ interface PhysicalGrowthRecord {
   createdAt: string;
 }
 
-type ViewTab = 'chart' | 'records';
+/** 위 탭 — 키·체중은 성장 도표, 기록은 기록 목록. */
+type ViewTab = 'height' | 'weight' | 'records';
 
 function todayString(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function formatDate(iso: string): string {
-  const d = iso.slice(0, 10);
-  const [y, m, dd] = d.split('-');
-  return `${y}. ${m}. ${dd}`;
 }
 
 function formatDateShort(iso: string): string {
@@ -55,11 +56,25 @@ function daysSinceBirth(birthDate: string, measuredAt: string): number {
   return Math.max(1, Math.floor((measured - birth) / 86400000) + 1);
 }
 
-const METRIC_TABS: { key: MetricType; label: string }[] = [
+const VIEW_TABS: { key: ViewTab; label: string }[] = [
   { key: 'height', label: '키' },
   { key: 'weight', label: '체중' },
-  { key: 'head', label: '머리둘레' },
+  { key: 'records', label: '기록' },
 ];
+
+/** 기록 줄의 첫 줄 — 있는 값만 '･' 로 잇는다. */
+function recordValues(r: PhysicalGrowthRecord): string[] {
+  const parts: string[] = [];
+  if (r.heightCm != null) parts.push(`키 ${r.heightCm}cm`);
+  if (r.weightKg != null) parts.push(`체중 ${r.weightKg}kg`);
+  if (r.headCircumCm != null) parts.push(`머리둘레 ${r.headCircumCm}cm`);
+  return parts;
+}
+
+/** 시트 입력칸 — 회색 테두리, 높이 52, 글자 16. */
+const FIELD =
+  'w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] leading-none text-[#121212] placeholder:text-[#BBC0C5] outline-none';
+const FIELD_LABEL = 'text-[14px] leading-[1.4] text-[#808991]';
 
 function resolveGender(child: Child): Gender {
   const g = child.gender?.toLowerCase();
@@ -79,8 +94,8 @@ export default function PhysicalGrowthClient() {
   const [loading, setLoading] = useState(false);
 
   // 탭 상태
-  const [viewTab, setViewTab] = useState<ViewTab>('chart');
-  const [activeMetric, setActiveMetric] = useState<MetricType>('height');
+  const [viewTab, setViewTab] = useState<ViewTab>('height');
+  const activeMetric: MetricType = viewTab === 'weight' ? 'weight' : 'height';
 
   // 입력 폼
   const [showForm, setShowForm] = useState(false);
@@ -207,389 +222,265 @@ export default function PhysicalGrowthClient() {
 
   const noChild = !selected;
 
+  // 아이 카드 — 쌍둥이는 한 카드에 같이(패턴·원더윅스와 같은 카드)
+  const twinGroups = groupTwins(childList);
+  const currentGroup = selected
+    ? (twinGroups.find((g) => g.some((c) => c.id === selected.id)) ?? [selected])
+    : null;
+  const toGroup = (g: typeof childList) => ({
+    key: g[0].id,
+    kids: g.map((c) => ({ name: c.name, gender: c.gender })),
+  });
+  const age = selected ? calcChildAge(selected.birthDate) : null;
+
+  const openAddForm = () => {
+    if (noChild) {
+      openLoginPrompt('로그인하고 우리 아기의 성장 기록을 시작하세요.');
+      return;
+    }
+    resetForm();
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
   return (
-    <main className="bg-white pb-[calc(var(--bottom-nav-space)+80px)]">
-      {/* 헤더 */}
-      <header className="sticky top-0 z-30 bg-white">
-        <PageHeader title="성장" variant="back" />
-        <div className="px-5 pb-3">
-          {noChild ? (
-            <NoChildCard loginMessage="로그인하고 우리 아기의 성장 기록을 확인하세요." />
-          ) : (
-            <ChildSelector
-              children={childList}
-              selected={selected}
-              onSelect={setSelected}
-            />
-          )}
-        </div>
+    <main
+      className="overflow-hidden flex flex-col gap-[10px] bg-[#F7F8F9] px-[20px]"
+      style={{
+        // 레이아웃이 높이 없는 div 로 감싸서 h-full 이 풀리지 않는다. 앱 셸 높이를 직접 준다.
+        height: 'var(--app-h, 100dvh)',
+        fontFamily: PIXEL_FONT,
+        paddingTop: 'calc(var(--safe-area-top) + 20px)',
+        // 광고 자리는 이 화면 위에 그대로 떠 있다. 그만큼 비워야 탭바가 가리지 않는다.
+        paddingBottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 10px)',
+      }}
+    >
+      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 다른 픽셀 화면과 같은 링크다. */}
+      <link rel="stylesheet" href={PIXEL_FONT_HREF} />
+
+      {/* 제목 상자 — 오른쪽 + 로 기록 추가 */}
+      <header className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+        <span className="size-[24px] shrink-0" aria-hidden />
+        <h1 className="text-[#121212] text-[16px] leading-none font-normal">성장</h1>
+        <button
+          type="button"
+          onClick={openAddForm}
+          className="size-[24px] shrink-0 active:translate-y-px"
+          aria-label="성장 기록 추가"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/plus.svg" alt="" width={24} height={24} className="block" />
+        </button>
       </header>
 
-      {/* 성장도표 / 기록 탭 전환 */}
-      <div className="px-5 mt-3">
-        <div className="flex h-[38px] bg-gray-100 rounded-xl p-1">
-          <button
-            type="button"
-            onClick={() => setViewTab('chart')}
-            className={`flex-1 h-[30px] rounded-lg text-[14px] transition-colors ${
-              viewTab === 'chart'
-                ? 'bg-white text-black font-medium shadow-sm'
-                : 'text-gray-500 font-normal'
-            }`}
-          >
-            성장도표
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewTab('records')}
-            className={`flex-1 h-[30px] rounded-lg text-[14px] transition-colors ${
-              viewTab === 'records'
-                ? 'bg-white text-black font-medium shadow-sm'
-                : 'text-gray-500 font-normal'
-            }`}
-          >
-            성장기록
-          </button>
-        </div>
+      {/* 아이 카드 — 쌍둥이는 한 카드에 같이(패턴·원더윅스와 같은 카드) */}
+      <div className="shrink-0 flex">
+        {currentGroup && age ? (
+          <ChildSwitcher
+            current={toGroup(currentGroup)}
+            groups={twinGroups.map(toGroup)}
+            ageParts={[`D+${age.days}`, `${age.months}개월 ${age.extraDays}일`]}
+            onSelect={(key) => {
+              const next = childList.find((c) => c.id === key);
+              if (next) setSelected(next);
+            }}
+          />
+        ) : (
+          <NoChildBox
+            sub="아기를 추가하면 성장을 기록할 수 있어요"
+            loginMessage="로그인하고 우리 아기의 성장 기록을 확인하세요."
+          />
+        )}
       </div>
 
-      {/* ── 성장도표 탭 ── */}
-      {viewTab === 'chart' && (
-        <div className="px-5 mt-4">
-          {/* 지표 선택 탭 (키/체중/머리둘레) */}
-          <div className="flex gap-2 mb-6">
-            {METRIC_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveMetric(tab.key)}
-                className={`flex-1 h-[30px] rounded-lg text-[12px] font-medium transition-colors ${
-                  activeMetric === tab.key
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-black'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+      {/* 키 / 체중 / 기록 */}
+      <div className="shrink-0 flex gap-[10px]">
+        {VIEW_TABS.map((tab) => {
+          const on = viewTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setViewTab(tab.key)}
+              aria-pressed={on}
+              className="flex-1 min-w-0 p-[10px] rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
+              style={{ background: on ? SELECTED_BG : '#FDFDFE' }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* 성장 도표 차트 — 비로그인/아기 미등록 시에도 WHO 기준 곡선만 표시 */}
+      {viewTab !== 'records' ? (
+        /* ── 성장 도표 — 비로그인/아기 미등록 시에도 WHO 기준 곡선만 표시 ── */
+        <div className={`${BOX} flex-1 min-h-0 overflow-y-auto overscroll-contain p-[10px] flex flex-col gap-[10px]`}>
           <GrowthChart
             gender={selected ? resolveGender(selected) : 'male'}
             metric={activeMetric}
             birthDate={selected?.birthDate ?? todayString()}
             records={selected ? records : []}
           />
-
-          {/* 성장도표 안내 문구 */}
-          <ul className="mt-6 space-y-1 text-[10px] font-normal text-gray-500">
-            <li className="flex gap-1">
-              <span aria-hidden="true">•</span>
-              <span>기록을 추가하면 성장 곡선에 표시됩니다</span>
-            </li>
-            <li className="flex gap-1">
-              <span aria-hidden="true">•</span>
-              <span>2017 소아청소년 성장도표 기준(0-36개월: WHO Growth Standards)</span>
-            </li>
+          <ul className="flex flex-col gap-[4px] list-disc pl-[18px] text-[12px] leading-[1.4] text-[#808991]">
+            <li>기록을 추가하면 성장 곡선에 표시됩니다</li>
+            <li>2017 소아청소년 성장도표 기준(0-36개월: WHO Growth Standards)</li>
           </ul>
         </div>
+      ) : (
+        /* ── 기록 목록 ── */
+        <div className={`${BOX} flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col`}>
+          {loading && records.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loading size={24} className="text-[#808991]" />
+            </div>
+          ) : records.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-[14px] leading-[1.4] text-[#808991]">등록된 기록이 없습니다.</p>
+            </div>
+          ) : (
+            records.map((record) => {
+              const days = selected ? daysSinceBirth(selected.birthDate, record.measuredAt) : 0;
+              const recAge = selected ? calcChildAge(selected.birthDate, new Date(record.measuredAt)) : null;
+              const values = recordValues(record);
+              const sub = [
+                `D+${days}`,
+                ...(recAge ? [`${recAge.months}개월 ${recAge.extraDays}일`] : []),
+                formatDateShort(record.measuredAt),
+              ];
+              return (
+                <button
+                  key={record.id}
+                  type="button"
+                  onClick={() => handleEdit(record)}
+                  className="shrink-0 w-full flex items-center justify-between gap-[10px] p-[10px] border-b border-[#121212] text-left active:bg-[#F7F8F9]"
+                  aria-label={`${formatDateShort(record.measuredAt)} 기록 수정`}
+                >
+                  <span className="min-w-0 flex flex-col gap-[4px] leading-[1.4] whitespace-nowrap">
+                    <span className="flex flex-wrap gap-x-[10px] items-center text-[16px] text-[#121212]">
+                      {values.map((v, i) => (
+                        <span key={v} className="flex gap-[10px] items-center">
+                          {i > 0 && <span aria-hidden>･</span>}
+                          {v}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="flex gap-[10px] items-center text-[14px] text-[#808991]">
+                      {sub.map((v, i) => (
+                        <span key={i} className="flex gap-[10px] items-center">
+                          {i > 0 && <span aria-hidden>･</span>}
+                          {v}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/icons/chevron-right.svg" alt="" width={24} height={24} className="block shrink-0" />
+                </button>
+              );
+            })
+          )}
+        </div>
       )}
 
-      {/* ── 기록 탭 ── */}
-      {viewTab === 'records' && (
-        <>
+      {/* 탭바는 화면 아래에 떠 있다 — 그 자리만큼 비워 둔다 */}
+      <div className="shrink-0" style={{ height: TAB_BAR_HEIGHT }} aria-hidden />
 
-      {/* 기록 목록 */}
-      <div className="px-5 mt-6">
-        {loading && records.length === 0 && (
-          <div className="flex items-center justify-center py-12">
-            <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+      {/* 기록 추가/수정 바텀시트 */}
+      <BottomSheet
+        pixel
+        variant="sheet"
+        open={showForm}
+        onClose={closeForm}
+        maxHeight="90dvh"
+        ariaLabel={editingId ? '기록 수정하기' : '기록 추가하기'}
+      >
+        <div
+          className="flex flex-col items-center gap-[16px] px-[20px] pt-[8px] overflow-y-auto"
+          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 20px)' }}
+        >
+          <span className="w-[36px] h-[4px] rounded-full bg-[#121212] shrink-0" aria-hidden />
+          <h2 className="w-full text-center text-[16px] leading-[1.4] font-normal text-[#121212]">
+            {editingId ? '기록 수정하기' : '기록 추가하기'}
+          </h2>
 
-        {!loading && records.length === 0 && (
-          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icon-empty-record.svg"
-                alt=""
-                width={20}
-                height={20}
-                aria-hidden="true"
+          <div className="w-full flex flex-col gap-[10px] py-[8px]">
+            {/* 측정일 */}
+            <div className="flex flex-col gap-[8px]">
+              <p className={FIELD_LABEL}>측정일</p>
+              <button
+                type="button"
+                onClick={() => setDatePickerOpen(true)}
+                className={`${FIELD} text-left tabular-nums active:bg-[#F7F8F9]`}
+              >
+                {formatDateShort(measuredAt)}
+              </button>
+            </div>
+
+            {/* 키 */}
+            <div className="flex flex-col gap-[8px]">
+              <p className={FIELD_LABEL}>키(cm)</p>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.1"
+                placeholder="키를 입력하세요."
+                value={heightCm}
+                onChange={(e) => setHeightCm(e.target.value)}
+                className={FIELD}
+                aria-label="키(cm)"
               />
             </div>
-            <p className="mt-[10px] text-[14px] font-medium text-black">
-              아직 등록된 기록이 없어요.
-            </p>
-            <p className="mt-[4px] text-[12px] font-normal text-gray-500">
-              우리 아기의 성장을 기록해 보세요.
-            </p>
+
+            {/* 몸무게 */}
+            <div className="flex flex-col gap-[8px]">
+              <p className={FIELD_LABEL}>몸무게(kg)</p>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                placeholder="몸무게를 입력하세요."
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                className={FIELD}
+                aria-label="몸무게(kg)"
+              />
+            </div>
           </div>
-        )}
 
-        <div className="flex flex-col gap-3">
-          {records.map((record) => {
-            const days = selected
-              ? daysSinceBirth(selected.birthDate, record.measuredAt)
-              : 0;
-            return (
-                <div
-                  key={record.id}
-                  className="relative bg-white rounded-lg p-4 border border-gray-100"
-                >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div className="flex items-center gap-1">
-                      <span className="bg-primary-500 text-white text-[12px] font-medium leading-none h-4 px-1 py-0.5 rounded flex items-center">
-                        D+{days}
-                      </span>
-                      <span className="text-[12px] font-normal text-black">
-                        {formatDateShort(record.measuredAt)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[12px] font-normal text-gray-500">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(record)}
-                        className="active:text-gray-700"
-                      >
-                        수정
-                      </button>
-                      <span aria-hidden="true" className="w-px h-2.5 bg-gray-200" />
-                      <button
-                        type="button"
-                        onClick={() => setDeletingId(record.id)}
-                        className="active:text-red-600"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1">
-                    <div className="bg-gray-100 rounded py-[9px] text-center">
-                      <p className="text-[10px] font-normal text-gray-500 leading-none">키</p>
-                      <p className="mt-2 leading-none">
-                        {record.heightCm != null ? (
-                          <>
-                            <span className="text-[12px] font-medium text-black">
-                              {record.heightCm}
-                            </span>
-                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
-                              cm
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">-</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="bg-gray-100 rounded py-[9px] text-center">
-                      <p className="text-[10px] font-normal text-gray-500 leading-none">체중</p>
-                      <p className="mt-2 leading-none">
-                        {record.weightKg != null ? (
-                          <>
-                            <span className="text-[12px] font-medium text-black">
-                              {record.weightKg}
-                            </span>
-                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
-                              kg
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">-</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="bg-gray-100 rounded py-[9px] text-center">
-                      <p className="text-[10px] font-normal text-gray-500 leading-none">머리둘레</p>
-                      <p className="mt-2 leading-none">
-                        {record.headCircumCm != null ? (
-                          <>
-                            <span className="text-[12px] font-medium text-black">
-                              {record.headCircumCm}
-                            </span>
-                            <span className="text-[10px] font-normal text-gray-500 ml-0.5">
-                              cm
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">-</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  {record.memo && (
-                    <div className="mt-2.5 bg-gray-100 rounded px-3 py-2">
-                      <p className="text-[10px] font-normal text-black">
-                        {record.memo}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      </>
-      )}
-
-      {/* + 기록 FAB — 하단 네비게이션 위 16px */}
-      {!showForm && (
-        <div
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-5 pointer-events-none flex justify-end"
-          style={{ bottom: 'calc(var(--bottom-nav-space) + 24px)' }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              if (noChild) {
-                openLoginPrompt('로그인하고 우리 아기의 성장 기록을 시작하세요.');
-                return;
-              }
-              resetForm();
-              setShowForm(true);
-            }}
-            className="pointer-events-auto flex items-center h-[32px] rounded-full bg-primary-500 text-white text-[12px] font-medium shadow-lg active:scale-95 transition-transform"
-            style={{ padding: '10px 12px', gap: '6px' }}
-            aria-label="성장 기록 추가"
-          >
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            기록
-          </button>
-        </div>
-      )}
-
-      {/* 입력 바텀시트 */}
-      <BottomSheet
-        open={showForm}
-        onClose={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-        maxHeight="90dvh"
-      >
-        <div className="flex items-center justify-between px-4 pt-5 pb-4">
-          <h2 className="text-[16px] font-medium text-black">
-            {editingId ? '성장기록 수정하기' : '성장기록 추가하기'}
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              setShowForm(false);
-              resetForm();
-            }}
-            className="w-5 h-5 flex items-center justify-center text-black"
-            aria-label="닫기"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-              <path d="M5 5l10 10M15 5L5 15" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="overflow-y-auto px-4 pb-0 space-y-3">
-          {/* 측정일 */}
-          <div>
-            <p className="text-[12px] font-medium text-gray-500 mb-2">
-              측정일 <span className="text-red-500">*</span>
-            </p>
+          <div className="w-full flex gap-[10px]">
             <button
               type="button"
-              onClick={() => setDatePickerOpen(true)}
-              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-left text-gray-900 bg-white active:bg-gray-50"
+              onClick={closeForm}
+              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none whitespace-nowrap active:translate-y-px"
             >
-              {formatDate(measuredAt)}.
+              취소
+            </button>
+            {editingId && (
+              <button
+                type="button"
+                onClick={() => {
+                  const id = editingId;
+                  closeForm();
+                  setDeletingId(id);
+                }}
+                className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none whitespace-nowrap active:translate-y-px"
+              >
+                삭제
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none whitespace-nowrap active:translate-y-px disabled:opacity-60 flex items-center justify-center"
+            >
+              {saving ? <Loading size={18} label="저장 중" /> : '저장하기'}
             </button>
           </div>
-
-          {/* 키 */}
-          <div>
-            <p className="text-[12px] font-medium text-gray-500 mb-2">
-              키(cm)
-            </p>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              placeholder="51"
-              value={heightCm}
-              onChange={(e) => setHeightCm(e.target.value)}
-              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* 몸무게 */}
-          <div>
-            <p className="text-[12px] font-medium text-gray-500 mb-2">
-              몸무게(kg)
-            </p>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              placeholder="3.09"
-              value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
-              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* 머리둘레 */}
-          <div>
-            <p className="text-[12px] font-medium text-gray-500 mb-2">
-              머리둘레(cm)
-            </p>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.1"
-              placeholder="41"
-              value={headCircumCm}
-              onChange={(e) => setHeadCircumCm(e.target.value)}
-              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* 메모 */}
-          <div>
-            <p className="text-[12px] font-medium text-gray-500 mb-2">
-              메모
-            </p>
-            <input
-              type="text"
-              placeholder="병원 정기검진 등"
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              className="w-full h-[48px] px-3 rounded-[4px] border border-gray-200 text-[14px] text-gray-900 placeholder:font-normal placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-
-        <div className="px-4 pt-4 pb-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setShowForm(false);
-              resetForm();
-            }}
-            className="flex-1 h-[48px] rounded-[4px] bg-gray-100 text-gray-600 font-semibold text-[15px] active:opacity-80"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 h-[48px] rounded-[4px] bg-primary-500 text-white font-semibold text-[15px] active:opacity-80 disabled:opacity-40"
-          >
-            {saving ? '저장 중...' : editingId ? '수정' : '저장'}
-          </button>
         </div>
       </BottomSheet>
 
@@ -604,21 +495,15 @@ export default function PhysicalGrowthClient() {
       {/* 삭제 확인 모달 */}
       <ConfirmModal
         open={deletingId !== null}
-        icon={
-          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M29.1788 6.44333H4M26.7099 10.146L26.0286 20.3658C25.7665 24.2966 25.6361 26.262 24.355 27.4604C23.0738 28.6587 21.1024 28.66 17.1626 28.66H16.0163C12.0764 28.66 10.1051 28.66 8.82393 27.4604C7.54275 26.262 7.41096 24.2966 7.15028 20.3658L6.46898 10.146" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M8.44336 6.44334H8.60629C9.20235 6.4281 9.77995 6.23335 10.2635 5.88454C10.7471 5.53574 11.1142 5.04909 11.3167 4.48825L11.3671 4.33571L11.5108 3.90469C11.6337 3.53593 11.6959 3.35226 11.7774 3.19527C11.9376 2.88775 12.1676 2.62205 12.449 2.41937C12.7304 2.21671 13.0552 2.08274 13.3977 2.02814C13.5709 2 13.765 2 14.153 2H19.0259C19.414 2 19.608 2 19.7813 2.02814C20.1237 2.08274 20.4486 2.21671 20.73 2.41937C21.0114 2.62205 21.2414 2.88775 21.4017 3.19527C21.4831 3.35226 21.5453 3.53593 21.6682 3.90469L21.8118 4.33571C21.9996 4.95966 22.3878 5.50432 22.9163 5.88534C23.4448 6.26637 24.0843 6.46248 24.7356 6.44334" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-        }
-        title="성장기록 삭제하기"
-        description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
+        showThumbnail={false}
+        title="성장 기록을 삭제할까요?"
+        description={'삭제한 기록은 다시 불러올 수 없어요.\n삭제 후에는 성장 도표에 반영되지 않아요.'}
         confirmLabel="삭제하기"
-        cancelLabel="취소"
         onConfirm={() => deletingId && handleDelete(deletingId)}
-        onClose={() => setDeletingId(null)}
+        onCancel={() => setDeletingId(null)}
       />
+
+      <PixelTabBar active="growth" />
     </main>
   );
 }

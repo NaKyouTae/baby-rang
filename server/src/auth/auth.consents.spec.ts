@@ -277,3 +277,29 @@ describe('전화번호로 소셜 계정 잇기', () => {
     expect(captured.user?.phone).toBe('01012345678');
   });
 });
+
+describe('성별 필수 동의항목 처리', () => {
+  it('성별이 비어 와도 가입을 막지 않는다', async () => {
+    // 네이버는 사용자가 동의해도 성별을 모르면 'U' 를 주고, 정규화하면서 버려진다.
+    // 동의를 마친 사용자가 제공자 사정으로 가입을 거부당하면 해결할 길이 없다.
+    const { service, captured } = makeService(null, []);
+
+    const result = await service.resolveOAuthLogin({
+      ...baseProfile,
+      provider: AuthProvider.NAVER,
+      gender: undefined,
+    });
+
+    expect(result.userId).toBe('user-1');
+    expect(captured.user?.gender).toBeNull();
+  });
+
+  it('연령대는 선택 항목이라 비어도 그대로 저장된다', async () => {
+    const { service, captured } = makeService(null, []);
+
+    await service.resolveOAuthLogin({ ...baseProfile, ageRange: undefined });
+
+    expect(captured.user?.ageRange).toBeNull();
+    expect(captured.user?.gender).toBe('female');
+  });
+});

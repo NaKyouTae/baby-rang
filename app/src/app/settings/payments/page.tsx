@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPayments, type PaymentItem } from '@/lib/api';
-import { palette } from '@/lib/colors';
-import PageHeader from '@/components/PageHeader';
+import { canGoBack } from '@/lib/navHistory';
 import ConfirmModal from '@/components/ConfirmModal';
+import Loading from '@/components/Loading';
 
 /**
  * 인앱결제 영수증 안내.
@@ -38,14 +38,12 @@ function storeMethodOf(item: PaymentItem): StoreMethod | null {
   return m === 'APP_STORE' || m === 'GOOGLE_PLAY' ? m : null;
 }
 
+/** "26.04.23 14:36" — 보석함 내역과 같은 꼴. */
 function formatDate(iso: string) {
   const d = new Date(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${y}.${m}.${day}. ${hh}:${mm}`;
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getFullYear() % 100)}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function formatAmount(n: number, currency = 'KRW') {
@@ -53,17 +51,21 @@ function formatAmount(n: number, currency = 'KRW') {
   return `${n.toLocaleString()} ${currency}`;
 }
 
-const STATUS_META: Record<
-  PaymentItem['status'],
-  { label: string; bg: string; text: string }
-> = {
-  PENDING: { label: '처리중', bg: '#515C6614', text: '#515C66' },
-  PAID: { label: '완료', bg: '#FF2D5514', text: '#FF2D55' },
-  FAILED: { label: '실패', bg: '#515C6614', text: '#515C66' },
-  CANCELLED: { label: '취소', bg: '#34C75914', text: '#34C759' },
-  REFUNDED: { label: '환불', bg: '#3078C914', text: '#3078C9' },
-  PARTIAL_REFUNDED: { label: '부분환불', bg: '#3078C914', text: '#3078C9' },
+/** 보석 묶음은 디자인상 "보석 20개 충전" 으로 읽힌다. 다른 상품은 이름 그대로 둔다. */
+function titleOf(item: PaymentItem) {
+  return item.productName.startsWith('보석') ? `${item.productName} 충전` : item.productName;
+}
+
+/** 완료가 아닌 건만 상태를 덧붙인다. 대부분이 완료라 매번 적으면 소음이다. */
+const STATUS_LABEL: Partial<Record<PaymentItem['status'], string>> = {
+  FAILED: '실패',
+  CANCELLED: '취소',
+  REFUNDED: '환불',
+  PARTIAL_REFUNDED: '부분환불',
 };
+
+/** 픽셀 디자인의 공통 상자 — 흰 바탕에 1px 검정 테두리, 모서리 4px. */
+const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 
 export default function PaymentsPage() {
   const router = useRouter();
@@ -91,81 +93,76 @@ export default function PaymentsPage() {
     };
   }, []);
 
-  return (
-    <div className="flex flex-col bg-white pb-[var(--bottom-nav-space)]">
-      <PageHeader title="결제 내역" variant="back" />
+  // 뒤로 갈 곳이 없으면 들어온 자리인 마이페이지로 보낸다
+  const goBack = () => (canGoBack() ? router.back() : router.replace('/home?my=1'));
 
-      <div className="px-5 pt-6">
+  return (
+    <div
+      className="min-h-[100dvh] flex flex-col gap-[10px] bg-[#F7F8F9] px-[20px]"
+      style={{
+        fontFamily: 'Galmuri11Fig, Galmuri11, monospace',
+        paddingTop: 'calc(var(--safe-area-top) + 20px)',
+        paddingBottom: 'calc(var(--bottom-nav-space) + 20px)',
+      }}
+    >
+      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 홈과 같은 링크다. */}
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
+
+      <div className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+        <button type="button" onClick={goBack} aria-label="뒤로가기" className="size-[24px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/chevron-left.svg" alt="" width={24} height={24} className="block" />
+        </button>
+        <h1 className="text-[#121212] text-[16px] leading-none font-normal">결제 내역</h1>
+        {/* 오른쪽은 비워 둔다 — 뒤로가기 버튼과 같은 폭이라 제목이 가운데에 남는다 */}
+        <span aria-hidden className="size-[24px]" />
+      </div>
+
+      <div className={`${BOX} flex-1 flex flex-col overflow-hidden`}>
         {loading ? (
-          <div className="space-y-2.5">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-16 rounded-lg bg-gray-100 animate-pulse" />
-            ))}
-          </div>
+          <Notice><Loading /></Notice>
         ) : error ? (
-          <div className="mt-20 text-center text-sm text-gray-500">
-            결제 내역을 불러오지 못했어요.
-            <br />
-            {error}
-          </div>
+          <Notice>결제 내역을 불러오지 못했습니다.</Notice>
         ) : items.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-200 h-[190px] flex flex-col items-center justify-center text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 mb-2.5">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="5" width="20" height="14" rx="2" />
-                <line x1="2" y1="10" x2="22" y2="10" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-black">아직 결제한 내역이 없어요.</p>
-            <p className="text-xs font-normal text-gray-500 mt-1">구매한 내역이 이곳에 표시돼요.</p>
-          </div>
+          <Notice>결제 내역이 없습니다.</Notice>
         ) : (
-          <ul className="space-y-2.5">
+          <ul>
             {items.map((item) => {
-              const meta = STATUS_META[item.status];
               const isPaid = item.status === 'PAID';
               const storeMethod = storeMethodOf(item);
+              const statusLabel = STATUS_LABEL[item.status];
               // 누를 수 있는 건 영수증이 있는 토스 결제와 안내를 띄울 인앱결제뿐이다.
               const clickable = isPaid && (Boolean(item.receiptUrl) || Boolean(storeMethod));
               return (
-                <li
-                  key={item.id}
-                  className={`flex items-center gap-3 h-16 rounded-lg border border-gray-200 bg-gray-100 px-4 transition-colors ${
-                    clickable ? 'cursor-pointer active:bg-gray-200' : ''
-                  }`}
-                  onClick={() => {
-                    if (!clickable) return;
-                    if (item.receiptUrl) {
-                      window.open(item.receiptUrl, '_blank', 'noopener,noreferrer');
-                      return;
-                    }
-                    // 인앱결제는 영수증 URL 이 없다. 스토어 구입 내역 경로를 안내한다.
-                    if (storeMethod) setReceiptGuide(storeMethod);
-                  }}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p className="text-[16px] font-medium text-black truncate">
-                        {item.productName}
-                      </p>
-                      <span
-                        className="shrink-0 rounded-sm px-1.5 h-4 inline-flex items-center text-xs font-medium"
-                        style={{ backgroundColor: meta.bg, color: meta.text }}
-                      >
-                        {meta.label}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex items-center gap-1 text-xs font-normal text-gray-500">
+                <li key={item.id} className="border-b border-[#121212]">
+                  <button
+                    type="button"
+                    disabled={!clickable}
+                    className="w-full flex flex-col items-start gap-[4px] p-[10px] text-left active:bg-[rgba(255,210,0,0.1)] disabled:active:bg-transparent"
+                    onClick={() => {
+                      if (item.receiptUrl) {
+                        window.open(item.receiptUrl, '_blank', 'noopener,noreferrer');
+                        return;
+                      }
+                      // 인앱결제는 영수증 URL 이 없다. 스토어 구입 내역 경로를 안내한다.
+                      if (storeMethod) setReceiptGuide(storeMethod);
+                    }}
+                  >
+                    <span className="max-w-full truncate text-[#121212] text-[16px] leading-[1.4]">
+                      {titleOf(item)}
+                    </span>
+                    <span className="flex items-center gap-[10px] text-[#808991] text-[14px] leading-[1.4] tabular-nums">
                       <span>{formatAmount(item.amount, item.currency)}</span>
-                      <span>|</span>
+                      <span>･</span>
                       <span>{formatDate(item.approvedAt || item.createdAt)}</span>
-                    </div>
-                  </div>
-                  {clickable && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={palette.gray400} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  )}
+                      {statusLabel && (
+                        <>
+                          <span>･</span>
+                          <span>{statusLabel}</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
                 </li>
               );
             })}
@@ -191,6 +188,15 @@ export default function PaymentsPage() {
         onConfirm={() => setReceiptGuide(null)}
         onClose={() => setReceiptGuide(null)}
       />
+    </div>
+  );
+}
+
+/** 목록이 비었을 때 상자 한가운데 놓는 글. */
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-[10px]">
+      <div className="text-[#808991] text-[14px] leading-[1.4]">{children}</div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { palette } from "@/lib/colors";
+import PixelErrorScreen from "@/components/PixelErrorScreen";
 
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없어요",
@@ -9,79 +8,9 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <div
-      className="flex flex-col items-center justify-center min-h-screen-safe px-6 text-center"
-      style={{
-        paddingTop: "calc(var(--safe-area-top) + 24px)",
-        paddingBottom: "calc(var(--safe-area-bottom) + 24px)",
-      }}
-    >
-      <style>{`[data-bottom-nav-root]{display:none !important}`}</style>
-
-      <div
-        className="flex items-center justify-center rounded-full"
-        style={{
-          width: 40,
-          height: 40,
-          backgroundColor: palette.gray100,
-        }}
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true"
-        >
-          <path
-            d="M15.4167 15.4165L18.3333 18.3332M5.625 2.72485C7.28841 1.76495 9.24404 1.44245 11.1276 1.81742C13.0111 2.19239 14.6941 3.23927 15.8631 4.76303C17.0321 6.28679 17.6073 8.18353 17.4816 10.0999C17.3559 12.0163 16.5378 13.8216 15.1798 15.1797C13.8218 16.5377 12.0165 17.3557 10.1001 17.4814C8.18368 17.6071 6.28694 17.0319 4.76318 15.8629C3.23942 14.694 2.19254 13.011 1.81757 11.1274C1.4426 9.24388 1.7651 7.28826 2.725 5.62485"
-            stroke={palette.black}
-            strokeWidth="1.25"
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-
-      <h1
-        className="font-medium"
-        style={{
-          marginTop: 10,
-          fontSize: 14,
-          lineHeight: "20px",
-          color: palette.black,
-        }}
-      >
-        페이지를 찾을 수 없어요.
-      </h1>
-      <p
-        className="font-normal"
-        style={{
-          marginTop: 4,
-          fontSize: 12,
-          lineHeight: "18px",
-          color: palette.gray500,
-        }}
-      >
-        페이지 주소를 다시 확인해 주세요.
-      </p>
-
-      <Link
-        href="/home"
-        className="inline-flex items-center justify-center text-white active:opacity-80 transition-opacity"
-        style={{
-          marginTop: 10,
-          height: 24,
-          paddingLeft: 12,
-          paddingRight: 12,
-          borderRadius: 4,
-          fontSize: 12,
-          fontWeight: 500,
-          backgroundColor: palette.teal,
-        }}
-      >
-        홈으로 돌아가기
-      </Link>
-    </div>
+    <PixelErrorScreen
+      title="페이지를 찾을 수 없어요."
+      description="페이지를 다시 확인해 주세요."
+    />
   );
 }

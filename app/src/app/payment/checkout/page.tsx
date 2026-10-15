@@ -3,6 +3,7 @@
 import { loadTossPayments, type TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import Loading from '@/components/Loading';
 
 // 토스 결제위젯 클라이언트 키.
 //
@@ -149,7 +150,7 @@ function CheckoutContent() {
     <>
       <main
         className="flex min-h-dvh w-full flex-col gap-4 bg-white p-4"
-        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 120px)' }}
+        style={{ paddingBottom: 'calc(var(--bottom-nav-space) + 120px)' }}
       >
         <header className="flex items-center justify-between">
           <button
@@ -201,7 +202,7 @@ function CheckoutContent() {
 
       <div
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white px-4 pt-3"
-        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 12px)' }}
+        style={{ paddingBottom: 'calc(var(--bottom-nav-space) + 12px)' }}
       >
         <p className="mb-2 text-center text-xs text-neutral-500">
           결제 전{' '}
@@ -222,7 +223,7 @@ function CheckoutContent() {
           disabled={!ready || loading}
           className="h-12 w-full rounded-xl bg-black text-sm font-semibold text-white disabled:opacity-50"
         >
-          {loading ? '처리 중...' : `${amount.toLocaleString()}원 결제하기`}
+          {loading ? <Loading size={18} label="결제 처리 중" /> : `${amount.toLocaleString()}원 결제하기`}
         </button>
       </div>
     </>

@@ -21,26 +21,27 @@ type GrowthChartProps = {
   }[];
 };
 
-// 차트 레이아웃 상수
-const CHART_W = 360;
-const CHART_H = 280;
-const PAD_L = 28;
-const PAD_R = 22;
-const PAD_T = 6;
-const PAD_B = 22;
+// 차트 레이아웃 상수 — 디자인의 차트 영역 330x394.
+// 왼쪽 25px 은 세로축 숫자, 아래 20px 은 가로축 숫자(축에서 10px 아래) 자리다.
+const CHART_W = 330;
+const CHART_H = 394;
+const PAD_L = 25;
+const PAD_R = 0;
+const PAD_T = 5;
+const PAD_B = 20;
 const PLOT_W = CHART_W - PAD_L - PAD_R;
 const PLOT_H = CHART_H - PAD_T - PAD_B;
 
-// 백분위수 곡선 색상
+// 정상 범위 띠 색상 — 디자인 범례의 #3078C9 10%
 const BAND_COLORS = {
-  outer: 'rgba(48,176,199,0.06)',  // 3-15, 85-97
-  inner: 'rgba(48,176,199,0.12)',  // 15-50, 50-85
+  outer: 'rgba(48,120,201,0.05)',  // 3-15, 85-97
+  inner: 'rgba(48,120,201,0.1)',  // 15-50, 50-85
 };
 
 const CURVE_STYLES: Record<string, { color: string; width: number; dash?: string }> = {
   p3:  { color: '#94a3b8', width: 0.8, dash: '3,2' },
   p15: { color: '#94a3b8', width: 0.8 },
-  p50: { color: '#3078C9', width: 1.5 },
+  p50: { color: '#3078C9', width: 2 },
   p85: { color: '#94a3b8', width: 0.8 },
   p97: { color: '#94a3b8', width: 0.8, dash: '3,2' },
 };
@@ -143,12 +144,12 @@ export default function GrowthChart({
   for (let v = yStart; v <= maxVal; v += yStep) yTicks.push(v);
 
   return (
-    <div className="bg-white rounded-lg p-4 border border-gray-200">
+    <div className="w-full flex flex-col items-end gap-[10px]">
       {/* SVG 차트 */}
       <svg
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-        className="w-full block"
-        style={{ aspectRatio: `${CHART_W}/${CHART_H}`, minHeight: '280px' }}
+        className="w-full block overflow-visible"
+        style={{ aspectRatio: `${CHART_W}/${CHART_H}` }}
       >
         {/* 밴드 영역 */}
         <path d={makeBand(chartData, 'p3', 'p15')} fill={BAND_COLORS.outer} />
@@ -156,7 +157,7 @@ export default function GrowthChart({
         <path d={makeBand(chartData, 'p50', 'p85')} fill={BAND_COLORS.inner} />
         <path d={makeBand(chartData, 'p85', 'p97')} fill={BAND_COLORS.outer} />
 
-        {/* 그리드 가로선 */}
+        {/* 그리드 가로선 — gray200 2px 점선 */}
         {yTicks.map((v) => (
           <line
             key={v}
@@ -164,9 +165,9 @@ export default function GrowthChart({
             y1={toY(v)}
             x2={CHART_W - PAD_R}
             y2={toY(v)}
-            stroke="#e2e8f0"
-            strokeWidth={0.6}
-            strokeDasharray="3,3"
+            stroke="#EEF0F1"
+            strokeWidth={1}
+            strokeDasharray="2,2"
           />
         ))}
 
@@ -205,67 +206,35 @@ export default function GrowthChart({
           );
         })}
 
-        {/* 백분위수 라벨 (오른쪽 끝) */}
-        {(['p3', 'p50', 'p97'] as const).map((key) => {
-          const lastData = chartData.find((d) => d.month === maxMonth);
-          if (!lastData) return null;
-          const label = key === 'p3' ? '3' : key === 'p50' ? '50' : '97';
-          return (
-            <text
-              key={key}
-              x={CHART_W - PAD_R + 4}
-              y={toY(lastData.percentiles[key]) + 3}
-              fontSize={10}
-              fill="#BBC0C5"
-            >
-              {label}
-            </text>
-          );
-        })}
-
-        {/* X축 라벨 (X축 선에서 6px 아래) */}
+        {/* X축 라벨 (X축 선에서 10px 아래) — 양 끝은 차트 밖으로 나가지 않게 안쪽으로 붙인다 */}
         {xTicks.map((m, i) => (
           <text
             key={m}
             x={toX(m)}
-            y={CHART_H - PAD_B + 6}
-            textAnchor={i === 0 ? 'start' : 'middle'}
+            y={CHART_H - PAD_B + 10}
+            textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
             dominantBaseline="hanging"
             fontSize={10}
             fill="#BBC0C5"
           >
-            {i === 0 ? `${m}개월` : m}
+            {m}
           </text>
         ))}
 
-        {/* Y축 라벨 (Y축 선에서 좌측 10px) */}
-        {yTicks.map((v, idx) => {
-          const isHighest = idx === yTicks.length - 1;
-          return (
-            <g key={v}>
-              <text
-                x={PAD_L - 10}
-                y={toY(v) + 3}
-                textAnchor="end"
-                fontSize={10}
-                fill="#BBC0C5"
-              >
-                {v}
-              </text>
-              {isHighest && (
-                <text
-                  x={PAD_L - 10}
-                  y={toY(v) + 14}
-                  textAnchor="end"
-                  fontSize={10}
-                  fill="#BBC0C5"
-                >
-                  {standard.unit}
-                </text>
-              )}
-            </g>
-          );
-        })}
+        {/* Y축 라벨 — 축 왼쪽 칸(25px)에 가운데 정렬 */}
+        {yTicks.map((v) => (
+          <text
+            key={v}
+            x={(PAD_L - 5) / 2}
+            y={toY(v)}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={10}
+            fill="#BBC0C5"
+          >
+            {v}
+          </text>
+        ))}
 
         {/* 아기 데이터 라인 */}
         {childPath && (
@@ -300,24 +269,21 @@ export default function GrowthChart({
         ))}
       </svg>
 
-      {/* 범례 */}
-      <div className="flex items-center justify-center gap-4 mt-6">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 flex items-center">
-            <div className="w-full h-0.5 bg-primary-500 rounded" />
-          </div>
-          <span className="text-[10px] font-normal text-black">50백분위수</span>
+      {/* 범례 — 오른쪽 정렬 */}
+      <div className="flex items-center justify-center gap-[16px]">
+        <div className="flex items-center gap-[4px]">
+          <span className="w-[10px] h-[2px] bg-[#3078C9]" aria-hidden />
+          <span className="text-[12px] leading-none text-[#121212]">50백분위수</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full border-2 border-primary-500 bg-white" />
-          <span className="text-[10px] font-normal text-black">우리 아기</span>
+        <div className="flex items-center gap-[4px]">
+          <span className="size-[10px] rounded-full border-2 border-[#3078C9] bg-[#FDFDFE]" aria-hidden />
+          <span className="text-[12px] leading-none text-[#121212]">내 아기</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-[2px]" style={{ background: BAND_COLORS.inner }} />
-          <span className="text-[10px] font-normal text-black">정상 범위</span>
+        <div className="flex items-center gap-[4px]">
+          <span className="size-[10px]" style={{ background: BAND_COLORS.inner }} aria-hidden />
+          <span className="text-[12px] leading-none text-[#121212]">정상 범위</span>
         </div>
       </div>
-
     </div>
   );
 }

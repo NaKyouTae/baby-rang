@@ -13,6 +13,7 @@ import {
   isNaverNativeLoginAvailable,
   runNaverNativeLogin,
 } from '@/lib/naverNativeLogin';
+import Loading from '@/components/Loading';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
@@ -130,7 +131,7 @@ export default function AdditionalInfoClient() {
   if (!isLoaded) {
     return (
       <div className="flex flex-1 items-center justify-center min-h-dvh">
-        <p className="text-sm text-gray-400">불러오는 중</p>
+        <Loading className="text-gray-400" />
       </div>
     );
   }
@@ -140,7 +141,7 @@ export default function AdditionalInfoClient() {
       className="flex flex-col bg-white min-h-dvh px-6"
       style={{
         paddingTop: 'calc(var(--safe-area-top) + 40px)',
-        paddingBottom: 'calc(var(--safe-area-bottom) + 24px)',
+        paddingBottom: 'calc(var(--bottom-nav-space) + 24px)',
       }}
     >
       <h1 className="text-[18px] font-medium text-black leading-relaxed">

@@ -100,6 +100,15 @@ export async function fetchAndroidProduct(
   return res.products?.find((p) => p.itemId === sku) ?? null;
 }
 
+/** 여러 상품을 한 번에 조회한다. 조회되지 않은 상품은 빠진다. */
+export async function fetchAndroidProducts(
+  skus: string[],
+): Promise<AndroidItem[]> {
+  const res = await call("billingProducts", { productIds: skus });
+  if (!res.ok) return [];
+  return (res.products ?? []).filter((p) => skus.includes(p.itemId));
+}
+
 /**
  * 결제 시트를 띄우고 구매 토큰을 돌려준다.
  * 사용자가 취소하면 null 을 돌려준다(에러가 아니다).

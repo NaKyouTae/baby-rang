@@ -9,6 +9,8 @@ import type { AuthUser } from './useAuth';
 // --- localStorage 지속 (콜드 스타트 stale-while-revalidate용) ---
 const AUTH_LS_KEY = 'baby-rang:auth';
 const CHILDREN_LS_KEY = 'baby-rang:children';
+// 홈 기록 버튼 구성. 저장은 홈 화면(HomeClient)이 하고, 여기서는 로그아웃 때 지우기만 한다.
+const HOME_MENU_LS_KEY = 'babyrang.home.menu';
 
 function lsRead<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
@@ -70,6 +72,8 @@ export function clearAuthCaches() {
     try {
       window.localStorage.removeItem(AUTH_LS_KEY);
       window.localStorage.removeItem(CHILDREN_LS_KEY);
+      // 홈 기록 버튼 구성도 계정마다 다르다. 남겨 두면 다음 계정이 그대로 물려받는다.
+      window.localStorage.removeItem(HOME_MENU_LS_KEY);
     } catch {
       /* ignore */
     }

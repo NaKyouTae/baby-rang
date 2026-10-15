@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { isAppOverlayOpen, subscribeAppOverlay } from "./appOverlay";
 
-/** BottomNav 가 비워 두는 앱 배너 슬롯의 DOM id. */
+/** BottomAdBar 가 비워 두는 앱 배너 슬롯의 DOM id. */
 export const APP_AD_SLOT_ID = "app-ad-slot";
 
 type MessageHandler = { postMessage: (body: unknown) => void };

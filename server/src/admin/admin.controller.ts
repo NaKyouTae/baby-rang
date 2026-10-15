@@ -12,6 +12,7 @@ import {
   UseGuards,
   UseInterceptors,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AgeGroup, TestType } from '@prisma/client';
@@ -153,7 +154,7 @@ export class AdminController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadRoomItemSprite(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('파일이 필요합니다.');
-    const url = await this.storage.upload(file, 'room-items');
+    const url = await this.storage.uploadSprite(file.buffer, 'room-items');
     return { url };
   }
 
@@ -474,12 +475,9 @@ export class AdminController {
   // 여기서는 아이템을 지우지 말고 isActive 를 끈다 — 지우면 이미 배치된 방이 깨진다.
   @Get('room-items')
   async listRoomItems() {
+    // 앱 꾸미기 화면과 같은 순서 — 같은 분류 안에서는 나중에 등록한 것이 먼저
     const items = await this.prisma.roomItem.findMany({
-      orderBy: [
-        { category: 'asc' },
-        { sortOrder: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ category: 'asc' }, { createdAt: 'desc' }],
     });
     return { items };
   }
@@ -495,14 +493,10 @@ export class AdminController {
         surface: body.surface ?? 'FLOOR',
         tileW: body.tileW ?? 1,
         tileH: body.tileH ?? 1,
-        spriteLiftY: body.spriteLiftY ?? 0,
-        directions: body.directions?.length ? body.directions : ['SOUTH'],
-        flippable: body.flippable ?? false,
-        canStack: body.canStack ?? false,
+        affordances: body.affordances ?? [],
         dynamicSlot: body.dynamicSlot || null,
         imageUrl: body.imageUrl ?? null,
-        unlock: body.unlock ?? 'FREE',
-        priceCoins: body.priceCoins ?? null,
+        priceCoins: body.priceCoins ?? 0,
         sortOrder: body.sortOrder ?? 0,
         isActive: body.isActive ?? true,
       },
@@ -522,18 +516,16 @@ export class AdminController {
         ...(body.surface !== undefined && { surface: body.surface }),
         ...(body.tileW !== undefined && { tileW: body.tileW }),
         ...(body.tileH !== undefined && { tileH: body.tileH }),
-        ...(body.spriteLiftY !== undefined && {
-          spriteLiftY: body.spriteLiftY,
+        ...(body.affordances !== undefined && {
+          affordances: body.affordances,
         }),
-        ...(body.directions !== undefined && { directions: body.directions }),
-        ...(body.flippable !== undefined && { flippable: body.flippable }),
-        ...(body.canStack !== undefined && { canStack: body.canStack }),
         ...(body.dynamicSlot !== undefined && {
           dynamicSlot: body.dynamicSlot || null,
         }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
-        ...(body.unlock !== undefined && { unlock: body.unlock }),
-        ...(body.priceCoins !== undefined && { priceCoins: body.priceCoins }),
+        ...(body.priceCoins !== undefined && {
+          priceCoins: body.priceCoins ?? 0,
+        }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
       },
@@ -554,6 +546,26 @@ export class AdminController {
 
   @Delete('room-items/:id')
   async deleteRoomItem(@Param('id') id: string) {
+    // 누군가 쓰고 있는 아이템을 지우면 방에서 가구가 사라지고 구매 기록도 함께 날아간다.
+    const [placed, owned, rooms] = await Promise.all([
+      this.prisma.roomPlacement.count({ where: { itemId: id } }),
+      this.prisma.roomItemOwnership.count({ where: { itemId: id } }),
+      this.prisma.room.count({
+        where: { OR: [{ wallpaperItemId: id }, { flooringItemId: id }] },
+      }),
+    ]);
+    if (placed || owned || rooms) {
+      const usage = [
+        placed && `${placed}개 배치`,
+        rooms && `${rooms}개 방 벽지·바닥`,
+        owned && `${owned}개 그룹 보유`,
+      ]
+        .filter(Boolean)
+        .join(', ');
+      throw new ConflictException(
+        `이미 사용 중인 아이템이라 삭제할 수 없습니다 (${usage}). 더 이상 보이지 않게 하려면 '노출'을 끄세요.`,
+      );
+    }
     await this.prisma.roomItem.delete({ where: { id } });
     return { ok: true };
   }

@@ -78,6 +78,36 @@ export default function WheelPickerModal({
     }, 90);
   };
 
+  // 마우스로 끌어서 돌리기.
+  // 터치는 브라우저 기본 스크롤이 그대로 처리하지만, 마우스는 스크롤 영역을
+  // 끌어도 아무 일이 없다(휠만 먹는다). PC 웹에서 "드래그가 안 된다"는 원인이 이것.
+  // 손을 떼면 scroll 이벤트가 onScroll 의 스냅으로 이어져 가장 가까운 칸에 맞춰진다.
+  const drag = useRef<{ y: number; top: number } | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const el = ref.current;
+    if (!el) return;
+    drag.current = { y: e.clientY, top: el.scrollTop };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!drag.current || !el) return;
+    el.scrollTop = drag.current.top - (e.clientY - drag.current.y);
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!drag.current) return;
+    drag.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    // 끌다가 칸 경계에서 정확히 멈추면 scroll 이벤트가 더 안 와서 스냅이 안 걸린다
+    onScroll();
+  };
+
   const handleConfirm = () => {
     // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
     // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
@@ -96,7 +126,7 @@ export default function WheelPickerModal({
   };
 
   return (
-    <BottomSheet
+    <BottomSheet pixel
       open={open}
       onClose={onClose}
       zIndex={80}
@@ -104,23 +134,28 @@ export default function WheelPickerModal({
       lockBodyScroll={false}
     >
       {title && (
-        <div className="px-5 pt-5 pb-2 text-sm font-semibold text-gray-700 text-center">
+        <div className="px-5 pt-5 pb-2 text-sm font-normal text-[#808991] text-center">
           {title}
         </div>
       )}
-      <div className="bg-white px-5 pt-4">
+      <div className="bg-[#FDFDFE] px-5 pt-4">
         {/* 인디케이터 기준 컨테이너 = 스크롤 영역과 동일 높이(패딩 제외)로 두어
             선택 박스 중앙과 선택된 숫자 중앙이 정확히 일치하도록 한다. */}
         <div className="relative" style={{ height: HEIGHT }}>
           <div
-            className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-gray-100 rounded-[8px]"
+            className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-[#F7F8F9] rounded-[4px]"
             style={{ height: ITEM_H }}
           />
           <div
             ref={ref}
             onScroll={onScroll}
-            className="overflow-y-auto scrollbar-hide relative"
-            style={{ height: HEIGHT, scrollBehavior: 'auto' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            className="overflow-y-auto scrollbar-hide relative cursor-grab active:cursor-grabbing"
+            // 끝까지 돌린 뒤 더 밀어도 뒤의 기록 시트가 따라 스크롤되지 않게 막는다
+            style={{ height: HEIGHT, scrollBehavior: 'auto', overscrollBehavior: 'contain' }}
           >
             <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
               {items.map((v, i) => {
@@ -130,8 +165,8 @@ export default function WheelPickerModal({
                   key={i}
                   className={`flex items-center justify-center tabular-nums select-none transition-colors ${
                     selected
-                      ? 'text-black font-bold text-xl'
-                      : 'text-gray-400 text-base'
+                      ? 'text-[#121212] font-normal text-xl'
+                      : 'text-[#BBC0C5] text-base'
                   }`}
                   style={{ height: ITEM_H }}
                 >
@@ -151,14 +186,14 @@ export default function WheelPickerModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
         >
           취소
         </button>
         <button
           type="button"
           onClick={handleConfirm}
-          className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90"
+          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px disabled:opacity-60"
         >
           확인
         </button>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchAndroidProduct,
+  fetchAndroidProducts,
   isAndroidBillingAvailable,
   purchaseWithAndroid,
 } from "./androidBilling";
@@ -142,6 +143,66 @@ export function usePlayProduct(sku: string): PlayProductState {
   }, [sku]);
 
   return state;
+}
+
+export type PlayProductsState =
+  | { status: "loading" }
+  | { status: "unavailable" }
+  | { status: "ready"; items: Map<string, ItemDetails> };
+
+/**
+ * 여러 상품을 한 번에 미리 받아둔다. 보석 충전처럼 묶음이 여럿일 때 쓴다.
+ *
+ * usePlayProduct 와 달리 itemId 가 sku 와 다른 상품은 짝을 지을 수 없어 뺀다.
+ * 빠진 상품은 결제 버튼을 띄우지 않는다 — 눌러도 다른 상품이 결제될 수 있다.
+ */
+export function usePlayProducts(skus: string[]): PlayProductsState {
+  const key = skus.join(",");
+  // 조회 대상이 바뀌면 이전 결과를 쓰지 않도록 어떤 목록의 결과인지 함께 둔다.
+  const [state, setState] = useState<{ key: string; value: PlayProductsState }>({
+    key: "",
+    value: { status: "loading" },
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const list = key ? key.split(",") : [];
+    const done = (value: PlayProductsState) => {
+      if (!cancelled) setState({ key, value });
+    };
+    void (async () => {
+      if (!list.length || !PLAY_BILLING_ENABLED) return done({ status: "unavailable" });
+
+      // 네이티브 앱이면 Play Billing 브리지를 쓴다. TWA 는 Digital Goods 로 간다.
+      if (isAndroidBillingAvailable()) {
+        const found = await fetchAndroidProducts(list).catch(() => []);
+        const items = new Map(
+          found.map((i) => [
+            i.itemId,
+            { itemId: i.itemId, title: i.title, price: { currency: i.currency, value: i.value } },
+          ]),
+        );
+        return done(items.size ? { status: "ready", items } : { status: "unavailable" });
+      }
+
+      const service = await getPlayBillingService();
+      if (!service) return done({ status: "unavailable" });
+      try {
+        const details = await service.getDetails(list);
+        const items = new Map(
+          details.filter((d) => list.includes(d.itemId)).map((d) => [d.itemId, d]),
+        );
+        done(items.size ? { status: "ready", items } : { status: "unavailable" });
+      } catch {
+        done({ status: "unavailable" });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  return state.key === key ? state.value : { status: "loading" };
 }
 
 /**

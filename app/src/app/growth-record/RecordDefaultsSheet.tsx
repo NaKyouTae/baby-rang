@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import BottomSheet from '@/components/BottomSheet';
+import { useAppOverlayLock } from '@/components/ads/appOverlay';
+import { PIXEL_FONT } from './pixelUi';
 import {
   BabyFoodUnit,
   DiaperKind,
@@ -24,7 +25,7 @@ interface Props {
 
 const TITLE: Record<RecordDefaultsMode, string> = {
   babyfood: '이유식 기본 단위 설정',
-  sleepNight: '밤잠 기록 시간 설정',
+  sleepNight: '밤잠 시간 설정',
   diaper: '기저귀 기본 타입 설정',
 };
 
@@ -38,7 +39,7 @@ function SegmentedGroup<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex rounded-[4px] border border-gray-200 overflow-hidden">
+    <div className="flex rounded-[4px] border border-[#808991] overflow-hidden">
       {options.map((o, idx) => {
         const active = value === o.value;
         return (
@@ -46,9 +47,13 @@ function SegmentedGroup<T extends string>({
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className={`flex-1 py-3 text-sm font-normal text-gray-600 transition ${
-              idx > 0 ? 'border-l border-gray-200' : ''
-            } ${active ? 'bg-primary-500/10' : 'bg-white active:bg-gray-50'}`}
+            className={`flex-1 min-w-0 h-[50px] px-[10px] text-[16px] leading-none transition ${
+              idx > 0 ? 'border-l border-[#808991]' : ''
+            } ${
+              active
+                ? 'bg-[#2C2C2C] text-[#FDFDFE]'
+                : 'bg-[#FDFDFE] text-[#808991] active:bg-[#F7F8F9]'
+            }`}
           >
             {o.label}
           </button>
@@ -77,28 +82,37 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
     onClose();
   }
 
+  // 기록 시트 위에 뜨는 가운데 설정 모달(Figma 기록 > 수면/기저귀 > 설정)
+  useAppOverlayLock(true);
+  const label = 'text-[14px] leading-[1.4] text-[#808991]';
+  const timeInput =
+    'w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] leading-none text-[#121212] tabular-nums';
+
   return (
-    <BottomSheet open onClose={onClose} zIndex={80} variant="sheet" ariaLabel={TITLE[mode]}>
-        <div className="flex items-center justify-between px-4 pt-4 pb-3">
-          <h2 className="text-base font-medium text-app-black">{TITLE[mode]}</h2>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 -mr-2 flex items-center justify-center text-gray-400 active:text-gray-600"
-            aria-label="닫기"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center px-[20px]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={TITLE[mode]}
+      style={{ fontFamily: PIXEL_FONT }}
+    >
+      <button
+        type="button"
+        aria-label="닫기"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/50"
+      />
+      <div className="relative w-full max-w-[350px] bg-[#FDFDFE] rounded-[16px] p-[20px] flex flex-col gap-[24px]">
+        <div className="py-[8px]">
+          <h2 className="text-center text-[16px] leading-none font-normal text-[#121212]">
+            {TITLE[mode]}
+          </h2>
         </div>
 
-        <div className="overflow-y-auto px-4 py-2 space-y-3">
+        <div className="flex flex-col gap-[10px]">
           {mode === 'babyfood' && (
-            <div>
-              <div className="flex items-baseline mb-2">
-                <span className="text-xs font-medium text-gray-500">단위</span>
-              </div>
+            <div className="flex flex-col gap-[8px]">
+              <span className={label}>단위</span>
               <SegmentedGroup<BabyFoodUnit>
                 value={unit}
                 onChange={setUnit}
@@ -111,10 +125,8 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
           )}
 
           {mode === 'diaper' && (
-            <div>
-              <div className="flex items-baseline mb-2">
-                <span className="text-xs font-medium text-gray-500">타입</span>
-              </div>
+            <div className="flex flex-col gap-[8px]">
+              <span className={label}>타입</span>
               <SegmentedGroup<DiaperKind>
                 value={diaper}
                 onChange={setDiaper}
@@ -129,55 +141,49 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
 
           {mode === 'sleepNight' && (
             <>
-              <div>
-                <div className="flex items-baseline mb-2">
-                  <span className="text-xs font-medium text-gray-500">시작시간</span>
-                </div>
+              <div className="flex flex-col gap-[8px]">
+                <span className={label}>시작시간</span>
                 <input
                   type="time"
                   value={range.start}
                   onChange={(e) =>
                     setRange((prev) => ({ ...prev, start: e.target.value }))
                   }
-                  className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-sm font-normal text-app-black tabular-nums"
+                  className={timeInput}
                 />
               </div>
-              <div>
-                <div className="flex items-baseline mb-2">
-                  <span className="text-xs font-medium text-gray-500">종료시간</span>
-                </div>
+              <div className="flex flex-col gap-[8px]">
+                <span className={label}>종료시간</span>
                 <input
                   type="time"
                   value={range.end}
                   onChange={(e) =>
                     setRange((prev) => ({ ...prev, end: e.target.value }))
                   }
-                  className="w-full px-3 py-3 rounded-[4px] border border-gray-200 bg-white text-sm font-normal text-app-black tabular-nums"
+                  className={timeInput}
                 />
               </div>
             </>
           )}
         </div>
 
-        <div
-          className="px-4 pt-2 flex gap-[10px]"
-          style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
-        >
+        <div className="flex gap-[10px]">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-12 rounded-[4px] bg-gray-200 text-gray-600 text-sm font-semibold active:bg-gray-300"
+            className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
           >
             취소
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 h-12 rounded-[4px] bg-primary-500 text-white text-sm font-semibold active:bg-primary-600"
+            className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px"
           >
             저장하기
           </button>
         </div>
-    </BottomSheet>
+      </div>
+    </div>
   );
 }

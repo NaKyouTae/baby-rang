@@ -27,13 +27,15 @@ final class KakaoLoginBridge {
 
     static let handlerName = "kakaoLogin"
 
-    /// 서버가 요구하는 동의항목. 하나라도 비어 있으면 추가 동의를 요청한다.
-    /// (선택 항목인 성별도 함께 묻되, 거절해도 로그인은 계속된다)
+    /// 다시 묻는 동의항목은 **필수 항목만**이다.
     ///
-    /// ⚠️ 연령대(age_range)는 카카오 콘솔에서 '사용 안 함'이라 뺐다. 콘솔에 없는 항목을
-    ///    scope 로 보내면 로그인 전체가 KOE205 로 막힌다. 콘솔에서 켜는 날 다시 넣는다.
-    private static let requiredScopes = ["name", "phone_number"]
-    private static let optionalScopes = ["gender"]
+    /// 선택 항목(연령대)은 최초 동의 화면에서 한 번 묻고 끝낸다. 거절한 사용자에게
+    /// 매 로그인마다 같은 화면을 띄우면, 선택이라고 해놓고 계속 조르는 꼴이 된다.
+    /// 동의한 사용자의 값은 어차피 정상 수집되므로 재요청할 이유도 없다.
+    ///
+    /// ⚠️ 여기 적은 값은 카카오 콘솔의 동의항목과 반드시 일치해야 한다.
+    ///    콘솔에서 '사용 안 함'인 항목을 scope 로 보내면 로그인 전체가 KOE205 로 막힌다.
+    private static let requiredScopes = ["name", "phone_number", "gender"]
 
     func handle(_ message: WKScriptMessage) {
         let body = message.body as? [String: Any] ?? [:]
@@ -53,9 +55,19 @@ final class KakaoLoginBridge {
                 : loginWithKakaoAccount()
 
             // 아직 동의받지 못한 항목이 있으면 그 항목만 다시 묻는다.
+            //
+            // ⚠️ 여기서 실패해도 로그인을 깨뜨리면 안 된다. 본 로그인은 이미 끝났고
+            //    이건 덤으로 더 받아보는 단계다. 카카오톡에서 막 돌아온 직후에
+            //    또 다른 인증 세션을 띄우는 흐름이라 실패(.IllegalState 등)가 잦은데,
+            //    그걸 로그인 실패로 올려보내면 사용자는 영문 SDK 오류만 보게 된다.
+            //    (Android 쪽은 처음부터 이렇게 되어 있었다 — KakaoLoginManager 참고)
             let missing = await missingScopes()
             if !missing.isEmpty {
-                token = try await loginWithKakaoAccount(scopes: missing)
+                do {
+                    token = try await loginWithKakaoAccount(scopes: missing)
+                } catch {
+                    print("[kakao] 추가 동의 실패, 기존 토큰으로 진행: \(describe(error))")
+                }
             }
 
             reply(requestId, ["ok": true, "accessToken": token.accessToken])
@@ -64,7 +76,35 @@ final class KakaoLoginBridge {
                 reply(requestId, ["ok": false, "cancelled": true])
                 return
             }
-            reply(requestId, ["ok": false, "message": error.localizedDescription])
+            reply(requestId, [
+                "ok": false,
+                "message": "로그인을 완료하지 못했습니다.",
+                // localizedDescription 은 SdkError 에서 "error 0" 같은 숫자만 내놓아
+                // 원인을 알 수 없다. 실제 reason 을 꺼내 로그로 넘긴다.
+                "detail": describe(error),
+            ])
+        }
+    }
+
+    /// SdkError 의 실제 원인을 문자열로 꺼낸다.
+    ///
+    /// SdkError 는 Swift enum 이라 NSError 로 bridge 되면서
+    /// "The operation couldn't be completed. (KakaoSDKCommon.SdkError error 0.)" 처럼
+    /// 쓸모없는 설명만 남는다. 어느 단계가 왜 실패했는지 알려면 직접 풀어야 한다.
+    private func describe(_ error: Error) -> String {
+        guard let sdkError = error as? SdkError else {
+            return error.localizedDescription
+        }
+        switch sdkError {
+        case .ClientFailed(let reason, let message):
+            return "ClientFailed(\(reason)) \(message ?? "")"
+        case .ApiFailed(let reason, let info):
+            return "ApiFailed(\(reason)) \(info?.msg ?? "")"
+        case .AuthFailed(let reason, let info):
+            return "AuthFailed(\(reason)) \(info?.errorDescription ?? "")"
+        @unknown default:
+            // SDK 가 케이스를 늘려도 빌드가 깨지지 않게 둔다.
+            return error.localizedDescription
         }
     }
 
@@ -93,9 +133,8 @@ final class KakaoLoginBridge {
         if account.nameNeedsAgreement == true { scopes.append("name") }
         if account.phoneNumberNeedsAgreement == true { scopes.append("phone_number") }
         if account.genderNeedsAgreement == true { scopes.append("gender") }
-        return scopes.filter {
-            Self.requiredScopes.contains($0) || Self.optionalScopes.contains($0)
-        }
+        // 연령대(age_range)는 선택 항목이라 여기서 다시 묻지 않는다.
+        return scopes.filter { Self.requiredScopes.contains($0) }
     }
 
     private func me() async throws -> User? {

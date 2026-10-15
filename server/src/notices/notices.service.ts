@@ -35,6 +35,15 @@ export class NoticesService {
     });
   }
 
+  /** 공지 목록은 공용 캐시라 읽음 여부를 못 싣는다 — 읽은 id 만 따로 준다. */
+  async findReadIds(userId: string): Promise<string[]> {
+    const rows = await this.prisma.noticeRead.findMany({
+      where: { userId, notice: { isPublished: true } },
+      select: { noticeId: true },
+    });
+    return rows.map((r) => r.noticeId);
+  }
+
   async hasUnread(userId: string): Promise<boolean> {
     // 독립적인 두 COUNT를 병렬 실행 (홈 진입마다 호출됨)
     const [totalPublished, totalRead] = await Promise.all([

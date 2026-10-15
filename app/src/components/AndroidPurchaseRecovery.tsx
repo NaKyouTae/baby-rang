@@ -54,7 +54,11 @@ export default function AndroidPurchaseRecovery() {
             productId: match.productId,
             purchaseToken: match.purchaseToken,
             productType: pending.productType,
-            productMeta: { submissionId: pending.submissionId },
+            // 보석 충전은 아이로 가족을 찾아 적립한다. 리포트는 검사 결과를 연다.
+            childId: pending.childId,
+            productMeta: pending.submissionId
+              ? { submissionId: pending.submissionId }
+              : undefined,
           }),
         });
         const data = (await res.json().catch(() => ({}))) as {
@@ -62,7 +66,10 @@ export default function AndroidPurchaseRecovery() {
         };
         if (!res.ok || !data.orderId) return;
 
-        await unlockResult(pending.submissionId, data.orderId);
+        // 보석은 결제가 저장되면 잔액을 읽을 때 서버가 적립한다. 따로 열 것이 없다.
+        if (pending.submissionId) {
+          await unlockResult(pending.submissionId, data.orderId);
+        }
         clearPendingPurchase();
       } catch {
         // 네트워크 오류 등은 조용히 둔다. 구매가 Play 에 남아 있으므로

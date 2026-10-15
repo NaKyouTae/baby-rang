@@ -20,12 +20,15 @@ export function WheelColumn({
   onChange,
   suffix,
   circular = false,
+  width = 68,
 }: {
   items: number[];
   selectedIndex: number;
   onChange: (index: number) => void;
   suffix: string;
   circular?: boolean;
+  /** 칸 너비. 글꼴이 넓으면(픽셀 폰트 등) 네 자리 연도가 줄바꿈되므로 연도 칸은 넓게 준다. */
+  width?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -156,7 +159,7 @@ export function WheelColumn({
   return (
     <div
       className="relative overflow-hidden select-none cursor-grab active:cursor-grabbing"
-      style={{ width: 68, height: SLOT * VISIBLE_COUNT - ITEM_GAP }}
+      style={{ width, height: SLOT * VISIBLE_COUNT - ITEM_GAP }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -172,7 +175,7 @@ export function WheelColumn({
           return (
             <div
               key={i}
-              className="flex items-center justify-center"
+              className="flex items-center justify-center whitespace-nowrap tabular-nums"
               style={{
                 height: ITEM_HEIGHT,
                 marginBottom: ITEM_GAP,
@@ -284,6 +287,7 @@ export default function WheelDatePickerModal({
             selectedIndex={yearIndex >= 0 ? yearIndex : 0}
             onChange={(i) => setYear(years[i])}
             suffix="년"
+            width={96}
           />
           <WheelColumn
             items={months}

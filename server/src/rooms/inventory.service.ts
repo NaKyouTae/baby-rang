@@ -135,10 +135,10 @@ export class InventoryService {
     if (!item || !item.isActive) {
       throw new NotFoundException('판매 중인 아이템이 아닙니다.');
     }
-    if (item.unlock === 'FREE') {
+    const price = item.priceCoins;
+    if (price <= 0) {
       throw new BadRequestException('무료 아이템이라 구매할 필요가 없습니다.');
     }
-    const price = item.priceCoins ?? 0;
 
     return this.prisma.$transaction(async (tx) => {
       const already = await tx.roomItemOwnership.findUnique({
@@ -161,13 +161,11 @@ export class InventoryService {
         select: { coins: true },
       });
       await tx.roomItemOwnership.create({
-        data: { groupId, itemId, source: item.unlock, pricePaid: price },
+        data: { groupId, itemId, pricePaid: price },
       });
-      if (price > 0) {
-        await tx.coinLedger.create({
-          data: { groupId, delta: -price, reason: 'SPEND', itemId },
-        });
-      }
+      await tx.coinLedger.create({
+        data: { groupId, delta: -price, reason: 'SPEND', itemId },
+      });
 
       const owned = await tx.roomItemOwnership.findMany({
         where: { groupId },

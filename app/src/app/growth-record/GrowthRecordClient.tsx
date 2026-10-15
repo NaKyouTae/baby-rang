@@ -1,9 +1,7 @@
 'use client';
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useSelectedChild } from '@/hooks/useChildren';
-import NoChildCard from '@/components/NoChildCard';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import {
   MENU_TYPES,
@@ -13,6 +11,7 @@ import {
   RECORD_ICONS,
   CATEGORY_STYLE,
   summarizeRecord,
+  recordTitle,
 } from './types';
 import EntrySheet from './EntrySheet';
 import QuickTypeSettingsSheet from './QuickTypeSettingsSheet';
@@ -24,23 +23,20 @@ import {
   buildDefaultRecordData,
 } from './recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
-import ChildSelector from '@/components/ChildSelector';
 import DatePickerModal from '@/components/DatePickerModal';
-import ConfirmModal from '@/components/ConfirmModal';
-import PageHeader from '@/components/PageHeader';
+import ConfirmModal from '../home/_components/ConfirmModal';
+import Loading from '@/components/Loading';
+import PixelTabBar, { TAB_BAR_HEIGHT } from '../home/_components/PixelTabBar';
+import { useLockAppScroll } from '@/hooks/useLockAppScroll';
+import ChildSwitcher from '../home/_components/ChildSwitcher';
+import { calcChildAge } from '@/lib/childAge';
+import { groupTwins } from '@/lib/twins';
+import { BOX, NoChildBox, PIXEL_FONT, PIXEL_FONT_HREF, RECORD_EMOJI } from './pixelUi';
 
-const SWIPE_DELETE_WIDTH = 59;
+// 삭제 버튼은 기록 행 높이만큼 정사각형(Figma 66px)
+const SWIPE_DELETE_WIDTH = 66;
 const SWIPE_OPEN_THRESHOLD = 30;
 
-/**
- * 실제 스크롤을 담당하는 엘리먼트.
- * 앱 셸(layout.tsx)이 fixed 라서 window 는 절대 스크롤되지 않는다.
- * (window.scrollY 는 항상 0 → 최상단 판정에 쓰면 안 됨)
- */
-function getScroller(): HTMLElement | null {
-  if (typeof document === 'undefined') return null;
-  return document.getElementById('app-scroll-container');
-}
 
 function SwipeableRow({
   open,
@@ -147,7 +143,7 @@ function SwipeableRow({
     <div
       data-swipe-row
       data-row-id={rowId}
-      className={`relative overflow-hidden bg-white border-b border-dotted border-gray-200 ${
+      className={`relative overflow-hidden bg-[#FDFDFE] border-b border-[#121212] ${
         isLast ? 'border-b-0' : ''
       }`}
     >
@@ -161,21 +157,14 @@ function SwipeableRow({
           aria-label="삭제"
           tabIndex={open ? 0 : -1}
           style={{ width: SWIPE_DELETE_WIDTH }}
-          className="absolute top-0 right-0 bottom-0 bg-red-500 active:bg-red-600 flex items-center justify-center"
+          className="absolute top-0 right-0 bottom-0 bg-[#FF4040] border-l border-[#121212] active:opacity-80 flex items-center justify-center"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icon-trash.svg"
-            alt=""
-            width={24}
-            height={24}
-            aria-hidden="true"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
+          <img src="/icons/trash.svg" alt="" width={24} height={24} aria-hidden="true" />
         </button>
       )}
       <div
-        className={`relative bg-white select-none ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
+        className={`relative bg-[#FDFDFE] select-none ${dragging ? '' : 'transition-transform duration-200 ease-out'}`}
         style={{
           transform: `translateX(${offset}px)`,
           touchAction: 'pan-y',
@@ -193,27 +182,16 @@ function SwipeableRow({
   );
 }
 
+/** 앱 공통 로딩 아이콘(components/Loading)을 이 화면 색으로 */
 function Spinner({ size = 24 }: { size?: number }) {
-  return (
-    <span
-      role="status"
-      aria-label="불러오는 중"
-      className="inline-block border-2 border-primary-500 border-t-transparent rounded-full animate-spin"
-      style={{ width: size, height: size }}
-    />
-  );
+  return <Loading size={size} className="text-[#808991]" />;
 }
 
 /** 기록 리스트가 도착하기 전 표시 — 하단 더보기 로딩과 동일한 형태 */
-function ListLoading({ label = '불러오는 중...' }: { label?: string }) {
+function ListLoading() {
   return (
-    <div
-      className="py-16 flex flex-col items-center justify-center gap-2"
-      role="status"
-      aria-live="polite"
-    >
+    <div className="py-16 flex items-center justify-center" aria-live="polite">
       <Spinner size={22} />
-      <span className="text-xs text-gray-400">{label}</span>
     </div>
   );
 }
@@ -262,13 +240,6 @@ function dayOfLife(birthDate: string, date: string): number {
   const diff = Math.floor((target.getTime() - birth.getTime()) / 86400000);
   return Math.max(1, diff + 1);
 }
-
-const FEEDING_TYPES: GrowthType[] = [
-  'BREASTFEEDING',
-  'FORMULA',
-  'PUMPED_FEEDING',
-  'MILK',
-];
 
 function formatDuration(mins: number): string {
   if (mins <= 0) return '0분';
@@ -379,31 +350,136 @@ function formatBabyFoodAmount(stats: {
   return `0${stats.babyFoodUnit ?? 'ml'}`;
 }
 
-// timeOf: 어떤 시각을 "마지막" 기준으로 삼을지 결정. 수유·기저귀는 시작(startAt),
-// 수면은 종료(endAt, 진행 중이면 startAt) 기준.
-function findLatestByTypes(
-  days: { date: string; records: GrowthRecord[] }[],
-  types: GrowthType[],
-  timeOf: (r: GrowthRecord) => string = (r) => r.startAt,
-): GrowthRecord | null {
-  let latest: GrowthRecord | null = null;
-  for (const g of days) {
-    for (const r of g.records) {
-      if (!types.includes(r.type)) continue;
-      if (!latest || new Date(timeOf(r)).getTime() > new Date(timeOf(latest)).getTime()) {
-        latest = r;
-      }
-    }
+type DayStats = ReturnType<typeof computeDayStats>;
+
+// 하루 수유 합계 — "모유 10분 + 총 890ml(분유 210 + 이유식 180)" 처럼 카테고리 색으로 나눠 보여준다.
+// 기록이 없으면 0ml.
+function FeedingStat({ stats }: { stats: DayStats }) {
+  const breakdown: ReactNode[] = [];
+  const pushBreakdown = (key: string, color: string, text: string) => {
+    if (breakdown.length > 0) breakdown.push(<span key={`${key}-sep`}>+</span>);
+    breakdown.push(
+      <span key={key} style={{ color }}>
+        {text}
+      </span>,
+    );
+  };
+  if (stats.formulaMl > 0) {
+    pushBreakdown('formula', CATEGORY_STYLE.FORMULA.border, String(stats.formulaMl));
   }
-  return latest;
+  if (stats.pumpedMl > 0) {
+    pushBreakdown('pumped', CATEGORY_STYLE.PUMPED_FEEDING.border, String(stats.pumpedMl));
+  }
+  // 이유식은 단위가 ml/g 로 갈리므로 숫자에 단위를 붙이고, 기록만 있고 양이 없으면 0 으로 표시한다.
+  if (stats.babyFoodCount > 0) {
+    pushBreakdown('babyFood', CATEGORY_STYLE.BABY_FOOD.border, formatBabyFoodAmount(stats));
+  }
+  // 총 수유량에는 이유식도 합산한다. 이유식 g 은 ml 과 더할 수 없어 "250ml+30g" 처럼 뒤에 따로 붙인다.
+  const totalMl = stats.feedingMl + stats.babyFoodMl;
+  const totalParts: string[] = [];
+  if (
+    stats.bottleCount > 0 ||
+    stats.babyFoodMl > 0 ||
+    (stats.babyFoodCount > 0 && stats.babyFoodG === 0)
+  ) {
+    totalParts.push(`${totalMl}ml`);
+  }
+  if (stats.babyFoodG > 0) totalParts.push(`${stats.babyFoodG}g`);
+  const feedingTotal = totalParts.join('+');
+  const hasBreast = stats.breastMin > 0;
+  return (
+    <>
+      {hasBreast ? (
+        <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
+      ) : null}
+      {feedingTotal ? (
+        <>
+          {hasBreast ? '+' : ''}
+          {feedingTotal}
+          {breakdown.length > 0 ? <>({breakdown})</> : null}
+        </>
+      ) : null}
+      {!hasBreast && !feedingTotal ? '0ml' : null}
+    </>
+  );
 }
 
-function formatAgo(iso: string, nowMs: number): string {
-  const diffMin = Math.max(
-    0,
-    Math.floor((nowMs - new Date(iso).getTime()) / 60000),
+/** 날짜 머리 — 가운데 "< 10월 7일(수) >", 오른쪽 위 D+N(오늘이면 '오늘'), 아래 줄에 하루 합계. */
+function DayHeader({
+  date,
+  stats,
+  rightLabel,
+  canPrev,
+  canNext,
+  onPrev,
+  onNext,
+  onPickDate,
+}: {
+  date: string;
+  stats: DayStats;
+  rightLabel: string;
+  canPrev: boolean;
+  canNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onPickDate: () => void;
+}) {
+  return (
+    <div className="sticky top-0 z-10 h-[50px] bg-[#FDFDFE] border-b border-[#121212] flex flex-col items-center justify-center">
+      <span className="absolute right-[10px] top-[6px] text-[14px] leading-[1.4] text-[#121212] tabular-nums">
+        {rightLabel}
+      </span>
+      <div className="flex items-center gap-[10px]">
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={!canPrev}
+          aria-label="이전 날짜"
+          className="size-[24px] flex items-center justify-center disabled:opacity-30 active:translate-y-px"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/chevron-left.svg" alt="" width={24} height={24} className="block" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onPickDate}
+          aria-label="다른 날짜 선택"
+          className="text-[14px] leading-[1.4] text-[#121212]"
+        >
+          {formatHeaderDate(date)}
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canNext}
+          aria-label="다음 날짜"
+          className="size-[24px] flex items-center justify-center disabled:opacity-30 active:translate-y-px"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/chevron-right.svg" alt="" width={24} height={24} className="block" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="flex items-center gap-[10px] text-[10px] leading-none text-[#121212] tabular-nums">
+        <span className="flex items-center gap-[4px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/stat-sun.svg" alt="낮잠" width={16} height={16} className="block" />
+          <span>{formatDuration(stats.napMin)}</span>
+        </span>
+        <span className="flex items-center gap-[4px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/stat-moon.svg" alt="밤잠" width={16} height={16} className="block" />
+          <span>{formatDuration(stats.nightMin)}</span>
+        </span>
+        <span className="flex items-center gap-[4px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icons/stat-bottle.svg" alt="수유" width={16} height={16} className="block" />
+          <span>
+            <FeedingStat stats={stats} />
+          </span>
+        </span>
+      </div>
+    </div>
   );
-  return `${formatDuration(diffMin)} 전`;
 }
 
 const PAGE_SIZE = 30;
@@ -448,8 +524,22 @@ export default function GrowthRecordPage() {
   const [deleteTarget, setDeleteTarget] = useState<GrowthRecord | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingRef = useRef(false);
-  const titleBarRef = useRef<HTMLDivElement | null>(null);
-  const [titleBarH, setTitleBarH] = useState(84);
+  // 스크롤은 기록 리스트 상자 안에서만 일어난다(제목·아이 카드·기록 버튼은 고정).
+  // 당겨서 새로고침·스와이프 닫기·더 불러오기가 모두 이 요소를 기준으로 한다.
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
+  // 리스트가 어느 날짜부터 불러왔는지 — 날짜 머리의 '다음 날짜(>)' 버튼을 켤지 정한다
+  const [listStart, setListStart] = useState<string>(() => todayString());
+  // 날짜 머리 화살표로 이미 불러온 다른 날짜로 넘어갈 때, 그 날짜 머리가 리스트 맨 위에 오도록 스크롤
+  const scrollToDay = useCallback((date: string) => {
+    const scroller = listScrollRef.current;
+    if (!scroller) return;
+    const el = scroller.querySelector<HTMLElement>(`[data-day="${date}"]`);
+    if (!el) return;
+    const top =
+      scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+    scroller.scrollTo({ top, behavior: 'smooth' });
+  }, []);
+  useLockAppScroll();
   // 당겨서 새로고침(pull-to-refresh)
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -493,16 +583,6 @@ export default function GrowthRecordPage() {
     const t = setTimeout(() => setShowSync(true), 200);
     return () => clearTimeout(t);
   }, [syncing]);
-
-  useEffect(() => {
-    const el = titleBarRef.current;
-    if (!el) return;
-    const update = () => setTitleBarH(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const fetchDay = useCallback(
     async (childId: string, d: string): Promise<GrowthRecord[]> => {
@@ -678,6 +758,7 @@ export default function GrowthRecordPage() {
           const data = await res.json();
           const earliest: string | null = data.earliestDate ?? null;
           setEarliestDate(earliest);
+          setListStart(start);
           const allRecords: GrowthRecord[] = data.records ?? [];
           const dateMap = new Map<string, GrowthRecord[]>();
           for (const r of allRecords) {
@@ -774,7 +855,7 @@ export default function GrowthRecordPage() {
       setSwipedRowId(null);
     };
     const onScroll = () => setSwipedRowId(null);
-    const scroller = getScroller();
+    const scroller = listScrollRef.current;
     document.addEventListener('touchstart', close, { passive: true });
     document.addEventListener('mousedown', close);
     scroller?.addEventListener('scroll', onScroll, { passive: true });
@@ -823,7 +904,7 @@ export default function GrowthRecordPage() {
           loadMore();
         }
       },
-      { rootMargin: '200px' },
+      { root: listScrollRef.current, rootMargin: '200px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -847,7 +928,7 @@ export default function GrowthRecordPage() {
       deleteTarget !== null ||
       busy;
 
-    const scroller = getScroller();
+    const scroller = listScrollRef.current;
     if (!scroller) return;
 
     const onTouchStart = (e: TouchEvent) => {
@@ -940,108 +1021,67 @@ export default function GrowthRecordPage() {
 
   const pullProgress = Math.min(1, pullDistance / 64);
 
+  const twinGroups = groupTwins(children);
+  const currentGroup = selectedChild
+    ? (twinGroups.find((g) => g.some((c) => c.id === selectedChild.id)) ?? [selectedChild])
+    : null;
+  const toGroup = (g: typeof children) => ({
+    key: g[0].id,
+    kids: g.map((c) => ({ name: c.name, gender: c.gender })),
+  });
+  const age = selectedChild ? calcChildAge(selectedChild.birthDate) : null;
+
   return (
-    <div className="flex flex-col bg-white px-6">
-      {/* 상단 고정 바 */}
-      <div
-        ref={titleBarRef}
-        className="sticky top-0 z-30 bg-white -mx-6"
-      >
-        <PageHeader title="기록" variant="back" />
-      </div>
+    <div
+      className="overflow-hidden flex flex-col gap-[10px] bg-[#F7F8F9] px-[20px]"
+      style={{
+        // 화면 높이에 딱 맞춘다 — 기록 리스트만 그 안에서 스크롤한다(패턴·원더윅스와 같은 틀)
+        height: 'var(--app-h, 100dvh)',
+        fontFamily: PIXEL_FONT,
+        paddingTop: 'calc(var(--safe-area-top) + 20px)',
+        // 광고 자리는 이 화면 위에 그대로 떠 있다. 그만큼 비워야 탭바가 가리지 않는다.
+        paddingBottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 10px)',
+      }}
+    >
+      {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 다른 픽셀 화면과 같은 링크다. */}
+      <link rel="stylesheet" href={PIXEL_FONT_HREF} />
+      <header className={`${BOX} h-[50px] shrink-0 flex items-center justify-center px-[10px]`}>
+        <h1 className="text-[#121212] text-[16px] leading-none font-normal">기록</h1>
+      </header>
 
-      {/* 백그라운드 갱신 인디케이터 — 캐시된 리스트를 보여주는 동안
-          최신 기록을 받아오는 중임을 알린다(레이아웃은 밀지 않음) */}
-      {showSync && !listLoading && !refreshing && (
-        <div
-          className="sticky z-20 flex items-start justify-center pointer-events-none"
-          style={{ top: titleBarH + 8, height: 0 }}
-          role="status"
-          aria-live="polite"
-        >
-          <div className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
-            <span
-              aria-hidden="true"
-              className="inline-block w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin"
-            />
-            최신 기록 불러오는 중...
-          </div>
-        </div>
-      )}
-
-      {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}
-      <div
-        className="flex items-center justify-center overflow-hidden"
-        style={{
-          height: refreshing ? 44 : pullDistance,
-          transition:
-            refreshing || pullDistance === 0 ? 'height 0.3s ease' : 'none',
-        }}
-        aria-hidden={!refreshing && pullDistance === 0}
-      >
-        <div
-          className="flex items-center gap-1.5 text-gray-400"
-          style={{ opacity: refreshing ? 1 : pullProgress }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            style={{
-              transform: `rotate(${pullProgress >= 1 || refreshing ? 180 : 0}deg)`,
-              transition: 'transform 0.2s ease',
-            }}
-          >
-            <path
-              d="M12 5v14M12 19l-6-6M12 19l6-6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="text-xs whitespace-nowrap">
-            {refreshing
-              ? '새로고침 중...'
-              : pullProgress >= 1
-                ? '놓으면 새로고침'
-                : '아래로 당겨 새로고침'}
-          </span>
-        </div>
-      </div>
-
-      {/* 기록 메뉴 전체: 프로필 · 카테고리 · 지표 · 기록 리스트 (하나의 div, gap 16px) */}
-      <main
-        className="flex-1 flex flex-col gap-4 pt-2"
-        style={{ paddingBottom: "186px" }}
-      >
         {!isLoaded ? (
-          // 아이 정보 로딩 중 — 자리만 잡아두고 비워둔다(로딩 표시는 리스트에서만)
-          <div className="h-10" aria-hidden="true" />
+          // 아이 정보 로딩 중 — 아이 카드 높이만큼 자리만 잡아 화면이 튀지 않게 한다
+          <div className="h-[50px] shrink-0" aria-hidden="true" />
         ) : noChild ? (
-          <NoChildCard loginMessage="로그인하고 우리 아기의 기록을 시작하세요." />
-        ) : (
-          <ChildSelector
-            children={children}
-            selected={selectedChild}
-            onSelect={selectChild}
-          />
-        )}
+          <div className="shrink-0 flex">
+            <NoChildBox
+              sub="아기를 추가하면 기록을 시작할 수 있어요"
+              loginMessage="로그인하고 우리 아기의 기록을 시작하세요."
+            />
+          </div>
+        ) : currentGroup && age ? (
+          // 아이 카드 — 쌍둥이는 한 카드에 같이(패턴·원더윅스와 같은 카드)
+          <div className="shrink-0 flex">
+            <ChildSwitcher
+              current={toGroup(currentGroup)}
+              groups={twinGroups.map(toGroup)}
+              ageParts={[`D+${age.days}`, `${age.months}개월 ${age.extraDays}일`]}
+              onSelect={(key) => {
+                const next = children.find((c) => c.id === key);
+                if (next) selectChild(next);
+              }}
+            />
+          </div>
+        ) : null}
 
         {/* 카테고리 가로 스크롤 */}
-        <div data-quick-bar-root className="-mx-6">
+        {/* 물결 테두리가 버튼 밖으로 3px 남짓 나와서 줄 안쪽에 여유(py)를 둔다 */}
+        <div data-quick-bar-root className="shrink-0 -mx-[20px] -my-[5px]">
           <div
-            className="overflow-x-auto no-scrollbar pl-6 pr-6"
-            style={{
-              scrollbarWidth: 'none',
-              maskImage:
-                'linear-gradient(to right, black, black calc(100% - 24px), transparent)',
-              WebkitMaskImage:
-                'linear-gradient(to right, black, black calc(100% - 24px), transparent)',
-            }}
+            className="overflow-x-auto no-scrollbar px-[20px]"
+            style={{ scrollbarWidth: 'none' }}
           >
-            <div className="inline-flex items-start gap-[10px] py-1 align-top">
+            <div className="inline-flex items-start gap-[10px] py-[5px] align-top">
               {visibleQuickTypes.map((t) => {
                 const cfg = TYPE_CONFIG[t];
                 const style = CATEGORY_STYLE[t];
@@ -1057,24 +1097,29 @@ export default function GrowthRecordPage() {
                       }
                       createQuickRecord(t);
                     }}
-                    className="flex flex-col items-center gap-[4px] shrink-0"
+                    aria-label={cfg.label}
+                    className="shrink-0"
                   >
                     <div
-                      className="w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
-                      style={{ borderColor: style.border, backgroundColor: style.bg }}
+                      className="size-[50px] rounded-[4px] border flex items-center justify-center active:translate-y-px"
+                      style={{
+                        borderColor: style.border,
+                        // 기록 색은 5% 투명이라 흰 바탕 위에 겹쳐 불투명하게 칠한다
+                        background: `linear-gradient(${style.bg}, ${style.bg}), #FDFDFE`,
+                      }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={RECORD_ICONS[t]}
-                        alt=""
-                        width={24}
-                        height={24}
-                        aria-hidden="true"
-                      />
+                      {RECORD_EMOJI[t] ?? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={RECORD_ICONS[t]}
+                          alt=""
+                          width={32}
+                          height={32}
+                          aria-hidden="true"
+                          className="block"
+                        />
+                      )}
                     </div>
-                    <span className="text-[10px] font-normal text-gray-500 whitespace-nowrap">
-                      {cfg.label}
-                    </span>
                   </button>
                 );
               })}
@@ -1088,16 +1133,10 @@ export default function GrowthRecordPage() {
                   }
                   setShowAddQuick(true);
                 }}
-                className="flex flex-col items-center gap-[4px] shrink-0"
+                className="shrink-0"
                 aria-label="기록 항목 설정"
               >
-                <div
-                  className="w-10 h-10 rounded-full border flex items-center justify-center overflow-hidden active:scale-95 transition-transform"
-                  style={{
-                    borderColor: '#BBC0C5',
-                    backgroundColor: 'rgba(187, 192, 197, 0.05)',
-                  }}
-                >
+                <div className="size-[50px] rounded-[4px] border border-[#BBC0C5] bg-[#FDFDFE] flex items-center justify-center active:translate-y-px">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/icon-settings.svg"
@@ -1107,192 +1146,138 @@ export default function GrowthRecordPage() {
                     aria-hidden="true"
                   />
                 </div>
-                <span className="text-[10px] font-normal text-gray-500">설정</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* 마지막 기록 3종 카드 */}
-        {(() => {
-          const nowMs = Date.now();
-          // 수유·기저귀는 시작 시각, 수면은 종료 시각(진행 중이면 시작) 기준
-          const startOf = (r: GrowthRecord) => r.startAt;
-          const sleepEndOf = (r: GrowthRecord) => r.endAt ?? r.startAt;
-          const lastFeed = findLatestByTypes(sortedDays, FEEDING_TYPES, startOf);
-          const lastSleep = findLatestByTypes(sortedDays, ['SLEEP'], sleepEndOf);
-          const lastDiaper = findLatestByTypes(sortedDays, ['DIAPER'], startOf);
-          const Item = ({
-            label,
-            time,
-          }: {
-            label: string;
-            time: string | null;
-          }) => (
-            <div className="flex-1 flex flex-col items-center justify-center gap-[6px] py-[10px] rounded-[4px] bg-gray-100 border border-gray-200">
-              <p className="text-[10px] font-medium text-gray-500">{label}</p>
-              <p className="text-[12px] font-semibold text-primary-500 tabular-nums">
-                {time ? formatAgo(time, nowMs) : '-'}
-              </p>
+        {/* 기록 리스트 — 화면에서 이 상자만 스크롤한다. 아래는 탭바와 10px 띄운다. */}
+        <div className={`${BOX} flex-1 min-h-0 flex flex-col overflow-hidden relative`}>
+          {/* 백그라운드 갱신 인디케이터 — 캐시된 리스트를 보여주는 동안
+              최신 기록을 받아오는 중임을 알린다(레이아웃은 밀지 않음) */}
+          {showSync && !listLoading && !refreshing && (
+            <div
+              className="absolute top-[8px] inset-x-0 z-20 flex justify-center pointer-events-none"
+              role="status"
+              aria-live="polite"
+            >
+              <div className={`${BOX} flex items-center px-2 py-1.5 text-[#808991]`}>
+                <Loading size={14} label="최신 기록 불러오는 중" />
+              </div>
             </div>
-          );
-          return (
-            <div className="flex items-stretch gap-[10px]">
-              <Item label="마지막 수유" time={lastFeed ? startOf(lastFeed) : null} />
-              <Item label="마지막 수면" time={lastSleep ? sleepEndOf(lastSleep) : null} />
-              <Item label="마지막 기저귀" time={lastDiaper ? startOf(lastDiaper) : null} />
-            </div>
-          );
-        })()}
+          )}
+          <div
+            ref={listScrollRef}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col"
+          >
+      {/* 당겨서 새로고침 인디케이터 — 평소 숨김, 아래로 당기면 컨텐츠 상단에 나타남 */}
+      <div
+        className="shrink-0 flex items-center justify-center overflow-hidden"
+        style={{
+          height: refreshing ? 44 : pullDistance,
+          transition:
+            refreshing || pullDistance === 0 ? 'height 0.3s ease' : 'none',
+        }}
+        aria-hidden={!refreshing && pullDistance === 0}
+      >
+        {refreshing ? (
+          <Loading size={18} className="text-[#808991]" label="새로고침 중" />
+        ) : (
+        <div
+          className="flex items-center gap-1.5 text-[#808991]"
+          style={{ opacity: pullProgress }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{
+              transform: `rotate(${pullProgress >= 1 ? 180 : 0}deg)`,
+              transition: 'transform 0.2s ease',
+            }}
+          >
+            <path
+              d="M12 5v14M12 19l-6-6M12 19l6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-xs whitespace-nowrap">
+            {pullProgress >= 1 ? '놓으면 새로고침' : '아래로 당겨 새로고침'}
+          </span>
+        </div>
+        )}
+      </div>
 
-        {/* 기록 리스트 (날짜 구분 + 통계 유지) */}
         {listLoading ? (
           <ListLoading />
-        ) : noChild ? (
-          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icon-empty-record.svg"
-                alt=""
-                width={20}
-                height={20}
-                aria-hidden="true"
-              />
+        ) : noChild || (sortedDays.length === 0 && !hasMore) ? (
+          // 기록이 하나도 없을 때 — 오늘 날짜 머리(합계 0)와 안내 문구만
+          <section className="flex-1 flex flex-col">
+            <DayHeader
+              date={today}
+              stats={computeDayStats([])}
+              rightLabel="오늘"
+              canPrev={false}
+              canNext={false}
+              onPrev={() => {}}
+              onNext={() => {}}
+              onPickDate={() => {
+                if (noChild) {
+                  openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.');
+                  return;
+                }
+                setShowDatePicker(true);
+              }}
+            />
+            <div className="flex-1 flex items-center justify-center px-[20px] py-12 text-center">
+              <p className="text-[14px] leading-[1.4] text-[#808991]">등록된 기록이 없습니다.</p>
             </div>
-            <p className="mt-[10px] text-[14px] font-medium text-black">아직 등록된 기록이 없어요.</p>
-            <p className="mt-[4px] text-[12px] font-normal text-gray-500">우리 아기의 하루를 기록해 보세요.</p>
-            <button
-              type="button"
-              onClick={() => openLoginPrompt('로그인하고 우리 아기의 기록을 시작하세요.')}
-              className="mt-[10px] inline-flex items-center justify-center px-3 h-6 rounded-[6px] text-[12px] font-semibold text-white bg-primary-500 active:opacity-80 transition-opacity"
-            >
-              데이터 가져오기
-            </button>
-          </div>
-        ) : sortedDays.length === 0 && !hasMore ? (
-          <div className="rounded-[8px] border border-dotted border-gray-200 px-5 py-12 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icon-empty-record.svg"
-                alt=""
-                width={20}
-                height={20}
-                aria-hidden="true"
-              />
-            </div>
-            <p className="mt-[10px] text-[14px] font-medium text-black">아직 등록된 기록이 없어요.</p>
-            <p className="mt-[4px] text-[12px] font-normal text-gray-500">우리 아기의 하루를 기록해 보세요.</p>
-            <Link
-              href="/settings/import-data"
-              className="mt-[10px] inline-flex items-center justify-center px-3 h-6 rounded-[6px] text-[12px] font-semibold text-white bg-primary-500 active:opacity-80 transition-opacity"
-            >
-              데이터 가져오기
-            </Link>
-          </div>
+          </section>
         ) : sortedDays.length === 0 ? (
           // 최근 30일에 기록이 없어 과거 구간을 백필하는 중 (sentinel이 loadMore 트리거)
           <div ref={sentinelRef} className="py-16 flex flex-col items-center gap-2">
             <Spinner size={22} />
-            <span className="text-xs text-gray-400">지난 기록을 불러오는 중이에요</span>
           </div>
         ) : (
-          <div className="rounded-[8px] border border-gray-200 bg-white">
-            {sortedDays.map((group) => {
+          <div>
+            {sortedDays.map((group, groupIdx) => {
               const stats = computeDayStats(group.records);
-              // 수유 통계 괄호 안 분해 표기 — 분유 / 유축수유 / 이유식을 각 카테고리 색으로 '+' 연결
-              const feedingBreakdown: ReactNode[] = [];
-              const pushBreakdown = (key: string, color: string, text: string) => {
-                if (feedingBreakdown.length > 0) feedingBreakdown.push(<span key={`${key}-sep`}>+</span>);
-                feedingBreakdown.push(
-                  <span key={key} style={{ color }}>
-                    {text}
-                  </span>,
-                );
-              };
-              if (stats.formulaMl > 0) {
-                pushBreakdown('formula', CATEGORY_STYLE.FORMULA.border, String(stats.formulaMl));
-              }
-              if (stats.pumpedMl > 0) {
-                pushBreakdown('pumped', CATEGORY_STYLE.PUMPED_FEEDING.border, String(stats.pumpedMl));
-              }
-              // 이유식은 단위가 ml/g 로 갈리므로 숫자에 단위를 붙이고, 기록만 있고 양이 없으면 0 으로 표시한다.
-              if (stats.babyFoodCount > 0) {
-                pushBreakdown('babyFood', CATEGORY_STYLE.BABY_FOOD.border, formatBabyFoodAmount(stats));
-              }
-              // 총 수유량에는 이유식도 합산한다. 이유식 g 은 ml 과 더할 수 없어 "250ml+30g" 처럼 뒤에 따로 붙인다.
-              const totalMl = stats.feedingMl + stats.babyFoodMl;
-              const totalParts: string[] = [];
-              if (
-                stats.bottleCount > 0 ||
-                stats.babyFoodMl > 0 ||
-                (stats.babyFoodCount > 0 && stats.babyFoodG === 0)
-              ) {
-                totalParts.push(`${totalMl}ml`);
-              }
-              if (stats.babyFoodG > 0) totalParts.push(`${stats.babyFoodG}g`);
-              const feedingTotal = totalParts.join('+');
               const isToday = group.date === today;
               const dDay = selectedChild?.birthDate
                 ? dayOfLife(selectedChild.birthDate, group.date)
                 : null;
+              const olderLoaded = groupIdx < sortedDays.length - 1;
+              const newerLoaded = groupIdx > 0;
               return (
-                <section key={group.date} className="mb-2 border-t border-gray-200 first:border-t-0">
-                  <div
-                    className="sticky z-10 bg-white px-4 py-3 border-b border-dotted border-gray-200"
-                    style={{ top: titleBarH - 4 }}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowDatePicker(true)}
-                        className="flex items-center gap-[2px] -ml-1 px-1 py-0.5 rounded-md active:bg-gray-100"
-                        aria-label="다른 날짜 선택"
-                      >
-                        <span className="text-[12px] font-semibold text-gray-900">{formatHeaderDate(group.date)}</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </button>
-                      <span className="text-[12px] font-normal text-gray-900 tabular-nums">
-                        {isToday ? '오늘' : dDay !== null ? `D+${dDay}` : ''}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-end gap-[10px] mt-[10px] tabular-nums">
-                      <span className="flex items-center gap-[2px]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/icon-stat-awake.svg" alt="" width={16} height={16} aria-hidden="true" />
-                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.napMin)}</span>
-                      </span>
-                      <span className="flex items-center gap-[2px]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src="/icon-stat-sleep.svg" alt="" width={16} height={16} aria-hidden="true" />
-                        <span className="text-[10px] font-medium text-gray-900">{formatDuration(stats.nightMin)}</span>
-                      </span>
-                      {stats.feedingCount > 0 || stats.babyFoodCount > 0 ? (
-                        <span className="flex items-center gap-[2px]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src="/icon-stat-feeding.svg" alt="" width={16} height={16} aria-hidden="true" />
-                          <span className="text-[10px] font-medium text-gray-900">
-                            {feedingTotal}
-                            {feedingBreakdown.length > 0 ? <>({feedingBreakdown})</> : null}
-                            {stats.breastMin > 0 ? (
-                              <>
-                                {feedingTotal ? '+' : ''}
-                                <span style={{ color: CATEGORY_STYLE.BREASTFEEDING.border }}>{stats.breastMin}분</span>
-                              </>
-                            ) : null}
-                          </span>
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
+                <section
+                  key={group.date}
+                  data-day={group.date}
+                  className="border-t border-[#121212] first:border-t-0"
+                >
+                  <DayHeader
+                    date={group.date}
+                    stats={stats}
+                    rightLabel={isToday ? '오늘' : dDay !== null ? `D+${dDay}` : ''}
+                    canPrev={olderLoaded || hasMore}
+                    canNext={newerLoaded || listStart < today}
+                    onPrev={() => {
+                      if (olderLoaded) scrollToDay(sortedDays[groupIdx + 1].date);
+                      else loadMore();
+                    }}
+                    onNext={() => {
+                      if (newerLoaded) scrollToDay(sortedDays[groupIdx - 1].date);
+                      else reload();
+                    }}
+                    onPickDate={() => setShowDatePicker(true)}
+                  />
 
                   {/* 기록 행 */}
                   <div>
                     {group.records.map((r, idx) => {
-                      const cfg = TYPE_CONFIG[r.type];
                       const catStyle = CATEGORY_STYLE[r.type] ?? CATEGORY_STYLE.ETC;
                       const summary = summarizeRecord(r);
                       const title =
@@ -1300,7 +1285,7 @@ export default function GrowthRecordPage() {
                           ? ((r.data as Record<string, unknown> | null)?.kind === 'NIGHT'
                               ? '밤잠'
                               : '낮잠')
-                          : cfg.label;
+                          : recordTitle(r.type);
                       const urls =
                         r.imageUrls && r.imageUrls.length > 0
                           ? r.imageUrls
@@ -1324,75 +1309,54 @@ export default function GrowthRecordPage() {
                               setEditing(r);
                               setSheetType(r.type);
                             }}
-                            className="w-full text-left flex items-start px-4 py-3 active:bg-gray-50"
+                            className="w-full min-h-[66px] text-left flex items-center justify-between gap-[10px] p-[10px] active:bg-[#F7F8F9]"
                           >
-                            <span className="flex flex-col items-center shrink-0 mt-0.5">
-                              <span
-                                className="inline-flex items-center justify-center px-1.5 rounded-[4px] text-[10px] font-semibold tabular-nums"
-                                style={{
-                                  height: 16,
-                                  backgroundColor: catStyle.bg,
-                                  color: catStyle.border,
-                                }}
-                              >
-                                {formatTime24(r.startAt)}
-                              </span>
-                              {r.endAt &&
-                                new Date(r.endAt).getTime() !==
-                                  new Date(r.startAt).getTime() && (
-                                  <span className="mt-[2px] text-[10px] font-normal text-gray-400 tabular-nums">
-                                    ~ {formatTime24(r.endAt)}
-                                  </span>
-                                )}
-                            </span>
-                            <span
-                              className="ml-[24px] mt-[7px] rounded-full shrink-0"
-                              style={{
-                                width: 6,
-                                height: 6,
-                                backgroundColor: catStyle.border,
-                              }}
-                            />
-                            <div className="ml-2 flex-1 min-w-0">
-                              <p className="text-[14px] font-semibold text-gray-900 leading-snug">
-                                {title}
-                              </p>
-                              {summary && (
-                                <p className="text-[12px] font-normal text-gray-500 mt-2">{summary}</p>
-                              )}
-                              {r.memo && (
-                                <p className="text-[11px] text-gray-600 mt-2 line-clamp-2">
-                                  {r.memo}
-                                </p>
-                              )}
-                              {urls.length > 0 && (
-                                <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide">
-                                  {urls.map((u: string) => (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      key={u}
-                                      src={u}
-                                      alt=""
-                                      className="shrink-0 w-16 h-16 object-cover rounded-lg"
-                                    />
-                                  ))}
+                            <div className="flex-1 min-w-0 flex flex-col gap-[4px]">
+                              <div className="flex items-center gap-[10px] text-[16px] leading-[1.4] text-[#121212]">
+                                <span
+                                  className="size-[10px] rounded-full shrink-0"
+                                  style={{ backgroundColor: catStyle.border }}
+                                  aria-hidden="true"
+                                />
+                                <span className="shrink-0 tabular-nums">{formatTime24(r.startAt)}</span>
+                                <span className="shrink-0" aria-hidden="true">･</span>
+                                <span className="min-w-0 truncate">{title}</span>
+                              </div>
+                              {(summary || r.memo || urls.length > 0) && (
+                                <div className="pl-[94px] flex flex-col gap-[4px] min-w-0">
+                                  {summary && (
+                                    <p className="text-[14px] leading-[1.4] text-[#808991]">{summary}</p>
+                                  )}
+                                  {r.memo && (
+                                    <p className="text-[12px] leading-[1.4] text-[#808991] line-clamp-2">
+                                      {r.memo}
+                                    </p>
+                                  )}
+                                  {urls.length > 0 && (
+                                    <div className="mt-[4px] flex gap-1.5 overflow-x-auto scrollbar-hide">
+                                      {urls.map((u: string) => (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          key={u}
+                                          src={u}
+                                          alt=""
+                                          className="shrink-0 w-16 h-16 object-cover rounded-[4px] border border-[#121212]"
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-gray-400 ml-2 mt-0.5 shrink-0"
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src="/icons/chevron-right.svg"
+                              alt=""
+                              width={24}
+                              height={24}
+                              className="block shrink-0"
                               aria-hidden="true"
-                            >
-                              <polyline points="9 18 15 12 9 6" />
-                            </svg>
+                            />
                           </button>
                         </SwipeableRow>
                       );
@@ -1404,19 +1368,18 @@ export default function GrowthRecordPage() {
             {hasMore && (
               <div
                 ref={sentinelRef}
-                className="py-6 flex items-center justify-center gap-2 text-xs text-gray-400"
+                className="py-6 flex items-center justify-center gap-2 text-xs text-[#808991]"
               >
-                {loadingMore ? (
-                  <>
-                    <Spinner size={16} />
-                    <span>불러오는 중...</span>
-                  </>
-                ) : null}
+                {loadingMore ? <Spinner size={16} /> : null}
               </div>
             )}
           </div>
         )}
-      </main>
+          </div>
+        </div>
+
+        {/* 탭바는 화면 아래에 떠 있다 — 그 자리만큼 비워 둔다 */}
+        <div className="shrink-0" style={{ height: TAB_BAR_HEIGHT }} aria-hidden />
 
       {sheetType && selectedChild && (
         <EntrySheet
@@ -1460,34 +1423,27 @@ export default function GrowthRecordPage() {
           role="status"
           aria-live="polite"
         >
-          <div className="flex flex-col items-center gap-2 rounded-[12px] bg-white px-6 py-5 shadow-lg">
+          <div className={`${BOX} flex items-center justify-center px-6 py-5`}>
             <Spinner size={26} />
-            <span className="text-[12px] font-medium text-gray-600">
-              불러오는 중...
-            </span>
           </div>
         </div>
       )}
 
       <ConfirmModal
         open={deleteTarget !== null}
-        icon={
-          <div className="w-[60px] h-[60px] rounded-full bg-gray-100 flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon-trash.svg" alt="" width={32} height={32} />
-          </div>
-        }
-        title="기록 삭제하기"
-        description={'기록을 삭제할까요?\n삭제하면 다시 되돌릴 수 없어요.'}
+        showThumbnail={false}
+        title="기록을 삭제할까요?"
+        description={'삭제한 기록은 다시 불러올 수 없어요.\n삭제 후에는 패턴에 반영되지 않아요.'}
         confirmLabel="삭제하기"
-        cancelLabel="취소"
         onConfirm={() => {
           const target = deleteTarget;
           setDeleteTarget(null);
           if (target) deleteRecord(target.id);
         }}
-        onClose={() => setDeleteTarget(null)}
+        onCancel={() => setDeleteTarget(null)}
       />
+
+      <PixelTabBar active="record" />
     </div>
   );
 }

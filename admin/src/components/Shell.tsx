@@ -16,6 +16,8 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  PersonStanding,
+  Smile,
   Users,
   Sofa,
 } from "lucide-react";
@@ -47,6 +49,13 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/faqs", label: "자주 묻는 질문", icon: HelpCircle },
       { href: "/nursing-rooms", label: "수유실 관리", icon: Baby },
       { href: "/room-items", label: "방 꾸미기 아이템", icon: Sofa },
+    ],
+  },
+  {
+    title: "모델링",
+    items: [
+      { href: "/modeling", label: "아기 모델", icon: PersonStanding },
+      { href: "/record-modeling", label: "기록 모델", icon: Smile },
     ],
   },
   {

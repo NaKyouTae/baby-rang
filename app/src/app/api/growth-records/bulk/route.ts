@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     if (rec.endAt) form.append('endAt', rec.endAt);
     if (rec.memo) form.append('memo', rec.memo);
     if (rec.data) form.append('data', rec.data);
+    // 가져온 기록은 보석 보상 대상이 아니다
+    form.append('source', 'import');
 
     try {
       const res = await fetch(`${API_URL}/growth-records`, {

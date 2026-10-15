@@ -7,7 +7,20 @@
 
 // 원더윅스 폭풍(fussy) 기간 — 출생일 기준 주차 범위
 // 참고: https://brunch.co.kr/@sleepinglion/18
-export const WONDER_WEEKS_LEAPS = [
+export interface WonderWeekLeap {
+  leap: number;
+  name: string;
+  startWeek: number;
+  endWeek: number;
+  symptom: string;
+  tip: string;
+  /** 이 시기에 맞는 놀이. 비어 있으면 화면에서 '추천 놀이 / 장난감' 칸을 숨긴다. */
+  play?: string;
+  /** 추천 장난감 한 개. play 와 같은 칸에 붙는다. */
+  toy?: { name: string; imageUrl: string; href: string };
+}
+
+export const WONDER_WEEKS_LEAPS: WonderWeekLeap[] = [
   {
     leap: 1, name: '감각의 변화', startWeek: 4, endWeek: 5,
     symptom: '아기 자신이 있는 곳이 엄마의 뱃속이 아니라는 것을 깨닫기 시작해 더 오래 깨어 있고 주변을 살피게 돼요. 또한 반사행동에 의해 온몸을 버둥거리고, 그 움직임에 놀라 울기도 합니다.',
@@ -59,15 +72,6 @@ export const WONDER_WEEKS_LEAPS = [
     tip: '동네 주변으로 산책을 자주 나가고, 다양한 환경을 경험하게 해주세요.',
   },
 ];
-
-export interface WonderWeekLeap {
-  leap: number;
-  name: string;
-  startWeek: number;
-  endWeek: number;
-  symptom: string;
-  tip: string;
-}
 
 /** 주차를 "생후 N개월 무렵" 표현으로 — 본문 가독성용. */
 export function weekToMonthLabel(week: number): string {

@@ -119,8 +119,8 @@ function VerticalWheel({
         key={i}
         className={`flex items-center justify-center tabular-nums ${
           selected
-            ? 'text-gray-900 font-bold text-xl'
-            : 'text-gray-400 text-base'
+            ? 'text-[#121212] font-normal text-xl'
+            : 'text-[#BBC0C5] text-base'
         }`}
         style={{ height: ITEM_H }}
       >
@@ -132,7 +132,7 @@ function VerticalWheel({
   return (
     <div className="relative flex-1">
       <div
-        className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded-xl bg-gray-100"
+        className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 rounded-[4px] bg-[#F7F8F9]"
         style={{ height: ITEM_H }}
       />
       <div
@@ -184,7 +184,7 @@ export default function TimePickerModal({
   }, [dayCount, d]);
 
   return (
-    <BottomSheet
+    <BottomSheet pixel
       open={open}
       onClose={onClose}
       zIndex={80}
@@ -193,7 +193,7 @@ export default function TimePickerModal({
       ariaLabel="날짜 · 시간 선택"
     >
       <div className="px-5 pt-5 pb-4">
-        <h3 className="text-base font-bold text-gray-900 mb-4 text-center">
+        <h3 className="text-base font-normal text-[#121212] mb-4 text-center">
           날짜 · 시간 선택
         </h3>
         <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export default function TimePickerModal({
             }}
             format={(v) => `${String(v === 0 ? 12 : v).padStart(2, '0')}시`}
           />
-          <span className="text-2xl font-bold text-gray-400">:</span>
+          <span className="text-2xl font-normal text-[#BBC0C5]">:</span>
           <VerticalWheel
             value={m}
             count={60}
@@ -244,7 +244,7 @@ export default function TimePickerModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 h-12 rounded-[8px] bg-gray-100 text-gray-700 text-sm font-semibold active:bg-gray-200"
+          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
         >
           취소
         </button>
@@ -255,7 +255,7 @@ export default function TimePickerModal({
             onConfirm(mo, safeDay, h, m);
             onClose();
           }}
-          className="flex-1 h-12 rounded-[8px] bg-primary-500 text-white text-sm font-semibold active:opacity-90"
+          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px disabled:opacity-60"
         >
           확인
         </button>

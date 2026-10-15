@@ -8,7 +8,7 @@ import WidgetBridge from "@/components/WidgetBridge";
 import AdditionalInfoGate from "@/components/AdditionalInfoGate";
 import LoginErrorNotice from "@/components/LoginErrorNotice";
 import SplashProvider from "@/components/SplashProvider";
-import BottomNavServer from "@/components/BottomNavServer";
+import BottomAdBar from "@/components/BottomAdBar";
 import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
 import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
 import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
@@ -135,10 +135,6 @@ export default function RootLayout({
   // AEO (Answer Engine Optimization) 를 위해 여러 스키마를 동시에 제공합니다.
   // AI 검색 엔진(ChatGPT, Claude, Perplexity, Gemini 등)과 Google 이
   // "아기랑" 서비스를 정확히 이해할 수 있도록 합니다.
-  //
-  // FAQPage 는 여기에 두지 않는다. 루트에 두면 수유실 지역 페이지 수백 개까지
-  // 같은 FAQ 가 박히고, 정작 /settings/faq 에서는 스키마가 두 벌이 된다.
-  // 본문이 실제로 FAQ 인 /settings/faq 가 어드민에 등록된 내용으로 직접 만든다.
 
   const organizationLd = {
     "@context": "https://schema.org",
@@ -235,6 +231,8 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        {/* 픽셀 폰트 Galmuri11 의 세로 위치를 피그마에 맞춘 보정판(Galmuri11Fig). 설명은 파일 안에 있다. */}
+        <link rel="stylesheet" href="/fonts/galmuri11-fig.css" />
         {/* iOS PWA / 홈 화면 추가 시 흰 화면 대신 보여줄 splash 이미지 */}
         <link rel="apple-touch-startup-image" href="/splash.png" />
         {/* Google Analytics (gtag.js) — next/script afterInteractive로 hydration mismatch 방지 */}
@@ -296,7 +294,7 @@ export default function RootLayout({
                 <GlobalFooter />
               </SplashProvider>
             </div>
-            <BottomNavServer />
+            <BottomAdBar />
             <AppAdSlotReporter />
             <AppStorePurchaseRecovery />
             <AndroidPurchaseRecovery />
