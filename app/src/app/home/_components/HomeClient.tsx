@@ -645,10 +645,13 @@ export default function HomeClient() {
     setDecorating(true);
   }, []);
 
-  // 고른 가구를 방 가운데에 놓는다. 그다음 끌어서 옮기면 된다.
-  // 시트는 열어 둔다. 여러 개를 연달아 놓고 닫기로 닫는다.
+  // 시트에서 막 놓은 가구. 방에서 바로 선택된 상태로 보이게 넘긴다.
+  const [focusPlacementId, setFocusPlacementId] = useState<string | null>(null);
+
+  // 고른 가구를 방 가운데에 놓는다. 시트는 닫고 놓은 가구를 선택해 두므로 바로 끌어 옮기면 된다.
   const handlePick = useCallback((item: RoomItem) => {
     preloadSprites([item.imageUrl]);
+    setDecorating(false);
 
     // 방·벽지·바닥·창문은 자리가 고정돼 있다. '놓는' 게 아니라 '바꾸는' 것이고
     // 각각 하나씩만 적용된다.
@@ -658,10 +661,12 @@ export default function HomeClient() {
       return;
     }
 
+    const id = crypto.randomUUID();
+    setFocusPlacementId(id);
     setPlacements((prev) => [
       ...prev,
       {
-        id: crypto.randomUUID(),
+        id,
         itemId: item.id,
         name: item.name,
         spriteKey: item.spriteKey,
@@ -670,7 +675,7 @@ export default function HomeClient() {
         tileX: Math.max(0, Math.round((ROOM_W_TILES - item.tileW) / 2)),
         // 벽에 거는 것(창문·액자)은 벽 쪽에, 나머지는 바닥 가운데에 놓는다.
         // 창문이 바닥 한가운데 떨어지면 뭘 잘못한 줄 안다.
-        tileY: item.surface === 'WALL' ? 2 : WALL_TILES + 4,
+        tileY: item.surface === 'WALL' ? 2 : WALL_TILES + 2,
         tileW: item.tileW,
         tileH: item.tileH,
         flipX: false,
@@ -717,6 +722,7 @@ export default function HomeClient() {
         onTapPlacement={handleFlipPlacement}
         onResizePlacement={handleResizePlacement}
         onLongPressPlacement={setRemoveTarget}
+        focusId={focusPlacementId}
         onPet={handlePet}
         reaction={reaction}
       />
