@@ -114,48 +114,18 @@ class KakaoLoginManager(
             )
             return
         }
-        agreeMissingScopesThenReply(requestId, accessToken)
+        replyToken(requestId, accessToken)
     }
 
-    /**
-     * 아직 동의받지 못한 항목이 있으면 그 항목만 다시 묻고, 끝나면 토큰을 돌려준다.
-     *
-     * 조회나 추가 동의가 실패해도 로그인은 그대로 진행한다 — 여기서 막는 것보다
-     * 서버 응답("이름과 전화번호 제공에 동의해야…")으로 안내하는 편이 덜 번거롭다.
-     */
-    private fun agreeMissingScopesThenReply(requestId: String, accessToken: String) {
-        UserApiClient.instance.me { user, error ->
-            if (error != null || user == null) {
-                Log.w(TAG, "동의항목 조회 실패, 그대로 진행: $error")
-                replyToken(requestId, accessToken)
-                return@me
-            }
-
-            val account = user.kakaoAccount
-            val scopes = mutableListOf<String>()
-            if (account?.nameNeedsAgreement == true) scopes.add("name")
-            if (account?.phoneNumberNeedsAgreement == true) scopes.add("phone_number")
-            if (account?.genderNeedsAgreement == true) scopes.add("gender")
-            // 선택 항목(연령대)은 다시 묻지 않는다. 최초 동의 화면에서 한 번 묻고 끝낸다 —
-            // 거절한 사용자에게 매 로그인마다 띄우면 선택이라고 해놓고 계속 조르는 꼴이 된다.
-            // ⚠️ 콘솔에서 '사용 안 함'인 항목을 scope 로 보내면 로그인이 KOE205 로 막힌다.
-            //    콘솔 설정을 바꾸면 이 목록도 같이 맞춰야 한다.
-
-            if (scopes.isEmpty()) {
-                replyToken(requestId, accessToken)
-                return@me
-            }
-
-            UserApiClient.instance.loginWithNewScopes(activity, scopes) { newToken, scopeError ->
-                if (scopeError != null) {
-                    Log.w(TAG, "추가 동의 실패, 기존 토큰으로 진행: $scopeError")
-                    replyToken(requestId, accessToken)
-                    return@loginWithNewScopes
-                }
-                replyToken(requestId, newToken?.accessToken ?: accessToken)
-            }
-        }
-    }
+    // 로그인 뒤에 동의항목을 다시 확인하지 않는다.
+    //
+    // 카카오는 콘솔에서 필수 동의항목을 추가하면, 이미 연결된 사용자에게도 다음 로그인 때
+    // 동의 화면을 **알아서 다시 띄운다**. 그런데 여기서 me() 로 한 번 더 확인하고
+    // loginWithNewScopes 를 부르면, 카카오톡에서 막 동의하고 돌아온 사용자에게
+    // 카카오계정 웹 로그인 창이 한 번 더 뜬다(동의 반영이 즉시 조회되지 않을 때).
+    //
+    // 필수 항목이 정말 비어서 들어오면 서버가 SOCIAL_CONSENT_REQUIRED 로 막고
+    // "이름과 전화번호 제공에 동의해야…" 안내가 화면에 뜬다. 그 경로로 충분하다.
 
     private fun replyToken(requestId: String, accessToken: String) =
         reply(requestId, JSONObject().put("ok", true).put("accessToken", accessToken))

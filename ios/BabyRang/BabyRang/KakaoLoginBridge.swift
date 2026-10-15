@@ -27,16 +27,6 @@ final class KakaoLoginBridge {
 
     static let handlerName = "kakaoLogin"
 
-    /// 다시 묻는 동의항목은 **필수 항목만**이다.
-    ///
-    /// 선택 항목(연령대)은 최초 동의 화면에서 한 번 묻고 끝낸다. 거절한 사용자에게
-    /// 매 로그인마다 같은 화면을 띄우면, 선택이라고 해놓고 계속 조르는 꼴이 된다.
-    /// 동의한 사용자의 값은 어차피 정상 수집되므로 재요청할 이유도 없다.
-    ///
-    /// ⚠️ 여기 적은 값은 카카오 콘솔의 동의항목과 반드시 일치해야 한다.
-    ///    콘솔에서 '사용 안 함'인 항목을 scope 로 보내면 로그인 전체가 KOE205 로 막힌다.
-    private static let requiredScopes = ["name", "phone_number", "gender"]
-
     func handle(_ message: WKScriptMessage) {
         let body = message.body as? [String: Any] ?? [:]
         // requestId 가 없으면 응답을 보낼 곳조차 없다. 웹은 타임아웃을 걸지 않으므로
@@ -50,26 +40,19 @@ final class KakaoLoginBridge {
             // 카카오톡이 깔려 있으면 앱으로, 아니면 카카오계정 웹 로그인으로.
             // isKakaoTalkLoginAvailable 은 Info.plist 의 LSApplicationQueriesSchemes 에
             // kakaokompassauth 가 있어야 제대로 판정한다.
-            var token: OAuthToken = try await UserApi.isKakaoTalkLoginAvailable()
+            let token: OAuthToken = try await UserApi.isKakaoTalkLoginAvailable()
                 ? loginWithKakaoTalk()
                 : loginWithKakaoAccount()
 
-            // 아직 동의받지 못한 항목이 있으면 그 항목만 다시 묻는다.
+            // 로그인 뒤에 동의항목을 다시 확인하지 않는다.
             //
-            // ⚠️ 여기서 실패해도 로그인을 깨뜨리면 안 된다. 본 로그인은 이미 끝났고
-            //    이건 덤으로 더 받아보는 단계다. 카카오톡에서 막 돌아온 직후에
-            //    또 다른 인증 세션을 띄우는 흐름이라 실패(.IllegalState 등)가 잦은데,
-            //    그걸 로그인 실패로 올려보내면 사용자는 영문 SDK 오류만 보게 된다.
-            //    (Android 쪽은 처음부터 이렇게 되어 있었다 — KakaoLoginManager 참고)
-            let missing = await missingScopes()
-            if !missing.isEmpty {
-                do {
-                    token = try await loginWithKakaoAccount(scopes: missing)
-                } catch {
-                    print("[kakao] 추가 동의 실패, 기존 토큰으로 진행: \(describe(error))")
-                }
-            }
-
+            // 카카오는 콘솔에서 필수 동의항목을 추가하면 이미 연결된 사용자에게도
+            // 다음 로그인 때 동의 화면을 알아서 다시 띄운다. 여기서 me() 로 한 번 더
+            // 확인하고 추가 동의를 부르면, 카카오톡에서 막 동의하고 돌아온 사용자에게
+            // 카카오계정 웹 로그인 창이 한 번 더 뜬다(동의 반영이 즉시 조회되지 않을 때).
+            //
+            // 필수 항목이 정말 비어서 들어오면 서버가 SOCIAL_CONSENT_REQUIRED 로 막고
+            // 안내 문구가 화면에 뜬다. 그 경로로 충분하다.
             reply(requestId, ["ok": true, "accessToken": token.accessToken])
         } catch {
             if isCancelled(error) {
@@ -122,33 +105,6 @@ final class KakaoLoginBridge {
         return false
     }
 
-    /// 아직 동의받지 않은 동의항목 목록.
-    ///
-    /// 조회에 실패하면 빈 배열을 돌려준다 — 추가 동의 화면을 띄우는 것보다
-    /// 일단 로그인을 진행시키고 서버 응답에 맡기는 편이 사용자에게 덜 번거롭다.
-    private func missingScopes() async -> [String] {
-        guard let account = try? await me()?.kakaoAccount else { return [] }
-
-        var scopes: [String] = []
-        if account.nameNeedsAgreement == true { scopes.append("name") }
-        if account.phoneNumberNeedsAgreement == true { scopes.append("phone_number") }
-        if account.genderNeedsAgreement == true { scopes.append("gender") }
-        // 연령대(age_range)는 선택 항목이라 여기서 다시 묻지 않는다.
-        return scopes.filter { Self.requiredScopes.contains($0) }
-    }
-
-    private func me() async throws -> User? {
-        try await withCheckedThrowingContinuation { continuation in
-            UserApi.shared.me { user, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: user)
-            }
-        }
-    }
-
     // MARK: - SDK 콜백 → async
 
     private func loginWithKakaoTalk() async throws -> OAuthToken {
@@ -159,15 +115,8 @@ final class KakaoLoginBridge {
         }
     }
 
-    /// scopes 를 넘기면 그 항목만 다시 동의받는 화면이 뜬다(카카오 '추가 항목 동의 받기').
-    private func loginWithKakaoAccount(scopes: [String]? = nil) async throws -> OAuthToken {
+    private func loginWithKakaoAccount() async throws -> OAuthToken {
         try await withCheckedThrowingContinuation { continuation in
-            if let scopes {
-                UserApi.shared.loginWithKakaoAccount(scopes: scopes) { token, error in
-                    Self.resume(continuation, token, error)
-                }
-                return
-            }
             UserApi.shared.loginWithKakaoAccount { token, error in
                 Self.resume(continuation, token, error)
             }
