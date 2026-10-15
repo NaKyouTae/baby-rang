@@ -7,7 +7,7 @@ import Loading from '@/components/Loading';
 /**
  * 꾸미기 모드 UI.
  *
- * 오른쪽 위 닫기(X)는 저장하지 않고 나가기, 아래 저장하기 버튼이 방 배치를 반영한다.
+ * 오른쪽 위 닫기(X)는 저장하지 않고 나가기, 왼쪽 위 저장 버튼이 방 배치를 반영한다.
  * 분류 탭은 가구를 옮길 때 방을 가리므로 접었다 펼 수 있다.
  */
 
@@ -81,20 +81,17 @@ export default function EditChrome({ onClose, onSave, saving, activeTab, onPickT
           })}
       </div>
 
-      {/* 저장하기 — 아이템 시트가 열려 있을 땐 시트에 가려진다. 시트를 닫고 배치를 본 뒤 저장한다. */}
-      <div
-        className="absolute left-[20px] right-[20px] pointer-events-auto"
-        style={{ bottom: 'max(var(--safe-area-bottom), 20px)' }}
+      {/* 저장 — X 와 같은 크기로 왼쪽 위에 둔다. 아이템 시트가 열려 있어도 가려지지 않는다. */}
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saving}
+        aria-label="꾸민 방 저장하기"
+        className={`${BOX} absolute left-[20px] size-[50px] flex items-center justify-center text-[#121212] text-[16px] leading-[1.4] pointer-events-auto active:translate-y-px disabled:opacity-60`}
+        style={{ top: 'calc(var(--safe-area-top) + 20px)' }}
       >
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] active:translate-y-px disabled:opacity-60"
-        >
-          {saving ? <Loading size={18} label="저장 중" /> : '저장하기'}
-        </button>
-      </div>
+        {saving ? <Loading size={18} label="저장 중" /> : '저장'}
+      </button>
     </div>
   );
 }
