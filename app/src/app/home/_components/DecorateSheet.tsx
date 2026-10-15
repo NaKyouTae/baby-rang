@@ -8,7 +8,7 @@ import ConfirmModal, { PriceTitle } from './ConfirmModal';
 import MenuPicker from './MenuPicker';
 import { loadRoomItems, refreshRoomItems } from './roomItems';
 import type { ActionId } from './RoomChrome';
-import Loading, { LoadingBlock } from '@/components/Loading';
+import { LoadingBlock } from '@/components/Loading';
 
 export type RoomItem = {
   id: string;
@@ -39,9 +39,6 @@ interface Props {
   onPick: (item: RoomItem) => void;
   category: CategoryTabId;
   onChangeCategory: (category: CategoryTabId) => void;
-  /** 저장하기 — 방 배치를 서버에 반영한다. */
-  onSave: () => void;
-  saving: boolean;
   /** 보유 중인 아이템 id. 무료 아이템은 여기 없어도 보유로 본다. */
   ownedItemIds: string[];
   coins: number;
@@ -58,8 +55,6 @@ export default function DecorateSheet({
   onPick,
   category,
   onChangeCategory,
-  onSave,
-  saving,
   ownedItemIds,
   coins,
   onPurchase,
@@ -240,22 +235,14 @@ export default function DecorateSheet({
             )}
           </div>
 
-          <div className="shrink-0 flex gap-[10px] items-start px-[20px] pt-[16px] pb-[max(var(--safe-area-bottom),20px)]">
+          {/* 저장은 편집 화면 아래 버튼으로 한다. 시트는 아이템을 고르는 데만 쓴다. */}
+          <div className="shrink-0 px-[20px] pt-[16px] pb-[max(var(--safe-area-bottom),20px)]">
             <button
               type="button"
               onClick={onClose}
-              disabled={saving}
-              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] active:translate-y-px disabled:opacity-60"
+              className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] active:translate-y-px"
             >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] active:translate-y-px disabled:opacity-60"
-            >
-              {saving ? <Loading size={18} label="저장 중" /> : '저장하기'}
+              닫기
             </button>
           </div>
         </div>
