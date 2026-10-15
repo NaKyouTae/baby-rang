@@ -27,6 +27,21 @@ export interface Layout {
 export const DEFAULT_WALLPAPER = '/room/default-wallpaper.png';
 export const DEFAULT_FLOORING = '/room/default-flooring.webp';
 
+/**
+ * 기본 벽지·바닥을 미리 받아 디코딩까지 해 둔다. 홈에 들어오기 전 화면(로그인 등)에서 부르면
+ * 홈의 첫 화면에 바닥이 늦게 떠 깜빡이는 일이 없다. 디코딩한 그림은 이 배열이 붙잡고 있는 동안 메모리에 남는다.
+ */
+const warmed: HTMLImageElement[] = [];
+export function warmRoomImages() {
+  if (typeof window === 'undefined' || warmed.length) return;
+  for (const src of [DEFAULT_WALLPAPER, DEFAULT_FLOORING]) {
+    const img = new Image();
+    img.src = src;
+    img.decode?.().catch(() => {});
+    warmed.push(img);
+  }
+}
+
 /** 디자인 비율 — 벽 4 : 바닥 6 (338px : 506px). 벽이 끝나는 방 픽셀 y. */
 export const wallBottomOf = (h: number) => Math.round(h * 0.4);
 

@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
+import { preload } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocialLogin } from '@/hooks/useSocialLogin';
 import { getLastLoginProvider, type LoginProvider } from '@/lib/lastLoginProvider';
 import { palette } from '@/lib/colors';
+import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, warmRoomImages } from '../home/_components/scene';
 
 // 로그인/회원가입 진입 전용 화면.
 //
@@ -68,6 +70,11 @@ export default function LoginClient() {
   const { isAuthenticated, isLoaded } = useAuth();
   const { login, loading, error } = useSocialLogin();
   const lastProvider = useSyncExternalStore(noopSubscribe, getLastLoginProvider, () => null);
+
+  // 로그인·닫기 뒤 홈으로 넘어갈 때 바닥 그림이 늦게 떠 깜빡이지 않게, 이 화면에 있는 동안 미리 받아 둔다
+  preload(DEFAULT_WALLPAPER, { as: 'image' });
+  preload(DEFAULT_FLOORING, { as: 'image' });
+  useEffect(() => warmRoomImages(), []);
 
   useEffect(() => {
     // 이미 로그인한 사람에게 로그인 화면을 보여줄 이유가 없다.

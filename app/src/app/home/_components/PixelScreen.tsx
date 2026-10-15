@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { TILE, scaleFor, tilesAcross } from './tiles';
 import { MAX_SCALE, getSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
-import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, layout, wallBottomOf, type Layout } from './scene';
+import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, layout, wallBottomOf, warmRoomImages, type Layout } from './scene';
 import {
   BED_FRONT,
   HEAD_TOP,
@@ -133,6 +133,9 @@ export default function PixelScreen(props: Props) {
   }, [selectedId]);
   // 꾸미기를 끝내면 선택도 푼다
   if (!editing && selectedId) setSelectedId(null);
+
+  // 홈으로 바로 들어온 경우에도 디코딩을 일찍 시작한다(로그인 화면에서 이미 했다면 아무것도 안 한다)
+  useEffect(() => warmRoomImages(), []);
 
   const layoutRef = useRef<Layout | null>(null);
   const petRef = useRef<(nx: number, ny: number) => void>(() => {});
@@ -623,27 +626,25 @@ export default function PixelScreen(props: Props) {
 
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
-      {/* 기본 벽지·바닥 — 캔버스 뒤에 원본 해상도로 깐다. 벽지·바닥재를 고르면 캔버스가 그 위를 덮는다. */}
-      {size && (
-        <>
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0"
-            style={{
-              height: `${(wallBottomOf(size.h) / size.h) * 100}%`,
-              background: `#EEF0F1 url(${DEFAULT_WALLPAPER}) center / 100% 100% no-repeat`,
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-0"
-            style={{
-              top: `${(wallBottomOf(size.h) / size.h) * 100}%`,
-              background: `#D8DBDE url(${DEFAULT_FLOORING}) top center / cover no-repeat`,
-            }}
-          />
-        </>
-      )}
+      {/* 기본 벽지·바닥 — 캔버스 뒤에 원본 해상도로 깐다. 벽지·바닥재를 고르면 캔버스가 그 위를 덮는다.
+          방 크기를 재기 전(첫 렌더)부터 그린다. 크기를 잰 뒤에 그리면 그만큼 바닥이 늦게 떠 깜빡인다.
+          경계는 재기 전에는 디자인 비율(40%), 잰 뒤에는 캔버스와 같은 픽셀 경계를 쓴다. */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0"
+        style={{
+          height: size ? `${(wallBottomOf(size.h) / size.h) * 100}%` : '40%',
+          background: `#EEF0F1 url(${DEFAULT_WALLPAPER}) center / 100% 100% no-repeat`,
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0"
+        style={{
+          top: size ? `${(wallBottomOf(size.h) / size.h) * 100}%` : '40%',
+          background: `#D8DBDE url(${DEFAULT_FLOORING}) top center / cover no-repeat`,
+        }}
+      />
       {size && (
         <canvas
           ref={canvasRef}

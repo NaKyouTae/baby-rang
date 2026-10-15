@@ -36,7 +36,7 @@ type DemoChild = { id: string; name: string; gender: string; birthDate: string }
 
 /**
  * 로그인/아이 등록 전에도 화면을 볼 수 있게 두는 미리보기용 아이.
- * 로그인 전에는 다섯 쌍둥이(quints), 로그인했지만 아이가 없으면 한 명(single)을 보여 준다.
+ * 기본은 한 명(single)이다.
  * 주소에 ?kids=single · twins · multi · quints 를 붙이면 그 구성으로 볼 수 있다.
  */
 const DEMO_SETS: Record<string, DemoChild[]> = {
@@ -213,7 +213,7 @@ export default function HomeClient() {
   const { children, selectedChild, selectChild } = useSelectedChild();
   const { isAuthenticated, isLoaded: isAuthLoaded } = useAuth();
   const router = useRouter();
-  // 주소(?kids=)로 고른 미리보기 구성. 없으면 로그인 여부로 정한다(아래 demoSet).
+  // 주소(?kids=)로 고른 미리보기 구성. 없으면 한 명(single).
   const [urlDemoSet, setUrlDemoSet] = useState<DemoChild[] | null>(null);
   const [demoId, setDemoId] = useState('');
   const [openAction, setOpenAction] = useState<ActionId | null>(null);
@@ -246,7 +246,7 @@ export default function HomeClient() {
     setUrlDemoSet(set);
     setDemoId(set[0].id);
   }, []);
-  const demoSet = urlDemoSet ?? (isAuthenticated ? DEMO_SETS.single : DEMO_SETS.quints);
+  const demoSet = urlDemoSet ?? DEMO_SETS.single;
 
   const isDemo = !selectedChild;
   const kidList: DemoChild[] = isDemo ? demoSet : children;

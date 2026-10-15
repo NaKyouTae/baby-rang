@@ -13,9 +13,13 @@ android {
 
     defaultConfig {
         applicationId "kr.spectrify.baby_rang"
-        // TWA(23)와 맞춘다. 24 로 올리면 Android 6.0 기기 1,209종이 지원에서 빠지고,
-        // 그 기기에 이미 깔린 사용자는 업데이트를 받지 못한다.
-        minSdk 23
+        // Play 자동 보호(Play Automatic Protection)가 minSdk 24 이상을 요구해서 24 로 올렸다.
+        // 23 으로는 AAB 업로드 자체가 거부된다(2026-10-15 업로드 실패로 확인).
+        //
+        // ⚠️ 대가: Android 6.0(API 23) 기기가 지원에서 빠지고, 그 기기에 이미 깔린
+        //    사용자는 더 이상 업데이트를 받지 못한다. 출시 초기라 영향이 작다고 보고
+        //    감수하기로 했다(사용자 결정). 되돌리려면 자동 보호를 끄고 23 으로 내리면 된다.
+        minSdk 24
         targetSdk 36
         // ⚠️ TWA 와 같은 패키지라 같은 Play 리스팅을 덮어쓴다.
         //    versionCode 는 되돌릴 수 없는 정수라 TWA 의 마지막 값(12)보다 커야 한다.
