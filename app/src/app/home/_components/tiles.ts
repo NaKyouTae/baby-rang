@@ -11,7 +11,7 @@ export const TILE = 16;
 
 /** 방의 논리 크기(타일). 기기가 달라도 이 값은 변하지 않는다. */
 export const ROOM_W_TILES = 12;
-/** 가구를 놓을 수 있는 세로 칸 수이자 보장하는 최소 높이. 화면이 더 길면 바닥이 아래로 더 보일 뿐이다. */
+/** 보장하는 최소 세로 칸 수. 화면이 더 길면 바닥이 아래로 더 보이고, 거기까지 가구를 놓을 수 있다. */
 export const ROOM_H_TILES = 20;
 
 export const ROOM_W = ROOM_W_TILES * TILE; // 192

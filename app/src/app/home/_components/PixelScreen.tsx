@@ -121,6 +121,9 @@ export default function PixelScreen(props: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<{ w: number; h: number; scale: number } | null>(null);
+  // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
+  // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
+  const rows = size ? Math.max(ROOM_H_TILES, Math.floor(size.h / TILE)) : ROOM_H_TILES;
 
   // 드래그 중인 가구. 렌더 루프가 테두리를 그리려고 읽는다.
   const dragIdRef = useRef<string | null>(null);
@@ -175,10 +178,10 @@ export default function PixelScreen(props: Props) {
   // 렌더 루프가 다시 서면서 아이 위치가 초기화된다.
   const placementsRef = useRef(placements);
   useEffect(() => {
-    // 방 크기가 기기마다 달랐던 때 넓은 화면에서 놓은 가구는 방 밖에 있을 수 있다. 그릴 때만 안으로 당긴다.
-    placementsRef.current = placements.map(clampToRoom);
+    // 긴 화면에서 아래쪽에 놓은 가구는 짧은 화면에선 방 밖에 있다. 그릴 때만 안으로 당긴다.
+    placementsRef.current = placements.map((p) => clampToRoom(p, rows));
     preloadSprites(placements.map((p) => p.imageUrl));
-  }, [placements]);
+  }, [placements, rows]);
 
   const slotsRef = useRef({ wallpaperUrl, flooringUrl });
   useEffect(() => {
@@ -586,7 +589,7 @@ export default function PixelScreen(props: Props) {
     const tx = Math.round((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
     const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
     const clampedX = Math.min(Math.max(tx, 0), ROOM_W_TILES - wOf(target));
-    const clampedY = Math.min(Math.max(ty, 0), ROOM_H_TILES - hOf(target));
+    const clampedY = Math.min(Math.max(ty, 0), rows - hOf(target));
     if (clampedX === target.tileX && clampedY === target.tileY) return;
     movedRef.current = true;
     clearLongPress();
@@ -608,7 +611,7 @@ export default function PixelScreen(props: Props) {
   };
 
   /** 배율을 바꾼다. 아랫변 가운데를 붙잡고 커지게 해서 바닥에 놓인 자리가 튀지 않게 한다. */
-  const fits = (p: Placement, scale: number) => p.tileW * scale <= ROOM_W_TILES && p.tileH * scale <= ROOM_H_TILES;
+  const fits = (p: Placement, scale: number) => p.tileW * scale <= ROOM_W_TILES && p.tileH * scale <= rows;
   const resizeTo = (p: Placement, scale: number) => {
     if (scale < 1 || scale > MAX_SCALE || !fits(p, scale)) return;
     const nw = p.tileW * scale;
@@ -619,12 +622,12 @@ export default function PixelScreen(props: Props) {
       p.id,
       scale,
       Math.min(Math.max(tx, 0), ROOM_W_TILES - nw),
-      Math.min(Math.max(ty, 0), ROOM_H_TILES - nh),
+      Math.min(Math.max(ty, 0), rows - nh),
     );
   };
 
   const found = editing && selectedId ? placements.find((p) => p.id === selectedId) : null;
-  const selected = found ? clampToRoom(found) : null;
+  const selected = found ? clampToRoom(found, rows) : null;
 
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
@@ -679,9 +682,9 @@ export default function PixelScreen(props: Props) {
 }
 
 /** 방 밖으로 나간 배치를 안으로 당긴다. 저장값은 건드리지 않고 그릴 때만 쓴다. */
-function clampToRoom(p: Placement): Placement {
+function clampToRoom(p: Placement, rows: number): Placement {
   const tileX = Math.min(Math.max(p.tileX, 0), Math.max(0, ROOM_W_TILES - wOf(p)));
-  const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, ROOM_H_TILES - hOf(p)));
+  const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, rows - hOf(p)));
   return tileX === p.tileX && tileY === p.tileY ? p : { ...p, tileX, tileY };
 }
 
