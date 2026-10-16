@@ -1,5 +1,6 @@
 export NVM_DIR="$HOME/.nvm"
-. "$NVM_DIR/nvm.sh"
+unset PREFIX NPM_CONFIG_PREFIX npm_config_prefix
+. "$NVM_DIR/nvm.sh" --no-use
 nvm use
 
 # pnpm 경로 추가
