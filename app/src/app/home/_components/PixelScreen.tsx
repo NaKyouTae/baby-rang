@@ -79,6 +79,8 @@ const AFFORDANCE_OF: Record<string, Affordance> = {
   PUSH_WALKER: 'walker',
   PLAY: 'play',
   SLEEP: 'bed',
+  SEAT: 'seat',
+  SLIDE: 'slide',
 };
 function affordancesOf(p: Placement): Affordance[] {
   if (p.affordances?.length) return p.affordances.map((a) => AFFORDANCE_OF[a]).filter(Boolean);
@@ -443,14 +445,16 @@ export default function PixelScreen(props: Props) {
         const { img, left, top, width, height, flip } = actorSprite(b);
         // 침대에서 자면 침대 앞 난간을 아기 위에 한 번 더 그려 몸이 침대 안에 들어가 보이게 한다
         const bed = b.inBed && b.spot ? all.find((p) => p.id === b.spot!.id) : null;
+        // 의자·미끄럼틀 위에 있으면 그 아이템 바로 위에 그린다
+        const seat = b.aboard && b.spot ? all.find((p) => p.id === b.spot!.id) : null;
         const bedImg = bed?.imageUrl
           ? getSpriteAt(bed.imageUrl, Math.round(wOf(bed) * TILE), Math.round(hOf(bed) * TILE))
           : null;
         dynamics.push({
           depth: actorDepth(b),
           rect: { x0: left, y0: top, x1: left + width, y1: top + height },
-          // 자는 아기는 그 침대 바로 위에 그린다
-          after: bed ? bed.id : undefined,
+          // 자는 아기는 그 침대, 올라탄 아기는 그 의자·미끄럼틀 바로 위에 그린다
+          after: bed ? bed.id : seat ? seat.id : undefined,
           draw: () => {
             drawFlipped(ctx, img, left, top, width, flip, height);
             if (!bed || !bedImg) return;

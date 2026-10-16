@@ -99,6 +99,10 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    // 카카오 애드핏 배너. AdMob 과 둘 중 무엇을 띄울지는 어드민 광고 설정을 따른다.
+    // 카카오 저장소(settings.gradle)에서 받는다. 광고 ID 를 읽으려면 ads-identifier 가 필요하다.
+    implementation 'com.kakao.adfit:ads-base:3.23.1'
+    implementation 'com.google.android.gms:play-services-ads-identifier:18.2.0'
     // ktx 변형은 Kotlin 2.3 으로 컴파일돼 이 프로젝트(2.0.x)와 메타데이터가 충돌한다.
     // 콜백 API 만 쓰므로 자바 기반 기본 아티팩트로 충분하다.
     implementation 'com.android.billingclient:billing:9.1.0'

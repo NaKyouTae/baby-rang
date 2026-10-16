@@ -46,6 +46,8 @@ const AFFORDANCE_OF: Record<string, Affordance> = {
   PUSH_WALKER: "walker",
   PLAY: "play",
   SLEEP: "bed",
+  SEAT: "seat",
+  SLIDE: "slide",
 };
 /** 쓰임새를 비워 뒀을 때 앱이 분류로 짐작하는 값. 앱 PixelScreen 의 CATEGORY_AFFORDANCE 와 같다. */
 const CATEGORY_AFFORDANCE: Partial<Record<string, Affordance[]>> = {
@@ -55,10 +57,18 @@ const CATEGORY_AFFORDANCE: Partial<Record<string, Affordance[]>> = {
   TOY: ["play"],
 };
 
-/** 그 쓰임새로 나오는 행동 — 꼭 있어야 하는 행동(needs)과 그 위에서 하는 행동(boost) */
+/**
+ * 그 쓰임새로 나오는 행동 — 꼭 있어야 하는 행동(needs)을 앞에, 그 위에서 하는 행동(boost)을 뒤에 둔다.
+ * 앞의 것이 이 아이템만의 행동이라 미리보기를 열면 그걸 먼저 보여 준다.
+ */
 function behaviorsFor(aff: Affordance[]): Behavior[] {
-  return BEHAVIORS.filter((b) => (b.needs && aff.includes(b.needs)) || (b.boost && aff.includes(b.boost)));
+  const needs = BEHAVIORS.filter((b) => b.needs && aff.includes(b.needs));
+  const boost = BEHAVIORS.filter((b) => !needs.includes(b) && b.boost && aff.includes(b.boost));
+  return [...needs, ...boost];
 }
+
+/** 그 행동을 보기 좋은 개월. 가장 흔한 개월로 맞추되, 아이템까지 가려면 기어야 하므로 6개월 밑으로는 내리지 않는다. */
+const monthsFor = (b: Behavior) => Math.max(b.typical, b.from, b.needs && b.needs !== "bed" ? 6 : 0);
 
 type Props = {
   category: string;
@@ -76,7 +86,8 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
   const [failed, setFailed] = useState(false);
   const [flip, setFlip] = useState(false);
   const [withBaby, setWithBaby] = useState(true);
-  const [behaviorId, setBehaviorId] = useState<string>("");
+  // null 은 아직 안 고름 — 아이템만의 행동을 골라 둔다. "" 는 '자유롭게'를 직접 고른 것.
+  const [behaviorId, setBehaviorId] = useState<string | null>(null);
   const [months, setMonths] = useState(12);
 
   useEffect(() => {
@@ -102,16 +113,19 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
   const options = useMemo(() => behaviorsFor(aff), [aff]);
   const behavior = options.find((b) => b.id === behaviorId) ?? null;
 
-  // 쓰임새가 바뀌어 고른 행동이 사라지면 첫 행동으로 되돌린다
+  // 처음 열 때나 쓰임새가 바뀌어 고른 행동이 사라지면, 이 아이템만의 첫 행동을 바로 보여 준다
   useEffect(() => {
-    if (behaviorId && !options.some((b) => b.id === behaviorId)) setBehaviorId(options[0]?.id ?? "");
+    if (behaviorId === "") return;
+    if (behaviorId && options.some((b) => b.id === behaviorId)) return;
+    const first = options[0];
+    setBehaviorId(first?.id ?? null);
+    if (first) setMonths(monthsFor(first));
   }, [options, behaviorId]);
 
   const pickBehavior = (id: string) => {
     setBehaviorId(id);
     const b = options.find((o) => o.id === id);
-    // 그 행동이 가장 흔한 개월로 맞춘다. 아이템까지 가려면 기어야 하므로 6개월 밑으로는 내리지 않는다.
-    if (b) setMonths(Math.max(b.typical, b.from, b.needs && b.needs !== "bed" ? 6 : 0));
+    if (b) setMonths(monthsFor(b));
   };
 
   useEffect(() => {
@@ -145,14 +159,18 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
           x1: Math.min(x1, WALK.x1),
           y0: Math.max(y0, WALL_BOTTOM),
           y1: Math.min(y1, WALK.y1),
+          // 침대·의자·미끄럼틀은 그림 칸 전체로 눕는/앉는/타는 자리를 잡는다. 반전하면 방향도 바뀐다.
+          box: { x0, x1, y0, y1 },
+          flip,
         };
         if (spot.x1 - spot.x0 >= 8) world.spots.push(spot);
       }
       world.novel.add("item");
     }
 
+    // 아이템 바로 앞에서 시작한다 — 멀리서 출발하면 아이템까지 가는 데 시간을 다 쓴다
     const baby = withBaby
-      ? createActor(months, "female", Math.min(x1 + 20, WALK.x1), Math.min(y1 + 24, WALK.y1), performance.now() + 300)
+      ? createActor(months, "female", Math.min(x1 + 6, WALK.x1), Math.min(y1 + 6, WALK.y1), performance.now())
       : null;
     if (baby && behavior) baby.only = behavior.id;
 
@@ -243,7 +261,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
       : !aff.length
         ? "쓰임새가 없어 아기가 이 아이템을 쓰지 않습니다. 점선은 차지하는 칸입니다."
         : behavior
-          ? `${months}개월 아기가 '${behavior.label}'만 반복합니다. 점선은 차지하는 칸입니다.`
+          ? `${months}개월 아기가 '${behavior.label}'만 반복합니다. ${behavior.note}`
           : `${months}개월 아기가 앱처럼 행동을 고릅니다. 이 아이템을 쓰는 행동이 더 자주 나옵니다.`;
 
   return (

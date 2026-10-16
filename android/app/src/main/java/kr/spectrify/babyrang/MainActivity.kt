@@ -23,6 +23,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.kakao.adfit.ads.ba.BannerAdView
 import com.kakao.sdk.common.KakaoSdk
 import com.navercorp.nid.NaverIdLoginSDK
 import com.kakao.sdk.common.util.Utility
@@ -48,7 +49,11 @@ class MainActivity : AppCompatActivity() {
     lateinit var naverLogin: NaverLoginManager
         private set
 
+    /** 지금 붙어 있는 배너. 웹이 고른 네트워크(adNetwork)에 따라 둘 중 하나만 있다. */
     private var adView: AdView? = null
+    private var adfitView: BannerAdView? = null
+    /** 지금 배너의 네트워크("admob" | "adfit"). 웹이 처음 슬롯을 알려주기 전에는 null. */
+    private var adNetwork: String? = null
     /** 광고가 실제로 채워졌는지. 채워지기 전에는 자리를 차지하지 않는다. */
     private var adLoaded = false
     /** 웹이 마지막으로 알려준 슬롯. 아직 못 받았으면 null. */
@@ -243,7 +248,7 @@ class MainActivity : AppCompatActivity() {
         binding.webView.addJavascriptInterface(AndroidBridge(this), "Android")
 
         MobileAds.initialize(this)
-        setUpBanner()
+        // 배너는 웹이 네트워크를 알려줄 때(applyAdSlot) 만든다.
 
         if (savedInstanceState == null) {
             binding.webView.loadUrl(startUrl)
@@ -314,7 +319,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 고정 규격(320x50) 배너를 만들어 컨테이너에 붙이고 로드한다. */
+    /**
+     * 배너를 웹이 고른 네트워크로 맞춘다. 이미 그 네트워크면 아무것도 하지 않는다.
+     * 바꿀 때는 이전 배너를 완전히 치운다. 두 배너가 함께 붙어 있으면 숨긴 쪽도 요청·갱신을 계속한다.
+     */
+    private fun switchBanner(network: String) {
+        if (network == adNetwork) return
+        android.util.Log.i(TAG, "배너 네트워크: $adNetwork → $network")
+        adView?.destroy()
+        adfitView?.destroy()
+        adView = null
+        adfitView = null
+        binding.adContainer.removeAllViews()
+        adLoaded = false
+        adNetwork = network
+        if (network == NETWORK_ADFIT) setUpAdfitBanner() else setUpBanner()
+    }
+
+    /**
+     * 애드핏 배너(320x50)를 만들어 컨테이너에 붙이고 로드한다.
+     * 크기·갱신 주기(60초)는 애드핏 플랫폼에 등록한 값을 SDK 가 따른다.
+     */
+    private fun setUpAdfitBanner() {
+        val view = BannerAdView(this).apply {
+            setAdUnitId(AdConfig.adfitBottomBannerUnitId)
+            setTestMode(AdConfig.adfitTestMode)
+            setAdListener(object : com.kakao.adfit.ads.AdListener {
+                override fun onAdLoaded() {
+                    android.util.Log.i(TAG, "✅ 애드핏 배너 채움")
+                    adLoaded = true
+                    layOutBanner()
+                }
+
+                override fun onAdFailed(errorCode: Int) {
+                    // 202 네트워크, 301·302 노필. 한 번 채워진 뒤의 실패는 이전 광고가 그대로 남으므로
+                    // adLoaded 를 되돌리지 않는다. 처음부터 못 채웠으면 아직 false 라 숨겨진 채다.
+                    android.util.Log.e(TAG, "애드핏 배너 실패: $errorCode")
+                }
+
+                override fun onAdClicked() {}
+            })
+        }
+        adfitView = view
+        binding.adContainer.addView(view)
+        layOutBanner()
+        view.loadAd()
+    }
+
+    /** 고정 규격(320x50) AdMob 배너를 만들어 컨테이너에 붙이고 로드한다. */
     private fun setUpBanner() {
         val view = AdView(this).apply {
             setAdSize(AdSize.BANNER)
@@ -352,7 +404,7 @@ class MainActivity : AppCompatActivity() {
      * 높이 0 이나 투명도로만 숨기면 SDK 가 노출로 집계할 수 있어 View 를 실제로 GONE 처리한다.
      */
     fun layOutBanner() {
-        val view = adView ?: return
+        val view: android.view.View = adView ?: adfitView ?: return
         val slot = adSlot
         val show = slot?.visible == true && adLoaded
 
@@ -390,11 +442,25 @@ class MainActivity : AppCompatActivity() {
     fun applyAdSlot(slot: AdSlot) {
         android.util.Log.i(TAG, "슬롯 수신: $slot")
         adSlot = slot
+        // 예전 웹은 network 를 보내지 않았다. 그때는 원래대로 AdMob 이다.
+        if (slot.visible) switchBanner(slot.network ?: NETWORK_ADMOB)
         layOutBanner()
+    }
+
+    // 애드핏은 화면 생명주기에 맞춰 pause/resume/destroy 를 부르지 않으면 광고 수신에 불이익을 준다.
+    override fun onResume() {
+        super.onResume()
+        adfitView?.resume()
+    }
+
+    override fun onPause() {
+        adfitView?.pause()
+        super.onPause()
     }
 
     override fun onDestroy() {
         adView?.destroy()
+        adfitView?.destroy()
         billing.destroy()
         super.onDestroy()
     }
@@ -414,6 +480,10 @@ class MainActivity : AppCompatActivity() {
 
         const val REQ_LOCATION = 1001
         const val TAG = "BabyRangAd"
+
+        /** 웹이 adSlot 의 network 로 보내는 값. */
+        const val NETWORK_ADMOB = "admob"
+        const val NETWORK_ADFIT = "adfit"
 
         /** 카카오 로그인 진단 로그 태그. `adb logcat -s BabyRangAuth` 로 본다. */
         const val TAG_AUTH = "BabyRangAuth"

@@ -1,6 +1,8 @@
 package kr.spectrify.babyrang
 
 /**
+ * 하단 배너 광고 식별자. AdMob·카카오 애드핏 중 무엇을 띄울지는 웹이 정한다(어드민 광고 설정).
+ *
  * AdMob 식별자.
  *
  * 디버그 빌드에서는 Google 이 제공하는 테스트 전용 단위를 쓴다.
@@ -17,4 +19,14 @@ object AdConfig {
         } else {
             "ca-app-pub-6008464533427245/5442054978"
         }
+
+    /** 애드핏 하단 배너(320x50). 매체: 아기랑 AOS(kr.spectrify.baby_rang). */
+    const val adfitBottomBannerUnitId = "DAN-hxjZ4ij9pP2RuddW"
+
+    /**
+     * 애드핏 테스트 모드. 테스트 요청은 과금·노출 지표에서 빠진다.
+     * AdMob 테스트 단위와 같은 이유로 디버그 빌드에서만 켠다.
+     */
+    val adfitTestMode: Boolean
+        get() = BuildConfig.DEBUG
 }

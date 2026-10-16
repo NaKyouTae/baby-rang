@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import KakaoAdBanner from "./ads/KakaoAdBanner";
 import { APP_AD_SLOT_ID } from "./ads/AppAdSlotReporter";
+import { useAppBannerMode } from "./ads/adConfig";
 
-const BOTTOM_AD_UNIT = "DAN-go0noPJx8cIt6SU7";
+const BOTTOM_AD_UNIT = "DAN-mFffxN7OmFUS6FZt";
 
 /**
  * 화면 하단에 고정되는 배너 광고 자리. 모든 페이지가 이 하나를 같이 쓴다.
@@ -16,6 +17,7 @@ const BOTTOM_AD_UNIT = "DAN-go0noPJx8cIt6SU7";
 export default function BottomAdBar() {
   const contentRef = useRef<HTMLDivElement>(null);
   const filledRef = useRef(false);
+  const mode = useAppBannerMode();
 
   // 슬롯 높이를 실제 소재 높이에 맞춘다. 미노출(no-fill)이면 0 으로 접어 흰 여백을 없앤다.
   // 애드핏 소재는 50px 고정이 아니다. 일부는 가로폭 비율로 높이를 정하고, iOS 에서는 가로폭을
@@ -36,6 +38,13 @@ export default function BottomAdBar() {
     },
     [applyHeight],
   );
+
+  // 앱에서는 웹 광고 대신 네이티브 배너 자리를 다룬다. 띄울 배너가 있으면 기본 높이(50px)로 비워 두고,
+  // 없으면 접는다. 판별 전(pending)에는 기본 높이 그대로 둬 화면이 들썩이지 않게 한다.
+  useEffect(() => {
+    if (mode === "admob" || mode === "adfit") handleAdFilled(true);
+    else if (mode === "none") handleAdFilled(false);
+  }, [mode, handleAdFilled]);
 
   // 소재가 늦게 커지거나 회전으로 폭이 바뀌어도 따라간다.
   useEffect(() => {
@@ -65,7 +74,9 @@ export default function BottomAdBar() {
       >
         {/* 슬롯은 높이를 변수로 고정하므로, 소재 자체 높이는 안쪽 래퍼로 잰다 */}
         <div ref={contentRef} className="w-full flex justify-center">
-          <KakaoAdBanner unit={BOTTOM_AD_UNIT} onFilledChange={handleAdFilled} />
+          {mode === "web" && (
+            <KakaoAdBanner unit={BOTTOM_AD_UNIT} onFilledChange={handleAdFilled} />
+          )}
         </div>
       </div>
     </div>

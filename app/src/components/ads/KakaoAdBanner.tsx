@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isNativeApp, useIsNativeApp } from "@/lib/isNativeApp";
-import { APP_ADMOB_ENABLED } from "./adConfig";
+import { isAndroidApp } from "@/lib/isAndroidApp";
 
 type Props = {
-  /** 카카오 광고 unit ID (예: "DAN-go0noPJx8cIt6SU7") */
+  /** 카카오 광고 unit ID (예: "DAN-mFffxN7OmFUS6FZt") */
   unit: string;
   /** 요청할 소재 규격의 너비. 미지정 시 320(AdFit 기본 배너 규격) */
   width?: number;
@@ -48,8 +48,9 @@ type WindowWithCallbacks = Window & Record<string, (() => void) | undefined>;
  * 플랫폼별 광고 슬롯.
  *
  * - 웹 브라우저: 카카오 애드핏 배너를 띄운다.
- * - 네이티브 앱: 아무것도 렌더하지 않되 슬롯 높이는 그대로 남긴다.
- *   비워둔 그 자리에 네이티브 AdMob 배너가 겹쳐 들어오기 때문이다.
+ * - 앱(iOS·Android, TWA 포함): 아무것도 렌더하지 않는다. 웹 광고를 앱에 넣으면 정책 위반 소지가 있다.
+ *   자리를 남길지 접을지는 BottomAdBar 가 정한다(useAppBannerMode). 남기면 그 자리에
+ *   네이티브 배너(AdMob 또는 애드핏)가 겹쳐 들어온다.
  *   (AdMob 은 네이티브 SDK 라서 WebView 안에서는 띄울 수 없고,
  *    웹용 AdSense 를 앱 WebView 에 넣는 것은 Google 정책 위반이다.)
  *   두 광고를 동시에 띄우면 화면도 잡아먹고 광고 밀도 정책에도 걸린다.
@@ -100,7 +101,7 @@ export default function KakaoAdBanner({
     // 상태(inNativeApp)가 아니라 함수를 직접 호출한다.
     // 상태는 이 effect 다음 렌더에 반영되므로, 그 사이에 애드핏 SDK 가
     // 한 번 로드되어 앱에서도 광고가 요청되는 것을 막아야 한다.
-    if (APP_ADMOB_ENABLED && isNativeApp()) return;
+    if (isNativeApp() || isAndroidApp()) return;
 
     const ins = insRef.current;
     if (!ins) return;
@@ -187,8 +188,8 @@ export default function KakaoAdBanner({
   }, [unit, onFilledChange, stretch, baseWidth]);
 
   if (!unit) return null;
-  // 앱에서는 네이티브 AdMob 배너가 노출되므로 웹 광고는 렌더하지 않는다(AdMob 을 끈 동안은 앱도 카카오).
-  if (APP_ADMOB_ENABLED && inNativeApp) return null;
+  // 앱에서는 네이티브 배너가 노출되므로 웹 광고는 렌더하지 않는다.
+  if (inNativeApp) return null;
 
   // style 은 AdFit SDK 가 채움 시점에 직접 건드린다(display 등).
   // 그래서 확대 transform 은 ins 가 아니라 바깥 래퍼에 건다.

@@ -51,7 +51,9 @@ export type BehaviorId =
   | 'manse'
   | 'doridori'
   | 'gonji'
-  | 'merong';
+  | 'merong'
+  | 'chairSit'
+  | 'slide';
 
 /**
  * 아이템 쓰임새. 방에 놓인 아이템이 아기에게 무엇을 할 수 있게 해 주는지.
@@ -61,8 +63,10 @@ export type BehaviorId =
  *   walker 밀고 걷는 보행기
  *   play   앉아서 갖고 노는 장난감(블록·오뚝이)
  *   bed    누워 잘 수 있는 침대(아기침대·범퍼침대)
+ *   seat   올라앉을 수 있다(소파·의자)
+ *   slide  사다리로 올라가 타고 내려오는 미끄럼틀
  */
-export type Affordance = 'hold' | 'soft' | 'ball' | 'walker' | 'play' | 'bed';
+export type Affordance = 'hold' | 'soft' | 'ball' | 'walker' | 'play' | 'bed' | 'seat' | 'slide';
 
 export type Behavior = {
   id: BehaviorId;
@@ -135,6 +139,10 @@ export const BEHAVIORS: Behavior[] = [
     note: '앉아서 한 손을 펴고, 다른 손 검지로 손바닥을 콕콕 찍는다. 손가락을 따로 쓰기 시작하는 9개월 무렵부터 한다.' },
   { id: 'merong', label: '메롱', from: 10, to: 24, typical: 14, facings: ['down', 'side'], frames: 8, fps: 6, roams: false, curve: [10, 14, 24, 24], weight: 0.25,
     note: '쪽쪽이를 빼고 혀를 쏙 내밀며 장난스럽게 웃는다. 걷기 전에는 앉아서, 걷기 시작하면 서서 한다.' },
+  { id: 'chairSit', label: '의자에 앉기', from: 12, to: 24, typical: 15, facings: ['down'], frames: 8, fps: 4, roams: false, curve: [12, 15, 24, 24], weight: 0.6, needs: 'seat',
+    note: '의자·소파 앞까지 가서 기어올라 앉는다. 다리를 늘어뜨리고 발을 번갈아 달랑거린다. 혼자 의자에 기어오르기는 12~18개월.' },
+  { id: 'slide', label: '미끄럼틀 타기', from: 15, to: 24, typical: 20, facings: ['side', 'up'], frames: 8, fps: 8, roams: false, curve: [15, 20, 24, 24], weight: 0.7, needs: 'slide',
+    note: '사다리로 가서 뒷모습으로 오른 뒤, 꼭대기에 앉아 두 팔을 들고 미끄러져 내려온다. 내려오면 다시 사다리로 간다. 낮은 미끄럼틀은 18개월 무렵부터 혼자 탄다. (뒷모습=사다리 오르기, 옆모습=타고 내려오기)' },
   { id: 'pushWalker', label: '보행기 밀기', from: 9, to: 16, typical: 10, facings: ['side', 'down', 'up'], frames: 8, fps: 8, roams: true, curve: [9, 10, 13, 16], weight: 1.0, needs: 'walker',
     note: '카트형 보행기 손잡이를 잡고 밀며 걷는다. 혼자 걷기 직전에 가장 많이 쓴다.' },
 ];
@@ -1529,6 +1537,68 @@ function plop(k: Ctx, i: number, facing: Facing) {
   }
 }
 
+/**
+ * 의자에 걸터앉았을 때 발밑(G)에서 엉덩이까지의 높이. 홈은 이만큼 내려서 엉덩이를 의자 앉는 면에 맞춘다.
+ */
+export function seatDrop(months: number) {
+  const m = metrics(months);
+  return m.thigh * 0.35 + m.shin + 1.6;
+}
+
+/** 의자에 앉기 — 앞모습. 무릎이 이쪽으로 나와 허벅지는 짧게 보이고, 정강이를 늘어뜨려 번갈아 달랑거린다. */
+function chairSit(k: Ctx, ph: number) {
+  const { m } = k;
+  const hipY = G - seatDrop(k.months);
+  const hip: P = [CX, hipY];
+  const chest: P = [CX + 0.4 * Math.sin(ph), hipY - m.torso];
+  torso(k, hip, chest, 'down');
+  for (const s of [-1, 1]) {
+    const hj: P = [CX + s * 2.1, hipY + 0.6];
+    const knee: P = [CX + s * 2.5, hipY + m.thigh * 0.35 + 0.6];
+    const swing = Math.max(0, Math.sin(ph + (s > 0 ? 0 : Math.PI)));
+    const ankle: P = [CX + s * 2.6, knee[1] + m.shin - 1.2 * swing];
+    limb(k.buf, [hj, knee, ankle], [m.rTh, m.rKn, m.rAn], LIMB);
+    sole(k, add(ankle, s * 0.3, 0.5));
+  }
+  // 두 손은 엉덩이 옆 앉는 면을 짚는다
+  for (const s of [-1, 1]) {
+    const sh: P = [chest[0] + s * (m.chestR - 0.2), chest[1] + 0.9];
+    const [el, wr] = ik(sh, [CX + s * 5.2, hipY + 0.4], m.ua, m.fa, s > 0 ? -1 : 1);
+    arm(k, sh, el, wr);
+  }
+  const hc = headOn(k, chest, 0);
+  neck(k, chest, hc);
+  head(k, hc, 'down');
+}
+
+/**
+ * 미끄럼틀 사다리 오르기 — 뒷모습. 한 손이 위 칸을 잡을 때 반대쪽 무릎을 올린다.
+ * 사다리는 아이템 그림에 있으므로 그리지 않는다. 손이 머리에 가리지 않게 머리 다음에 팔을 그린다.
+ */
+function climb(k: Ctx, ph: number) {
+  const { m } = k;
+  const hipY = G - 1.3 - (m.thigh + m.shin) * 0.92;
+  const hip: P = [CX, hipY];
+  const chest: P = [CX, hipY - m.torso];
+  for (const s of [-1, 1]) {
+    const lift = Math.max(0, s > 0 ? Math.sin(ph) : -Math.sin(ph));
+    const hj: P = [CX + s * 2.2, hipY];
+    const ankle: P = [CX + s * 2.6, G - 1.3 - 3.2 * lift];
+    const mid = mix(hj, ankle, 0.5);
+    leg(k, hj, [mid[0] + s * 0.5, mid[1] - 0.8 * lift], ankle, null, false, 'up');
+  }
+  torso(k, hip, chest, 'up');
+  const hc = headOn(k, chest, 0);
+  neck(k, chest, hc);
+  head(k, hc, 'up');
+  for (const s of [-1, 1]) {
+    const reach = s > 0 ? 0.5 + 0.5 * Math.cos(ph) : 0.5 - 0.5 * Math.cos(ph);
+    const sh: P = [chest[0] + s * (m.chestR - 0.3), chest[1] + 0.8];
+    const [el, wr] = ik(sh, [chest[0] + s * 6.2, chest[1] - 5 - 4 * reach], m.ua * 1.3, m.fa * 1.35, s > 0 ? 1 : -1);
+    arm(k, sh, el, wr, true);
+  }
+}
+
 // ───────────────────────── 프레임 굽기 ─────────────────────────
 
 /** 도리도리 고개 방향(프레임별). 끝에서 한 프레임 더 머물러야 고개를 '젓는' 느낌이 난다. */
@@ -1582,6 +1652,12 @@ export function buildFrames(
         sit(k, Math.PI / 2, f, 0, 'rest');
         break;
       case 'gonji': sit(k, ph, f, 0, 'gonji'); break;
+      case 'chairSit': chairSit(k, ph); break;
+      case 'slide':
+        // 뒷모습은 사다리 오르기, 옆모습은 두 팔을 들고 타고 내려오기
+        if (f === 'up') climb(k, ph);
+        else sit(k, Math.PI + 0.3 * Math.sin(ph), 'side', 0, 'manse');
+        break;
       case 'merong': {
         // 혀를 내밀 때는 눈웃음, 넣을 때는 빙긋 웃는다
         const out = MERONG[i];

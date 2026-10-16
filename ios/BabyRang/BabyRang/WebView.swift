@@ -41,6 +41,16 @@ struct WebView: UIViewRepresentable {
         // 네이버앱 로그인 브릿지
         contentController.add(context.coordinator, name: NaverLoginBridge.handlerName)
 
+        // 이 빌드가 띄울 수 있는 배너 네트워크를 웹에 알린다.
+        // 웹은 이 값을 보고 adSlot 메시지의 network 를 고른다. 이 스크립트가 없는
+        // 예전 빌드는 AdMob 만 띄울 수 있으므로, 웹은 값이 없으면 AdMob 전용으로 취급한다.
+        // 페이지 스크립트보다 먼저 읽혀야 해서 atDocumentStart 에 주입한다.
+        contentController.addUserScript(WKUserScript(
+            source: #"window.__babyrangBannerNetworks = ["admob","adfit"];"#,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true,
+        ))
+
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
@@ -139,8 +149,12 @@ struct WebView: UIViewRepresentable {
                 let height = (body?["height"] as? NSNumber)?.doubleValue ?? 0
                 let width = (body?["width"] as? NSNumber)?.doubleValue
                 let left = (body?["left"] as? NSNumber)?.doubleValue ?? 0
+                // 어느 광고 네트워크를 띄울지("admob" | "adfit").
+                // visible:true 인데 비어 있으면 network 필드 이전의 웹이므로 admob 으로 본다.
+                // visible:false 는 생략해도 되므로 nil 로 넘겨 현재 네트워크를 유지한다.
+                let network = (body?["network"] as? String) ?? (visible ? AdSlotModel.admob : nil)
                 adLogger.info(
-                    "슬롯 수신: visible=\(visible, privacy: .public) bottom=\(inset ?? -1, privacy: .public) h=\(height, privacy: .public) w=\(width ?? -1, privacy: .public) left=\(left, privacy: .public)",
+                    "슬롯 수신: visible=\(visible, privacy: .public) bottom=\(inset ?? -1, privacy: .public) h=\(height, privacy: .public) w=\(width ?? -1, privacy: .public) left=\(left, privacy: .public) network=\(network ?? "-", privacy: .public)",
                 )
                 Task { @MainActor [adSlot] in
                     adSlot.update(
@@ -148,6 +162,7 @@ struct WebView: UIViewRepresentable {
                         height: CGFloat(height),
                         width: width.map { CGFloat($0) },
                         left: CGFloat(left),
+                        network: network,
                     )
                 }
             }

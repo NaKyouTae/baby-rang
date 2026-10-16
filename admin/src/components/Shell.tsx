@@ -17,6 +17,7 @@ import {
   Megaphone,
   Menu,
   PersonStanding,
+  RectangleHorizontal,
   Smile,
   Users,
   Sofa,
@@ -71,6 +72,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/users", label: "사용자", icon: Users },
       { href: "/payments", label: "결제 내역", icon: CreditCard },
       { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
+      { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
     ],
   },
 ];

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { APP_ADMOB_ENABLED } from "./adConfig";
+import { useAppBannerMode } from "./adConfig";
 import { isAppOverlayOpen, subscribeAppOverlay } from "./appOverlay";
 
 /** BottomAdBar 가 비워 두는 앱 배너 슬롯의 DOM id. */
@@ -18,6 +18,8 @@ type NativeBridgeWindow = Window & {
 
 type SlotPayload = {
   visible: boolean;
+  /** 띄울 네트워크. 이걸 모르는 예전 빌드는 무시하고 AdMob 을 띄운다. */
+  network?: "admob" | "adfit";
   bottomInset?: number;
   height?: number;
   width?: number;
@@ -37,12 +39,14 @@ type SlotPayload = {
  */
 export default function AppAdSlotReporter() {
   const pathname = usePathname();
+  const mode = useAppBannerMode();
 
   useEffect(() => {
     const w = window as NativeBridgeWindow;
     const iosHandler = w.webkit?.messageHandlers?.adSlot;
     const hasAndroid = typeof w.Android?.reportAdSlot === "function";
     if (!iosHandler && !hasAndroid) return;
+    const network = mode === "admob" || mode === "adfit" ? mode : null;
 
     // 플랫폼별 전송 방식을 여기서 흡수한다. 아래 로직은 동일하다.
     const send = (payload: SlotPayload) => {
@@ -71,6 +75,7 @@ export default function AppAdSlotReporter() {
       const rect = el.getBoundingClientRect();
       send({
         visible: rect.height > 0,
+        network: network ?? undefined,
         // 뷰포트 하단에서 슬롯 하단까지의 거리. CSS px = pt 이므로 그대로 쓴다.
         bottomInset: window.innerHeight - rect.bottom,
         height: rect.height,
@@ -81,8 +86,9 @@ export default function AppAdSlotReporter() {
       });
     };
 
-    // AdMob 을 끈 동안은 슬롯 자리에 카카오가 들어오므로 네이티브 배너는 늘 숨긴다.
-    if (!APP_ADMOB_ENABLED) {
+    // 띄울 네이티브 배너가 없거나(설정한 네트워크를 이 빌드가 모름) 아직 판별 전이면 숨긴다.
+    // 예전 빌드는 network 를 무시하고 AdMob 을 띄우므로, 슬롯을 아예 알려주지 않아야 한다.
+    if (!network) {
       send({ visible: false });
       return;
     }
@@ -104,7 +110,7 @@ export default function AppAdSlotReporter() {
       observer.disconnect();
       window.removeEventListener("resize", report);
     };
-  }, [pathname]);
+  }, [pathname, mode]);
 
   return null;
 }

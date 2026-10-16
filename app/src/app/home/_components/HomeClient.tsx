@@ -21,6 +21,8 @@ import RoomChrome, {
   ACTION_LABEL,
   DEFAULT_MENU,
   LEGACY_DEFAULT_MENUS,
+  MENU_OPTIONS,
+  MENU_SLOTS,
   type ActionId,
 } from './RoomChrome';
 import EditChrome from './EditChrome';
@@ -73,8 +75,9 @@ const STORAGE_KEY = 'babyrang.home.placements';
 /** 자리가 고정된 슬롯(방·벽지·바닥·창문). 좌표가 없어 배치와 따로 저장한다. */
 const ROOM_KEY = 'babyrang.home.room';
 /**
- * 좌우 기록 버튼 구성. 아직 서버 저장이 없어 브라우저에 둔다.
- * 로그아웃·탈퇴 때 지워서 다음에 가입하는 계정은 기본 구성으로 시작한다(clearAuthCaches).
+ * 좌우 기록 버튼 구성. 원본은 계정(서버 /screen-preference)이고, 브라우저에는 첫 화면을 바로 그리려고 사본을 둔다.
+ * 비로그인 데모는 브라우저에만 둔다.
+ * 로그아웃·탈퇴 때 지워서 다음에 로그인하는 계정이 앞 계정의 구성을 잠깐이라도 보지 않게 한다(clearAuthCaches).
  */
 const MENU_KEY = 'babyrang.home.menu';
 
@@ -107,6 +110,25 @@ function loadSavedMenu(): ActionId[] {
   } catch {
     return DEFAULT_MENU;
   }
+}
+
+/** 서버에서 받은 구성 — 앱이 모르는 값(다른 버전에서 저장한 것)은 걸러 낸다 */
+function toMenu(value: unknown): ActionId[] {
+  if (!Array.isArray(value)) return [];
+  const known = new Set<string>(MENU_OPTIONS.map((o) => o.id));
+  return value.filter((id): id is ActionId => typeof id === 'string' && known.has(id)).slice(0, MENU_SLOTS);
+}
+
+const sameMenu = (a: ActionId[], b: ActionId[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+function saveMenuToServer(menu: ActionId[]) {
+  fetch('/api/screen-preference', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recordMenu: menu }),
+  }).catch(() => {
+    /* 실패해도 이 기기에는 남아 있다. 다음에 바꿀 때 다시 올라간다. */
+  });
 }
 
 type Slot = { id: string; imageUrl: string | null } | null;
@@ -317,6 +339,44 @@ export default function HomeClient() {
       /* 용량 초과 등은 무시한다 */
     }
   }, [menu]);
+
+  // 계정에 저장된 기록 버튼 구성을 받아 온다. 기기마다 달라 보이지 않게 서버 값이 이긴다.
+  // 서버에 아직 없으면(계정 저장 전에 이 기기에서 바꿔 둔 사용자) 이 기기의 구성을 한 번 올려 둔다.
+  // 받아 오는 사이 사용자가 먼저 바꿨으면 그 값을 지킨다.
+  const menuTouchedRef = useRef(false);
+  useEffect(() => {
+    if (!isAuthLoaded || !isAuthenticated) return;
+    let alive = true;
+    fetch('/api/screen-preference', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!alive || !d || menuTouchedRef.current) return;
+        const saved = toMenu(d.recordMenu);
+        if (saved.length) {
+          setMenu(saved);
+          return;
+        }
+        const local = loadSavedMenu();
+        if (!sameMenu(local, DEFAULT_MENU)) saveMenuToServer(local);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isAuthLoaded, isAuthenticated]);
+
+  // 메뉴 탭에서 바꿀 때마다 계정에 저장한다. 연달아 고르는 동안은 모았다가 한 번에 보낸다.
+  const menuSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleChangeMenu = useCallback(
+    (next: ActionId[]) => {
+      menuTouchedRef.current = true;
+      setMenu(next);
+      if (!isAuthenticated) return;
+      if (menuSaveTimer.current) clearTimeout(menuSaveTimer.current);
+      menuSaveTimer.current = setTimeout(() => saveMenuToServer(next), 500);
+    },
+    [isAuthenticated],
+  );
 
   // 카탈로그를 한 번 받아 배치 정보를 최신으로 맞춘다.
   // 예전 형식으로 저장된 배치에는 분류가 없어서, 러그인 줄 모르고 아이를 가렸다.
@@ -771,7 +831,7 @@ export default function HomeClient() {
         onPurchase={handlePurchase}
         onCharge={openGems}
         menu={menu}
-        onChangeMenu={setMenu}
+        onChangeMenu={handleChangeMenu}
       />
 
       <MyPage

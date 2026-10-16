@@ -13,7 +13,10 @@ export class ScreenPreferenceController {
   }
 
   @Put()
-  async update(@Req() req, @Body() body: { home?: unknown }) {
+  async update(
+    @Req() req,
+    @Body() body: { home?: unknown; recordMenu?: unknown },
+  ) {
     return this.screenPreferenceService.update(req.user.id, body);
   }
 }
