@@ -144,12 +144,12 @@ export default function GrowthChart({
   for (let v = yStart; v <= maxVal; v += yStep) yTicks.push(v);
 
   return (
-    <div className="w-full flex flex-col items-end gap-[10px]">
+    <div className="w-full flex-1 min-h-0 flex flex-col items-center gap-[10px]">
       {/* SVG 차트 */}
       <svg
         viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-        className="w-full block overflow-visible"
-        style={{ aspectRatio: `${CHART_W}/${CHART_H}` }}
+        className="w-full flex-1 min-h-0 block"
+        style={{ height: 0 }}
       >
         {/* 밴드 영역 */}
         <path d={makeBand(chartData, 'p3', 'p15')} fill={BAND_COLORS.outer} />

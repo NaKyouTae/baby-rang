@@ -8,9 +8,9 @@ import ConfirmModal from './ConfirmModal';
 const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 /** 고른 탭 — #FFD200 10% 를 흰 바탕 위에 겹쳐 불투명하게 칠한다. */
 const SELECTED_BG = 'linear-gradient(rgba(255,210,0,0.1), rgba(255,210,0,0.1)), #FDFDFE';
-// 52px 안에 16px 두 글자가 좌우 여백 10px 과 함께는 안 들어간다. 좌우 여백을 빼고 줄바꿈을 막는다.
+// 48px 안에 16px 두 글자가 좌우 여백 10px 과 함께는 안 들어간다. 좌우 여백을 빼고 줄바꿈을 막는다.
 const SIDE_BUTTON =
-  'w-[52px] h-[52px] shrink-0 flex items-center justify-center rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px disabled:opacity-60';
+  'w-[52px] h-[48px] shrink-0 flex items-center justify-center rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px disabled:opacity-60';
 
 interface GroupMember {
   userId: string;
@@ -195,7 +195,7 @@ export default function SharingScreen({ open, onBack }: Props) {
             role="tab"
             aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`${BOX} flex-1 min-w-0 p-[10px] text-[#121212] text-[16px] leading-[1.4] text-center`}
+            className={`${BOX} flex-1 min-w-0 h-[32px] px-[10px] flex items-center justify-center text-[#121212] text-[16px] leading-[1.4] text-center`}
             style={tab === t ? { background: SELECTED_BG } : undefined}
           >
             {t === 'mine' ? '내 공유' : '받은 공유'}
@@ -205,7 +205,7 @@ export default function SharingScreen({ open, onBack }: Props) {
 
       {tab === 'mine' ? (
         <div className="shrink-0 flex gap-[10px]">
-          <div className={`${BOX} flex-1 min-w-0 h-[52px] flex items-center justify-center`}>
+          <div className={`${BOX} flex-1 min-w-0 h-[48px] flex items-center justify-center`}>
             <span className="text-[#121212] text-[16px] leading-none tracking-[2px] uppercase truncate">
               {code}
             </span>
@@ -232,7 +232,7 @@ export default function SharingScreen({ open, onBack }: Props) {
               maxLength={6}
               autoCapitalize="characters"
               autoComplete="off"
-              className={`${BOX} flex-1 min-w-0 h-[52px] px-[10px] text-center text-[#121212] text-[16px] leading-none tracking-[2px] uppercase placeholder:tracking-normal placeholder:normal-case placeholder:text-[#BBC0C5] focus:outline-none`}
+              className={`${BOX} flex-1 min-w-0 h-[48px] px-[10px] text-center text-[#121212] text-[16px] leading-none tracking-[2px] uppercase placeholder:tracking-normal placeholder:normal-case placeholder:text-[#BBC0C5] focus:outline-none`}
             />
             <button
               type="button"

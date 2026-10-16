@@ -115,6 +115,20 @@ export default function PhysicalGrowthClient() {
   // 날짜 선택 모달
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
+  // 이 페이지는 화면 높이에 고정한다. 기록 목록은 내부에서만 스크롤한다.
+  useEffect(() => {
+    const appScroller = document.getElementById('app-scroll-container');
+    if (!appScroller) return;
+    const previousOverflowY = appScroller.style.overflowY;
+    const previousOverscrollBehaviorY = appScroller.style.overscrollBehaviorY;
+    appScroller.style.overflowY = 'hidden';
+    appScroller.style.overscrollBehaviorY = 'none';
+    return () => {
+      appScroller.style.overflowY = previousOverflowY;
+      appScroller.style.overscrollBehaviorY = previousOverscrollBehaviorY;
+    };
+  }, []);
+
   useEffect(() => {
     if (!showForm) return;
     const original = document.body.style.overflow;
@@ -307,7 +321,7 @@ export default function PhysicalGrowthClient() {
               type="button"
               onClick={() => setViewTab(tab.key)}
               aria-pressed={on}
-              className="flex-1 min-w-0 p-[10px] rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
+              className="flex-1 min-w-0 h-[32px] px-[10px] rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
               style={{ background: on ? SELECTED_BG : '#FDFDFE' }}
             >
               {tab.label}
@@ -318,14 +332,14 @@ export default function PhysicalGrowthClient() {
 
       {viewTab !== 'records' ? (
         /* ── 성장 도표 — 비로그인/아기 미등록 시에도 WHO 기준 곡선만 표시 ── */
-        <div className={`${BOX} flex-1 min-h-0 overflow-y-auto overscroll-contain p-[10px] flex flex-col gap-[10px]`}>
+        <div className={`${BOX} flex-1 min-h-0 overflow-hidden py-[10px] flex flex-col gap-[10px]`}>
           <GrowthChart
             gender={selected ? resolveGender(selected) : 'male'}
             metric={activeMetric}
             birthDate={selected?.birthDate ?? todayString()}
             records={selected ? records : []}
           />
-          <ul className="flex flex-col gap-[4px] list-disc pl-[18px] text-[12px] leading-[1.4] text-[#808991]">
+          <ul className="mx-[10px] shrink-0 flex flex-col gap-[4px] list-disc pl-[18px] text-[12px] leading-[1.4] text-[#808991]">
             <li>기록을 추가하면 성장 곡선에 표시됩니다</li>
             <li>2017 소아청소년 성장도표 기준(0-36개월: WHO Growth Standards)</li>
           </ul>

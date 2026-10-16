@@ -251,6 +251,7 @@ export default function HomeClient() {
   const { open: panels, openPanel, closePanel } = useHistoryPanels();
   const charging = panels.gems;
   const myPageOpen = panels.my;
+  const [gemsOpenedFromSettings, setGemsOpenedFromSettings] = useState(false);
   const [editing, setEditing] = useState(false);
   // 보기 모드 — 카드·버튼·탭바를 걷어내고 방만 본다.
   const [viewing, setViewing] = useState(false);
@@ -317,9 +318,8 @@ export default function HomeClient() {
         { label: '기저귀', value: '48시간 25분 전' },
       ];
     }
-    // 불러오는 동안은 '기록 없음'이 깜빡이지 않게 비워 둔다.
     const show = (iso: string | null | undefined) =>
-      lastRecords ? formatElapsed(iso ?? null, now) : '';
+      formatElapsed(iso ?? null, now);
     return [
       { label: '수면', value: show(lastRecords?.sleepAt) },
       { label: '수유', value: show(lastRecords?.feedingAt) },
@@ -540,6 +540,12 @@ export default function HomeClient() {
   }, [isAuthLoaded, router]);
   const openGems = useCallback(() => {
     if (!isAuthenticated) return goLogin();
+    setGemsOpenedFromSettings(false);
+    openPanel('gems');
+  }, [isAuthenticated, goLogin, openPanel]);
+  const openGemsFromSettings = useCallback(() => {
+    if (!isAuthenticated) return goLogin();
+    setGemsOpenedFromSettings(true);
     openPanel('gems');
   }, [isAuthenticated, goLogin, openPanel]);
 
@@ -841,12 +847,13 @@ export default function HomeClient() {
       <MyPage
         open={myPageOpen && !charging}
         onClose={() => closePanel('my')}
-        onOpenGems={openGems}
+        onOpenGems={openGemsFromSettings}
       />
 
       <GemStore
         open={charging}
         onClose={() => closePanel('gems')}
+        showBackButton={gemsOpenedFromSettings}
         coins={coins}
         childId={childId}
         onCharged={reloadInventory}

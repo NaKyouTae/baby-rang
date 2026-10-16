@@ -28,8 +28,11 @@ final class DateTimePickerBridge {
             reply(requestId, value: nil, error: true)
             return
         }
-        let picker = NativeDateTimePickerController(date: date,
-            title: body["title"] as? String ?? "일시 선택", timeOnly: body["mode"] as? String == "time")
+        let picker = NativeDateTimePickerController(
+            date: date,
+            title: body["title"] as? String ?? "일시 선택",
+            mode: body["mode"] as? String ?? "dateTime"
+        )
         picker.onResult = { [weak self] value in
             self?.active = nil
             self?.activeRequestId = nil
@@ -53,15 +56,15 @@ final class DateTimePickerBridge {
 @MainActor
 private final class NativeDateTimePickerController: UIViewController {
     private let initial: Date
-    private let timeOnly: Bool
+    private let mode: String
     private let picker = UIDatePicker()
     private let feedback = UISelectionFeedbackGenerator()
     private var finished = false
     var onResult: ((String?) -> Void)?
 
-    init(date: Date, title: String, timeOnly: Bool) {
+    init(date: Date, title: String, mode: String) {
         initial = date
-        self.timeOnly = timeOnly
+        self.mode = mode
         super.init(nibName: nil, bundle: nil)
         self.title = title
         modalPresentationStyle = .overFullScreen
@@ -85,12 +88,17 @@ private final class NativeDateTimePickerController: UIViewController {
         card.layer.cornerRadius = 14
         view.addSubview(card)
         picker.translatesAutoresizingMaskIntoConstraints = false
-        picker.datePickerMode = timeOnly ? .time : .dateAndTime
+        switch mode {
+        case "time": picker.datePickerMode = .time
+        case "date": picker.datePickerMode = .date
+        default: picker.datePickerMode = .dateAndTime
+        }
         picker.preferredDatePickerStyle = .wheels
         picker.locale = Locale(identifier: "ko_KR")
         picker.calendar = Calendar(identifier: .gregorian)
         picker.timeZone = .autoupdatingCurrent
         picker.minuteInterval = 1
+        if mode == "date" { picker.maximumDate = Date() }
         picker.addTarget(self, action: #selector(selectionChanged), for: .valueChanged)
         picker.accessibilityLabel = title
         card.addSubview(picker)

@@ -5,7 +5,9 @@ import { animate, motion, useMotionValue, type PanInfo } from 'framer-motion';
 import { useSelectedChild } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
-import WheelDatePickerModal from '@/components/WheelDatePickerModal';
+import PatternDatePickerModal from './PatternDatePickerModal';
+import { openNativeDateTimePicker } from '@/lib/nativeDateTimePicker';
+import { useAppOverlayLock } from '@/components/ads/appOverlay';
 import { calcChildAge } from '@/lib/childAge';
 import { groupTwins } from '@/lib/twins';
 import ChildSwitcher from '../home/_components/ChildSwitcher';
@@ -197,6 +199,10 @@ export default function GrowthPatternClient() {
   const [days, setDays] = useState<Record<string, GrowthRecord[]>>({});
   const [loading, setLoading] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [nativeDatePickerPending, setNativeDatePickerPending] = useState(false);
+  const nativeDatePickerCancelRef = useRef<(() => void) | null>(null);
+  useAppOverlayLock(nativeDatePickerPending);
+  useEffect(() => () => nativeDatePickerCancelRef.current?.(), []);
   const [selectedTypes, setSelectedTypes] = useState<Set<GrowthType>>(
     () =>
       new Set<GrowthType>([
@@ -419,6 +425,27 @@ export default function GrowthPatternClient() {
       ? formatDayLabel(selectedDate)
       : `${formatDayLabel(dates[0])} - ${formatDayLabel(dates[6])}`;
 
+  const openDatePicker = () => {
+    if (nativeDatePickerPending) return;
+    const cancel = openNativeDateTimePicker(
+      '날짜 선택',
+      `${selectedDate}T00:00`,
+      (result) => {
+        nativeDatePickerCancelRef.current = null;
+        setNativeDatePickerPending(false);
+        if (result.error) setDatePickerOpen(true);
+        else if (result.value) setSelectedDate(result.value.slice(0, 10));
+      },
+      'date',
+    );
+    if (cancel) {
+      nativeDatePickerCancelRef.current = cancel;
+      setNativeDatePickerPending(true);
+    } else {
+      setDatePickerOpen(true);
+    }
+  };
+
   const groups = groupTwins(children);
   const current = selectedChild
     ? (groups.find((g) => g.some((c) => c.id === selectedChild.id)) ?? [selectedChild])
@@ -483,7 +510,7 @@ export default function GrowthPatternClient() {
               type="button"
               onClick={() => setViewMode(mode)}
               aria-pressed={on}
-              className="flex-1 min-w-0 p-[10px] rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
+              className="flex-1 min-w-0 h-[32px] px-[10px] flex items-center justify-center rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
               // #FFD200 10% 를 흰 바탕 위에 겹쳐 불투명하게 칠한다
               style={{
                 background: on
@@ -554,7 +581,7 @@ export default function GrowthPatternClient() {
           </button>
           <button
             type="button"
-            onClick={() => setDatePickerOpen(true)}
+            onClick={openDatePicker}
             className="text-[#121212] text-[14px] leading-[1.4] whitespace-nowrap tabular-nums active:opacity-70"
             aria-label="날짜 선택"
           >
@@ -611,10 +638,9 @@ export default function GrowthPatternClient() {
       <div className="shrink-0" style={{ height: TAB_BAR_HEIGHT }} aria-hidden />
       <PixelTabBar active="pattern" />
 
-      <WheelDatePickerModal
+      <PatternDatePickerModal
         open={datePickerOpen}
         value={selectedDate}
-        max={todayStr}
         onClose={() => setDatePickerOpen(false)}
         onConfirm={(d) => setSelectedDate(d)}
       />
@@ -878,7 +904,7 @@ function WeekBarChart({
         </div>
         {/* Y축 시간 레이블 — 각 라벨의 세로 중앙이 해당 border line 과 정확히 일치 (translateY -50%) */}
         <div className="relative w-[20px] ml-[5px]">
-          {HOURS.map((h) => (
+          {HOURS.slice(1, -1).map((h) => (
             <div
               key={h}
               className="absolute inset-x-0 text-center text-[10px] font-normal text-[#BBC0C5] leading-none"

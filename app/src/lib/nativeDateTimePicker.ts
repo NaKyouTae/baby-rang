@@ -1,5 +1,5 @@
 type Result = { value: string | null; error?: boolean };
-type Request = { requestId: string; action: 'open' | 'cancel'; title?: string; value?: string; mode?: 'dateTime' | 'time' };
+type Request = { requestId: string; action: 'open' | 'cancel'; title?: string; value?: string; mode?: 'dateTime' | 'time' | 'date' };
 interface PickerWindow {
   webkit?: { messageHandlers?: { dateTimePicker?: { postMessage: (request: Request) => void } } };
   Android?: { dateTimePicker?: (json: string) => void };
@@ -8,7 +8,7 @@ interface PickerWindow {
 const pending = new Map<string, (result: Result) => void>();
 let sequence = 0;
 export function openNativeDateTimePicker(title: string, value: string,
-  onResult: (result: Result) => void, mode: 'dateTime' | 'time' = 'dateTime'): (() => void) | null {
+  onResult: (result: Result) => void, mode: 'dateTime' | 'time' | 'date' = 'dateTime'): (() => void) | null {
   const w = window as unknown as PickerWindow;
   const ios = w.webkit?.messageHandlers?.dateTimePicker;
   if (!ios && !w.Android?.dateTimePicker) return null;

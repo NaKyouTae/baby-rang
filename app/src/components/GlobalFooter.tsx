@@ -12,6 +12,7 @@ const EXCLUDED_PREFIXES = [
   "/auth", // OAuth 콜백 (리다이렉트 전용 화면)
   "/home", // 픽셀 홈 (전체화면). 사업자정보는 홈의 설정 화면 하단에 있다.
   "/growth-pattern", // h-[100dvh] + overflow-hidden
+  "/physical-growth", // 화면 높이에 고정, 목록만 내부 스크롤
   "/wonder-weeks", // 픽셀 원더윅스 (전체화면, 안쪽만 스크롤)
   // 결제 플로우(checkout/success/fail). checkout 은 자체 하단 패딩(120px)이 있고
   // 승인 대기/실패는 스쳐 지나가는 전체화면이라 여백이 필요 없다.

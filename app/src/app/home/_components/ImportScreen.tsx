@@ -162,7 +162,7 @@ export default function ImportScreen({ open, onBack }: Props) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className={`${BOX} flex-1 min-w-0 h-[52px] flex items-center px-[10px] ${
+          className={`${BOX} flex-1 min-w-0 h-[48px] flex items-center px-[10px] ${
             fileName ? 'justify-start' : 'justify-center'
           }`}
         >
@@ -177,8 +177,8 @@ export default function ImportScreen({ open, onBack }: Props) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          // 52px 버튼 안쪽(30px)보다 "찾기"(32px)가 넓다. 디자인처럼 한 줄로 두어야 두 줄로 꺾이지 않는다.
-          className="w-[52px] shrink-0 self-stretch flex items-center justify-center p-[10px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
+          // 버튼 안쪽보다 "찾기"가 넓다. 디자인처럼 한 줄로 두어야 두 줄로 꺾이지 않는다.
+          className="w-[52px] h-[48px] shrink-0 flex items-center justify-center p-[10px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-[1.4] whitespace-nowrap active:translate-y-px"
         >
           찾기
         </button>

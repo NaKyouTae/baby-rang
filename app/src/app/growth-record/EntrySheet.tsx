@@ -100,14 +100,14 @@ function formatDisplayDate(s: string): string {
   return `${p(y % 100)}.${p(mo)}.${p(d)} ${p(h)}:${p(mi)}`;
 }
 
-/** 입력칸 — 높이 52, 회색 테두리, 16px 글자 (Figma button_large) */
+/** 입력칸 — 높이 50, 회색 테두리, 16px 글자 */
 const FIELD_BOX =
-  'h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] flex items-center text-left text-[16px] leading-none text-[#121212] tabular-nums active:bg-[#F7F8F9]';
+  'h-[50px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] flex items-center text-left text-[16px] leading-none text-[#121212] tabular-nums active:bg-[#F7F8F9]';
 /** 입력 이름(측정일시·수유량 등) */
 const FIELD_LABEL = 'text-[14px] leading-[1.4] text-[#808991]';
-/** 입력칸 옆 52px 정사각 '지금 완료' 버튼 */
+/** 입력칸 옆 50px 정사각 '지금 완료' 버튼 */
 const NOW_BUTTON =
-  'shrink-0 size-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[16px] leading-[1.4] text-[#121212] text-center active:translate-y-px';
+  'shrink-0 size-[50px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[16px] leading-[1.4] text-[#121212] text-center active:translate-y-px';
 
 /** 소변/대변/둘다, 낮잠/밤잠 같은 고르기 칸 */
 function Segmented({
@@ -678,7 +678,7 @@ export default function EntrySheet({
         <button
           type="button"
           onClick={() => toggleTimer(...toggleKeys)}
-          className={`shrink-0 size-[52px] rounded-[4px] border flex items-center justify-center active:translate-y-px ${
+          className={`shrink-0 size-[50px] rounded-[4px] border flex items-center justify-center active:translate-y-px ${
             running
               ? 'border-[#3078C9] bg-[rgba(48,120,201,0.1)]'
               : 'border-[#121212] bg-[#EEF0F1]'
@@ -816,7 +816,7 @@ export default function EntrySheet({
         </div>
 
         <div className="overflow-y-auto px-[20px] pt-[24px] pb-[8px] flex flex-col gap-[10px]">
-          <div className="flex flex-col gap-[8px]">
+          <div className="flex flex-col gap-[4px]">
             <span className={FIELD_LABEL}>측정일시</span>
             <div className={`${FIELD_BOX} relative w-full`}>
               {formatDisplayDate(startAt)}
@@ -825,7 +825,7 @@ export default function EntrySheet({
           </div>
 
           {cfg.showEndPicker && (
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[4px]">
               <span className={FIELD_LABEL}>종료일시</span>
               <div className={`${FIELD_BOX} relative w-full`}>
                 {formatDisplayDate(endAt || startAt)}
@@ -835,7 +835,7 @@ export default function EntrySheet({
           )}
 
           {cfg.showDuration && (
-            <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[4px]">
               <span className={FIELD_LABEL}>시간</span>
               <div className="flex items-stretch gap-[10px]">
                 <div className={`${FIELD_BOX} relative flex-1 min-w-0`}>
@@ -899,14 +899,14 @@ export default function EntrySheet({
 
             return (
               <>
-                <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[4px]">
                   {renderFieldHeader(leftMinField)}
                   {renderNumberField(leftMinField, {
                     showTimer: true,
                     mirrorKey: pumpingMode === 'BOTH' ? 'rightMin' : undefined,
                   })}
                 </div>
-                <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[4px]">
                   {renderFieldHeader(rightMinField)}
                   {renderNumberField(rightMinField, {
                     showTimer: true,
@@ -915,7 +915,7 @@ export default function EntrySheet({
                 </div>
 
                 {volumeMode === 'LR' ? (
-                  <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[4px]">
                     {renderFieldHeader(amountMlField)}
                     <div className="grid grid-cols-2 gap-[8px]">
                       {renderNumberField(leftMlField)}
@@ -924,7 +924,7 @@ export default function EntrySheet({
                     {renderRecentAmounts(pumpingAmountTarget)}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[4px]">
                     {renderFieldHeader(amountMlField)}
                     {renderNumberField(amountMlField)}
                     {renderRecentAmounts('amountMl')}
@@ -940,11 +940,11 @@ export default function EntrySheet({
               // 왼쪽·오른쪽은 위아래로 한 줄씩 (Figma 모유수유)
               return (
                 <div key={`pair-${idx}`} className="flex flex-col gap-[10px]">
-                  <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[4px]">
                     {renderFieldHeader(row.left)}
                     {renderNumberField(row.left, { showTimer })}
                   </div>
-                  <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[4px]">
                     {renderFieldHeader(row.right)}
                     {renderNumberField(row.right, { showTimer })}
                   </div>
@@ -953,7 +953,7 @@ export default function EntrySheet({
             }
             const f = row.field;
             return (
-              <div key={f.key} className="flex flex-col gap-[8px]">
+              <div key={f.key} className="flex flex-col gap-[4px]">
                 {renderFieldHeader(f)}
                 {f.kind === 'segmented' && f.options ? (
                   <Segmented
@@ -975,7 +975,7 @@ export default function EntrySheet({
                       setData({ ...data, [f.key]: e.target.value })
                     }
                     placeholder={f.placeholder}
-                    className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
+                    className="w-full h-[50px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
                   />
                 )}
               </div>
@@ -983,13 +983,13 @@ export default function EntrySheet({
           })}
 
           {!['FORMULA', 'BREASTFEEDING', 'PUMPED_FEEDING', 'PUMPING', 'BABY_FOOD', 'SLEEP', 'DIAPER'].includes(type) && (
-          <div className="flex flex-col gap-[8px]">
+          <div className="flex flex-col gap-[4px]">
             <span className={FIELD_LABEL}>메모</span>
             <input
               type="text"
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              className="w-full h-[52px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
+              className="w-full h-[50px] px-[20px] rounded-[4px] border border-[#808991] bg-[#FDFDFE] text-[16px] text-[#121212] placeholder:text-[#BBC0C5]"
               placeholder=""
             />
           </div>

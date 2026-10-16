@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { canGoBack } from '@/lib/navHistory';
 
@@ -27,6 +28,21 @@ export default function PixelDocPage({
   // /settings/* 는 마이페이지에서 들어오므로 마이페이지를 연 홈으로 간다.
   const fallback = pathname.startsWith('/settings/') ? '/home?my=1' : '/home';
   const goBack = () => (canGoBack() ? router.back() : router.replace(fallback));
+
+  // 앱 셸의 공통 스크롤을 잠가 본문 끝에서 페이지 전체로 스크롤이 전달되지 않게 한다.
+  // 문서 박스(article)의 overflow-y-auto 는 그대로라 텍스트만 스크롤할 수 있다.
+  useEffect(() => {
+    const appScroller = document.getElementById('app-scroll-container');
+    if (!appScroller) return;
+    const previousOverflowY = appScroller.style.overflowY;
+    const previousOverscrollBehaviorY = appScroller.style.overscrollBehaviorY;
+    appScroller.style.overflowY = 'hidden';
+    appScroller.style.overscrollBehaviorY = 'none';
+    return () => {
+      appScroller.style.overflowY = previousOverflowY;
+      appScroller.style.overscrollBehaviorY = previousOverscrollBehaviorY;
+    };
+  }, []);
 
   return (
     <div

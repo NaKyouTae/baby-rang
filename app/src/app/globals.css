@@ -58,6 +58,11 @@ body {
   user-select: none;
 }
 
+/* 문의하기 FAQ의 번호 마커만 디자인 검정으로 표시한다. */
+.support-page-faq-list li::marker {
+  color: #121212;
+}
+
 
 @keyframes dotBounce {
   0%, 80%, 100% {

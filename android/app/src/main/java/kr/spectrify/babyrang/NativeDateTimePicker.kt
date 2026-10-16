@@ -34,13 +34,16 @@ class NativeDateTimePicker(private val activity: MainActivity, private val evalu
             reply(id, null, true)
             return
         }
-        val timeOnly = body.optString("mode") == "time"
+        val mode = body.optString("mode", "dateTime")
+        val timeOnly = mode == "time"
+        val dateOnly = mode == "date"
         val calendar = Calendar.getInstance().apply { time = date }
         // 이 테마의 DatePicker/TimePicker는 달력·시계 대신 네이티브 스피너를 사용한다.
         val context = ContextThemeWrapper(activity, android.R.style.Theme_Holo_Light_Dialog_NoActionBar)
         val datePicker = DatePicker(context).apply {
             calendarViewShown = false
             spinnersShown = true
+            if (dateOnly) maxDate = System.currentTimeMillis()
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             init(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)) { view, _, _, _ ->
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -58,7 +61,7 @@ class NativeDateTimePicker(private val activity: MainActivity, private val evalu
             val padding = (8 * resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
             if (!timeOnly) addView(datePicker, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(timePicker, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            if (!dateOnly) addView(timePicker, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         val scroll = ScrollView(activity).apply { addView(content) }
         requestId = id
@@ -68,7 +71,7 @@ class NativeDateTimePicker(private val activity: MainActivity, private val evalu
             .setNegativeButton("취소") { _, _ -> finish(null) }
             .setPositiveButton("선택완료") { _, _ ->
                 finish(String.format(Locale.US, "%04d-%02d-%02dT%02d:%02d", datePicker.year, datePicker.month + 1,
-                    datePicker.dayOfMonth, timePicker.hour, timePicker.minute))
+                    datePicker.dayOfMonth, if (dateOnly) 0 else timePicker.hour, if (dateOnly) 0 else timePicker.minute))
             }.create().also { picker ->
                 picker.setOnDismissListener { if (requestId == id) finish(null) }
                 picker.show()

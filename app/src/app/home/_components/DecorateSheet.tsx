@@ -69,6 +69,7 @@ export default function DecorateSheet({
   const [items, setItems] = useState<RoomItem[] | null>(null);
   const [buying, setBuying] = useState<RoomItem | null>(null);
   const [busy, setBusy] = useState(false);
+  const [menuDraft, setMenuDraft] = useState(menu);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -77,13 +78,14 @@ export default function DecorateSheet({
   // — 그사이 운영자가 유료로 바꾼 아이템이 무료로 보이지 않게.
   useEffect(() => {
     if (!open) return;
+    setMenuDraft(menu);
     let alive = true;
     loadRoomItems().then((list) => alive && setItems(list));
     refreshRoomItems().then((list) => alive && list && setItems(list));
     return () => {
       alive = false;
     };
-  }, [open]);
+  }, [open, menu]);
 
   const owned = new Set(ownedItemIds);
   const isOwned = (item: RoomItem) => item.priceCoins <= 0 || owned.has(item.id);
@@ -137,6 +139,11 @@ export default function DecorateSheet({
   };
 
   const shortOnCoins = buying ? coins < (buying.priceCoins) : false;
+
+  const saveAndClose = () => {
+    if (isMenuTab) onChangeMenu(menuDraft);
+    onClose();
+  };
 
   return (
     <>
@@ -192,61 +199,80 @@ export default function DecorateSheet({
             ref={listRef}
             className="flex-1 min-h-0 overflow-y-auto px-[20px] pt-[24px] pb-[max(var(--safe-area-bottom),20px)]"
           >
-            {isMenuTab ? (
-              <MenuPicker selected={menu} onChange={onChangeMenu} />
-            ) : items === null ? (
-              <LoadingBlock />
-            ) : visible.length === 0 ? (
-              <p className="pt-[15px] text-center text-[14px] leading-[1.4] text-[#808991]">
-                활성화된 {active.label} 아이템이 없습니다.
-              </p>
-            ) : (
-              <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
-                {visible.map((item) => {
-                  const mine = isOwned(item);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => tap(item)}
-                      className="relative flex flex-col gap-[4px] items-center justify-center"
-                    >
-                      <span
-                        className="size-[50px] flex items-center justify-center rounded-[4px] border overflow-hidden"
-                        style={
-                          mine
-                            ? { background: '#FDFDFE', borderColor: '#121212' }
-                            : { background: '#F7F8F9', borderColor: '#BBC0C5' }
-                        }
+            <div className="min-h-[152px]">
+              {isMenuTab ? (
+                <MenuPicker selected={menuDraft} onChange={setMenuDraft} />
+              ) : items === null ? (
+                <LoadingBlock />
+              ) : visible.length === 0 ? (
+                <p className="pt-[15px] text-center text-[14px] leading-[1.4] text-[#808991]">
+                  활성화된 {active.label} 아이템이 없습니다.
+                </p>
+              ) : (
+                <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
+                  {visible.map((item) => {
+                    const mine = isOwned(item);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => tap(item)}
+                        className="relative flex flex-col gap-[4px] items-center justify-center"
                       >
-                        {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다 */}
-                        {item.imageUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={item.imageUrl}
-                            alt=""
-                            className="size-full object-cover"
-                            style={{ imageRendering: 'pixelated', opacity: mine ? 1 : 0.5 }}
-                          />
-                        )}
-                      </span>
-                      <span
-                        className="text-[12px] leading-[1.4] text-center whitespace-nowrap"
-                        style={{ color: mine ? '#121212' : '#DFE0E1' }}
-                      >
-                        {item.name}
-                      </span>
-                      {/* 미보유 유료 아이템은 보석 뱃지를 단다 */}
-                      {!mine && (
-                        <span className="absolute left-[36px] top-[4px]">
-                          <GemIcon size={10} />
+                        <span
+                          className="size-[50px] flex items-center justify-center rounded-[4px] border overflow-hidden"
+                          style={
+                            mine
+                              ? { background: '#FDFDFE', borderColor: '#121212' }
+                              : { background: '#F7F8F9', borderColor: '#BBC0C5' }
+                          }
+                        >
+                          {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다 */}
+                          {item.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt=""
+                              className="size-full object-cover"
+                              style={{ imageRendering: 'pixelated', opacity: mine ? 1 : 0.5 }}
+                            />
+                          )}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                        <span
+                          className="text-[12px] leading-[1.4] text-center whitespace-nowrap"
+                          style={{ color: mine ? '#121212' : '#DFE0E1' }}
+                        >
+                          {item.name}
+                        </span>
+                        {/* 미보유 유료 아이템은 보석 뱃지를 단다 */}
+                        {!mine && (
+                          <span className="absolute left-[36px] top-[4px]">
+                            <GemIcon size={10} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-[24px] flex gap-[10px]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={saveAndClose}
+                className="flex-1 min-w-0 h-[52px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px"
+              >
+                저장하기
+              </button>
+            </div>
           </div>
         </div>
       </BottomSheet>

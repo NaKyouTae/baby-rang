@@ -30,6 +30,7 @@ function formatAt(iso: string) {
 interface Props {
   open: boolean;
   onClose: () => void;
+  showBackButton?: boolean;
   coins: number;
   /** 내역 조회와 충전 적립에 쓸 아이. 없으면(비로그인 데모) 내역은 비워 둔다. */
   childId?: string;
@@ -43,7 +44,14 @@ interface Props {
  * 금액과 지급량은 서버 카탈로그가 정한다. 클라이언트가 보낸 수량으로 적립하면
  * 요청 본문만 고쳐서 공짜로 보석을 받을 수 있다.
  */
-export default function GemStore({ open, onClose, coins, childId, onCharged }: Props) {
+export default function GemStore({
+  open,
+  onClose,
+  showBackButton = false,
+  coins,
+  childId,
+  onCharged,
+}: Props) {
   const [tab, setTab] = useState<Tab>('charge');
   const [packs, setPacks] = useState<CoinPack[] | null>(null);
   const [charges, setCharges] = useState<ChargeRow[] | null>(null);
@@ -110,13 +118,23 @@ export default function GemStore({ open, onClose, coins, childId, onCharged }: P
       }}
     >
       <div className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
-        {/* 디자인의 왼쪽 화살표는 투명하다 — 제목을 가운데로 미는 자리일 뿐이다 */}
-        <span className="size-[24px]" />
+        {showBackButton ? (
+          <button type="button" onClick={close} aria-label="뒤로" className="size-[24px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/chevron-left.svg" alt="" width={24} height={24} className="block" />
+          </button>
+        ) : (
+          <span aria-hidden className="size-[24px]" />
+        )}
         <p className="text-[#121212] text-[16px] leading-none">보석함</p>
-        <button type="button" onClick={close} aria-label="닫기" className="size-[24px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icons/close.svg" alt="" width={24} height={24} className="block" />
-        </button>
+        {showBackButton ? (
+          <span aria-hidden className="size-[24px]" />
+        ) : (
+          <button type="button" onClick={close} aria-label="닫기" className="size-[24px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icons/close.svg" alt="" width={24} height={24} className="block" />
+          </button>
+        )}
       </div>
 
       <div className="flex gap-[10px] shrink-0">
@@ -125,7 +143,7 @@ export default function GemStore({ open, onClose, coins, childId, onCharged }: P
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex-1 min-w-0 p-[10px] rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-[1.4] ${
+            className={`flex-1 min-w-0 h-[32px] px-[10px] flex items-center justify-center rounded-[4px] border border-[#121212] text-[#121212] text-[16px] leading-none ${
               tab === t.id ? 'bg-[rgba(255,210,0,0.1)]' : 'bg-[#FDFDFE]'
             }`}
           >
@@ -135,7 +153,7 @@ export default function GemStore({ open, onClose, coins, childId, onCharged }: P
       </div>
 
       <div
-        className={`${BOX} h-[50px] shrink-0 flex gap-[10px] items-center justify-center px-[10px]`}
+        className={`${BOX} h-[48px] shrink-0 flex gap-[10px] items-center justify-center px-[10px]`}
       >
         <span className="text-[#121212] text-[16px] leading-none tracking-[2px]">내 보석</span>
         <span className="flex gap-[10px] items-center">
