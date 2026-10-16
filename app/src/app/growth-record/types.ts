@@ -79,7 +79,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
     label: '유축수유',
     emoji: '🤱',
     color: 'bg-rose-50 text-rose-600',
-    hasEnd: true,
+    hasEnd: false,
     fields: [{ key: 'amountMl', label: '수유량', kind: 'number', unit: 'ml' }],
   },
   PUMPING: {
@@ -154,8 +154,7 @@ export const TYPE_CONFIG: Record<GrowthType, TypeConfig> = {
         key: 'amount',
         label: '먹은 양',
         kind: 'number',
-        units: ['ml', 'g'],
-        showSettingsLink: true,
+        unit: 'ml',
       },
     ],
   },
@@ -234,10 +233,7 @@ export const MENU_TYPES: GrowthType[] = [
   'PUMPING',
   'BABY_FOOD',
   'SLEEP',
-  'BATH',
-  'MEDICATION',
   'DIAPER',
-  'TEMPERATURE',
 ];
 
 export const RECORD_ICONS: Record<GrowthType, string> = {
@@ -308,7 +304,8 @@ export function summarizeRecord(r: GrowthRecord): string {
       const sides: string[] = [];
       if (lm > 0 || ls > 0) sides.push(`왼쪽 ${fmtMinSec(lm, ls)}`);
       if (rm > 0 || rs > 0) sides.push(`오른쪽 ${fmtMinSec(rm, rs)}`);
-      if (sides.length) parts.push(sides.join(', '));
+      if (sides.length) parts.push(sides.join(' · '));
+      else parts.push('0분');
       break;
     }
     case 'FORMULA':
@@ -319,35 +316,16 @@ export function summarizeRecord(r: GrowthRecord): string {
       break;
     case 'BABY_FOOD':
       if (data.menu) parts.push(String(data.menu));
-      if (data.amount && data.amountUnit) parts.push(`${data.amount}${data.amountUnit}`);
-      else if (data.amountG) parts.push(`${data.amountG}g`);
+      if (data.amount) parts.push(`${data.amount}ml`);
+      else if (data.amountG) parts.push(`${data.amountG}ml`);
       else if (data.amountMl) parts.push(`${data.amountMl}ml`);
       break;
     case 'SLEEP':
       break;
     case 'PUMPING': {
-      const pumpingMode = String(data.pumpingMode ?? 'LR');
-      const volumeMode = String(data.volumeMode ?? 'LR');
-      const lm = Number(data.leftMin) || 0;
-      const ls = Number(data.leftSec) || 0;
-      const rm = Number(data.rightMin) || 0;
-      const rs = Number(data.rightSec) || 0;
-      const min: string[] = [];
-      if (pumpingMode === 'BOTH') {
-        if (lm > 0 || ls > 0) min.push(`동시 ${fmtMinSec(lm, ls)}`);
-      } else {
-        if (lm > 0 || ls > 0) min.push(`왼쪽 ${fmtMinSec(lm, ls)}`);
-        if (rm > 0 || rs > 0) min.push(`오른쪽 ${fmtMinSec(rm, rs)}`);
-      }
-      if (min.length) parts.push(min.join(', '));
-      const ml: string[] = [];
-      if (volumeMode === 'BOTH') {
-        if (data.amountMl) ml.push(`${data.amountMl}ml`);
-      } else {
-        if (data.leftMl) ml.push(`왼쪽 ${data.leftMl}ml`);
-        if (data.rightMl) ml.push(`오른쪽 ${data.rightMl}ml`);
-      }
-      if (ml.length) parts.push(ml.join(', '));
+      const left = Number(data.leftMl) || 0;
+      const right = Number(data.rightMl) || 0;
+      parts.push(`왼쪽 ${left}ml`, `오른쪽 ${right}ml`);
       break;
     }
     case 'MEDICATION':
@@ -362,13 +340,12 @@ export function summarizeRecord(r: GrowthRecord): string {
   }
   // 값이 아직 없는 기록도 0 으로 보여준다(Figma '각 데이터 기본값')
   if (parts.length === 0) {
-    if (r.type === 'BREASTFEEDING' || r.type === 'PUMPING') parts.push('0분');
-    else if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') parts.push('0ml');
+    if (r.type === 'FORMULA' || r.type === 'PUMPED_FEEDING' || r.type === 'MILK') parts.push('0ml');
     else if (r.type === 'BABY_FOOD') {
-      parts.push(`0${data.amountUnit === 'g' || data.amountUnit === 'ml' ? data.amountUnit : 'ml'}`);
+      parts.push('0ml');
     }
   }
-  if (cfg.hasEnd) {
+  if (cfg.hasEnd && r.type !== 'BREASTFEEDING' && r.type !== 'PUMPING') {
     // 최초 입력 시 종료 시간이 없을 수 있음 → 경과 시간 0분으로 표시
     const mins = r.endAt
       ? Math.max(

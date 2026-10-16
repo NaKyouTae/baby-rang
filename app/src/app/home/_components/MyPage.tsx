@@ -137,7 +137,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
       }}
     >
       <div className="px-[20px] flex flex-col gap-[10px]">
-        <div className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+        <div className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
           {/* 디자인의 왼쪽 화살표는 투명하다 — 제목을 가운데로 미는 자리일 뿐이다 */}
           <span className="size-[24px]" />
           <p className="text-[#121212] text-[16px] leading-none">설정</p>
@@ -151,8 +151,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
           <button
             type="button"
             onClick={() => (isAuthenticated ? setProfileOpen(true) : go('/login'))}
-            // 높이는 디자인(두 줄) 그대로 66px. 이메일이 없는 회원은 이름만 세로 가운데에 둔다.
-            className={`${BOX} w-full min-h-[66px] flex items-center justify-between p-[10px] text-left`}
+            className={`${BOX} w-full h-[48px] shrink-0 flex items-center justify-between px-[10px] text-left`}
           >
             <span className="flex flex-col gap-[4px] min-w-0">
               <span className="text-[#121212] text-[16px] leading-[1.4] truncate">
@@ -340,7 +339,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
 
 function Section({
   title,
-  gap = 16,
+  gap = 10,
   children,
 }: {
   title: string;
@@ -350,7 +349,7 @@ function Section({
 }) {
   return (
     <div className={`${BOX} flex flex-col ${gap === 10 ? 'gap-[10px]' : 'gap-[16px]'} justify-center p-[10px]`}>
-      <p className="text-[#808991] text-[14px] leading-[1.4]">{title}</p>
+      <p className="text-[#808991] text-[12px] leading-[1.4]">{title}</p>
       <div className="flex flex-col gap-[10px]">{children}</div>
     </div>
   );

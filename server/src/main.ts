@@ -12,6 +12,9 @@ async function bootstrap() {
       'https://baby-rang-admin.spectrify.kr',
       'http://localhost:13000',
       'http://localhost:13001',
+      ...(process.env.NODE_ENV !== 'production' && process.env.CLIENT_URL
+        ? [process.env.CLIENT_URL]
+        : []),
     ],
     credentials: true,
   });

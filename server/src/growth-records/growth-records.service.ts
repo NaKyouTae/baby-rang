@@ -90,6 +90,25 @@ export class GrowthRecordsService {
   // 상대시간("3시간 22분 전")은 기기에서 계산하므로 절대 시각만 내려준다.
   // childId 미지정(또는 삭제된 아이)이면 첫 아이로 폴백.
   // children 목록은 위젯의 탭-페이징(다음 아이로 넘기기)에 사용.
+  private canFinishHomeSleep(
+    record: {
+      type: GrowthRecordType;
+      startAt: Date;
+      endAt: Date | null;
+      data: unknown;
+    } | null,
+  ): boolean {
+    if (!record || record.type !== 'SLEEP') return false;
+    if (record.endAt && record.endAt.getTime() !== record.startAt.getTime())
+      return false;
+    const data = record.data as Record<string, unknown> | null;
+    // 기존 메인 수면은 endAt=null로 저장되어 있다.
+    return (
+      data?.homeSleepPending === true ||
+      (!record.endAt && data?.homeSleepPending !== false)
+    );
+  }
+
   async widgetSummary(userId: string, childId?: string) {
     const all = await this.children.findAll(userId);
     if (all.length === 0) return null;
@@ -127,10 +146,14 @@ export class GrowthRecordsService {
       return best;
     };
 
-    const [feeding, sleepAt, diaper] = await Promise.all([
+    const [feeding, sleepAt, diaper, latestRecord] = await Promise.all([
       latestByStart({ type: { in: FEEDING_TYPES } }),
       latestSleepEnd(),
       latestByStart({ type: 'DIAPER' }),
+      this.prisma.growthRecord.findFirst({
+        where: { childId: selected.id },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      }),
     ]);
 
     // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
@@ -143,6 +166,7 @@ export class GrowthRecordsService {
       birthDate,
       lastFeedingAt: feeding?.startAt ?? null,
       lastSleepAt: sleepAt ?? null,
+      canEndSleep: this.canFinishHomeSleep(latestRecord),
       lastDiaperAt: diaper?.startAt ?? null,
       // 전체 아이 목록(순서 고정) — 위젯 페이징용
       children: all.map((c) => ({ id: c.id, name: c.name })),
@@ -170,6 +194,48 @@ export class GrowthRecordsService {
 
   // 먹은 양 빠른 입력용 — 해당 타입의 최근 기록에서 중복 제거한 먹은 양 N개.
   // 수유류(분유/유축수유/우유/물)는 amountMl(ml 고정), 이유식은 amount(+amountUnit: ml/g).
+  private recordAmounts(type: GrowthRecordType, raw: unknown) {
+    const d = raw as Record<string, unknown> | null;
+    const values =
+      type === 'PUMPING'
+        ? d?.volumeMode === 'BOTH'
+          ? [d?.amountMl]
+          : [d?.leftMl, d?.rightMl, d?.amountMl]
+        : type === 'BABY_FOOD'
+          ? [d?.amount ?? d?.amountG ?? d?.amountMl]
+          : ['FORMULA', 'PUMPED_FEEDING', 'MILK', 'WATER'].includes(type)
+            ? [d?.amountMl]
+            : [];
+    const unit = 'ml';
+    return values
+      .map(Number)
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .map((value) => ({ value, unit }));
+  }
+
+  private async rememberRecordAmounts(
+    tx: Prisma.TransactionClient,
+    record: {
+      childId: string;
+      type: GrowthRecordType;
+      data: unknown;
+      updatedAt: Date;
+    },
+    touch = true,
+  ) {
+    for (const { value, unit } of this.recordAmounts(
+      record.type,
+      record.data,
+    )) {
+      const key = { childId: record.childId, type: record.type, value, unit };
+      await tx.recentRecordAmount.upsert({
+        where: { childId_type_value_unit: key },
+        create: { ...key, lastUsedAt: record.updatedAt },
+        update: touch ? { lastUsedAt: record.updatedAt } : {},
+      });
+    }
+  }
+
   async recentAmounts(
     userId: string,
     childId: string,
@@ -178,27 +244,42 @@ export class GrowthRecordsService {
   ) {
     await this.assertChildAccess(userId, childId);
     const t = this.validateType(type);
-    // 날짜 구간이 아니라 "최근 기록"에서 가져온다(먹은 양이 오래 전 기록에만 있을 수 있음).
-    const records = await this.prisma.growthRecord.findMany({
-      where: { childId, type: t },
-      orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }],
-      take: 100,
-      select: { data: true },
-    });
-    const isBabyFood = t === 'BABY_FOOD';
     const seen = new Set<string>();
     const amounts: { value: number; unit: string }[] = [];
-    for (const r of records) {
-      const d = r.data as Record<string, unknown> | null;
-      const value = Number(isBabyFood ? d?.amount : d?.amountMl);
-      if (!Number.isFinite(value) || value <= 0) continue;
-      const unit =
-        isBabyFood && typeof d?.amountUnit === 'string' ? d.amountUnit : 'ml';
-      const key = `${value}|${unit}`;
+    const history = await this.prisma.recentRecordAmount.findMany({
+      where: { childId, type: t },
+      orderBy: [{ lastUsedAt: 'desc' }, { id: 'desc' }],
+      take: t === 'BABY_FOOD' ? limit * 2 : limit,
+      select: { value: true, unit: true },
+    });
+    for (const amount of history) {
+      const normalized = t === 'BABY_FOOD' ? { ...amount, unit: 'ml' } : amount;
+      const key = `${normalized.value}|${normalized.unit}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      amounts.push({ value, unit });
-      if (amounts.length >= limit) break;
+      amounts.push(normalized);
+      if (amounts.length >= limit) return { amounts };
+    }
+    const batchSize = 100;
+    // 최근 100건에 같은 용량만 반복돼도 이전 기록에서 서로 다른 5개를 찾는다.
+    for (let skip = 0; amounts.length < limit; skip += batchSize) {
+      const records = await this.prisma.growthRecord.findMany({
+        where: { childId, type: t },
+        orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        take: batchSize,
+        skip,
+        select: { data: true },
+      });
+      for (const r of records) {
+        for (const { value, unit } of this.recordAmounts(t, r.data)) {
+          const key = `${value}|${unit}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          amounts.push({ value, unit });
+          if (amounts.length >= limit) return { amounts };
+        }
+      }
+      if (records.length < batchSize) break;
     }
     return { amounts };
   }
@@ -234,7 +315,10 @@ export class GrowthRecordsService {
     userId: string,
     input: UpsertInput,
     files?: Express.Multer.File[],
-    { reward = true }: { reward?: boolean } = {},
+    {
+      reward = true,
+      quickRecord = false,
+    }: { reward?: boolean; quickRecord?: boolean } = {},
   ) {
     await this.assertChildAccess(userId, input.childId);
     const type = this.validateType(input.type);
@@ -247,19 +331,60 @@ export class GrowthRecordsService {
     );
 
     return this.prisma.$transaction(async (tx) => {
+      // 같은 아기의 동시 기록 요청도 순서대로 처리해 중복 수면 생성을 막는다.
+      await tx.$queryRaw`SELECT id FROM children WHERE id = ${input.childId} FOR UPDATE`;
+      if (quickRecord && type === 'SLEEP') {
+        const previous = await tx.growthRecord.findFirst({
+          where: { childId: input.childId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        const startAt = new Date(input.startAt);
+        if (
+          this.canFinishHomeSleep(previous) &&
+          previous &&
+          startAt.getTime() >= previous.startAt.getTime()
+        ) {
+          return tx.growthRecord.update({
+            where: { id: previous.id },
+            data: {
+              endAt: startAt,
+              data: {
+                ...((previous.data as Record<string, Prisma.InputJsonValue>) ??
+                  {}),
+                homeSleepPending: false,
+              },
+            },
+          });
+        }
+      }
       const record = await tx.growthRecord.create({
         data: {
           userId,
           childId: input.childId,
           type,
           startAt: new Date(input.startAt),
-          endAt: input.endAt ? new Date(input.endAt) : null,
+          endAt:
+            quickRecord && type === 'SLEEP'
+              ? null
+              : input.endAt
+                ? new Date(input.endAt)
+                : null,
           memo: input.memo ?? null,
           imageUrl: uploaded[0] ?? null,
           imageUrls: uploaded,
-          data: this.parseData(input.data),
+          data:
+            type === 'SLEEP'
+              ? {
+                  ...((this.parseData(input.data) as Record<
+                    string,
+                    Prisma.InputJsonValue
+                  >) ?? {}),
+                  homeSleepPending: quickRecord,
+                }
+              : this.parseData(input.data),
         },
       });
+      if (reward) await this.rememberRecordAmounts(tx, record);
       // 가져오기는 수천 건이 한 번에 들어온다. 그만큼 보석을 주면 재화가 무너진다.
       if (reward) await rewardRecord(tx, input.childId);
       return record;
@@ -314,25 +439,54 @@ export class GrowthRecordsService {
       nextUrls = [...keepUrls, ...uploaded].slice(0, 5);
     }
 
-    return this.prisma.growthRecord.update({
-      where: { id },
-      data: {
-        type: input.type ? this.validateType(input.type) : undefined,
-        startAt: input.startAt ? new Date(input.startAt) : undefined,
-        endAt:
-          input.endAt === undefined
-            ? undefined
-            : input.endAt === null || input.endAt === ''
-              ? null
-              : new Date(input.endAt),
-        memo: input.memo === undefined ? undefined : input.memo,
-        data:
-          input.data === undefined
-            ? undefined
-            : (this.parseData(input.data) ?? Prisma.JsonNull),
-        imageUrl: nextUrls === undefined ? undefined : (nextUrls[0] ?? null),
-        imageUrls: nextUrls === undefined ? undefined : nextUrls,
-      },
+    let nextData =
+      input.data === undefined
+        ? undefined
+        : (this.parseData(input.data) ?? Prisma.JsonNull);
+    const nextType = input.type ? this.validateType(input.type) : existing.type;
+    if (nextType === 'SLEEP') {
+      const nextStart = input.startAt
+        ? new Date(input.startAt)
+        : existing.startAt;
+      const nextEnd =
+        input.endAt === undefined
+          ? existing.endAt
+          : input.endAt
+            ? new Date(input.endAt)
+            : null;
+      const pending =
+        this.canFinishHomeSleep(existing) &&
+        (!nextEnd || nextEnd.getTime() === nextStart.getTime());
+      const raw =
+        input.data === undefined ? existing.data : this.parseData(input.data);
+      nextData = {
+        ...((raw as Record<string, Prisma.InputJsonValue>) ?? {}),
+        homeSleepPending: pending,
+      };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 덮어쓰기 전 값도 이력으로 보존한다.
+      await this.rememberRecordAmounts(tx, existing, false);
+      const record = await tx.growthRecord.update({
+        where: { id },
+        data: {
+          type: input.type ? this.validateType(input.type) : undefined,
+          startAt: input.startAt ? new Date(input.startAt) : undefined,
+          endAt:
+            input.endAt === undefined
+              ? undefined
+              : input.endAt === null || input.endAt === ''
+                ? null
+                : new Date(input.endAt),
+          memo: input.memo === undefined ? undefined : input.memo,
+          data: nextData,
+          imageUrl: nextUrls === undefined ? undefined : (nextUrls[0] ?? null),
+          imageUrls: nextUrls === undefined ? undefined : nextUrls,
+        },
+      });
+      await this.rememberRecordAmounts(tx, record);
+      return record;
     });
   }
 

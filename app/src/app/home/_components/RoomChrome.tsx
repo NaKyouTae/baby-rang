@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentProps, ReactNode } from 'react';
+import { cloneElement, type ComponentProps, type ReactElement } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import ChildSwitcher from './ChildSwitcher';
 import PixelTabBar from './PixelTabBar';
@@ -46,7 +46,7 @@ export type ActionId =
 type Action = {
   id: ActionId;
   label: string;
-  icon: ReactNode;
+  icon: ReactElement<{ size?: number }>;
   /** 디자인의 버튼 배경색과 테두리색 */
   bg: string;
   border: string;
@@ -61,12 +61,6 @@ export const MENU_SLOTS = 7;
 /** 한 줄(왼쪽·오른쪽 각각)에 들어가는 버튼 수. */
 const COLUMN_ROWS = 4;
 
-/** 앱 기존 기록 아이콘. 디자인에 이모지가 없는 종류는 이걸 쓴다. */
-function RecordIcon({ file }: { file: string }) {
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={`/${file}`} alt="" width={32} height={32} className="block shrink-0" />;
-}
-
 /** 고를 수 있는 기록 메뉴 전부. 앞의 일곱 개가 기본 구성이다(배치 순서는 DEFAULT_MENU). */
 export const MENU_OPTIONS: Action[] = [
   { id: 'formula', label: '분유수유', icon: <FormulaIcon />, bg: '#FFF7F8', border: '#FF5675' },
@@ -76,22 +70,14 @@ export const MENU_OPTIONS: Action[] = [
   { id: 'babyfood', label: '이유식', icon: <BabyFoodIcon />, bg: '#F8FAFE', border: '#6A92EA' },
   { id: 'sleep', label: '수면', icon: <SleepIcon />, bg: '#FBF8FE', border: '#B67CF0' },
   { id: 'diaper', label: '기저귀', icon: <DiaperIcon />, bg: '#FBF9F9', border: '#A8837F' },
-  { id: 'bath', label: '목욕', icon: <RecordIcon file="icon-record-bath.svg" />, bg: '#F6FBFE', border: '#63B6E0' },
-  { id: 'temperature', label: '체온', icon: <RecordIcon file="icon-record-temperature.svg" />, bg: '#FFF8F8', border: '#E86A6A' },
-  { id: 'medication', label: '투약', icon: <RecordIcon file="icon-record-medication.svg" />, bg: '#FAF8FE', border: '#9B7CE0' },
-  { id: 'water', label: '물', icon: <RecordIcon file="icon-record-water.svg" />, bg: '#F6FCFE', border: '#59BFD6' },
-  { id: 'milk', label: '우유', icon: <RecordIcon file="icon-record-milk.svg" />, bg: '#FCFCFC', border: '#A9AEB4' },
-  { id: 'snack', label: '간식', icon: <RecordIcon file="icon-record-baby-food.svg" />, bg: '#FFFBF4', border: '#E0A24A' },
-  { id: 'play', label: '놀이', icon: <RecordIcon file="icon-record-etc.svg" />, bg: '#F8FCF9', border: '#6CC68A' },
-  { id: 'hospital', label: '병원', icon: <RecordIcon file="icon-record-temperature.svg" />, bg: '#F8FAFE', border: '#6A92EA' },
-  { id: 'etc', label: '기타', icon: <RecordIcon file="icon-record-etc.svg" />, bg: '#FCFCFC', border: '#BBC0C5' },
+
 ];
 
-/** 설정은 고를 수 없고 항상 오른쪽 맨 아래에 있다. */
-const SETTINGS_ACTION: Action = {
+/** 고정 편집 메뉴. 저장된 메뉴와의 호환을 위해 내부 ID는 settings를 유지한다. */
+const EDIT_ACTION: Action = {
   id: 'settings',
-  label: '설정',
-  icon: <SettingsIcon />,
+  label: '편집',
+  icon: <DecorateIcon />,
   bg: '#FCFCFC',
   border: '#BBC0C5',
 };
@@ -100,7 +86,7 @@ const BY_ID = new Map(MENU_OPTIONS.map((a) => [a.id, a]));
 
 /**
  * 버튼이 들어가는 자리 순서. 아래 줄부터 위로, 한 줄 안에서는 왼쪽 → 오른쪽으로 채운다.
- * 맨 아래 줄 오른쪽은 설정 자리라 왼쪽만 쓴다. 그래서 두 개를 고르면 둘 다 왼쪽에 쌓인다.
+ * 맨 아래 줄 오른쪽은 편집 자리라 왼쪽만 쓴다. 그래서 두 개를 고르면 둘 다 왼쪽에 쌓인다.
  * [줄, 쪽] — 줄은 위에서부터 0~3.
  */
 const SLOT_ORDER: [number, 'left' | 'right'][] = [
@@ -114,12 +100,12 @@ const SLOT_ORDER: [number, 'left' | 'right'][] = [
 ];
 
 /**
- * 기본 메뉴 구성 — 설정을 뺀 일곱 개. SLOT_ORDER 순으로 들어가므로
+ * 기본 메뉴 구성 — 편집을 뺀 일곱 개. SLOT_ORDER 순으로 들어가므로
  * 화면에서는 이렇게 보인다.
  *   분유수유 | 이유식
  *   모유수유 | 수면
  *   유축수유 | 기저귀
- *   유축     | 설정
+ *   유축     | 편집
  */
 export const DEFAULT_MENU: ActionId[] = [
   'pumping',
@@ -142,7 +128,7 @@ export const LEGACY_DEFAULT_MENUS: ActionId[][] = [
 ];
 
 export const ACTION_LABEL: Record<ActionId, string> = Object.fromEntries(
-  [...MENU_OPTIONS, SETTINGS_ACTION].map((a) => [a.id, a.label]),
+  [...MENU_OPTIONS, EDIT_ACTION].map((a) => [a.id, a.label]),
 ) as Record<ActionId, string>;
 
 
@@ -156,8 +142,8 @@ interface Props {
   /** 마지막 기록으로부터 지난 시간. 값이 없으면 '기록 없음'. */
   stats: { label: string; value: string }[];
   /**
-   * 좌우에 놓인 기록 버튼. 설정은 빼고 넘긴다.
-   * 아래 줄부터 왼쪽 → 오른쪽 순으로 쌓인다(SLOT_ORDER). 맨 아래 줄 오른쪽은 설정이다.
+   * 좌우에 놓인 기록 버튼. 고정 편집 메뉴는 빼고 넘긴다.
+   * 아래 줄부터 왼쪽 → 오른쪽 순으로 쌓인다(SLOT_ORDER). 맨 아래 줄 오른쪽은 편집이다.
    */
   menu: ActionId[];
   onAction: (id: ActionId) => void;
@@ -171,6 +157,7 @@ interface Props {
    * (마이페이지·보석함)보다 위에 보이므로, 그 화면이 열려 있으면 숨긴다.
    */
   showTabBar?: boolean;
+  sleepPending?: boolean;
 }
 
 export default function RoomChrome({
@@ -184,16 +171,18 @@ export default function RoomChrome({
   onOpenGems,
   toast = null,
   showTabBar = true,
+  sleepPending = false,
 }: Props) {
   const chosen = menu
     .map((id) => BY_ID.get(id))
     .filter((a): a is Action => !!a)
-    .slice(0, MENU_SLOTS);
+    .slice(0, MENU_SLOTS)
+    .map((a) => a.id === 'sleep' && sleepPending ? { ...a, label: '수면종료' } : a);
   // 아래 줄부터 SLOT_ORDER 순으로 채운다. 빈 자리는 null 로 남겨
-  // 개수가 적어도 두 줄의 바닥이 설정 버튼 높이에 맞춰진다.
+  // 개수가 적어도 두 줄의 바닥이 편집 버튼 높이에 맞춰진다.
   const left: (Action | null)[] = Array(COLUMN_ROWS).fill(null);
   const right: (Action | null)[] = Array(COLUMN_ROWS).fill(null);
-  right[COLUMN_ROWS - 1] = SETTINGS_ACTION;
+  right[COLUMN_ROWS - 1] = EDIT_ACTION;
   chosen.forEach((a, i) => {
     const [row, side] = SLOT_ORDER[i];
     (side === 'left' ? left : right)[row] = a;
@@ -211,22 +200,22 @@ export default function RoomChrome({
           <ChildSwitcher {...kids} />
           <button
             type="button"
-            onClick={onDecorate}
-            aria-label="방 꾸미기"
-            className={`${BOX} size-[50px] flex items-center justify-center shrink-0 active:translate-y-px`}
+            onClick={() => onAction('settings')}
+            aria-label="설정"
+            className={`${BOX} size-[48px] flex items-center justify-center shrink-0 active:translate-y-px`}
           >
-            <DecorateIcon />
+            <SettingsIcon size={28} />
           </button>
         </div>
 
-        <div className="flex gap-[10px] items-center text-[12px] leading-[1.4] text-center">
+        <div className="flex gap-[10px] items-center text-[10px] leading-[1.4] text-center">
           {stats.map((s) => (
             <div
               key={s.label}
-              className={`${BOX} flex-1 min-w-0 h-[50px] flex flex-col items-center justify-center`}
+              className={`${BOX} flex-1 min-w-0 h-[48px] flex flex-col gap-[2px] items-center justify-center`}
             >
               <span className="text-[#808991]">{s.label}</span>
-              <span className="text-[#121212] truncate px-1">{s.value}</span>
+              <span className="text-[#121212] text-[12px] truncate px-1">{s.value}</span>
             </div>
           ))}
         </div>
@@ -235,7 +224,7 @@ export default function RoomChrome({
       {/* 재화(왼쪽)와 보기 모드 전환(오른쪽). 누르는 자리를 넉넉히 두려고 위아래로 늘린다. */}
       <div
         className="absolute left-[20px] right-[20px] flex items-center justify-between pointer-events-none"
-        style={{ top: 'calc(var(--safe-area-top) + 128px)' }}
+        style={{ top: 'calc(var(--safe-area-top) + 126px)' }}
       >
         {/* 누르면 보석함으로 */}
         <button
@@ -280,7 +269,11 @@ export default function RoomChrome({
 
       {/* 좌우 기록 버튼 */}
       <ActionColumn side="left" actions={left} onAction={onAction} />
-      <ActionColumn side="right" actions={right} onAction={onAction} />
+      <ActionColumn
+        side="right"
+        actions={right}
+        onAction={(id) => id === 'settings' ? onDecorate() : onAction(id)}
+      />
 
       {/* 하단 탭바 — 아기방은 지금 화면, 나머지는 기존 페이지로 보낸다 */}
       {showTabBar && <PixelTabBar active="room" />}
@@ -299,10 +292,12 @@ function ActionColumn({
 }) {
   return (
     <div
-      className="absolute w-[60px] flex flex-col gap-[20px] items-start pointer-events-auto"
+      className="absolute w-[48px] flex flex-col justify-center gap-[20px] items-start pointer-events-none"
       style={{
         [side]: 20,
-        top: 'calc(var(--safe-area-top) + 254px)',
+        // MODE 행의 아래(118 + 44)부터 하단 탭바의 위까지를 중앙 정렬 영역으로 쓴다.
+        top: 'calc(var(--safe-area-top) + 162px)',
+        bottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 70px)',
       }}
     >
       {actions.map((a, i) =>
@@ -311,21 +306,21 @@ function ActionColumn({
             key={a.id}
             type="button"
             onClick={() => onAction(a.id)}
-            className="w-full flex flex-col gap-[4px] items-center justify-center active:translate-y-px"
+            className="w-full shrink-0 flex flex-col gap-[4px] items-center justify-center pointer-events-auto active:translate-y-px"
           >
             <span
-              className="size-[50px] flex items-center justify-center rounded-[4px] border"
+              className="size-[48px] flex items-center justify-center rounded-[4px] border"
               style={{ background: a.bg, borderColor: a.border }}
             >
-              {a.icon}
+              {cloneElement(a.icon, { size: 28 })}
             </span>
-            <span className="text-[#121212] text-[14px] leading-[1.4] text-center w-full">
+            <span className="text-[#121212] text-[12px] leading-[1.4] text-center whitespace-nowrap">
               {a.label}
             </span>
           </button>
         ) : (
-          // 빈 자리 — 버튼과 같은 높이(50 + 4 + 글자 한 줄)를 차지해 줄 맞춤을 지킨다
-          <div key={`empty-${i}`} aria-hidden className="w-full h-[73.6px]" />
+          // 빈 자리도 12px 글자 높이를 반영해 양쪽 줄을 맞춘다.
+          <div key={`empty-${i}`} aria-hidden className="w-full shrink-0" style={{ height: 68.8 }} />
         ),
       )}
     </div>

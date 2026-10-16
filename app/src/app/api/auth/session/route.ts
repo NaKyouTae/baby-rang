@@ -12,11 +12,15 @@ import { NextRequest, NextResponse } from 'next/server';
 // (가입 화면이 없어 signup_token 단계가 사라졌다).
 export function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
-  const origin = request.nextUrl.origin; // open redirect 방지: 목적지는 항상 자기 origin
   const secure = process.env.NODE_ENV === 'production';
 
   if (token) {
-    const res = NextResponse.redirect(new URL('/home', origin));
+    // 상대 경로로 이동해 개발 서버가 origin을 localhost로 정규화해도
+    // 휴대폰에서 접속한 호스트를 그대로 유지한다.
+    const res = new NextResponse(null, {
+      status: 307,
+      headers: { Location: '/home' },
+    });
     res.cookies.set('access_token', token, {
       httpOnly: true,
       secure,
@@ -27,5 +31,8 @@ export function GET(request: NextRequest) {
     return res;
   }
 
-  return NextResponse.redirect(new URL('/', origin));
+  return new NextResponse(null, {
+    status: 307,
+    headers: { Location: '/' },
+  });
 }

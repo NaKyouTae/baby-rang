@@ -4,9 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "concurrently -k -n server,app,admin -c blue,green,magenta \"pnpm dev:server\" \"wait-on tcp:18080 && pnpm dev:app\" \"wait-on tcp:18080 && pnpm dev:admin\"",
+    "dev": "concurrently -k --kill-others-on-fail -n server,app,admin,ngrok -c blue,green,magenta,yellow \"pnpm dev:server\" \"wait-on tcp:18080 && pnpm dev:app\" \"wait-on tcp:18080 && pnpm dev:admin\" \"wait-on tcp:13000 && pnpm dev:app:tunnel\"",
     "dev:server": "pnpm --filter server start:dev",
     "dev:app": "pnpm --filter app dev",
+    "dev:app:tunnel": "sh -c 'ngrok config check >/dev/null 2>&1 && exec ngrok http 13000; echo \"[ngrok] skipped: run ngrok config add-authtoken <token> to enable mobile tunnel\"; exec tail -f /dev/null'",
     "dev:admin": "pnpm --filter admin dev",
     "prepare": "husky",
     "version:patch": "node scripts/bump-version.js patch",

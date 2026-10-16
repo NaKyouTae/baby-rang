@@ -198,18 +198,15 @@ function ListLoading() {
   );
 }
 
-const DEFAULT_QUICK_TYPES: GrowthType[] = [
-  'FORMULA',
-  'BREASTFEEDING',
-  'PUMPED_FEEDING',
-  'PUMPING',
-  'BABY_FOOD',
-  'SLEEP',
-  'BATH',
-  'MEDICATION',
-  'DIAPER',
-  'TEMPERATURE',
-];
+const DEFAULT_QUICK_TYPES: GrowthType[] = [...MENU_TYPES];
+
+function normalizeQuickTypes(types: GrowthType[] | undefined): GrowthType[] {
+  const allowed = (types ?? []).filter((type) => MENU_TYPES.includes(type));
+  const legacyDefault = ['FORMULA', 'SLEEP', 'DIAPER', 'BABY_FOOD'];
+  if (!allowed.length || (allowed.length === legacyDefault.length &&
+    allowed.every((type, i) => type === legacyDefault[i]))) return [...DEFAULT_QUICK_TYPES];
+  return allowed;
+}
 
 function todayString(): string {
   const d = new Date();
@@ -338,18 +335,9 @@ function computeDayStats(records: GrowthRecord[]) {
 
 type BabyFoodUnit = 'ml' | 'g';
 
-// 이유식 합계 표기. g/ml 이 섞인 날은 둘 다 보여주고,
-// 기록은 있으나 먹은 양이 없으면 0으로 표시한다.
-function formatBabyFoodAmount(stats: {
-  babyFoodMl: number;
-  babyFoodG: number;
-  babyFoodUnit: BabyFoodUnit | null;
-}): string {
-  const parts: string[] = [];
-  if (stats.babyFoodG > 0) parts.push(`${stats.babyFoodG}g`);
-  if (stats.babyFoodMl > 0) parts.push(`${stats.babyFoodMl}ml`);
-  if (parts.length > 0) return parts.join('+');
-  return `0${stats.babyFoodUnit ?? 'ml'}`;
+// 상단 상세에서는 이유식 양을 단위 없는 하나의 값으로 표시한다.
+function formatBabyFoodAmount(stats: { babyFoodMl: number; babyFoodG: number }): string {
+  return String(stats.babyFoodMl + stats.babyFoodG);
 }
 
 type DayStats = ReturnType<typeof computeDayStats>;
@@ -372,22 +360,13 @@ function FeedingStat({ stats }: { stats: DayStats }) {
   if (stats.pumpedMl > 0) {
     pushBreakdown('pumped', CATEGORY_STYLE.PUMPED_FEEDING.border, String(stats.pumpedMl));
   }
-  // 이유식은 단위가 ml/g 로 갈리므로 숫자에 단위를 붙이고, 기록만 있고 양이 없으면 0 으로 표시한다.
+  // 괄호 안 이유식 값은 숫자만 표시한다.
   if (stats.babyFoodCount > 0) {
     pushBreakdown('babyFood', CATEGORY_STYLE.BABY_FOOD.border, formatBabyFoodAmount(stats));
   }
-  // 총 수유량에는 이유식도 합산한다. 이유식 g 은 ml 과 더할 수 없어 "250ml+30g" 처럼 뒤에 따로 붙인다.
-  const totalMl = stats.feedingMl + stats.babyFoodMl;
-  const totalParts: string[] = [];
-  if (
-    stats.bottleCount > 0 ||
-    stats.babyFoodMl > 0 ||
-    (stats.babyFoodCount > 0 && stats.babyFoodG === 0)
-  ) {
-    totalParts.push(`${totalMl}ml`);
-  }
-  if (stats.babyFoodG > 0) totalParts.push(`${stats.babyFoodG}g`);
-  const feedingTotal = totalParts.join('+');
+  // 상단 집계는 이유식의 입력 숫자까지 합산해 섭취 총량 하나를 ml로 표시한다.
+  const totalMl = stats.feedingMl + stats.babyFoodMl + stats.babyFoodG;
+  const feedingTotal = stats.bottleCount > 0 || stats.babyFoodCount > 0 ? `${totalMl}ml` : '';
   const hasBreast = stats.breastMin > 0;
   return (
     <>
@@ -499,10 +478,7 @@ export default function GrowthRecordPage() {
   const [hasMore, setHasMore] = useState(true);
   const [earliestDate, setEarliestDate] = useState<string | null>(null);
   const [quickTypes, setQuickTypes] = useState<GrowthType[]>(() => {
-    const cached = getCachedQuickTypes()?.filter(
-      (t) => (MENU_TYPES as string[]).includes(t),
-    ) as GrowthType[] | undefined;
-    return cached && cached.length > 0 ? cached : DEFAULT_QUICK_TYPES;
+    return normalizeQuickTypes(getCachedQuickTypes() as GrowthType[] | undefined);
   });
   const [loadingMore, setLoadingMore] = useState(false);
   // 최초 진입/아이 전환 시 첫 조회가 끝날 때까지 true (캐시가 있으면 리스트를 그대로 보여줌)
@@ -671,10 +647,7 @@ export default function GrowthRecordPage() {
         if (res.ok) {
           const data = await res.json();
           if (cancelled) return;
-          const saved: GrowthType[] = (data.quickButtons ?? []).filter(
-            (t: GrowthType) => (MENU_TYPES as string[]).includes(t),
-          );
-          const nextQuick = saved.length > 0 ? saved : DEFAULT_QUICK_TYPES;
+          const nextQuick = normalizeQuickTypes(data.quickButtons);
           setQuickTypes(nextQuick);
           setCachedQuickTypes(nextQuick);
           const earliest = data.earliestDate ?? null;
@@ -1047,7 +1020,7 @@ export default function GrowthRecordPage() {
     >
       {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 다른 픽셀 화면과 같은 링크다. */}
       <link rel="stylesheet" href={PIXEL_FONT_HREF} />
-      <header className={`${BOX} h-[50px] shrink-0 flex items-center justify-center px-[10px]`}>
+      <header className={`${BOX} h-[48px] shrink-0 flex items-center justify-center px-[10px]`}>
         <h1 className="text-[#121212] text-[16px] leading-none font-normal">기록</h1>
       </header>
 
@@ -1076,14 +1049,14 @@ export default function GrowthRecordPage() {
           </div>
         ) : null}
 
-        {/* 카테고리 가로 스크롤 */}
+        {/* 기본 7개 기록과 설정을 한 줄 가로 스크롤로 표시한다. */}
         {/* 물결 테두리가 버튼 밖으로 3px 남짓 나와서 줄 안쪽에 여유(py)를 둔다 */}
         <div data-quick-bar-root className="shrink-0 -mx-[20px] -my-[5px]">
           <div
-            className="overflow-x-auto no-scrollbar px-[20px]"
+            className="overflow-x-auto scrollbar-hide"
             style={{ scrollbarWidth: 'none' }}
           >
-            <div className="inline-flex items-start gap-[10px] py-[5px] align-top">
+            <div className="inline-flex items-start gap-[10px] px-[20px] py-[5px] align-top">
               {visibleQuickTypes.map((t) => {
                 const cfg = TYPE_CONFIG[t];
                 const style = CATEGORY_STYLE[t];
@@ -1100,7 +1073,7 @@ export default function GrowthRecordPage() {
                       createQuickRecord(t);
                     }}
                     aria-label={cfg.label}
-                    className="shrink-0"
+                    className="w-[50px] shrink-0 flex flex-col items-center gap-[4px]"
                   >
                     <div
                       className="size-[50px] rounded-[4px] border flex items-center justify-center active:translate-y-px"
@@ -1122,6 +1095,9 @@ export default function GrowthRecordPage() {
                         />
                       )}
                     </div>
+                    <span className="text-[12px] leading-[1.4] text-[#121212] whitespace-nowrap">
+                      {t === 'FORMULA' ? '분유수유' : t === 'BREASTFEEDING' ? '모유수유' : cfg.label}
+                    </span>
                   </button>
                 );
               })}
@@ -1135,7 +1111,7 @@ export default function GrowthRecordPage() {
                   }
                   setShowAddQuick(true);
                 }}
-                className="shrink-0"
+                className="w-[50px] shrink-0 flex flex-col items-center gap-[4px]"
                 aria-label="기록 항목 설정"
               >
                 <div className="size-[50px] rounded-[4px] border border-[#BBC0C5] bg-[#FDFDFE] flex items-center justify-center active:translate-y-px">
@@ -1148,6 +1124,7 @@ export default function GrowthRecordPage() {
                     aria-hidden="true"
                   />
                 </div>
+                <span className="text-[12px] leading-[1.4] text-[#121212] whitespace-nowrap">설정</span>
               </button>
             </div>
           </div>
@@ -1385,6 +1362,7 @@ export default function GrowthRecordPage() {
 
       {sheetType && selectedChild && (
         <EntrySheet
+          key={`${selectedChild.id}:${sheetType}:${editing?.id ?? 'new'}`}
           childId={selectedChild.id}
           type={sheetType}
           initial={editing}

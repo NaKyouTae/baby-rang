@@ -13,6 +13,7 @@ interface WidgetBridgeWindow {
  * 일반 브라우저에서는 네이티브 핸들러가 없어 아무 일도 하지 않는다.
  */
 export function reloadWidget(): void {
+  window.dispatchEvent(new Event('growth-records-updated'));
   try {
     const w = window as unknown as WidgetBridgeWindow;
     const ios = w.webkit?.messageHandlers?.reloadWidget;

@@ -14,8 +14,8 @@ import WonderWeeksCalendar from './_components/WonderWeeksCalendar';
 /** 디자인의 공통 상자 — 흰 바탕에 1px 검정 테두리, 모서리 4px. */
 const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 
-/** 헤더(50) + 간격(10) + 아이 카드(50) + 간격(10) — 달력이 처음에 놓이는 자리. */
-const TOP_STACK = 120;
+/** 헤더(48) + 간격(10) + 아이 카드(48) + 간격(10) — 달력이 처음에 놓이는 자리. */
+const TOP_STACK = 116;
 
 /**
  * 원더윅스 — 픽셀 디자인.
@@ -66,7 +66,7 @@ export default function WonderWeeksClient() {
 
       {/* 헤더 — 달력 위에 떠 있다 */}
       <header
-        className={`${BOX} absolute left-[20px] right-[20px] z-10 h-[50px] flex items-center justify-center px-[10px]`}
+        className={`${BOX} absolute left-[20px] right-[20px] z-10 h-[48px] flex items-center justify-center px-[10px]`}
         style={{ top: 'calc(var(--safe-area-top) + 20px)' }}
       >
         <h1 className="text-[#121212] text-[16px] leading-none font-normal">원더윅스</h1>
@@ -75,7 +75,7 @@ export default function WonderWeeksClient() {
       {/* 아이 카드 — 불러오는 동안은 같은 높이의 빈 상자로 자리만 잡아 화면이 튀지 않게 한다 */}
       <div
         className="absolute left-[20px] right-[20px] z-20 flex"
-        style={{ top: 'calc(var(--safe-area-top) + 80px)' }}
+        style={{ top: 'calc(var(--safe-area-top) + 78px)' }}
       >
         {current && age ? (
           <ChildSwitcher
@@ -90,7 +90,7 @@ export default function WonderWeeksClient() {
         ) : isLoaded ? (
           <NoChildBox />
         ) : (
-          <div className={`${BOX} flex-1 h-[50px]`} />
+          <div className={`${BOX} flex-1 h-[48px]`} />
         )}
       </div>
 
@@ -125,7 +125,7 @@ function NoChildBox() {
           ? router.push('/home?my=1')
           : openLoginPrompt('로그인하고 우리 아기의 원더윅스를 확인하세요.')
       }
-      className={`${BOX} flex-1 min-w-0 h-[50px] flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
+      className={`${BOX} flex-1 min-w-0 h-[48px] flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
     >
       <span className="text-[#121212] text-[16px]">등록된 아기가 없어요</span>
       <span className="text-[#808991] text-[14px]">아기를 추가하면 원더윅스를 알려드려요</span>

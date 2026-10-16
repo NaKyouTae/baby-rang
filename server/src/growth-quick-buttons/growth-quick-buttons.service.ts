@@ -2,32 +2,17 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { GrowthRecordType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-const ALLOWED_TYPES: GrowthRecordType[] = [
-  'BREASTFEEDING',
-  'FORMULA',
-  'BABY_FOOD',
-  'SLEEP',
-  'PUMPED_FEEDING',
-  'PUMPING',
-  'BATH',
-  'HOSPITAL',
-  'TEMPERATURE',
-  'MEDICATION',
-  'DIAPER',
-  'SNACK',
-  'MILK',
-  'WATER',
-  'PLAY',
-  'TUMMY_TIME',
-  'ETC',
-];
-const ALLOWED_SET = new Set<GrowthRecordType>(ALLOWED_TYPES);
 const DEFAULT_TYPES: GrowthRecordType[] = [
   'FORMULA',
+  'BREASTFEEDING',
+  'PUMPED_FEEDING',
+  'PUMPING',
+  'BABY_FOOD',
   'SLEEP',
   'DIAPER',
-  'BABY_FOOD',
 ];
+const ALLOWED_SET = new Set<GrowthRecordType>(DEFAULT_TYPES);
+const LEGACY_DEFAULT = ['FORMULA', 'SLEEP', 'DIAPER', 'BABY_FOOD'];
 
 @Injectable()
 export class GrowthQuickButtonsService {
@@ -39,7 +24,16 @@ export class GrowthQuickButtonsService {
       orderBy: { position: 'asc' },
     });
     if (rows.length === 0) return [...DEFAULT_TYPES];
-    return rows.map((r) => r.type);
+    const types = rows
+      .map((r) => r.type)
+      .filter((type) => ALLOWED_SET.has(type));
+    if (
+      types.length === 0 ||
+      (types.length === LEGACY_DEFAULT.length &&
+        types.every((type, i) => type === LEGACY_DEFAULT[i]))
+    )
+      return [...DEFAULT_TYPES];
+    return types;
   }
 
   async replaceAll(

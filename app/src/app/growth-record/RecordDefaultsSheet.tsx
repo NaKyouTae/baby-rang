@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import DateTimeWheelModal from './DateTimeWheelModal';
+import { openNativeDateTimePicker } from '@/lib/nativeDateTimePicker';
 import { useAppOverlayLock } from '@/components/ads/appOverlay';
 import { PIXEL_FONT } from './pixelUi';
 import {
@@ -61,6 +64,33 @@ function SegmentedGroup<T extends string>({
       })}
     </div>
   );
+}
+
+function TimeWheelField({ label, value, onChange, className }: {
+  label: string; value: string; onChange: (value: string) => void; className: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  useAppOverlayLock(pending);
+  useEffect(() => () => cancelRef.current?.(), []);
+  const dateValue = `2000-01-01T${value}`;
+  return <>
+    <button type="button" aria-label={label} aria-haspopup="dialog" disabled={pending}
+      className={`${className} text-left`} onClick={() => {
+        if (pending || open) return;
+        const cancel = openNativeDateTimePicker(label, dateValue, result => {
+          cancelRef.current = null;
+          setPending(false);
+          if (result.error) setOpen(true);
+          else if (result.value !== null) onChange(result.value.slice(11, 16));
+        }, 'time');
+        if (cancel) { cancelRef.current = cancel; setPending(true); }
+        else setOpen(true);
+      }}>{value}</button>
+    {open && createPortal(<DateTimeWheelModal timeOnly title={label} value={dateValue}
+      onClose={() => setOpen(false)} onConfirm={next => onChange(next.slice(11, 16))} />, document.body)}
+  </>;
 }
 
 export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
@@ -142,26 +172,14 @@ export default function RecordDefaultsSheet({ mode, onClose, onSaved }: Props) {
           {mode === 'sleepNight' && (
             <>
               <div className="flex flex-col gap-[8px]">
-                <span className={label}>시작시간</span>
-                <input
-                  type="time"
-                  value={range.start}
-                  onChange={(e) =>
-                    setRange((prev) => ({ ...prev, start: e.target.value }))
-                  }
-                  className={timeInput}
-                />
+                <span className={label}>시작 시간</span>
+                <TimeWheelField label="시작 시간" value={range.start}
+                  onChange={start => setRange(prev => ({ ...prev, start }))} className={timeInput} />
               </div>
               <div className="flex flex-col gap-[8px]">
-                <span className={label}>종료시간</span>
-                <input
-                  type="time"
-                  value={range.end}
-                  onChange={(e) =>
-                    setRange((prev) => ({ ...prev, end: e.target.value }))
-                  }
-                  className={timeInput}
-                />
+                <span className={label}>종료 시간</span>
+                <TimeWheelField label="종료 시간" value={range.end}
+                  onChange={end => setRange(prev => ({ ...prev, end }))} className={timeInput} />
               </div>
             </>
           )}

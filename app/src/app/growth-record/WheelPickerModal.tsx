@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import BottomSheet from '@/components/BottomSheet';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useAppOverlayLock } from '@/components/ads/appOverlay';
+import { selectionFeedback } from '@/lib/selectionFeedback';
 
-const ITEM_H = 44;
-const VISIBLE = 5;
+const ITEM_H = 32;
+const VISIBLE = 7;
 const HEIGHT = ITEM_H * VISIBLE;
 
 interface Props {
@@ -32,172 +33,105 @@ export default function WheelPickerModal({
   onClose,
   onConfirm,
 }: Props) {
-  const count = Math.max(1, Math.round((max - min) / step) + 1);
-  const items: number[] = [];
-  for (let i = 0; i < count; i++) {
-    items.push(+(min + i * step).toFixed(decimals));
-  }
-
-  const initialIdx = Math.min(
-    count - 1,
-    Math.max(0, Math.round((value - min) / step)),
-  );
+  useAppOverlayLock(open);
+  const optionId = useId();
+  const items = Array.from({ length: Math.round((max - min) / step) + 1 },
+    (_, i) => Number((min + i * step).toFixed(decimals)));
+  if (Number.isFinite(value) && !items.includes(value)) items.push(value);
+  items.sort((a, b) => a - b);
+  const count = items.length;
+  const initialIdx = items.indexOf(value) >= 0 ? items.indexOf(value)
+    : Math.max(0, Math.min(count - 1, Math.round((value - min) / step)));
 
   const ref = useRef<HTMLDivElement>(null);
   const lastRef = useRef(initialIdx);
-  const timer = useRef<number | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(initialIdx);
 
   useEffect(() => {
     if (!open) return;
-    const idx = Math.min(
-      count - 1,
-      Math.max(0, Math.round((value - min) / step)),
-    );
+    const idx = initialIdx;
     setSelectedIdx(idx); // eslint-disable-line react-hooks/set-state-in-effect -- sync external value to wheel index when modal opens
     lastRef.current = idx;
     const el = ref.current;
     if (el) el.scrollTop = idx * ITEM_H;
-  }, [open, value, min, step, count]);
+  }, [open, initialIdx]);
 
   const onScroll = () => {
     const el = ref.current;
     if (!el) return;
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      const rawIdx = Math.round(el.scrollTop / ITEM_H);
-      const idx = Math.max(0, Math.min(count - 1, rawIdx));
-      const target = idx * ITEM_H;
-      if (Math.abs(el.scrollTop - target) > 0.5) {
-        el.scrollTo({ top: target, behavior: 'smooth' });
-      }
-      if (idx !== lastRef.current) {
-        lastRef.current = idx;
-        setSelectedIdx(idx);
-      }
-    }, 90);
-  };
-
-  // 마우스로 끌어서 돌리기.
-  // 터치는 브라우저 기본 스크롤이 그대로 처리하지만, 마우스는 스크롤 영역을
-  // 끌어도 아무 일이 없다(휠만 먹는다). PC 웹에서 "드래그가 안 된다"는 원인이 이것.
-  // 손을 떼면 scroll 이벤트가 onScroll 의 스냅으로 이어져 가장 가까운 칸에 맞춰진다.
-  const drag = useRef<{ y: number; top: number } | null>(null);
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
-    const el = ref.current;
-    if (!el) return;
-    drag.current = { y: e.clientY, top: el.scrollTop };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = ref.current;
-    if (!drag.current || !el) return;
-    el.scrollTop = drag.current.top - (e.clientY - drag.current.y);
-  };
-
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!drag.current) return;
-    drag.current = null;
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
+    const idx = Math.max(0, Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)));
+    if (idx !== lastRef.current) {
+      lastRef.current = idx;
+      setSelectedIdx(idx);
+      selectionFeedback();
     }
-    // 끌다가 칸 경계에서 정확히 멈추면 scroll 이벤트가 더 안 와서 스냅이 안 걸린다
-    onScroll();
   };
 
   const handleConfirm = () => {
-    // 휠이 막 멈춘 직후 빠르게 누르면 90ms 디바운스 콜백이
-    // 아직 실행되지 않아 selectedIdx가 갱신 전일 수 있다.
-    // scrollTop에서 직접 계산해 현재 시각적으로 중앙에 있는 값을 보장.
+    // 관성 스크롤 중 확인을 눌러도 중앙에 가장 가까운 값을 저장한다.
     const el = ref.current;
     let idx = selectedIdx;
     if (el) {
-      if (timer.current) {
-        window.clearTimeout(timer.current);
-        timer.current = null;
-      }
       idx = Math.max(0, Math.min(count - 1, Math.round(el.scrollTop / ITEM_H)));
     }
     onConfirm(items[idx]);
     onClose();
   };
 
+  if (!open) return null;
+
   return (
-    <BottomSheet pixel
-      open={open}
-      onClose={onClose}
-      zIndex={80}
-      variant="sheet"
-      lockBodyScroll={false}
-    >
-      {title && (
-        <div className="px-5 pt-5 pb-2 text-sm font-normal text-[#808991] text-center">
-          {title}
-        </div>
-      )}
-      <div className="bg-[#FDFDFE] px-5 pt-4">
-        {/* 인디케이터 기준 컨테이너 = 스크롤 영역과 동일 높이(패딩 제외)로 두어
-            선택 박스 중앙과 선택된 숫자 중앙이 정확히 일치하도록 한다. */}
-        <div className="relative" style={{ height: HEIGHT }}>
-          <div
-            className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 bg-[#F7F8F9] rounded-[4px]"
-            style={{ height: ITEM_H }}
-          />
-          <div
-            ref={ref}
-            onScroll={onScroll}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            className="overflow-y-auto scrollbar-hide relative cursor-grab active:cursor-grabbing"
-            // 끝까지 돌린 뒤 더 밀어도 뒤의 기록 시트가 따라 스크롤되지 않게 막는다
-            style={{ height: HEIGHT, scrollBehavior: 'auto', overscrollBehavior: 'contain' }}
-          >
-            <div style={{ paddingTop: ITEM_H * 2, paddingBottom: ITEM_H * 2 }}>
-              {items.map((v, i) => {
-              const selected = i === selectedIdx;
-              return (
-                <div
-                  key={i}
-                  className={`flex items-center justify-center tabular-nums select-none transition-colors ${
-                    selected
-                      ? 'text-[#121212] font-normal text-xl'
-                      : 'text-[#BBC0C5] text-base'
-                  }`}
-                  style={{ height: ITEM_H }}
-                >
-                  {format ? format(v) : String(v)}
-                </div>
-              );
-            })}
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/20"
+      role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <div className="w-full max-w-[430px] px-[8px] pt-[8px] flex flex-col gap-[8px]"
+        style={{ paddingBottom: 'max(8px, var(--safe-area-bottom))',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-[14px] bg-[#F2F1EF] px-[40px] py-[12px]">
+          <div className="relative" style={{ height: HEIGHT }}>
+            <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-[8px] bg-[#E6E5E4]"
+              style={{ height: ITEM_H }} />
+            <div ref={ref} role="listbox" aria-label={title} tabIndex={0}
+              aria-activedescendant={`${optionId}-${selectedIdx}`}
+              onScroll={onScroll}
+              onContextMenu={(e) => e.preventDefault()}
+              onDragStart={(e) => e.preventDefault()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); handleConfirm(); return; }
+                if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+                const delta = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+                if (!delta) return;
+                e.preventDefault();
+                const idx = Math.max(0, Math.min(count - 1, selectedIdx + delta));
+                if (ref.current) ref.current.scrollTop = idx * ITEM_H;
+                setSelectedIdx(idx);
+              }}
+              className="relative overflow-y-auto scrollbar-hide select-none outline-none"
+              style={{ height: HEIGHT, scrollBehavior: 'auto', overscrollBehavior: 'contain',
+                scrollSnapType: 'y mandatory', touchAction: 'pan-y', WebkitTouchCallout: 'none',
+                maskImage: 'linear-gradient(transparent, black 35%, black 65%, transparent)',
+                WebkitMaskImage: 'linear-gradient(transparent, black 35%, black 65%, transparent)' }}>
+              <div style={{ paddingBlock: ITEM_H * Math.floor(VISIBLE / 2) }}>
+                {items.map((v, i) => {
+                  const distance = Math.abs(i - selectedIdx);
+                  return (
+                    <div key={v} id={`${optionId}-${i}`} role="option" aria-selected={i === selectedIdx}
+                      className="flex items-center justify-center select-none tabular-nums"
+                      style={{ height: ITEM_H, scrollSnapAlign: 'center', color: distance === 0 ? '#121212' : '#999999',
+                        fontSize: 22, transform: `scale(${Math.max(0.65, 1 - distance * 0.08)})` }}>
+                      {format ? format(v) : String(v)}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div
-        className="flex gap-2 px-5 pt-4"
-        style={{ paddingBottom: 'calc(var(--safe-area-bottom) + 16px)' }}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px"
-        >
-          취소
-        </button>
-        <button
-          type="button"
-          onClick={handleConfirm}
-          className="flex-1 h-12 rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] leading-none active:translate-y-px disabled:opacity-60"
-        >
+        <button type="button" onClick={handleConfirm}
+          className="h-[56px] shrink-0 rounded-[14px] bg-white text-[#007AFF] text-[20px] font-medium active:bg-[#F2F2F7]">
           확인
         </button>
       </div>
-    </BottomSheet>
+    </div>
   );
 }

@@ -263,7 +263,7 @@ export default function PhysicalGrowthClient() {
       <link rel="stylesheet" href={PIXEL_FONT_HREF} />
 
       {/* 제목 상자 — 오른쪽 + 로 기록 추가 */}
-      <header className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+      <header className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
         <span className="size-[24px] shrink-0" aria-hidden />
         <h1 className="text-[#121212] text-[16px] leading-none font-normal">성장</h1>
         <button

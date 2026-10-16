@@ -24,7 +24,7 @@ export default function PageHeader({
     onAction ?? (() => (canGoBack() ? router.back() : router.push('/home')));
 
   return (
-    <header className="sticky top-0 z-30 bg-white flex items-center justify-center relative px-5 py-4" style={{ paddingTop: 'calc(var(--safe-area-top) + 16px)' }}>
+    <header className="sticky top-0 z-30 bg-white flex items-center justify-center relative shrink-0 px-5" style={{ height: 'calc(var(--safe-area-top) + 48px)', paddingTop: 'var(--safe-area-top)' }}>
       {variant === 'back' && (
         <button
           type="button"

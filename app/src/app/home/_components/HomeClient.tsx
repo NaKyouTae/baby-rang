@@ -99,7 +99,7 @@ function loadSavedMenu(): ActionId[] {
     const raw = readStored(MENU_KEY);
     const saved = raw ? (JSON.parse(raw) as ActionId[]) : null;
     // 예전 구성에는 설정이 들어 있었다. 이제 설정은 고정이라 걸러낸다.
-    const picked = Array.isArray(saved) ? saved.filter((id) => id !== 'settings') : [];
+    const picked = Array.isArray(saved) ? saved.filter((id) => DEFAULT_MENU.includes(id)) : [];
     const isLegacyDefault = LEGACY_DEFAULT_MENUS.some(
       (legacy) => picked.length === legacy.length && picked.every((id, i) => id === legacy[i]),
     );
@@ -511,6 +511,7 @@ export default function HomeClient() {
       const fd = new FormData();
       fd.append('childId', childId);
       fd.append('type', type);
+      fd.append('quickRecord', 'true');
       fd.append('startAt', now);
       if (TYPE_CONFIG[type].showEndPicker) fd.append('endAt', now);
       fd.append('memo', '');
@@ -741,6 +742,7 @@ export default function HomeClient() {
           }}
           gems={coins}
           stats={stats}
+          sleepPending={!isDemo && lastRecords?.canEndSleep === true}
           menu={menu}
           onAction={handleAction}
           onDecorate={handleDecorate}

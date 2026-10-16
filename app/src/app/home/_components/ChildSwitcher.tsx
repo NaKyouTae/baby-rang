@@ -35,7 +35,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
   const body = (
     <>
       <div className="flex-1 min-w-0 flex flex-col items-start leading-[1.4] whitespace-nowrap">
-        <div className="max-w-full flex gap-[10px] items-start text-[16px] overflow-hidden">
+        <div className="max-w-full flex gap-[10px] items-start text-[14px] overflow-hidden">
           {current.kids.map((k) => (
             <span key={k.name} className="flex gap-[4px] items-start min-w-0">
               <span className="text-[#121212] truncate">{k.name}</span>
@@ -44,7 +44,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
             </span>
           ))}
         </div>
-        <div className="w-full flex gap-[10px] items-center text-[#121212] text-[14px]">
+        <div className="w-full flex gap-[10px] items-center text-[#121212] text-[12px]">
           {ageParts.map((p, i) => (
             <span key={i} className="flex gap-[10px] items-center shrink-0">
               {i > 0 && <span aria-hidden>･</span>}
@@ -72,7 +72,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
         type="button"
         onClick={onTap}
         aria-label="로그인하고 아이 등록하기"
-        className={`${BOX} flex-1 min-w-0 h-[50px] flex items-center px-[10px] text-left active:translate-y-px`}
+        className={`${BOX} flex-1 min-w-0 h-[48px] flex items-center px-[10px] text-left active:translate-y-px`}
       >
         {body}
       </button>
@@ -80,7 +80,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
   }
 
   if (!switchable) {
-    return <div className={`${BOX} flex-1 min-w-0 h-[50px] flex items-center px-[10px]`}>{body}</div>;
+    return <div className={`${BOX} flex-1 min-w-0 h-[48px] flex items-center px-[10px]`}>{body}</div>;
   }
 
   return (
@@ -91,7 +91,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label="아이 바꾸기"
-        className={`${BOX} w-full h-[50px] flex items-center px-[10px] text-left`}
+        className={`${BOX} w-full h-[48px] flex items-center px-[10px] text-left`}
       >
         {body}
       </button>
@@ -103,7 +103,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
           <ul
             role="listbox"
             aria-label="아이 목록"
-            className={`${BOX} absolute left-0 right-0 top-[60px] z-20 max-h-[120px] overflow-y-auto overflow-x-hidden flex flex-col`}
+            className={`${BOX} absolute left-0 right-0 top-[58px] z-20 max-h-[120px] overflow-y-auto overflow-x-hidden flex flex-col`}
           >
             {groups.map((g, i) => {
               const on = g.key === current.key;

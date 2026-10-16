@@ -163,6 +163,7 @@ export function buildDefaultRecordData(type: GrowthType): Record<string, unknown
   const cfg = TYPE_CONFIG[type];
   const data: Record<string, unknown> = {};
   const now = new Date();
+  if (type === 'BABY_FOOD') data.amountUnit = 'ml';
 
   cfg.fields.forEach((f) => {
     if (type === 'SLEEP' && f.key === 'kind') {

@@ -151,10 +151,9 @@ export default function ChildSheet({ open, child, onClose }: Props) {
               <div role="radiogroup" aria-label="성별" className="w-full flex rounded-[4px] border border-[#808991] overflow-hidden">
                 {GENDERS.map((g, i) => {
                   const selected = gender === g.value;
-                  // 디자인상 고른 칸은 양옆에 회색 선이 있다. 바깥 테두리와 겹치는 쪽은 뺀다.
-                  const sideBorder = selected
-                    ? `${i > 0 ? 'border-l' : ''} ${i < GENDERS.length - 1 ? 'border-r' : ''} border-[#808991]`
-                    : '';
+                  // 선택 위치와 관계없이 두 구분선을 유지한다.
+                  // 한 버튼에 border-l/r을 함께 주면 손그림 테두리 규칙이 한쪽 선을 덮는다.
+                  const sideBorder = i > 0 ? 'border-l border-[#808991]' : '';
                   return (
                     <button
                       key={g.value}

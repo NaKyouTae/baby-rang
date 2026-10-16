@@ -109,7 +109,7 @@ export default function GemStore({ open, onClose, coins, childId, onCharged }: P
           'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 20px)',
       }}
     >
-      <div className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+      <div className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
         {/* 디자인의 왼쪽 화살표는 투명하다 — 제목을 가운데로 미는 자리일 뿐이다 */}
         <span className="size-[24px]" />
         <p className="text-[#121212] text-[16px] leading-none">보석함</p>

@@ -177,7 +177,7 @@ export default function SharingScreen({ open, onBack }: Props) {
           'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 20px)',
       }}
     >
-      <div className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+      <div className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
         <button type="button" onClick={onBack} aria-label="뒤로" className="size-[24px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/chevron-left.svg" alt="" width={24} height={24} className="block" />

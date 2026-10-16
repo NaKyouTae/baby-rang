@@ -214,7 +214,7 @@ export default function GrowthChart({
             y={CHART_H - PAD_B + 10}
             textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
             dominantBaseline="hanging"
-            fontSize={10}
+            fontSize="10"
             fill="#BBC0C5"
           >
             {m}
@@ -229,7 +229,7 @@ export default function GrowthChart({
             y={toY(v)}
             textAnchor="middle"
             dominantBaseline="central"
-            fontSize={10}
+            fontSize="10"
             fill="#BBC0C5"
           >
             {v}

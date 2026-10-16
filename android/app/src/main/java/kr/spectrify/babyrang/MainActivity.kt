@@ -32,6 +32,10 @@ import kr.spectrify.babyrang.databinding.ActivityMainBinding
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    lateinit var dateTimePicker: NativeDateTimePicker
+        private set
+    lateinit var numberPicker: NativeNumberPicker
+        private set
 
     /** 웹이 실행되는 주소. iOS 앱과 동일하게 프로덕션을 본다. */
     private val startUrl = "https://baby-rang.spectrify.kr/home"
@@ -94,6 +98,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        dateTimePicker = NativeDateTimePicker(this) { script ->
+            binding.webView.evaluateJavascript(script, null)
+        }
+        numberPicker = NativeNumberPicker(this) { script ->
+            binding.webView.evaluateJavascript(script, null)
+        }
 
         // onPageCommitVisible 이 오지 않는 경우(네트워크 오류 등) 대비.
         // 스플래시가 영원히 남아 앱이 멈춘 것처럼 보이는 것을 막는다.
@@ -102,6 +112,8 @@ class MainActivity : AppCompatActivity() {
         with(binding.webView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
+            // 시스템 글자 크기와 관계없이 웹 디자인의 CSS 글자 크기를 유지한다.
+            textZoom = 100
             // 웹이 뷰포트를 직접 제어한다(ViewportHeightSetter). 자동 축소를 끈다.
             useWideViewPort = false
             loadWithOverviewMode = false
@@ -394,6 +406,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::numberPicker.isInitialized) numberPicker.close()
+        if (::dateTimePicker.isInitialized) dateTimePicker.close()
         adView?.destroy()
         billing.destroy()
         super.onDestroy()

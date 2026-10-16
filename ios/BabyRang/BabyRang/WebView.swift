@@ -25,6 +25,9 @@ struct WebView: UIViewRepresentable {
         // openSettings 메시지 핸들러 등록
         let contentController = configuration.userContentController
         contentController.add(context.coordinator, name: "openSettings")
+        contentController.add(context.coordinator, name: "selectionFeedback")
+        contentController.add(context.coordinator, name: "numberPicker")
+        contentController.add(context.coordinator, name: "dateTimePicker")
         // 홈 화면 위젯용 토큰/설정 저장 핸들러
         contentController.add(context.coordinator, name: "saveWidgetData")
         contentController.add(context.coordinator, name: "clearWidgetData")
@@ -55,6 +58,8 @@ struct WebView: UIViewRepresentable {
         context.coordinator.storeKit.webView = webView
         context.coordinator.kakaoLogin.webView = webView
         context.coordinator.naverLogin.webView = webView
+        context.coordinator.numberPicker.webView = webView
+        context.coordinator.dateTimePicker.webView = webView
         // 앱 밖에서 확정된 거래(보호자 승인, 중단 후 복구)를 받아 웹에 넘긴다.
         context.coordinator.storeKit.startTransactionListener()
 
@@ -70,12 +75,15 @@ struct WebView: UIViewRepresentable {
         private let onLoad: () -> Void
         private let adSlot: AdSlotModel
         private var hasNotifiedLoad = false
+        private let selectionFeedback = UISelectionFeedbackGenerator()
         /// 인앱결제 요청을 처리한다. makeUIView 에서 webView 를 물려준다.
         let storeKit = StoreKitBridge()
         /// 카카오톡 앱 로그인을 처리한다.
         let kakaoLogin = KakaoLoginBridge()
         /// 네이버앱 로그인을 처리한다.
         let naverLogin = NaverLoginBridge()
+        let numberPicker = NumberPickerBridge()
+        let dateTimePicker = DateTimePickerBridge()
 
         init(adSlot: AdSlotModel, onLoad: @escaping () -> Void) {
             self.adSlot = adSlot
@@ -107,6 +115,20 @@ struct WebView: UIViewRepresentable {
             }
             if message.name == NaverLoginBridge.handlerName {
                 MainActor.assumeIsolated { naverLogin.handle(message) }
+                return
+            }
+
+            if message.name == "dateTimePicker" {
+                MainActor.assumeIsolated { dateTimePicker.handle(message) }
+                return
+            }
+            if message.name == "numberPicker" {
+                MainActor.assumeIsolated { numberPicker.handle(message) }
+                return
+            }
+            if message.name == "selectionFeedback" {
+                selectionFeedback.selectionChanged()
+                selectionFeedback.prepare()
                 return
             }
 

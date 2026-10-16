@@ -2,6 +2,13 @@
    여기서 @import 로 불러오면 CSS 파싱이 끝난 뒤에야 폰트 CSS 요청이 시작돼 first paint 가 수백 ms 늦어진다. */
 @import "tailwindcss";
 
+/* 모바일의 자동 글자 확대를 끄고 rem 기준도 디자인의 16px로 유지한다. */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 @theme {
   /* Primary (blue) */
   --color-primary-50: #EEF3FB;

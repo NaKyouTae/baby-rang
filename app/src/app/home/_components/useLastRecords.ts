@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 interface LastRecords {
   childId: string;
+  canEndSleep: boolean;
   sleepAt: string | null;
   feedingAt: string | null;
   diaperAt: string | null;
@@ -33,6 +34,7 @@ async function fetchLastRecords(childId: string): Promise<LastRecords | null | u
     if (!data || data.childId !== childId) return null;
     return {
       childId,
+      canEndSleep: data.canEndSleep === true,
       sleepAt: data.lastSleepAt,
       feedingAt: data.lastFeedingAt,
       diaperAt: data.lastDiaperAt,
@@ -78,7 +80,11 @@ export function useLastRecords(childId: string | undefined) {
       if (document.visibilityState === 'visible') void refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('growth-records-updated', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('growth-records-updated', onVisible);
+    };
   }, [refresh]);
 
   useEffect(() => {

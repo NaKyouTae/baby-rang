@@ -43,7 +43,7 @@ export default function PixelDocPage({
       {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 홈과 같은 링크다. */}
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
 
-      <div className={`${BOX} h-[50px] shrink-0 flex items-center justify-between px-[10px]`}>
+      <div className={`${BOX} h-[48px] shrink-0 flex items-center justify-between px-[10px]`}>
         <button type="button" onClick={goBack} aria-label="뒤로가기" className="size-[24px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icons/chevron-left.svg" alt="" width={24} height={24} className="block" />

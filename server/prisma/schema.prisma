@@ -358,6 +358,7 @@ model Child {
   group           Group            @relation(fields: [groupId], references: [id], onDelete: Cascade)
   payments        Payment[]
   growthRecords   GrowthRecord[]
+  recentRecordAmounts RecentRecordAmount[]
   physicalGrowths PhysicalGrowth[]
   room            Room?
 
@@ -409,6 +410,21 @@ model GrowthRecord {
   // recentAmounts: childId + type 필터 + startAt 정렬 최적화
   @@index([childId, type, startAt])
   @@map("growth_records")
+}
+
+// 기록을 수정해도 이전에 사용한 용량은 별도로 보존한다.
+model RecentRecordAmount {
+  id         String @id @default(uuid())
+  childId    String
+  type       GrowthRecordType
+  value      Float
+  unit       String
+  lastUsedAt DateTime @default(now())
+  child      Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, type, value, unit])
+  @@index([childId, type, lastUsedAt])
+  @@map("recent_record_amounts")
 }
 
 enum NursingRoomReportStatus {

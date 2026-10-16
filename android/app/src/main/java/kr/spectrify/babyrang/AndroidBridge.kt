@@ -1,6 +1,7 @@
 package kr.spectrify.babyrang
 
 import android.webkit.JavascriptInterface
+import android.view.HapticFeedbackConstants
 import org.json.JSONObject
 
 /**
@@ -13,6 +14,24 @@ import org.json.JSONObject
  *    호출은 WebView 의 백그라운드 스레드에서 들어오므로 UI 작업은 메인으로 넘긴다.
  */
 class AndroidBridge(private val activity: MainActivity) {
+
+    @JavascriptInterface
+    fun dateTimePicker(json: String) {
+        activity.runOnUiThread { activity.dateTimePicker.handle(json) }
+    }
+
+    @JavascriptInterface
+    fun numberPicker(json: String) {
+        activity.runOnUiThread { activity.numberPicker.handle(json) }
+    }
+
+    /** 휠에서 선택값이 바뀔 때 시스템 설정을 따르는 짧은 햅틱. */
+    @JavascriptInterface
+    fun selectionFeedback() {
+        activity.runOnUiThread {
+            activity.window.decorView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+        }
+    }
 
     @JavascriptInterface
     fun openLocationSettings() {

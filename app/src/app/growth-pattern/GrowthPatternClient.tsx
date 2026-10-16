@@ -444,7 +444,7 @@ export default function GrowthPatternClient() {
       {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 홈과 같은 링크다. */}
       <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
 
-      <header className={`${BOX} h-[50px] shrink-0 flex items-center justify-center px-[10px]`}>
+      <header className={`${BOX} h-[48px] shrink-0 flex items-center justify-center px-[10px]`}>
         <h1 className="text-[#121212] text-[16px] leading-none font-normal">패턴</h1>
       </header>
 

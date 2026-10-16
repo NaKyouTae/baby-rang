@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FieldDef,
   GrowthRecord,
@@ -8,13 +9,16 @@ import {
   TYPE_CONFIG,
   recordTitle,
 } from './types';
-import TimePickerModal from './TimePickerModal';
-import WheelPickerModal from './WheelPickerModal';
 import BottomSheet from '@/components/BottomSheet';
+import WheelPickerModal from './WheelPickerModal';
+import DateTimeWheelModal from './DateTimeWheelModal';
+import { openNativeDateTimePicker } from '@/lib/nativeDateTimePicker';
+import { numberPickerOptions, openNativeNumberPicker } from '@/lib/nativeNumberPicker';
+import { useAppOverlayLock } from '@/components/ads/appOverlay';
+import { loadRecentAmounts, mergeRecentAmounts, storeRecentAmounts, type RecentAmount } from './recentAmounts';
 import ConfirmModal from '../home/_components/ConfirmModal';
 import RecordDefaultsSheet, { RecordDefaultsMode } from './RecordDefaultsSheet';
 import {
-  getBabyFoodDefaultUnit,
   getDiaperDefaultKind,
   isWithinNightRange,
 } from './recordDefaults';
@@ -89,11 +93,6 @@ function parseLocal(s: string) {
   return { y: +m[1], mo: +m[2], d: +m[3], h: +m[4], mi: +m[5] };
 }
 
-function fmtLocal(y: number, mo: number, d: number, h: number, mi: number) {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${y}-${p(mo)}-${p(d)}T${p(h)}:${p(mi)}`;
-}
-
 function formatDisplayDate(s: string): string {
   const { y, mo, d, h, mi } = parseLocal(s);
   const p = (n: number) => String(n).padStart(2, '0');
@@ -140,6 +139,63 @@ function Segmented({
       ))}
     </div>
   );
+}
+
+/** 앱은 네이티브 휠, 브라우저·구버전 앱은 웹 휠을 연다. */
+function RecordNumberPicker({ label, value, min, max, step = 1, decimals = 0, unit, onChange }: {
+  label: string; value: number; min: number; max: number; step?: number;
+  decimals?: number; unit?: string; onChange: (value: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [nativePending, setNativePending] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  useAppOverlayLock(nativePending);
+  useEffect(() => () => cancelRef.current?.(), []);
+  function showPicker() {
+    if (nativePending || open) return;
+    const options = numberPickerOptions(value, min, max, step, decimals, unit);
+    const cancel = openNativeNumberPicker(label, options, value, (result) => {
+      cancelRef.current = null;
+      setNativePending(false);
+      if (result.error) setOpen(true);
+      else if (result.value !== null) onChange(result.value);
+    });
+    if (cancel) { cancelRef.current = cancel; setNativePending(true); }
+    else setOpen(true);
+  }
+  return (
+    <>
+      <button type="button" aria-label={label} aria-haspopup="dialog"
+        onClick={showPicker} disabled={nativePending} className="absolute inset-0 w-full h-full" />
+      {open && createPortal(<WheelPickerModal open title={label} value={value} min={min} max={max}
+        step={step} decimals={decimals}
+        format={(v) => `${decimals ? v.toFixed(decimals) : v}${unit ?? ''}`}
+        onClose={() => setOpen(false)} onConfirm={onChange} />, document.body)}
+    </>
+  );
+}
+
+function RecordDateTimePicker({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [nativePending, setNativePending] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  useAppOverlayLock(nativePending);
+  useEffect(() => () => cancelRef.current?.(), []);
+  return <>
+    <button type="button" aria-label={label} aria-haspopup="dialog" disabled={nativePending}
+      className="absolute inset-0 w-full h-full" onClick={() => {
+        if (nativePending || open) return;
+        const cancel = openNativeDateTimePicker(label, value, result => {
+          cancelRef.current = null;
+          setNativePending(false);
+          if (result.error) setOpen(true);
+          else if (result.value !== null) onChange(result.value);
+        });
+        if (cancel) { cancelRef.current = cancel; setNativePending(true); }
+        else setOpen(true);
+      }} />
+    {open && createPortal(<DateTimeWheelModal title={label} value={value} onClose={() => setOpen(false)} onConfirm={onChange} />, document.body)}
+  </>;
 }
 
 type FieldRow =
@@ -206,7 +262,7 @@ export default function EntrySheet({
         d[f.key] = String(src[f.key]);
         return;
       }
-      if (f.key === 'amount' && f.units) {
+      if (type === 'BABY_FOOD' && f.key === 'amount') {
         // BABY_FOOD 마이그레이션: amountG/amountMl → amount
         if (src.amountG != null) d[f.key] = String(src.amountG);
         else if (src.amountMl != null) d[f.key] = String(src.amountMl);
@@ -280,7 +336,6 @@ export default function EntrySheet({
       } else if (f.key === 'amount') {
         if (src.amountG != null && f.units.includes('g')) u[f.key] = 'g';
         else if (src.amountMl != null && f.units.includes('ml')) u[f.key] = 'ml';
-        else if (!initial && type === 'BABY_FOOD') u[f.key] = getBabyFoodDefaultUnit();
         else u[f.key] = f.units[0];
       } else {
         u[f.key] = f.units[0];
@@ -298,13 +353,21 @@ export default function EntrySheet({
       cfg.fields.some((f) => f.key === 'amountMl' || f.key === 'amount'),
     [type, cfg.fields],
   );
-  const [recentAmounts, setRecentAmounts] = useState<
-    { value: number; unit: string }[]
-  >([]);
+  const [recentAmounts, setRecentAmounts] = useState<RecentAmount[]>(() => loadRecentAmounts(childId, type));
+  const recentAmountsRef = useRef(recentAmounts);
+  function rememberAmount(fieldKey: string, value: number, unit: string) {
+    if (!['amount', 'amountMl', 'leftMl', 'rightMl'].includes(fieldKey) || value <= 0) return;
+    const next = mergeRecentAmounts([{ value, unit }], recentAmountsRef.current);
+    recentAmountsRef.current = next;
+    setRecentAmounts(next);
+    storeRecentAmounts(childId, type, next);
+  }
+  const [pumpingAmountTarget, setPumpingAmountTarget] = useState<'leftMl' | 'rightMl'>('leftMl');
 
   useEffect(() => {
     if (!usesAmountField || !childId) return;
     let cancelled = false;
+    const historyAtRequest = recentAmountsRef.current;
     (async () => {
       try {
         const res = await fetch(
@@ -315,7 +378,12 @@ export default function EntrySheet({
           amounts?: { value: number; unit: string }[];
         };
         if (!cancelled && Array.isArray(json.amounts)) {
-          setRecentAmounts(json.amounts);
+          const next = recentAmountsRef.current === historyAtRequest
+            ? mergeRecentAmounts(type === 'BABY_FOOD' ? json.amounts.map(a => ({ ...a, unit: 'ml' })) : json.amounts, recentAmountsRef.current)
+            : mergeRecentAmounts(recentAmountsRef.current, type === 'BABY_FOOD' ? json.amounts.map(a => ({ ...a, unit: 'ml' })) : json.amounts);
+          recentAmountsRef.current = next;
+          setRecentAmounts(next);
+          storeRecentAmounts(childId, type, next);
         }
       } catch {
         /* ignore */
@@ -326,14 +394,9 @@ export default function EntrySheet({
     };
   }, [usesAmountField, childId, type]);
 
-  const [showStartModal, setShowStartModal] = useState(false);
-  const [showEndModal, setShowEndModal] = useState(false);
-  const [showDurationPicker, setShowDurationPicker] = useState(false);
-  const [pickerField, setPickerField] = useState<FieldDef | null>(null);
   const [settingsMode, setSettingsMode] = useState<RecordDefaultsMode | null>(null);
 
   function getSettingsModeFor(fieldKey: string): RecordDefaultsMode | null {
-    if (type === 'BABY_FOOD' && fieldKey === 'amount') return 'babyfood';
     if (type === 'DIAPER' && fieldKey === 'kind') return 'diaper';
     if (type === 'SLEEP' && fieldKey === 'kind') return 'sleepNight';
     return null;
@@ -345,10 +408,21 @@ export default function EntrySheet({
   const [, forceTick] = useState(0);
 
   useEffect(() => {
-    const anyRunning = Object.values(timers).some((t) => t.startMs !== null);
-    if (!anyRunning) return;
-    const id = window.setInterval(() => forceTick((n) => n + 1), 1000);
-    return () => window.clearInterval(id);
+    const running = Object.values(timers).filter((t) => t.startMs !== null);
+    if (!running.length) return;
+    const signature = () => running.map((t) => Math.floor((Date.now() - t.startMs!) / 1000)).join(',');
+    let previous = signature();
+    let frame: number;
+    const update = () => {
+      const next = signature();
+      if (next !== previous) {
+        previous = next;
+        forceTick((n) => n + 1);
+      }
+      frame = window.requestAnimationFrame(update);
+    };
+    frame = window.requestAnimationFrame(update);
+    return () => window.cancelAnimationFrame(frame);
   }, [timers]);
 
   const fieldRows = useMemo(() => pairFields(cfg.fields), [cfg.fields]);
@@ -363,12 +437,14 @@ export default function EntrySheet({
   function toggleTimer(...keys: string[]) {
     if (keys.length === 0) return;
     const primaryKey = keys[0];
+    const now = Date.now();
+    const initialSeconds = getDisplaySeconds(primaryKey);
     setTimers((prev) => {
-      const t = prev[primaryKey] ?? { baseSec: 0, startMs: null };
+      const t = prev[primaryKey] ?? { baseSec: initialSeconds, startMs: null };
       const newState: TimerState =
         t.startMs === null
-          ? { baseSec: t.baseSec, startMs: Date.now() }
-          : { baseSec: t.baseSec + Math.floor((Date.now() - t.startMs) / 1000), startMs: null };
+          ? { baseSec: t.baseSec, startMs: now }
+          : { baseSec: t.baseSec + Math.floor((now - t.startMs) / 1000), startMs: null };
       const next = { ...prev };
       keys.forEach((k) => {
         next[k] = newState;
@@ -480,6 +556,7 @@ export default function EntrySheet({
           cleanData[`${f.key}Unit`] = selectedUnits[f.key] ?? f.units[0];
         });
       }
+      if (type === 'BABY_FOOD') cleanData.amountUnit = 'ml';
       fd.append('data', JSON.stringify(cleanData));
       fd.append('keepImageUrls', JSON.stringify([]));
 
@@ -514,12 +591,6 @@ export default function EntrySheet({
     }
   }
 
-  function elapsedSecondsFromStart(): number {
-    const start = new Date(startAt).getTime();
-    const now = Date.now();
-    return Math.max(0, Math.floor((now - start) / 1000));
-  }
-
   function durationMinutes(): number {
     if (!endAt) return 0;
     const s = new Date(startAt).getTime();
@@ -534,29 +605,6 @@ export default function EntrySheet({
 
   function fillNowEnd() {
     setEndAt(nowFullLocalInput());
-  }
-
-  function fillNow(field: FieldDef, mirrorKey?: string) {
-    const r = rangeFor(field);
-    const maxSec = r.max * 60;
-    const clampedSec = Math.min(maxSec, elapsedSecondsFromStart());
-    const mins = String(Math.floor(clampedSec / 60));
-    const secs = String(clampedSec % 60);
-    const secKey = secKeyFor(field.key);
-    const mirrorSecKey = mirrorKey ? secKeyFor(mirrorKey) : null;
-    setData((prev) => {
-      const next = { ...prev, [field.key]: mins };
-      if (secKey) next[secKey] = secs;
-      if (mirrorKey) next[mirrorKey] = mins;
-      if (mirrorSecKey) next[mirrorSecKey] = secs;
-      return next;
-    });
-    setTimers((prev) => {
-      const newState: TimerState = { baseSec: clampedSec, startMs: null };
-      const next = { ...prev, [field.key]: newState };
-      if (mirrorKey) next[mirrorKey] = newState;
-      return next;
-    });
   }
 
   function formatFieldValue(f: FieldDef, raw: string | undefined): string {
@@ -584,24 +632,49 @@ export default function EntrySheet({
     return key.endsWith('Min') ? key.slice(0, -3) + 'Sec' : null;
   }
 
+  function renderFieldPicker(f: FieldDef) {
+    const activeUnit = f.units ? selectedUnits[f.key] ?? f.units[0] : f.unit;
+    const r = rangeFor(f, activeUnit);
+    const raw = data[f.key];
+    const fallback = (f.key === 'amountMl' || f.key === 'amount') && recentAmounts.length
+      ? recentAmounts[0].value : Number(f.placeholder ?? r.min);
+    const current = raw !== undefined && raw !== '' ? Number(raw) : fallback;
+    return <RecordNumberPicker label={f.label} value={Number.isFinite(current) ? current : r.min}
+      {...r} unit={activeUnit} onChange={(v) => {
+        rememberAmount(f.key, v, activeUnit ?? 'ml');
+        const value = String(v);
+        const sync = type === 'PUMPING' && data.pumpingMode === 'BOTH' &&
+          (f.key === 'leftMin' || f.key === 'rightMin');
+        const secKey = secKeyFor(f.key);
+        setData((prev) => {
+          const next = { ...prev, [f.key]: value };
+          if (secKey) next[secKey] = '0';
+          if (sync) {
+            next.leftMin = value; next.rightMin = value;
+            next.leftSec = '0'; next.rightSec = '0';
+          }
+          return next;
+        });
+        if (sync) clearTimer('leftMin', 'rightMin');
+        else clearTimer(f.key);
+      }} />;
+  }
+
   function renderTimerField(f: FieldDef, mirrorKey?: string) {
     const running = timers[f.key]?.startMs != null;
     const seconds = getDisplaySeconds(f.key);
     const toggleKeys = mirrorKey ? [f.key, mirrorKey] : [f.key];
-    // 한 줄: [값] [재생/일시정지] [지금 완료] — Figma 모유수유·유축
+    // 한 줄: [값] [재생/일시정지] — 모유수유·유축
     return (
       <div className="flex items-stretch gap-[10px]">
-        <button
-          type="button"
-          onClick={() => setPickerField(f)}
-          className={`${FIELD_BOX} flex-1 min-w-0`}
-        >
-          {seconds > 0 ? (
+        <div className={`${FIELD_BOX} relative flex-1 min-w-0`}>
+          {renderFieldPicker(f)}
+          {running || seconds > 0 ? (
             <span className="text-[#121212]">{fmtMmSs(seconds)}</span>
           ) : (
             <span className="text-[#BBC0C5]">0</span>
           )}
-        </button>
+        </div>
         <button
           type="button"
           onClick={() => toggleTimer(...toggleKeys)}
@@ -622,39 +695,29 @@ export default function EntrySheet({
             aria-hidden="true"
           />
         </button>
-        <button
-          type="button"
-          onClick={() => fillNow(f, mirrorKey)}
-          className={NOW_BUTTON}
-        >
-          지금<br />완료
-        </button>
       </div>
     );
   }
 
   function renderNumberField(
     f: FieldDef,
-    opts?: { showNowButton?: boolean; mirrorKey?: string },
+    opts?: { showTimer?: boolean; mirrorKey?: string },
   ) {
-    if (opts?.showNowButton) {
+    if (opts?.showTimer) {
       return renderTimerField(f, opts?.mirrorKey);
     }
     const hasValue = data[f.key] && data[f.key] !== '' && data[f.key] !== '0';
     const placeholder = f.placeholder ?? '0';
     return (
       <div className="flex items-stretch gap-[10px]">
-        <button
-          type="button"
-          onClick={() => setPickerField(f)}
-          className={`${FIELD_BOX} flex-1 min-w-0`}
-        >
+        <div className={`${FIELD_BOX} relative flex-1 min-w-0`}>
+          {renderFieldPicker(f)}
           {hasValue ? (
             <span className="text-[#121212]">{formatFieldValue(f, data[f.key])}</span>
           ) : (
             <span className="text-[#BBC0C5]">{placeholder}</span>
           )}
-        </button>
+        </div>
         {f.units && f.units.length > 0 && (
           <div className="shrink-0 flex rounded-[4px] border border-[#808991] overflow-hidden">
             {f.units.map((u, idx) => {
@@ -697,7 +760,11 @@ export default function EntrySheet({
             key={`${a.value}-${a.unit}`}
             type="button"
             onClick={() => {
+              rememberAmount(fieldKey, a.value, a.unit);
               setData((prev) => ({ ...prev, [fieldKey]: String(a.value) }));
+              if (type === 'PUMPING' && (fieldKey === 'leftMl' || fieldKey === 'rightMl')) {
+                setPumpingAmountTarget(fieldKey === 'leftMl' ? 'rightMl' : 'leftMl');
+              }
               // 단위가 있는 필드(이유식)는 기록 당시 단위까지 함께 반영
               if (hasUnits) {
                 setSelectedUnits((prev) => ({ ...prev, [fieldKey]: a.unit }));
@@ -736,7 +803,6 @@ export default function EntrySheet({
     );
   }
 
-  const startParsed = parseLocal(startAt);
 
   return (
     <>
@@ -752,70 +818,29 @@ export default function EntrySheet({
         <div className="overflow-y-auto px-[20px] pt-[24px] pb-[8px] flex flex-col gap-[10px]">
           <div className="flex flex-col gap-[8px]">
             <span className={FIELD_LABEL}>측정일시</span>
-            <button
-              type="button"
-              onClick={() => setShowStartModal(true)}
-              className={`${FIELD_BOX} w-full`}
-            >
+            <div className={`${FIELD_BOX} relative w-full`}>
               {formatDisplayDate(startAt)}
-            </button>
+              <RecordDateTimePicker label="측정일시" value={startAt} onChange={setStartAt} />
+            </div>
           </div>
-
-          {showStartModal && (
-            <TimePickerModal
-              open={showStartModal}
-              year={startParsed.y}
-              month={startParsed.mo}
-              day={startParsed.d}
-              hour={startParsed.h}
-              minute={startParsed.mi}
-              onClose={() => setShowStartModal(false)}
-              onConfirm={(nmo, nd, nh, nm) =>
-                setStartAt(fmtLocal(startParsed.y, nmo, nd, nh, nm))
-              }
-            />
-          )}
 
           {cfg.showEndPicker && (
             <div className="flex flex-col gap-[8px]">
               <span className={FIELD_LABEL}>종료일시</span>
-              <button
-                type="button"
-                onClick={() => setShowEndModal(true)}
-                className={`${FIELD_BOX} w-full`}
-              >
+              <div className={`${FIELD_BOX} relative w-full`}>
                 {formatDisplayDate(endAt || startAt)}
-              </button>
+                <RecordDateTimePicker label="종료일시" value={endAt || startAt} onChange={setEndAt} />
+              </div>
             </div>
           )}
-
-          {cfg.showEndPicker && showEndModal && (() => {
-            const endParsed = parseLocal(endAt || startAt);
-            return (
-              <TimePickerModal
-                open={showEndModal}
-                year={endParsed.y}
-                month={endParsed.mo}
-                day={endParsed.d}
-                hour={endParsed.h}
-                minute={endParsed.mi}
-                onClose={() => setShowEndModal(false)}
-                onConfirm={(nmo, nd, nh, nm) =>
-                  setEndAt(fmtLocal(endParsed.y, nmo, nd, nh, nm))
-                }
-              />
-            );
-          })()}
 
           {cfg.showDuration && (
             <div className="flex flex-col gap-[8px]">
               <span className={FIELD_LABEL}>시간</span>
               <div className="flex items-stretch gap-[10px]">
-                <button
-                  type="button"
-                  onClick={() => setShowDurationPicker(true)}
-                  className={`${FIELD_BOX} flex-1 min-w-0`}
-                >
+                <div className={`${FIELD_BOX} relative flex-1 min-w-0`}>
+                  <RecordNumberPicker label="시간" value={durationMinutes()} min={0} max={720}
+                    unit="분" onChange={setDurationMinutes} />
                   {(() => {
                     const mins = durationMinutes();
                     return mins > 0 ? (
@@ -824,7 +849,7 @@ export default function EntrySheet({
                       <span className="text-[#BBC0C5]">0</span>
                     );
                   })()}
-                </button>
+                </div>
                 <button type="button" onClick={fillNowEnd} className={NOW_BUTTON}>
                   지금<br />완료
                 </button>
@@ -872,69 +897,19 @@ export default function EntrySheet({
               unit: 'ml',
             };
 
-            const changePumpingMode = (value: 'LR' | 'BOTH') => {
-              setData((prev) => {
-                const next: Record<string, string> = { ...prev, pumpingMode: value };
-                if (value === 'BOTH') {
-                  // 동시: 오른쪽을 왼쪽 값과 동기화
-                  next.rightMin = prev.leftMin ?? '';
-                  next.rightSec = prev.leftSec ?? '';
-                }
-                return next;
-              });
-              if (value === 'BOTH') {
-                setTimers((prev) => {
-                  const lt = prev.leftMin;
-                  const next = { ...prev };
-                  if (lt) next.rightMin = { ...lt };
-                  else if (next.rightMin) delete next.rightMin;
-                  return next;
-                });
-              }
-            };
-
-            const changeVolumeMode = (value: 'LR' | 'BOTH') => {
-              setData((prev) => ({ ...prev, volumeMode: value }));
-            };
-
-            const MODE_OPTIONS: { value: 'LR' | 'BOTH'; label: string }[] = [
-              { value: 'LR', label: '좌우' },
-              { value: 'BOTH', label: '동시' },
-            ];
-
             return (
               <>
-                {/* 좌우/동시 고르기 — Figma 에는 없지만 기존 기능이라 같은 모양으로 둔다 */}
-                <div className="grid grid-cols-2 gap-[8px]">
-                  <div className="flex flex-col gap-[8px]">
-                    <span className={FIELD_LABEL}>유축</span>
-                    <Segmented
-                      options={MODE_OPTIONS}
-                      value={pumpingMode}
-                      onChange={(v) => changePumpingMode(v as 'LR' | 'BOTH')}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-[8px]">
-                    <span className={FIELD_LABEL}>유축량</span>
-                    <Segmented
-                      options={MODE_OPTIONS}
-                      value={volumeMode}
-                      onChange={(v) => changeVolumeMode(v as 'LR' | 'BOTH')}
-                    />
-                  </div>
-                </div>
-
                 <div className="flex flex-col gap-[8px]">
                   {renderFieldHeader(leftMinField)}
                   {renderNumberField(leftMinField, {
-                    showNowButton: true,
+                    showTimer: true,
                     mirrorKey: pumpingMode === 'BOTH' ? 'rightMin' : undefined,
                   })}
                 </div>
                 <div className="flex flex-col gap-[8px]">
                   {renderFieldHeader(rightMinField)}
                   {renderNumberField(rightMinField, {
-                    showNowButton: true,
+                    showTimer: true,
                     mirrorKey: pumpingMode === 'BOTH' ? 'leftMin' : undefined,
                   })}
                 </div>
@@ -946,6 +921,7 @@ export default function EntrySheet({
                       {renderNumberField(leftMlField)}
                       {renderNumberField(rightMlField)}
                     </div>
+                    {renderRecentAmounts(pumpingAmountTarget)}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-[8px]">
@@ -960,17 +936,17 @@ export default function EntrySheet({
 
           {type !== 'PUMPING' && fieldRows.map((row, idx) => {
             if (row.kind === 'pair') {
-              const showNow = row.left.unit === '분';
+              const showTimer = row.left.unit === '분';
               // 왼쪽·오른쪽은 위아래로 한 줄씩 (Figma 모유수유)
               return (
                 <div key={`pair-${idx}`} className="flex flex-col gap-[10px]">
                   <div className="flex flex-col gap-[8px]">
                     {renderFieldHeader(row.left)}
-                    {renderNumberField(row.left, { showNowButton: showNow })}
+                    {renderNumberField(row.left, { showTimer })}
                   </div>
                   <div className="flex flex-col gap-[8px]">
                     {renderFieldHeader(row.right)}
-                    {renderNumberField(row.right, { showNowButton: showNow })}
+                    {renderNumberField(row.right, { showTimer })}
                   </div>
                 </div>
               );
@@ -1006,7 +982,7 @@ export default function EntrySheet({
             );
           })}
 
-          {/* 메모 — Figma 에는 없지만 기존 기능이라 같은 모양으로 둔다 */}
+          {!['FORMULA', 'BREASTFEEDING', 'PUMPED_FEEDING', 'PUMPING', 'BABY_FOOD', 'SLEEP', 'DIAPER'].includes(type) && (
           <div className="flex flex-col gap-[8px]">
             <span className={FIELD_LABEL}>메모</span>
             <input
@@ -1017,6 +993,7 @@ export default function EntrySheet({
               placeholder=""
             />
           </div>
+          )}
         </div>
 
         <div
@@ -1050,89 +1027,6 @@ export default function EntrySheet({
         </div>
     </BottomSheet>
 
-      {pickerField && (() => {
-        const activeUnit = pickerField.units
-          ? selectedUnits[pickerField.key] ?? pickerField.units[0]
-          : pickerField.unit;
-        const r = rangeFor(pickerField, activeUnit);
-        const raw = data[pickerField.key];
-        let current: number = r.min;
-        if (raw !== undefined && raw !== '') {
-          current = Number(raw);
-        } else if (
-          (pickerField.key === 'amountMl' || pickerField.key === 'amount') &&
-          recentAmounts.length > 0
-        ) {
-          // 먹은 양: 입력값이 없으면 가장 최근 먹은 양을 기본 선택값으로 연다
-          current = recentAmounts[0].value;
-        } else if (pickerField.placeholder) {
-          const parsed = Number(pickerField.placeholder);
-          if (!Number.isNaN(parsed) && parsed >= r.min && parsed <= r.max) {
-            current = parsed;
-          }
-        }
-        return (
-          <WheelPickerModal
-            open={true}
-            title={pickerField.label}
-            value={current}
-            min={r.min}
-            max={r.max}
-            step={r.step}
-            decimals={r.decimals}
-            format={(v) => {
-              const num = r.decimals > 0 ? v.toFixed(r.decimals) : String(v);
-              return activeUnit ? `${num}${activeUnit}` : num;
-            }}
-            onClose={() => setPickerField(null)}
-            onConfirm={(v) => {
-              const value = String(v);
-              const pumpingBothSyncMin =
-                type === 'PUMPING' &&
-                data.pumpingMode === 'BOTH' &&
-                (pickerField.key === 'leftMin' || pickerField.key === 'rightMin');
-              const secKey = secKeyFor(pickerField.key);
-              setData((prev) => {
-                const next = { ...prev, [pickerField.key]: value };
-                // 휠 피커는 분 단위만 선택하므로, 분이 갱신되면 초는 0으로 초기화
-                if (secKey) next[secKey] = '0';
-                if (pumpingBothSyncMin) {
-                  next.leftMin = value;
-                  next.rightMin = value;
-                  next.leftSec = '0';
-                  next.rightSec = '0';
-                }
-                return next;
-              });
-              if (pumpingBothSyncMin) {
-                clearTimer('leftMin', 'rightMin');
-              } else {
-                clearTimer(pickerField.key);
-              }
-            }}
-          />
-        );
-      })()}
-
-      {showDurationPicker && (() => {
-        const r = { min: 0, max: 720, step: 1, decimals: 0 };
-        const current = durationMinutes();
-        return (
-          <WheelPickerModal
-            open={true}
-            title="시간"
-            value={current}
-            min={r.min}
-            max={r.max}
-            step={r.step}
-            decimals={r.decimals}
-            format={(v) => `${v}분`}
-            onClose={() => setShowDurationPicker(false)}
-            onConfirm={(v) => setDurationMinutes(v)}
-          />
-        );
-      })()}
-
       <ConfirmModal
         open={deleteConfirmOpen}
         showThumbnail={false}
@@ -1149,12 +1043,7 @@ export default function EntrySheet({
           onClose={() => setSettingsMode(null)}
           onSaved={() => {
             if (initial) return;
-            if (settingsMode === 'babyfood') {
-              setSelectedUnits((prev) => ({
-                ...prev,
-                amount: getBabyFoodDefaultUnit(),
-              }));
-            } else if (settingsMode === 'diaper') {
+            if (settingsMode === 'diaper') {
               setData((prev) => ({ ...prev, kind: getDiaperDefaultKind() }));
             } else if (settingsMode === 'sleepNight') {
               const now = new Date();
