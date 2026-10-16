@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import BottomSheet from '@/components/BottomSheet';
 import { CATEGORY_TABS, type CategoryTabId } from './scene';
 import { GemIcon } from './icons';
@@ -25,10 +25,14 @@ export type RoomItem = {
 };
 
 /**
- * 시트 높이 — 아래 버튼 없이 아이템 목록만 둔다. 홈 인디케이터가 있으면 그만큼 늘린다.
- * 닫기는 시트 바깥(방)을 누르면 된다. 아이템이 적거나 없어도 높이는 고정이다.
+ * 시트 최소 높이 — 아이템 두 줄이 들어가는 높이. 홈 인디케이터가 있으면 그만큼 늘린다.
+ * 아이템이 더 많은 분류는 시트가 늘어나 전부 보인다(목록 안에서 스크롤하지 않게).
+ * 아이템이 적거나 없어도 이보다 줄지 않아야 탭을 바꿀 때 시트가 들썩이지 않는다.
+ * 닫기는 시트 바깥(방)을 누르면 된다.
  */
-const SHEET_HEIGHT = 'calc(290px + max(var(--safe-area-bottom), 20px))';
+const SHEET_MIN_HEIGHT = 'calc(290px + max(var(--safe-area-bottom), 20px))';
+/** 아이템이 아주 많아도 방 위쪽은 남긴다. 이걸 넘을 때만 목록이 스크롤된다. */
+const SHEET_MAX_HEIGHT = 'calc(100dvh - var(--safe-area-top) - 120px)';
 
 /** 아이템을 고르는 탭만. '메뉴' 탭은 기록 버튼을 고르는 거라 분류가 비어 있다. */
 const ITEM_TABS = CATEGORY_TABS.filter((c) => c.categories.length > 0);
@@ -66,19 +70,7 @@ export default function DecorateSheet({
   const [buying, setBuying] = useState<RoomItem | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // 아이템이 넘치면 스크롤 위치를 비율로 잰다. 넘치지 않으면 null.
   const listRef = useRef<HTMLDivElement>(null);
-  const [thumb, setThumb] = useState<{ top: number; size: number } | null>(null);
-  const measure = useCallback(() => {
-    const el = listRef.current;
-    if (!el || el.scrollHeight <= el.clientHeight + 1) {
-      setThumb(null);
-      return;
-    }
-    const size = el.clientHeight / el.scrollHeight;
-    const progress = el.scrollTop / (el.scrollHeight - el.clientHeight);
-    setThumb({ size, top: progress * (1 - size) });
-  }, []);
 
   // 시트를 여는 쪽이 이미 이미지까지 받아 둔 상태라 여기서는 바로 끝난다.
   // 시트는 닫혀도 마운트된 채 남아 있어서, 열릴 때마다 목록을 새로 받아 덮는다
@@ -102,11 +94,10 @@ export default function DecorateSheet({
   const wanted = new Set<string>(active.categories);
   const visible = items?.filter((i) => wanted.has(i.category)) ?? [];
 
-  // 탭을 바꾸면 목록 맨 위부터 보이고, 내용이 바뀔 때마다 넘치는지 다시 잰다.
+  // 탭을 바꾸면 목록 맨 위부터 보인다
   useLayoutEffect(() => {
     if (listRef.current) listRef.current.scrollTop = 0;
-    measure();
-  }, [open, category, items, measure]);
+  }, [open, category]);
 
   // 누르는 순간의 가격으로 판단한다. 시트를 연 사이 운영자가 유료로 바꿨을 수 있다.
   const tapping = useRef(false);
@@ -153,11 +144,11 @@ export default function DecorateSheet({
         open={open}
         onClose={onClose}
         variant="sheet"
-        maxHeight={SHEET_HEIGHT}
+        maxHeight={SHEET_MAX_HEIGHT}
         ariaLabel="아기방 꾸미기"
         surfaceClassName="bg-[#FDFDFE] rounded-t-[16px]"
       >
-        <div className="flex flex-col min-h-0" style={{ height: SHEET_HEIGHT }}>
+        <div className="flex flex-col min-h-0" style={{ minHeight: SHEET_MIN_HEIGHT }}>
           <div className="shrink-0 pt-[16px] relative">
             <div className="w-[36px] h-[4px] bg-[#121212] rounded-full mx-auto" />
             <p className="mt-[16px] text-center text-[#121212] text-[16px] leading-[1.4]">
@@ -197,80 +188,63 @@ export default function DecorateSheet({
             </div>
           </div>
 
-          <div className="relative flex-1 min-h-0">
-            <div
-              ref={listRef}
-              onScroll={measure}
-              className="h-full overflow-y-auto px-[20px] pt-[24px] pb-[max(var(--safe-area-bottom),20px)]"
-              style={{ scrollbarWidth: 'none' }}
-            >
-              {isMenuTab ? (
-                <MenuPicker selected={menu} onChange={onChangeMenu} />
-              ) : items === null ? (
-                <LoadingBlock />
-              ) : visible.length === 0 ? (
-                <p className="pt-[15px] text-center text-[14px] leading-[1.4] text-[#808991]">
-                  활성화된 {active.label} 아이템이 없습니다.
-                </p>
-              ) : (
-                <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
-                  {visible.map((item) => {
-                    const mine = isOwned(item);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => tap(item)}
-                        className="relative flex flex-col gap-[4px] items-center justify-center"
+          <div
+            ref={listRef}
+            className="flex-1 min-h-0 overflow-y-auto px-[20px] pt-[24px] pb-[max(var(--safe-area-bottom),20px)]"
+          >
+            {isMenuTab ? (
+              <MenuPicker selected={menu} onChange={onChangeMenu} />
+            ) : items === null ? (
+              <LoadingBlock />
+            ) : visible.length === 0 ? (
+              <p className="pt-[15px] text-center text-[14px] leading-[1.4] text-[#808991]">
+                활성화된 {active.label} 아이템이 없습니다.
+              </p>
+            ) : (
+              <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
+                {visible.map((item) => {
+                  const mine = isOwned(item);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => tap(item)}
+                      className="relative flex flex-col gap-[4px] items-center justify-center"
+                    >
+                      <span
+                        className="size-[50px] flex items-center justify-center rounded-[4px] border overflow-hidden"
+                        style={
+                          mine
+                            ? { background: '#FDFDFE', borderColor: '#121212' }
+                            : { background: '#F7F8F9', borderColor: '#BBC0C5' }
+                        }
                       >
-                        <span
-                          className="size-[50px] flex items-center justify-center rounded-[4px] border overflow-hidden"
-                          style={
-                            mine
-                              ? { background: '#FDFDFE', borderColor: '#121212' }
-                              : { background: '#F7F8F9', borderColor: '#BBC0C5' }
-                          }
-                        >
-                          {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다 */}
-                          {item.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={item.imageUrl}
-                              alt=""
-                              className="size-full object-cover"
-                              style={{ imageRendering: 'pixelated', opacity: mine ? 1 : 0.5 }}
-                            />
-                          )}
-                        </span>
-                        <span
-                          className="text-[12px] leading-[1.4] text-center whitespace-nowrap"
-                          style={{ color: mine ? '#121212' : '#DFE0E1' }}
-                        >
-                          {item.name}
-                        </span>
-                        {/* 미보유 유료 아이템은 보석 뱃지를 단다 */}
-                        {!mine && (
-                          <span className="absolute left-[36px] top-[4px]">
-                            <GemIcon size={10} />
-                          </span>
+                        {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다 */}
+                        {item.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="size-full object-cover"
+                            style={{ imageRendering: 'pixelated', opacity: mine ? 1 : 0.5 }}
+                          />
                         )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            {/* 스크롤 표시 — 웹뷰는 스크롤바를 숨기므로 직접 그린다. 넘칠 때만 보인다. */}
-            {thumb && (
-              <div
-                aria-hidden
-                className="absolute right-[6px] top-[24px] w-[3px] rounded-full bg-[#EEF0F1] pointer-events-none"
-                style={{ bottom: 'max(var(--safe-area-bottom), 20px)' }}
-              >
-                <div
-                  className="absolute left-0 w-full rounded-full bg-[#BBC0C5]"
-                  style={{ top: `${thumb.top * 100}%`, height: `${thumb.size * 100}%` }}
-                />
+                      </span>
+                      <span
+                        className="text-[12px] leading-[1.4] text-center whitespace-nowrap"
+                        style={{ color: mine ? '#121212' : '#DFE0E1' }}
+                      >
+                        {item.name}
+                      </span>
+                      {/* 미보유 유료 아이템은 보석 뱃지를 단다 */}
+                      {!mine && (
+                        <span className="absolute left-[36px] top-[4px]">
+                          <GemIcon size={10} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

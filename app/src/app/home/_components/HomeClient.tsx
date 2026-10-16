@@ -620,12 +620,14 @@ export default function HomeClient() {
   // 편집 모드에 들어갈 때의 방. 저장하지 않고 나가면 이걸로 되돌린다.
   const editSnapshotRef = useRef<{ placements: Placement[]; slots: Slots } | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // 꾸미기는 로그인해야 한다. 데모 방을 꾸며도 저장할 곳이 없다.
   const handleDecorate = useCallback(() => {
+    if (!isAuthenticated) return goLogin();
     loadRoomItems();
     editSnapshotRef.current = { placements, slots };
     setSheetCategory(null);
     setEditing(true);
-  }, [placements, slots]);
+  }, [isAuthenticated, goLogin, placements, slots]);
 
   const discardEdit = useCallback(() => {
     const snap = editSnapshotRef.current;
