@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import BottomSheet from '@/components/BottomSheet';
 import { CATEGORY_TABS, type CategoryTabId } from './scene';
 import { GemIcon } from './icons';
@@ -8,7 +8,7 @@ import ConfirmModal, { PriceTitle } from './ConfirmModal';
 import MenuPicker from './MenuPicker';
 import { loadRoomItems, refreshRoomItems } from './roomItems';
 import type { ActionId } from './RoomChrome';
-import Loading, { LoadingBlock } from '@/components/Loading';
+import { LoadingBlock } from '@/components/Loading';
 
 export type RoomItem = {
   id: string;
@@ -25,10 +25,14 @@ export type RoomItem = {
 };
 
 /**
- * 시트 높이 — 디자인은 378 고정(버튼 아래 여백 20 포함). 홈 인디케이터가 있으면 그만큼 늘린다.
- * 아이템이 적거나 없어도 높이가 줄지 않아야 버튼 자리가 흔들리지 않는다.
+ * 시트 최소 높이 — 아이템 두 줄이 들어가는 높이. 홈 인디케이터가 있으면 그만큼 늘린다.
+ * 아이템이 더 많은 분류는 시트가 늘어나 전부 보인다(목록 안에서 스크롤하지 않게).
+ * 아이템이 적거나 없어도 이보다 줄지 않아야 탭을 바꿀 때 시트가 들썩이지 않는다.
+ * 닫기는 시트 바깥(방)을 누르면 된다.
  */
-const SHEET_HEIGHT = 'calc(358px + max(var(--safe-area-bottom), 20px))';
+const SHEET_MIN_HEIGHT = 'calc(290px + max(var(--safe-area-bottom), 20px))';
+/** 아이템이 아주 많아도 방 위쪽은 남긴다. 이걸 넘을 때만 목록이 스크롤된다. */
+const SHEET_MAX_HEIGHT = 'calc(100dvh - var(--safe-area-top) - 120px)';
 
 /** 아이템을 고르는 탭만. '메뉴' 탭은 기록 버튼을 고르는 거라 분류가 비어 있다. */
 const ITEM_TABS = CATEGORY_TABS.filter((c) => c.categories.length > 0);
@@ -39,9 +43,6 @@ interface Props {
   onPick: (item: RoomItem) => void;
   category: CategoryTabId;
   onChangeCategory: (category: CategoryTabId) => void;
-  /** 저장하기 — 방 배치를 서버에 반영한다. */
-  onSave: () => void;
-  saving: boolean;
   /** 보유 중인 아이템 id. 무료 아이템은 여기 없어도 보유로 본다. */
   ownedItemIds: string[];
   coins: number;
@@ -58,8 +59,6 @@ export default function DecorateSheet({
   onPick,
   category,
   onChangeCategory,
-  onSave,
-  saving,
   ownedItemIds,
   coins,
   onPurchase,
@@ -70,6 +69,8 @@ export default function DecorateSheet({
   const [items, setItems] = useState<RoomItem[] | null>(null);
   const [buying, setBuying] = useState<RoomItem | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const listRef = useRef<HTMLDivElement>(null);
 
   // 시트를 여는 쪽이 이미 이미지까지 받아 둔 상태라 여기서는 바로 끝난다.
   // 시트는 닫혀도 마운트된 채 남아 있어서, 열릴 때마다 목록을 새로 받아 덮는다
@@ -92,6 +93,11 @@ export default function DecorateSheet({
   // 탭 하나가 여러 시스템 분류를 묶는다 (벽지 = 벽지 + 바닥재).
   const wanted = new Set<string>(active.categories);
   const visible = items?.filter((i) => wanted.has(i.category)) ?? [];
+
+  // 탭을 바꾸면 목록 맨 위부터 보인다
+  useLayoutEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [open, category]);
 
   // 누르는 순간의 가격으로 판단한다. 시트를 연 사이 운영자가 유료로 바꿨을 수 있다.
   const tapping = useRef(false);
@@ -138,11 +144,11 @@ export default function DecorateSheet({
         open={open}
         onClose={onClose}
         variant="sheet"
-        maxHeight={SHEET_HEIGHT}
+        maxHeight={SHEET_MAX_HEIGHT}
         ariaLabel="아기방 꾸미기"
         surfaceClassName="bg-[#FDFDFE] rounded-t-[16px]"
       >
-        <div className="flex flex-col min-h-0" style={{ height: SHEET_HEIGHT }}>
+        <div className="flex flex-col min-h-0" style={{ minHeight: SHEET_MIN_HEIGHT }}>
           <div className="shrink-0 pt-[16px] relative">
             <div className="w-[36px] h-[4px] bg-[#121212] rounded-full mx-auto" />
             <p className="mt-[16px] text-center text-[#121212] text-[16px] leading-[1.4]">
@@ -182,7 +188,10 @@ export default function DecorateSheet({
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-[20px] pt-[24px]">
+          <div
+            ref={listRef}
+            className="flex-1 min-h-0 overflow-y-auto px-[20px] pt-[24px] pb-[max(var(--safe-area-bottom),20px)]"
+          >
             {isMenuTab ? (
               <MenuPicker selected={menu} onChange={onChangeMenu} />
             ) : items === null ? (
@@ -238,25 +247,6 @@ export default function DecorateSheet({
                 })}
               </div>
             )}
-          </div>
-
-          <div className="shrink-0 flex gap-[10px] items-start px-[20px] pt-[16px] pb-[max(var(--safe-area-bottom),20px)]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] active:translate-y-px disabled:opacity-60"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#3078C9] text-[#FDFDFE] text-[16px] active:translate-y-px disabled:opacity-60"
-            >
-              {saving ? <Loading size={18} label="저장 중" /> : '저장하기'}
-            </button>
           </div>
         </div>
       </BottomSheet>

@@ -22,6 +22,18 @@ enum AdConfig {
         "ca-app-pub-6008464533427245/3855956234"
         #endif
     }
+
+    /// 카카오 애드핏 하단 배너 단위(매체: 아기랑 iOS, 번들 kr.spectrify.baby-rang, 320x50).
+    ///
+    /// 갱신 주기(60초)는 애드핏 플랫폼의 광고 단위 설정에서 정한다. 앱에서 따로 타이머를
+    /// 돌리지 않는다 — 30초 안에 다시 요청하면 SDK 가 오류 5 로 거절한다.
+    ///
+    /// AdMob 과 달리 공용 테스트 단위가 없어 DEBUG 에서도 같은 단위를 쓰고,
+    /// 대신 AdFitBannerView 에서 DEBUG 일 때 SDK 테스트 모드를 켠다.
+    static let adFitBottomBannerUnitID = "DAN-NAIcVb5ngfxOLNEd"
+
+    /// 애드핏 배너 규격. SDK 에 문자열로 넘긴다.
+    static let adFitBannerSize = "320x50"
 }
 
 /// 광고 추적 동의(ATT) 처리.

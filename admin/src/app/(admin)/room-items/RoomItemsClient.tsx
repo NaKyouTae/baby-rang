@@ -64,6 +64,8 @@ const AFFORDANCE: Record<string, string> = {
   BALL: "공",
   PUSH_WALKER: "보행기",
   SLEEP: "침대에서 자기",
+  SEAT: "앉기(의자·소파)",
+  SLIDE: "미끄럼틀 타기",
 };
 /** 비워 뒀을 때 앱이 분류로 짐작하는 쓰임새 — 폼에 안내로 보여준다 */
 const DEFAULT_AFFORDANCE: Record<string, string[]> = {

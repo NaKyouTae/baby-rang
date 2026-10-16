@@ -24,10 +24,31 @@ final class AdSlotModel: ObservableObject {
     /// 뷰포트 왼쪽에서 슬롯 왼쪽까지의 거리(pt).
     @Published var left: CGFloat = 0
 
-    func update(bottomInset: CGFloat?, height: CGFloat, width: CGFloat?, left: CGFloat) {
+    /// 이 슬롯에 띄울 광고 네트워크. "admob" 또는 "adfit".
+    ///
+    /// 어떤 네트워크를 쓸지는 웹이 정한다(운영 중 앱 업데이트 없이 전환하려고).
+    /// 기본값이 admob 인 이유: network 필드가 생기기 전 웹은 이 값을 보내지 않는데,
+    /// 그때까지의 배너는 전부 AdMob 이었다.
+    @Published var network: String = AdSlotModel.admob
+
+    static let admob = "admob"
+    static let adfit = "adfit"
+
+    /// - Parameter network: visible 슬롯 보고에 실려 온 값.
+    ///   nil 이면 기존 네트워크를 유지한다(visible:false 는 보통 network 를 생략하므로,
+    ///   여기서 admob 으로 되돌리면 다음 화면에서 네트워크가 깜빡 바뀐다).
+    func update(bottomInset: CGFloat?, height: CGFloat, width: CGFloat?, left: CGFloat, network: String? = nil) {
         self.bottomInset = bottomInset
         self.height = height
         self.width = width
         self.left = left
+        if let network {
+            // 모르는 값은 admob 으로 본다. 웹이 이 빌드가 모르는 네트워크를 보내도
+            // 배너가 아예 사라지는 것보다는 기존 동작을 유지하는 편이 낫다.
+            let normalized = network == Self.adfit ? Self.adfit : Self.admob
+            if self.network != normalized {
+                self.network = normalized
+            }
+        }
     }
 }

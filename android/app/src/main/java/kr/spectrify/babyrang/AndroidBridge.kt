@@ -39,6 +39,15 @@ class AndroidBridge(private val activity: MainActivity) {
     }
 
     /**
+     * 이 빌드가 띄울 수 있는 하단 배너 네트워크(쉼표 구분).
+     *
+     * 웹은 어드민에서 고른 네트워크가 여기 있을 때만 배너 자리를 알려준다
+     * (app/src/components/ads/adConfig.ts). 이 메서드가 없는 예전 빌드는 AdMob 만 있다.
+     */
+    @JavascriptInterface
+    fun bannerNetworks(): String = "admob,adfit"
+
+    /**
      * 카카오 로그인. 결과는 window.__kakaoLoginBridge.resolve 로 돌아간다.
      *
      * 카카오톡이 깔려 있으면 앱으로 넘어가 인증하고, 없으면 카카오계정 웹 로그인으로 간다.
@@ -108,6 +117,7 @@ class AndroidBridge(private val activity: MainActivity) {
                     null
                 },
                 left = o.optDouble("left", 0.0).toFloat(),
+                network = o.optString("network").ifEmpty { null },
             )
         } catch (e: org.json.JSONException) {
             // 웹이 보낸 형식이 깨졌으면 배너를 숨기는 쪽이 안전하다.

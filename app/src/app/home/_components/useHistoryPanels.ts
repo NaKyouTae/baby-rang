@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
 /**
  * 홈 위에 겹쳐 뜨는 전체 화면(마이페이지·보석함)을 주소에 올린다.
@@ -29,22 +29,46 @@ function urlWith(panel: Panel, on: boolean) {
   return `${location.pathname}${qs ? `?${qs}` : ''}`;
 }
 
-export function useHistoryPanels() {
-  const [open, setOpen] = useState<Record<Panel, boolean>>({ my: false, gems: false });
+/** pushState·replaceState 는 popstate 를 내지 않는다. 우리가 바꿀 때 직접 알린다. */
+const CHANGE = 'homepanelchange';
 
-  // 서버 렌더와 어긋나지 않게 마운트 뒤에 주소를 읽는다.
-  useEffect(() => {
-    const sync = () => setOpen(readPanels());
-    sync();
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, []);
+function subscribe(onChange: () => void) {
+  window.addEventListener('popstate', onChange);
+  window.addEventListener(CHANGE, onChange);
+  return () => {
+    window.removeEventListener('popstate', onChange);
+    window.removeEventListener(CHANGE, onChange);
+  };
+}
+
+/** 스냅샷은 같은 값이면 같아야 해서 객체 대신 문자열로 낸다. */
+function getSnapshot() {
+  const { my, gems } = readPanels();
+  return `${my ? 1 : 0}${gems ? 1 : 0}`;
+}
+
+// 서버는 주소의 쿼리를 모른다. 하이드레이션 때만 닫힌 채로 맞춘다.
+const getServerSnapshot = () => '00';
+
+function notify() {
+  window.dispatchEvent(new Event(CHANGE));
+}
+
+export function useHistoryPanels() {
+  // 주소를 첫 렌더부터 읽는다. effect 에서 읽으면 약관 화면에서 뒤로 왔을 때
+  // 닫힌 홈이 한 번 그려진 뒤에 마이페이지가 열려, 홈을 거쳐 돌아오는 것처럼 보인다.
+  // 앱 안에서 이동해 다시 마운트될 때는 하이드레이션이 아니라 바로 클라이언트 값을 쓴다.
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const open = useMemo<Record<Panel, boolean>>(
+    () => ({ my: snapshot[0] === '1', gems: snapshot[1] === '1' }),
+    [snapshot],
+  );
 
   const openPanel = useCallback((panel: Panel) => {
     if (readPanels()[panel]) return;
     // Next 가 pushState 를 감싸서 라우터 내부 상태를 이 객체에 채워 넣는다
     history.pushState({ [MARK]: panel }, '', urlWith(panel, true));
-    setOpen(readPanels());
+    notify();
   }, []);
 
   const closePanel = useCallback((panel: Panel) => {
@@ -55,7 +79,7 @@ export function useHistoryPanels() {
     }
     // 새로고침·결제 복귀·약관에서 돌아온 경우처럼 칸 없이 열려 있었다 — 주소만 지운다.
     history.replaceState({}, '', urlWith(panel, false));
-    setOpen(readPanels());
+    notify();
   }, []);
 
   return { open, openPanel, closePanel };

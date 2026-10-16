@@ -46,7 +46,14 @@ export type BehaviorId =
   | 'ballKick'
   | 'pushWalker'
   | 'toyPlay'
-  | 'sleep';
+  | 'sleep'
+  | 'jamjam'
+  | 'manse'
+  | 'doridori'
+  | 'gonji'
+  | 'merong'
+  | 'chairSit'
+  | 'slide';
 
 /**
  * 아이템 쓰임새. 방에 놓인 아이템이 아기에게 무엇을 할 수 있게 해 주는지.
@@ -56,8 +63,10 @@ export type BehaviorId =
  *   walker 밀고 걷는 보행기
  *   play   앉아서 갖고 노는 장난감(블록·오뚝이)
  *   bed    누워 잘 수 있는 침대(아기침대·범퍼침대)
+ *   seat   올라앉을 수 있다(소파·의자)
+ *   slide  사다리로 올라가 타고 내려오는 미끄럼틀
  */
-export type Affordance = 'hold' | 'soft' | 'ball' | 'walker' | 'play' | 'bed';
+export type Affordance = 'hold' | 'soft' | 'ball' | 'walker' | 'play' | 'bed' | 'seat' | 'slide';
 
 export type Behavior = {
   id: BehaviorId;
@@ -120,6 +129,20 @@ export const BEHAVIORS: Behavior[] = [
     note: '굴러간 공까지 아장아장 가서 쪼그려 앉아 손으로 툭 민다. 공이 굴러가면 또 쫓아간다.' },
   { id: 'ballKick', label: '공 차기', from: 17, to: 24, typical: 20, facings: ['side', 'down', 'up'], frames: 8, fps: 10, roams: false, curve: [17, 20, 24, 24], weight: 0.6, needs: 'ball',
     note: '공 뒤로 다가가 한 발로 디디고 다른 발로 찬다. 18~24개월 대근육 발달 지표.' },
+  { id: 'jamjam', label: '잼잼', from: 6, to: 15, typical: 8, facings: ['down', 'side'], frames: 8, fps: 6, roams: false, curve: [6, 8, 11, 15], weight: 0.35,
+    note: '앉아서 두 손을 얼굴 앞에 들고 주먹을 쥐었다 폈다 한다. 어른 손짓을 따라 하는 놀이로 7~9개월에 가장 많이 한다.' },
+  { id: 'manse', label: '만세', from: 8, to: 24, typical: 10, facings: ['down', 'side'], frames: 8, fps: 6, roams: false, curve: [8, 10, 18, 24], weight: 0.3,
+    note: '두 팔을 머리 위로 번쩍 들었다 내린다. 걷기 전(12개월 전)에는 앉아서, 걷기 시작하면 서서 한다. 9~12개월에 "만세" 말을 알아듣고 따라 한다.' },
+  { id: 'doridori', label: '도리도리', from: 5, to: 14, typical: 7, facings: ['down'], frames: 8, fps: 8, roams: false, curve: [5, 7, 10, 14], weight: 0.35,
+    note: '앉아서 고개를 좌우로 도리도리 젓는다. 목을 가누고 앉기 시작할 무렵 가장 먼저 따라 하는 손유희다.' },
+  { id: 'gonji', label: '곤지곤지', from: 7, to: 15, typical: 9, facings: ['down'], frames: 8, fps: 6, roams: false, curve: [7, 9, 12, 15], weight: 0.3,
+    note: '앉아서 한 손을 펴고, 다른 손 검지로 손바닥을 콕콕 찍는다. 손가락을 따로 쓰기 시작하는 9개월 무렵부터 한다.' },
+  { id: 'merong', label: '메롱', from: 10, to: 24, typical: 14, facings: ['down', 'side'], frames: 8, fps: 6, roams: false, curve: [10, 14, 24, 24], weight: 0.25,
+    note: '쪽쪽이를 빼고 혀를 쏙 내밀며 장난스럽게 웃는다. 걷기 전에는 앉아서, 걷기 시작하면 서서 한다.' },
+  { id: 'chairSit', label: '의자에 앉기', from: 12, to: 24, typical: 15, facings: ['down'], frames: 8, fps: 4, roams: false, curve: [12, 15, 24, 24], weight: 0.6, needs: 'seat',
+    note: '의자·소파 앞까지 가서 기어올라 앉는다. 다리를 늘어뜨리고 발을 번갈아 달랑거린다. 혼자 의자에 기어오르기는 12~18개월.' },
+  { id: 'slide', label: '미끄럼틀 타기', from: 15, to: 24, typical: 20, facings: ['side', 'up'], frames: 8, fps: 8, roams: false, curve: [15, 20, 24, 24], weight: 0.7, needs: 'slide',
+    note: '사다리로 가서 뒷모습으로 오른 뒤, 꼭대기에 앉아 두 팔을 들고 미끄러져 내려온다. 내려오면 다시 사다리로 간다. 낮은 미끄럼틀은 18개월 무렵부터 혼자 탄다. (뒷모습=사다리 오르기, 옆모습=타고 내려오기)' },
   { id: 'pushWalker', label: '보행기 밀기', from: 9, to: 16, typical: 10, facings: ['side', 'down', 'up'], frames: 8, fps: 8, roams: true, curve: [9, 10, 13, 16], weight: 1.0, needs: 'walker',
     note: '카트형 보행기 손잡이를 잡고 밀며 걷는다. 혼자 걷기 직전에 가장 많이 쓴다.' },
 ];
@@ -377,7 +400,9 @@ type Ctx = {
   /** 배불러 빵빵한 볼(앞모습만) */
   chubby?: boolean;
   /** 기록 반응용 입(앞모습만). 주지 않으면 쪽쪽이. 먹고 마실 때는 쪽쪽이를 뺀다. */
-  mouth?: 'none' | 'open' | 'smile' | 'tongue';
+  mouth?: 'none' | 'open' | 'smile' | 'tongue' | 'merong';
+  /** 도리도리 — 몸은 그대로 두고 머리만 돌린다. front 정면, back 뒤통수, left·right 옆얼굴. */
+  headTurn?: 'front' | 'back' | 'left' | 'right';
   /** 눈물 한 방울(앞모습만) */
   tear?: boolean;
 };
@@ -402,10 +427,32 @@ function blob(buf: Buf, c: P, rx: number, ry: number, tone: Tone) {
   ell(buf, c[0] + sh, c[1] + sh, rx + sr, ry + sr, tone.light);
 }
 
-function arm(k: Ctx, sh: P, el: P, wr: P, far = false) {
+/** hand — open 은 손가락을 부채꼴로 편 손, fist 는 꼭 쥔 주먹(잼잼). 주지 않으면 보통 손. */
+function arm(k: Ctx, sh: P, el: P, wr: P, far = false, hand?: 'open' | 'fist' | 'point', fingerDeg?: number) {
   limb(k.buf, [sh, el, wr], [k.m.rUa, k.m.rUa - 0.1, k.m.rWr], far ? LIMB_FAR : LIMB);
   const d = dir(el, wr);
-  blob(k.buf, add(wr, d[0] * 0.9, d[1] * 0.9), 1.45, 1.35, far ? SKIN_FAR : SKIN);
+  const tone = far ? SKIN_FAR : SKIN;
+  if (hand === 'open') {
+    // 픽셀이 굵어 손가락 다섯 개는 뭉개진다. 네 갈래를 부채꼴로 벌려 주먹보다 확실히 커 보이게 한다.
+    const c = add(wr, d[0] * 1.2, d[1] * 1.2);
+    const base = (Math.atan2(d[1], d[0]) * 180) / Math.PI;
+    for (const deg of [-75, -25, 25, 75]) limb(k.buf, [c, pol(c, base + deg, 2.7)], [0.45, 0.35], tone);
+    blob(k.buf, c, 1.8, 1.7, tone);
+    return;
+  }
+  if (hand === 'point') {
+    // 곤지곤지 — 주먹에서 검지 하나만 뻗는다
+    const c = add(wr, d[0] * 0.5, d[1] * 0.5);
+    const deg = fingerDeg ?? (Math.atan2(d[1], d[0]) * 180) / Math.PI;
+    limb(k.buf, [c, pol(c, deg, 2.2)], [0.45, 0.35], tone);
+    blob(k.buf, c, 1.05, 1.0, tone);
+    return;
+  }
+  if (hand === 'fist') {
+    blob(k.buf, add(wr, d[0] * 0.5, d[1] * 0.5), 0.95, 0.9, tone);
+    return;
+  }
+  blob(k.buf, add(wr, d[0] * 0.9, d[1] * 0.9), 1.45, 1.35, tone);
 }
 
 /**
@@ -556,7 +603,11 @@ const HEADBAND: Record<Facing, [number, number, string][]> = {
   up: [[5, 2, 'O'], [6, 2, 'O'], [7, 2, 'O'], [8, 2, 'O'], [9, 2, 'O'], [10, 2, 'o'], [3, 3, 'O'], [4, 3, 'O'], [11, 3, 'o'], [12, 3, 'o'], [2, 4, 'O'], [13, 4, 'o'], [1, 5, 'O'], [14, 5, 'o']],
 };
 
-function head(k: Ctx, c: P, facing: Facing) {
+function head(k: Ctx, c: P, body: Facing) {
+  // 도리도리는 머리 그림만 다른 방향 것으로 바꾼다. 왼쪽 옆얼굴은 오른쪽 것을 뒤집는다.
+  const t = k.headTurn;
+  const facing: Facing = !t ? body : t === 'front' ? 'down' : t === 'back' ? 'up' : 'side';
+  const flip = t === 'left';
   const map = SD_HEADS[facing].map((row) => row.split(''));
   if (k.gender === 'female') for (const [x, y, ch] of HEADBAND[facing]) map[y][x] = ch;
   // 눈 감기 — 위 칸은 피부, 아래 칸은 감은 눈 선
@@ -572,9 +623,13 @@ function head(k: Ctx, c: P, facing: Facing) {
   }
   if (facing === 'down') faceDown(k, map);
   if (facing === 'side') faceSide(k, map);
-  const left = Math.round(c[0] - SD_HEAD_C[facing][0]);
+  const last = map[0].length - 1;
+  const cx = SD_HEAD_C[facing][0];
+  const left = Math.round(c[0] - (flip ? last - cx : cx));
   const top = Math.round(c[1] - SD_HEAD_C[facing][1]);
-  map.forEach((row, y) => row.forEach((ch, x) => ch !== '.' && px(k.buf, left + x, top + y, SD_COLOR[ch])));
+  map.forEach((row, y) =>
+    row.forEach((ch, x) => ch !== '.' && px(k.buf, left + (flip ? last - x : x), top + y, SD_COLOR[ch])),
+  );
 }
 
 /** 옆모습 표정 — 졸린 눈, 쪽쪽이 뺀 입(옆얼굴 턱선을 새로 찍는다). 눈은 x 12 의 8~9줄. */
@@ -589,7 +644,14 @@ function faceSide(k: Ctx, map: string[][]) {
   map[10][14] = 'k';
   map[11][11] = 'S';
   map[11][12] = 'S';
-  map[11][13] = k.mouth === 'open' ? 'E' : 'k';
+  map[11][13] = k.mouth === 'open' || k.mouth === 'merong' ? 'E' : 'k';
+  if (k.mouth === 'merong') {
+    // 벌린 입 앞으로 혀가 두 칸 나온다
+    map[11][14] = 'O';
+    map[11][15] = 'O';
+    map[12][14] = 'O';
+    map[12][15] = 'o';
+  }
   map[12][11] = 'k';
   map[12][12] = 'k';
 }
@@ -623,6 +685,9 @@ function faceDown(k: Ctx, map: string[][]) {
       k.mouth === 'open' ? [[7, 10, 'k'], [8, 10, 'k'], [7, 11, 'E'], [8, 11, 'E']]
         : k.mouth === 'smile' ? [[6, 10, 'k'], [7, 11, 'k'], [8, 11, 'k'], [9, 10, 'k']]
           : k.mouth === 'tongue' ? [[7, 11, 'k'], [8, 11, 'k'], [7, 12, 'O'], [8, 12, 'O']]
+          : k.mouth === 'merong'
+            ? [[6, 10, 'k'], [7, 10, 'E'], [8, 10, 'E'], [9, 10, 'k'], [6, 11, 'k'], [7, 11, 'O'], [8, 11, 'O'], [9, 11, 'k'],
+              [6, 12, 'k'], [7, 12, 'O'], [8, 12, 'O'], [9, 12, 'k'], [7, 13, 'o'], [8, 13, 'o']]
           : [[7, 11, 'k'], [8, 11, 'k']];
     for (const [x, y, ch] of dots) map[y][x] = ch;
   }
@@ -741,10 +806,42 @@ function tummy(k: Ctx, ph: number) {
   head(k, hc, 'side');
 }
 
+/**
+ * 만세·잼잼 팔. 머리가 커서 원래 팔 길이로는 손이 머리 위로 못 나온다 — 이 두 동작만 팔을 늘려 그린다.
+ * s 는 앞/뒷모습의 좌우(-1·1), 옆모습은 0. up 은 만세 팔 높이 0~1.
+ */
+function raisedArm(k: Ctx, sh: P, s: -1 | 0 | 1, kind: 'manse' | 'jamjam', up: number, grip: 'open' | 'fist', far = false) {
+  const ua = k.m.ua * 1.3;
+  const fa = k.m.fa * 1.35;
+  const mirror = (deg: number) => (s < 0 ? 180 - deg : deg);
+  let a: number;
+  let b: number;
+  if (s === 0) {
+    // 옆 — 만세는 앞으로 내린 팔이 앞을 지나 위로, 잼잼은 손을 얼굴 앞에 세운다
+    a = kind === 'manse' ? 65 - 145 * up : 20;
+    b = kind === 'manse' ? a - 15 * up : -75;
+  } else {
+    // 앞/뒤 — 만세는 옆으로 내린 팔이 머리 옆 V 자로, 잼잼은 팔꿈치를 옆으로 빼고 손을 세운다
+    a = kind === 'manse' ? 80 - 100 * up : -8;
+    b = kind === 'manse' ? 85 - 150 * up : -78;
+  }
+  const el = pol(sh, mirror(a), ua);
+  const wr = pol(el, mirror(b), fa);
+  arm(k, sh, el, wr, far, kind === 'jamjam' ? grip : up > 0.6 ? 'open' : undefined);
+}
+
 /** 앉기 */
-/** hands — clap 짝짜꿍, push 공을 앞으로 밀기, tap 장난감 두드리기 */
-function sit(k: Ctx, ph: number, facing: Facing, bounce = 0, hands: 'clap' | 'push' | 'tap' = 'clap') {
+/** hands — clap 짝짜꿍, push 공을 앞으로 밀기, tap 장난감 두드리기, jamjam 주먹 쥐었다 펴기, manse 두 팔 번쩍 */
+type SitHands = 'clap' | 'push' | 'tap' | 'jamjam' | 'manse' | 'rest' | 'gonji';
+function sit(k: Ctx, ph: number, facing: Facing, bounce = 0, hands: SitHands = 'clap') {
   const { m } = k;
+  // 잼잼 — 한 바퀴에 두 번 쥐었다 편다. 위상을 1/8 밀어 편 손·주먹이 두 프레임씩 번갈아 나온다.
+  const grip: 'open' | 'fist' = Math.sin(ph * 2 + Math.PI / 4) >= 0 ? 'open' : 'fist';
+  // 만세 — 0 내린 팔 → 1 머리 위. 꼭대기에서 잠깐 멈추게 곡선을 눌러 준다.
+  const up = Math.min(1, (0.5 - 0.5 * Math.cos(ph)) * 1.25);
+  if (hands === 'manse') bounce -= 0.6 * up;
+  // 곤지곤지 — 한 바퀴에 두 번 콕콕. 0 이면 손바닥에 닿아 있다.
+  const poke = Math.max(0, Math.sin(ph * 2));
   if (facing === 'side') {
     const lean = 12 + 3 * Math.sin(ph);
     const hip: P = [CX - 4, G - 1 - m.bodyR * 0.75 + bounce];
@@ -764,17 +861,37 @@ function sit(k: Ctx, ph: number, facing: Facing, bounce = 0, hands: 'clap' | 'pu
         const lift = 1.8 * Math.max(0, Math.sin(ph + (far ? Math.PI : 0)));
         target = [chest[0] + 4.4 + (far ? 0.8 : 0), G - 2.4 - lift];
       }
+      if (hands === 'manse' || hands === 'jamjam') {
+        raisedArm(k, sh, 0, hands, up, grip, far);
+        return;
+      }
+      if (hands === 'rest') target = [chest[0] + 3.4 + (far ? 0.6 : 0), G - 2.6];
+      if (hands === 'gonji') {
+        // 먼 손은 손바닥을 위로 펴 들고, 가까운 손 검지가 위에서 내려와 찍는다
+        const palm: P = [chest[0] + 4.6, chest[1] + 3.2];
+        if (far) {
+          const [el, wr] = ik(sh, add(palm, -0.6, 0.6), m.ua, m.fa, 1);
+          arm(k, sh, el, wr, true, 'open', -90);
+        } else {
+          const [el, wr] = ik(sh, add(palm, -0.8, -3.0 - 1.8 * poke), m.ua, m.fa, 1);
+          arm(k, sh, el, wr, false, 'point', 75);
+        }
+        return;
+      }
       const [el, wr] = ik(sh, target, m.ua, m.fa, 1);
       arm(k, sh, el, wr, far);
     };
+    const raised = hands === 'manse' || hands === 'jamjam';
     armOf(true);
     legOf(true);
     torso(k, hip, chest, 'side');
     legOf(false);
-    armOf(false);
+    if (!raised) armOf(false);
     const hc = headOn(k, chest, lean);
     neck(k, chest, hc);
     head(k, hc, 'side');
+    // 든 손은 얼굴 앞에 온다 — 머리 위에 그린다
+    if (raised) armOf(false);
     return;
   }
 
@@ -791,6 +908,34 @@ function sit(k: Ctx, ph: number, facing: Facing, bounce = 0, hands: 'clap' | 'pu
     sole(k, add(ankle, s * 0.6, 0.6));
   }
   const hc = headOn(k, chest, 0);
+  // 만세·잼잼은 손이 얼굴 높이까지 올라오므로 머리를 먼저 그리고 팔을 그 위에 올린다
+  if (hands === 'manse' || hands === 'jamjam') {
+    neck(k, chest, hc);
+    head(k, hc, 'down');
+    for (const s of [-1, 1]) {
+      const sh: P = [chest[0] + s * (m.chestR - 0.2), chest[1] + 0.9];
+      raisedArm(k, sh, s as -1 | 1, hands, up, grip);
+    }
+    return;
+  }
+  if (hands === 'gonji') {
+    // 손이 몸통 위에서 엇갈리면 뭉개진다 — 한 손은 잼잼처럼 볼 옆에 펴 들고,
+    // 반대 손이 가슴 앞을 가로질러 와서 검지로 그 손바닥을 아래에서 찍는다. 팔은 잼잼처럼 늘려 그린다.
+    const ua = m.ua * 1.3;
+    const fa = m.fa * 1.35;
+    neck(k, chest, hc);
+    head(k, hc, 'down');
+    const shL: P = [chest[0] + (m.chestR - 0.2), chest[1] + 0.9];
+    const elL = pol(shL, -8, ua);
+    const wrL = pol(elL, -78, fa);
+    arm(k, shL, elL, wrL, false, 'open');
+    const d = dir(elL, wrL);
+    const palm = add(wrL, d[0] * 1.2, d[1] * 1.2);
+    const shR: P = [chest[0] - (m.chestR - 0.2), chest[1] + 0.9];
+    const [elR, wrR] = ik(shR, add(palm, -3.0 - 1.4 * poke, 2.4 + 0.6 * poke), ua, fa, -1);
+    arm(k, shR, elR, wrR, false, 'point', -40);
+    return;
+  }
   const open = 0.5 + 0.5 * Math.cos(ph * 2);
   const push = 0.5 - 0.5 * Math.cos(ph);
   for (const s of [-1, 1]) {
@@ -802,6 +947,8 @@ function sit(k: Ctx, ph: number, facing: Facing, bounce = 0, hands: 'clap' | 'pu
       const lift = 1.8 * Math.max(0, Math.sin(ph + (s > 0 ? 0 : Math.PI)));
       wr = [chest[0] + s * 2.8, chest[1] + m.chestR + 3.4 - lift];
     }
+    // 무릎 위에 손을 얹고 쉰다
+    if (hands === 'rest') wr = [chest[0] + s * 3.6, chest[1] + m.chestR + 3.2];
     const [el, w] = ik(sh, wr, m.ua, m.fa, s > 0 ? -1 : 1);
     arm(k, sh, el, w);
   }
@@ -1068,7 +1215,7 @@ function frontBack(k: Ctx, facing: Facing, hip: P, chest: P, arms: () => void) {
 }
 
 /** reach — 쪼그려 앉아 바닥의 공을 손으로 미는 자세 */
-type Stance = { c: number; lift: number; u: number; sway?: number; reach?: boolean };
+type Stance = { c: number; lift: number; u: number; sway?: number; reach?: boolean; manse?: number };
 
 /** 웅크리기·점프·서 있기를 한 함수로. c=웅크림 0~1, lift=공중 높이, u=팔 들기 -1(뒤)~1(위). */
 function stance(k: Ctx, s0: Stance, facing: Facing) {
@@ -1096,18 +1243,24 @@ function stance(k: Ctx, s0: Stance, facing: Facing) {
         arm(k, sh, el, wr, far);
         return;
       }
+      if (s0.manse !== undefined) {
+        raisedArm(k, sh, 0, 'manse', s0.manse, 'open', far);
+        return;
+      }
       const uA = 95 - 150 * Math.max(0, u) + 55 * Math.max(0, -u);
       const el = pol(sh, uA, m.ua);
       arm(k, sh, el, pol(el, uA - 20, m.fa), far);
     };
+    const raised = s0.manse !== undefined;
     armOf(true);
     legOf(true);
     torso(k, hip, chest, 'side');
     legOf(false);
-    armOf(false);
+    if (!raised) armOf(false);
     const hc = headOn(k, chest, lean * 0.6);
     neck(k, chest, hc);
     head(k, hc, 'side');
+    if (raised) armOf(false);
     return;
   }
 
@@ -1122,9 +1275,22 @@ function stance(k: Ctx, s0: Stance, facing: Facing) {
     const mid = mix(hj, ankle, 0.5);
     leg(k, hj, [mid[0] + s * (0.4 + 2.4 * c), mid[1]], ankle, null, false, facing);
   }
+  if (s0.manse !== undefined && facing === 'down') {
+    // 만세는 손이 머리 옆까지 올라오므로 머리를 먼저 그린다
+    torso(k, hip, chest, facing);
+    const hc = headOn(k, chest, 0);
+    neck(k, chest, hc);
+    head(k, hc, facing);
+    for (const s of [-1, 1] as const) raisedArm(k, [chest[0] + s * (m.chestR - 0.3), chest[1] + 0.8], s, 'manse', s0.manse, 'open');
+    return;
+  }
   frontBack(k, facing, hip, chest, () => {
     for (const s of [-1, 1]) {
       const sh: P = [chest[0] + s * (m.chestR - 0.3), chest[1] + 0.8];
+      if (s0.manse !== undefined) {
+        raisedArm(k, sh, s as -1 | 1, 'manse', s0.manse, 'open', facing === 'up');
+        continue;
+      }
       if (s0.reach) {
         // 앞모습은 손이 이쪽(아래)으로, 뒷모습은 몸 너머(위)로 뻗는다
         const toward = facing === 'down' ? 1 : -1;
@@ -1371,7 +1537,76 @@ function plop(k: Ctx, i: number, facing: Facing) {
   }
 }
 
+/**
+ * 의자에 걸터앉았을 때 발밑(G)에서 엉덩이까지의 높이. 홈은 이만큼 내려서 엉덩이를 의자 앉는 면에 맞춘다.
+ */
+export function seatDrop(months: number) {
+  const m = metrics(months);
+  return m.thigh * 0.35 + m.shin + 1.6;
+}
+
+/** 의자에 앉기 — 앞모습. 무릎이 이쪽으로 나와 허벅지는 짧게 보이고, 정강이를 늘어뜨려 번갈아 달랑거린다. */
+function chairSit(k: Ctx, ph: number) {
+  const { m } = k;
+  const hipY = G - seatDrop(k.months);
+  const hip: P = [CX, hipY];
+  const chest: P = [CX + 0.4 * Math.sin(ph), hipY - m.torso];
+  torso(k, hip, chest, 'down');
+  for (const s of [-1, 1]) {
+    const hj: P = [CX + s * 2.1, hipY + 0.6];
+    const knee: P = [CX + s * 2.5, hipY + m.thigh * 0.35 + 0.6];
+    const swing = Math.max(0, Math.sin(ph + (s > 0 ? 0 : Math.PI)));
+    const ankle: P = [CX + s * 2.6, knee[1] + m.shin - 1.2 * swing];
+    limb(k.buf, [hj, knee, ankle], [m.rTh, m.rKn, m.rAn], LIMB);
+    sole(k, add(ankle, s * 0.3, 0.5));
+  }
+  // 두 손은 엉덩이 옆 앉는 면을 짚는다
+  for (const s of [-1, 1]) {
+    const sh: P = [chest[0] + s * (m.chestR - 0.2), chest[1] + 0.9];
+    const [el, wr] = ik(sh, [CX + s * 5.2, hipY + 0.4], m.ua, m.fa, s > 0 ? -1 : 1);
+    arm(k, sh, el, wr);
+  }
+  const hc = headOn(k, chest, 0);
+  neck(k, chest, hc);
+  head(k, hc, 'down');
+}
+
+/**
+ * 미끄럼틀 사다리 오르기 — 뒷모습. 한 손이 위 칸을 잡을 때 반대쪽 무릎을 올린다.
+ * 사다리는 아이템 그림에 있으므로 그리지 않는다. 손이 머리에 가리지 않게 머리 다음에 팔을 그린다.
+ */
+function climb(k: Ctx, ph: number) {
+  const { m } = k;
+  const hipY = G - 1.3 - (m.thigh + m.shin) * 0.92;
+  const hip: P = [CX, hipY];
+  const chest: P = [CX, hipY - m.torso];
+  for (const s of [-1, 1]) {
+    const lift = Math.max(0, s > 0 ? Math.sin(ph) : -Math.sin(ph));
+    const hj: P = [CX + s * 2.2, hipY];
+    const ankle: P = [CX + s * 2.6, G - 1.3 - 3.2 * lift];
+    const mid = mix(hj, ankle, 0.5);
+    leg(k, hj, [mid[0] + s * 0.5, mid[1] - 0.8 * lift], ankle, null, false, 'up');
+  }
+  torso(k, hip, chest, 'up');
+  const hc = headOn(k, chest, 0);
+  neck(k, chest, hc);
+  head(k, hc, 'up');
+  for (const s of [-1, 1]) {
+    const reach = s > 0 ? 0.5 + 0.5 * Math.cos(ph) : 0.5 - 0.5 * Math.cos(ph);
+    const sh: P = [chest[0] + s * (m.chestR - 0.3), chest[1] + 0.8];
+    const [el, wr] = ik(sh, [chest[0] + s * 6.2, chest[1] - 5 - 4 * reach], m.ua * 1.3, m.fa * 1.35, s > 0 ? 1 : -1);
+    arm(k, sh, el, wr, true);
+  }
+}
+
 // ───────────────────────── 프레임 굽기 ─────────────────────────
+
+/** 도리도리 고개 방향(프레임별). 끝에서 한 프레임 더 머물러야 고개를 '젓는' 느낌이 난다. */
+type Turn = NonNullable<Ctx['headTurn']>;
+const DORI_FRONT: Turn[] = ['front', 'right', 'right', 'front', 'left', 'left', 'front', 'front'];
+const DORI_SIDE: Turn[] = ['right', 'front', 'front', 'right', 'back', 'back', 'right', 'right'];
+/** 메롱 — 혀를 내밀었다(true) 넣었다 한다 */
+const MERONG = [false, true, true, true, false, true, true, false];
 
 /** (행동, 개월수, 성별, 방향) 한 벌의 프레임을 픽셀 버퍼로 굽는다. */
 export function buildFrames(
@@ -1410,6 +1645,38 @@ export function buildFrames(
       case 'ballChase': ballChase(k, ph, f); break;
       case 'ballKick': ballKick(k, i, f); break;
       case 'pushWalker': gait(k, ph, GAIT.push, f); break;
+      case 'jamjam': sit(k, ph, f, 0, 'jamjam'); break;
+      case 'doridori':
+        // 정면 몸은 오른쪽·왼쪽 옆얼굴로, 옆 몸은 정면·뒤통수로 고개를 돌린다
+        k.headTurn = f === 'down' ? DORI_FRONT[i] : DORI_SIDE[i];
+        sit(k, Math.PI / 2, f, 0, 'rest');
+        break;
+      case 'gonji': sit(k, ph, f, 0, 'gonji'); break;
+      case 'chairSit': chairSit(k, ph); break;
+      case 'slide':
+        // 뒷모습은 사다리 오르기, 옆모습은 두 팔을 들고 타고 내려오기
+        if (f === 'up') climb(k, ph);
+        else sit(k, Math.PI + 0.3 * Math.sin(ph), 'side', 0, 'manse');
+        break;
+      case 'merong': {
+        // 혀를 내밀 때는 눈웃음, 넣을 때는 빙긋 웃는다
+        const out = MERONG[i];
+        k.mouth = out ? 'merong' : 'smile';
+        k.face = 'happy';
+        k.blink = false;
+        if (months < 12) sit(k, Math.PI / 2, f, 0, 'rest');
+        else stance(k, { c: 0.1, lift: 0, u: 0, sway: out ? 0.6 : 0 }, f);
+        break;
+      }
+      case 'manse':
+        // 걷기 전에는 앉아서, 걷기 시작하면 서서 한다
+        if (months < 12) sit(k, ph, f, 0, 'manse');
+        else {
+          const up = Math.min(1, (0.5 - 0.5 * Math.cos(ph)) * 1.25);
+          // 팔을 올릴 때 무릎을 살짝 굽혔다 펴며 들썩인다
+          stance(k, { c: 0.2 - 0.15 * up, lift: 0, u: 0, manse: up }, f);
+        }
+        break;
     }
     return buf;
   });

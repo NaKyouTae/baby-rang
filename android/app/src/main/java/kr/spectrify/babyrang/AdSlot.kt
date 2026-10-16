@@ -14,6 +14,8 @@ package kr.spectrify.babyrang
  * @param height 슬롯 높이.
  * @param width 슬롯 가로 폭. 화면이 콘텐츠 셸보다 넓을 때 배너가 밖으로 퍼지는 것을 막는다.
  * @param left 뷰포트 왼쪽에서 슬롯 왼쪽까지의 거리.
+ * @param network 띄울 광고 네트워크("admob" | "adfit"). 어드민 광고 설정을 웹이 전달한다.
+ *   예전 웹은 보내지 않으므로 null 이면 AdMob 으로 본다.
  */
 data class AdSlot(
     val visible: Boolean,
@@ -21,4 +23,5 @@ data class AdSlot(
     val height: Float = 0f,
     val width: Float? = null,
     val left: Float = 0f,
+    val network: String? = null,
 )

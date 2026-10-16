@@ -24,6 +24,7 @@ import {
   behaviorWeights,
   buildFrames,
   buildRecordFrames,
+  seatDrop,
   walkerSprite,
   type Affordance,
   type Behavior,
@@ -131,6 +132,8 @@ function holdFor(id: BehaviorId) {
   if (id === 'jump') return (b.frames / b.fps) * 3 * 1000;
   if (id === 'ballChase' || id === 'ballKick') return 14000 + Math.random() * 8000;
   if (id === 'sleep') return 20000 + Math.random() * 15000;
+  // 미끄럼틀은 한 번 타는 데 몇 초 걸린다 — 서너 번 타고 내려올 시간
+  if (id === 'slide') return 15000 + Math.random() * 8000;
   return 8000 + Math.random() * 8000;
 }
 
@@ -157,6 +160,10 @@ export interface Actor {
   settled: boolean;
   /** 침대 안에 누워 있다 — 침대 그림보다 앞에 그려야 한다 */
   inBed: boolean;
+  /** 의자·미끄럼틀 위에 올라가 있다 — 그 아이템 그림보다 앞에 그려야 한다 */
+  aboard: boolean;
+  /** 미끄럼틀을 한 번 타기 시작한 시각 */
+  rideStart: number;
   until: number;
   x: number;
   y: number;
@@ -190,6 +197,8 @@ export function createActor(months: number, gender: string, x: number, y: number
     lastItem: null,
     settled: false,
     inBed: false,
+    aboard: false,
+    rideStart: 0,
     // 다 같이 한꺼번에 행동을 바꾸면 군무처럼 보인다. 첫 선택을 아이마다 어긋나게 둔다.
     until: startAt,
     x,
@@ -303,12 +312,69 @@ function bedSpot(spot: Spot) {
   return { x: b.x0 + (b.x1 - b.x0) * MATTRESS.x, y: b.y0 + (b.y1 - b.y0) * MATTRESS.y };
 }
 
+/**
+ * 의자 그림 안에서 앉는 면의 상대 위치. 의자·소파 그림은 대개 칸 아래쪽 절반에 앉는 면이 온다.
+ * 아기는 엉덩이를 이 점에 맞춰 앉는다.
+ */
+const SEAT = { x: 0.5, y: 0.55 };
+
+function seatSpot(spot: Spot) {
+  const b = spot.box ?? spot;
+  return { x: b.x0 + (b.x1 - b.x0) * SEAT.x, y: b.y0 + (b.y1 - b.y0) * SEAT.y };
+}
+
+/**
+ * 미끄럼틀 그림 안의 자리(상대 위치). 사다리가 왼쪽, 경사면이 오른쪽 아래로 내려가는 그림을 기준으로 한다.
+ * 아이템을 좌우 반전해 놓으면 반대로 탄다.
+ *   base 사다리 아래(발 위치) · top 꼭대기 앉는 자리(엉덩이) · end 경사면 끝(발 위치)
+ */
+const SLIDE = { base: { x: 0.2, y: 1 }, top: { x: 0.26, y: 0.3 }, end: { x: 0.95, y: 0.97 } };
+/** 한 번 타기 — 사다리 오르기 · 꼭대기에서 잠깐 · 미끄러지기 · 끝에서 잠깐(초) */
+const RIDE = { climb: 1.6, top: 0.5, slide: 0.9, end: 0.5 };
+/** 옆으로 앉은 그림에서 발밑과 엉덩이 사이. 꼭대기에서는 엉덩이를 앉는 자리에 맞춘다. */
+const RIDE_HIP = 4;
+
+function slidePoint(spot: Spot, at: keyof typeof SLIDE) {
+  const b = spot.box ?? spot;
+  const w = b.x1 - b.x0;
+  const p = SLIDE[at];
+  return { x: spot.flip ? b.x1 - w * p.x : b.x0 + w * p.x, y: b.y0 + (b.y1 - b.y0) * p.y };
+}
+
+/** 미끄럼틀 위 자리와 자세를 시간에 맞춰 정한다. 한 번 다 타면 true. */
+function rideSlide(a: Actor, spot: Spot, now: number) {
+  const t = (now - a.rideStart) / 1000;
+  const base = slidePoint(spot, 'base');
+  const top = slidePoint(spot, 'top');
+  const end = slidePoint(spot, 'end');
+  if (t < RIDE.climb) {
+    // 사다리를 뒷모습으로 오른다. 발이 바닥에서 꼭대기 앉는 자리 높이까지 올라간다.
+    const u = t / RIDE.climb;
+    a.facing = 'up';
+    a.flip = false;
+    a.x = base.x + (top.x - base.x) * u;
+    a.y = base.y + (top.y + RIDE_HIP - base.y) * u;
+    return false;
+  }
+  a.facing = 'side';
+  a.flip = !!spot.flip;
+  const s = t - RIDE.climb - RIDE.top;
+  // 처음엔 천천히, 갈수록 빨라진다
+  const u = s <= 0 ? 0 : Math.min(1, (s / RIDE.slide) ** 2);
+  a.x = top.x + (end.x - top.x) * u;
+  a.y = top.y + RIDE_HIP + (end.y - top.y - RIDE_HIP) * u;
+  return t >= RIDE.climb + RIDE.top + RIDE.slide + RIDE.end;
+}
+
 function release(a: Actor) {
   // 자고 일어나면 침대 앞으로 내려온다
   if (a.inBed && a.spot) {
     a.y = a.spot.y1 + 3;
     a.inBed = false;
   }
+  // 의자·미끄럼틀에서 내려와 그 앞 바닥에 선다
+  if (a.aboard && a.spot) a.y = a.spot.y1 + 3;
+  a.aboard = false;
   if (a.prop) {
     a.prop.heldBy = null;
     a.prop.locked = false;
@@ -348,6 +414,19 @@ function begin(a: Actor, id: BehaviorId, now: number) {
     a.facing = 'down';
     // 머리는 침대 머리판 쪽 — 반전해 놓은 침대면 반대쪽
     a.flip = !!a.spot.flip;
+  } else if (b.needs === 'seat' && a.spot) {
+    // 의자 앞에 도착하면 올라앉는다
+    const at = seatSpot(a.spot);
+    a.x = at.x;
+    a.y = at.y + seatDrop(a.months);
+    a.aboard = true;
+    a.facing = 'down';
+    a.flip = false;
+  } else if (b.needs === 'slide' && a.spot) {
+    // 사다리 아래에 도착하면 한 번 타기 시작한다
+    a.aboard = true;
+    a.rideStart = now;
+    rideSlide(a, a.spot, now);
   } else if (b.needs === 'hold') {
     a.facing = 'up';
     a.flip = false;
@@ -391,6 +470,15 @@ function choose(a: Actor, now: number, world: World) {
     a.spot = spot;
     // 움직일 수 있으면 침대 앞까지 간다. 못 움직이면 바로 눕는다(begin 이 침대 안으로 옮긴다).
     if (a.locomotion && travel(a, id, clamp((spot.x0 + spot.x1) / 2, bounds.x0, bounds.x1), spot.y1 + 3)) return;
+  } else if (b.needs === 'seat') {
+    const spot = preferNovel(itemsFor(a, world, 'seat') as Spot[], world);
+    a.spot = spot;
+    if (travel(a, id, clamp(seatSpot(spot).x, bounds.x0, bounds.x1), clamp(spot.y1 + 2, bounds.y0, bounds.y1))) return;
+  } else if (b.needs === 'slide') {
+    const spot = preferNovel(itemsFor(a, world, 'slide') as Spot[], world);
+    const at = slidePoint(spot, 'base');
+    a.spot = spot;
+    if (travel(a, id, clamp(at.x, bounds.x0, bounds.x1), clamp(at.y + 2, bounds.y0, bounds.y1))) return;
   } else if (b.needs === 'play') {
     // 장난감 옆에 앉아 장난감 쪽을 본다
     const spot = preferNovel(itemsFor(a, world, 'play') as Spot[], world);
@@ -508,6 +596,7 @@ export function updateActor(a: Actor, now: number, dt: number, world: World) {
   if (a.spot && !world.spots.some((s) => s.id === a.spot!.id)) {
     a.spot = null;
     a.inBed = false;
+    a.aboard = false;
     a.until = 0;
     if (a.traveling) a.next = null;
   }
@@ -561,6 +650,18 @@ export function updateActor(a: Actor, now: number, dt: number, world: World) {
       // 보행기를 밀 때는 보행기가 방 밖으로 나가지 않게 안쪽으로만 다닌다
       const m = a.act === 'pushWalker' ? 12 : 0;
       moveTo(a, rnd(bounds.x0 + m, bounds.x1 - m), rnd(bounds.y0 + m * 0.6, bounds.y1 - m * 0.6), b.facings);
+    }
+  }
+
+  // 미끄럼틀 — 한 번 다 타면 시간이 남았을 때 다시 사다리로 간다
+  if (a.act === 'slide' && a.aboard && a.spot && !a.traveling) {
+    const spot = a.spot;
+    if (rideSlide(a, spot, now)) {
+      a.aboard = false;
+      if (now < a.until) {
+        const at = slidePoint(spot, 'base');
+        if (!travel(a, 'slide', clamp(at.x, bounds.x0, bounds.x1), clamp(at.y + 2, bounds.y0, bounds.y1))) begin(a, 'slide', now);
+      }
     }
   }
 
@@ -738,9 +839,9 @@ export function propSprite(p: Prop) {
   };
 }
 
-/** 아기 그리기 순서용 깊이. 침대 안에서 자면 침대 그림 위에 와야 한다. */
+/** 아기 그리기 순서용 깊이. 침대 안에서 자거나 의자·미끄럼틀 위에 있으면 그 그림 위에 와야 한다. */
 export function actorDepth(a: Actor) {
-  return a.inBed && a.spot ? (a.spot.box ?? a.spot).y1 + 0.5 : a.y;
+  return (a.inBed || a.aboard) && a.spot ? (a.spot.box ?? a.spot).y1 + 0.5 : a.y;
 }
 
 /** 그리기 순서용 깊이. 옆으로 미는 보행기는 아기와 같은 줄이지만 몸 앞에 와야 한다. */

@@ -26,7 +26,7 @@ export type Placement = {
   flipX: boolean;
   /**
    * 아기가 이 아이템으로 무엇을 할 수 있는지(어드민 RoomItem.affordances).
-   * HOLD 붙잡기 · SOFT_FLOOR 푹신한 바닥 · BALL 공 · PUSH_WALKER 보행기 · PLAY 장난감.
+   * HOLD 붙잡기 · SOFT_FLOOR 푹신한 바닥 · BALL 공 · PUSH_WALKER 보행기 · PLAY 장난감 · SLEEP 침대 · SEAT 의자 · SLIDE 미끄럼틀.
    * 예전에 저장된 배치에는 없을 수 있어 선택값이다 — 없으면 분류로 짐작한다.
    */
   affordances?: string[];

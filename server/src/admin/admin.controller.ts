@@ -20,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { StorageService } from '../storage/storage.service';
 import { CrawlerVisitsService } from '../crawler-visits/crawler-visits.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AdminGuard } from './admin.guard';
 import {
   DIMENSIONS,
@@ -139,6 +140,7 @@ export class AdminController {
     private storage: StorageService,
     private paymentsService: PaymentsService,
     private crawlerVisits: CrawlerVisitsService,
+    private appSettings: AppSettingsService,
   ) {}
 
   // ===== Upload =====
@@ -739,6 +741,17 @@ export class AdminController {
   async deleteFaq(@Param('id') id: string) {
     await this.prisma.faq.delete({ where: { id } });
     return { ok: true };
+  }
+
+  // ===== 앱 설정 (광고 네트워크) =====
+  @Get('app-settings')
+  async getAppSettings() {
+    return this.appSettings.get();
+  }
+
+  @Patch('app-settings')
+  async updateAppSettings(@Body() body: { adNetwork?: unknown }) {
+    return this.appSettings.setAdNetwork(body?.adNetwork);
   }
 
   // ===== AI 크롤러 유입 =====

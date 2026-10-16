@@ -172,35 +172,85 @@ struct BabyRangApp: App {
 ///
 /// 광고가 실제로 채워지기 전이나 노필일 때는 높이 0 으로 접는다.
 /// 빈 띠를 남겨두면 WebView 뷰포트만 줄어들어 레이아웃이 어색해진다.
+///
+/// AdMob 과 애드핏 중 무엇을 띄울지는 웹이 정한다(slot.network).
 private struct BottomBannerSlot: View {
     @ObservedObject var slot: AdSlotModel
     /// ATT 응답 전에는 false. 배너 뷰는 마운트하되 요청만 미룬다.
     let canLoad: Bool
 
-    @State private var isLoaded = false
+    /// 네트워크별 채움 여부. 하나로 두면 AdMob 이 채워진 상태에서 애드핏으로 바뀌었을 때
+    /// 아직 비어 있는 애드핏 배너를 "채워짐"으로 보고 빈 띠를 띄우게 된다.
+    @State private var isAdMobLoaded = false
+    @State private var isAdFitLoaded = false
+    /// 각 네트워크가 한 번이라도 선택됐는지. 선택된 적 없는 네트워크에는 요청을 보내지 않는다.
+    /// 쓰지도 않을 광고를 받아 두면 요청 대비 노출률만 떨어진다.
+    @State private var didSelectAdMob = false
+    @State private var didSelectAdFit = false
 
-    /// 웹이 이 화면에 배너 자리를 보고했고, 광고도 채워진 상태인지.
-    private var isVisible: Bool {
-        slot.bottomInset != nil && isLoaded
+    private var isAdFitSelected: Bool { slot.network == AdSlotModel.adfit }
+
+    private var isAdMobVisible: Bool {
+        slot.bottomInset != nil && !isAdFitSelected && isAdMobLoaded
+    }
+
+    private var isAdFitVisible: Bool {
+        slot.bottomInset != nil && isAdFitSelected && isAdFitLoaded
     }
 
     var body: some View {
-        // 배너는 항상 마운트한다. 조건부로 감싸면 EmptyView 로 접히는 순간
-        // 붙여둔 modifier 들이 함께 사라져 광고 요청 자체가 일어나지 않는다.
-        BannerAdView(
-            adUnitID: AdConfig.bottomBannerUnitID,
-            canLoad: canLoad,
-            isBannerHidden: !isVisible,
-            onLoaded: { isLoaded = true },
-            onFailed: { isLoaded = false }
-        )
-        .frame(height: BannerAdView.height)
-        .frame(height: isVisible ? BannerAdView.height : 0)
-        .clipped()
+        // 두 배너 모두 항상 마운트하고 isHidden 으로만 바꿔 끼운다.
+        // - 조건부로 감싸면 EmptyView 로 접히는 순간 붙여둔 modifier 들이 함께 사라져
+        //   광고 요청 자체가 일어나지 않는다.
+        // - 네트워크가 바뀔 때마다 뷰를 새로 만들면 이미 받아 둔 광고를 버리고 다시 요청하게 되고,
+        //   애드핏은 30초 안의 재요청을 오류 5 로 거절한다.
+        ZStack(alignment: .bottom) {
+            BannerAdView(
+                adUnitID: AdConfig.bottomBannerUnitID,
+                canLoad: canLoad && didSelectAdMob,
+                isBannerHidden: !isAdMobVisible,
+                onLoaded: { isAdMobLoaded = true },
+                onFailed: { isAdMobLoaded = false }
+            )
+            .frame(height: BannerAdView.height)
+            .frame(height: isAdMobVisible ? BannerAdView.height : 0)
+            .clipped()
+            .allowsHitTesting(isAdMobVisible)
+
+            AdFitBannerView(
+                clientID: AdConfig.adFitBottomBannerUnitID,
+                canLoad: canLoad && didSelectAdFit,
+                isBannerHidden: !isAdFitVisible,
+                onLoaded: { isAdFitLoaded = true },
+                onFailed: { isAdFitLoaded = false }
+            )
+            .frame(height: AdFitBannerView.height)
+            .frame(height: isAdFitVisible ? AdFitBannerView.height : 0)
+            .clipped()
+            .allowsHitTesting(isAdFitVisible)
+        }
         // 웹 콘텐츠 셸이 화면보다 좁을 수 있다(iPad). 배너를 화면 전체 폭으로 두면
         // 기둥 밖으로 튀어나오므로, 웹이 알려준 슬롯 폭·좌측 위치에 맞춘다.
         .modifier(SlotGeometry(slot: slot))
-        .allowsHitTesting(isVisible)
+        .allowsHitTesting(isAdMobVisible || isAdFitVisible)
+        // 웹이 배너 자리를 보고하면서 고른 네트워크만 요청을 연다. 이후엔 선택이 바뀌어도 열어 둔다.
+        // 기본값(admob)만 보고 미리 열면, 웹이 애드핏을 고른 경우에도 실행 직후 AdMob 요청이 나간다.
+        .onChange(of: requestedNetwork, initial: true) { _, network in
+            if let network { markSelected(network) }
+        }
+    }
+
+    /// 웹이 배너 자리를 보고한 상태에서의 네트워크. 자리가 없으면 nil.
+    private var requestedNetwork: String? {
+        slot.bottomInset != nil ? slot.network : nil
+    }
+
+    private func markSelected(_ network: String) {
+        if network == AdSlotModel.adfit {
+            didSelectAdFit = true
+        } else {
+            didSelectAdMob = true
+        }
     }
 }
 

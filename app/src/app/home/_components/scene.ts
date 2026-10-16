@@ -42,9 +42,6 @@ export function warmRoomImages() {
   }
 }
 
-/** 디자인 비율 — 벽 4 : 바닥 6 (338px : 506px). 벽이 끝나는 방 픽셀 y. */
-export const wallBottomOf = (h: number) => Math.round(h * 0.4);
-
 /**
  * 꾸미기 분류 탭.
  *
@@ -78,7 +75,7 @@ export function layout(w: number, h: number, safeBottom: number): Layout {
     walk: {
       x0: 1.5 * TILE,
       x1: w - 1.5 * TILE,
-      y0: (WALL_TILES + 5) * TILE,
+      y0: (WALL_TILES + 3) * TILE,
       y1: h - safeBottom - 46,
     },
   };

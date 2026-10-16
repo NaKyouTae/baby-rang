@@ -29,6 +29,9 @@ model User {
   // 초기 화면(첫 진입) 설정 — 앱/웹 진입 시 처음 보여줄 화면의 menuId.
   // null이면 기본값(홈). 값 예: 'growth-record' | 'growth-pattern' | 'nursing-room' 등.
   homeMenu               String?
+  // 홈 좌우 기록 버튼 구성(순서대로, 최대 7개). 값 예: 'breast' | 'sleep' | 'diaper' 등.
+  // 비어 있으면 앱 기본 구성. 기기가 아니라 사용자마다 저장해 어느 기기에서나 같게 보인다.
+  recordMenu             String[]                @default([])
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   accounts               Account[]
@@ -608,6 +611,8 @@ enum RoomAffordance {
   PUSH_WALKER // 밀고 걷는 보행기
   PLAY // 앉아서 갖고 노는 장난감 — 블록·오뚝이
   SLEEP // 누워 잘 수 있는 침대 — 아기침대·범퍼침대
+  SEAT // 올라앉을 수 있다 — 소파·의자
+  SLIDE // 사다리로 올라가 타고 내려오는 미끄럼틀
 }
 
 model RoomItem {
@@ -728,4 +733,23 @@ model CoinLedger {
 
   @@index([groupId, createdAt])
   @@map("coin_ledgers")
+}
+
+/// 네이티브 앱(iOS/Android) 하단 배너에 띄울 광고 네트워크.
+/// 웹 브라우저는 이 값과 상관없이 항상 카카오 애드핏 웹 광고를 쓴다.
+enum AppAdNetwork {
+  GOOGLE // Google AdMob
+  KAKAO // Kakao AdFit
+}
+
+/// 앱 전역 설정. 행은 id=1 하나만 쓰는 싱글톤 테이블이다.
+///
+/// 앱 재배포 없이 어드민에서 바로 바꿔야 하는 값(광고 네트워크 등)을 둔다.
+/// 2026-10-15 AdMob 계정이 30일 정지돼 기본값은 KAKAO 로 둔다.
+model AppSetting {
+  id        Int          @id @default(1)
+  adNetwork AppAdNetwork @default(KAKAO)
+  updatedAt DateTime     @updatedAt
+
+  @@map("app_settings")
 }

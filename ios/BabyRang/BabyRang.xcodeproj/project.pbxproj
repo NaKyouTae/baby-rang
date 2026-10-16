@@ -11,6 +11,7 @@
 		6E6BF6B02FF64F6C00521308 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6E6BF6AF2FF64F6C00521308 /* SwiftUI.framework */; };
 		6E6BF6BD2FF64F6E00521308 /* BabyRangWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6E6BF6AB2FF64F6C00521308 /* BabyRangWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		AD00B1A00000000000000001 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = AD00B1A00000000000000003 /* GoogleMobileAds */; };
+		AF00B1A00000000000000001 /* AdFitSDK in Frameworks */ = {isa = PBXBuildFile; productRef = AF00B1A00000000000000003 /* AdFitSDK */; };
 		CA00B1A00000000000000010 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000020 /* KakaoSDKCommon */; };
 		CA00B1A00000000000000011 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000021 /* KakaoSDKAuth */; };
 		CA00B1A00000000000000012 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = CA00B1A00000000000000022 /* KakaoSDKUser */; };
@@ -92,6 +93,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD00B1A00000000000000001 /* GoogleMobileAds in Frameworks */,
+				AF00B1A00000000000000001 /* AdFitSDK in Frameworks */,
 				CA00B1A00000000000000010 /* KakaoSDKCommon in Frameworks */,
 				CA00B1A00000000000000011 /* KakaoSDKAuth in Frameworks */,
 				CA00B1A00000000000000012 /* KakaoSDKUser in Frameworks */,
@@ -164,6 +166,7 @@
 			name = BabyRang;
 			packageProductDependencies = (
 				AD00B1A00000000000000003 /* GoogleMobileAds */,
+				AF00B1A00000000000000003 /* AdFitSDK */,
 				CA00B1A00000000000000020 /* KakaoSDKCommon */,
 				CA00B1A00000000000000021 /* KakaoSDKAuth */,
 				CA00B1A00000000000000022 /* KakaoSDKUser */,
@@ -225,6 +228,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AD00B1A00000000000000002 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				AF00B1A00000000000000002 /* XCRemoteSwiftPackageReference "adfit-spm" */,
 				CA00B1A00000000000000001 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 				NV00B1A00000000000000001 /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios" */,
 			);
@@ -411,7 +415,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = BabyRang/BabyRang.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -432,7 +436,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.15;
+				MARKETING_VERSION = 1.2.16;
 				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -453,7 +457,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = BabyRang/BabyRang.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -473,7 +477,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.15;
+				MARKETING_VERSION = 1.2.16;
 				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -493,7 +497,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = BabyRangWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRangWidget/Info.plist;
@@ -505,7 +509,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.15;
+				MARKETING_VERSION = 1.2.16;
 				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang.BabyRangWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -525,7 +529,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = BabyRangWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 25;
 				DEVELOPMENT_TEAM = 43599V7UL7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = BabyRangWidget/Info.plist;
@@ -537,7 +541,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.15;
+				MARKETING_VERSION = 1.2.16;
 				PRODUCT_BUNDLE_IDENTIFIER = "kr.spectrify.baby-rang.BabyRangWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -607,6 +611,14 @@
 				minimumVersion = 4.1.5;
 			};
 		};
+		AF00B1A00000000000000002 /* XCRemoteSwiftPackageReference "adfit-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/adfit/adfit-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.22.7;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -634,6 +646,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = NV00B1A00000000000000001 /* XCRemoteSwiftPackageReference "naveridlogin-sdk-ios" */;
 			productName = NaverThirdPartyLogin;
+		};
+		AF00B1A00000000000000003 /* AdFitSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AF00B1A00000000000000002 /* XCRemoteSwiftPackageReference "adfit-spm" */;
+			productName = AdFitSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

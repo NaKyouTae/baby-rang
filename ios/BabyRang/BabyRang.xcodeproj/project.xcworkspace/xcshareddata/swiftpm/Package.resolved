@@ -1,6 +1,15 @@
 {
-  "originHash" : "3801419d8c6bfa05cf59a332bf8d3eafc7aef151c6436b31346ce9d0885b5e45",
+  "originHash" : "5567d850a9e1e4168a500d0aaae0f342984d15b74c31149d45f0f6fa55c31065",
   "pins" : [
+    {
+      "identity" : "adfit-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/adfit/adfit-spm.git",
+      "state" : {
+        "revision" : "de79c15bf0b6d8ce7f9f94c39e5b2c871e416c6c",
+        "version" : "3.22.7"
+      }
+    },
     {
       "identity" : "alamofire",
       "kind" : "remoteSourceControl",
