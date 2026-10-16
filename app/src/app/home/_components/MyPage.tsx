@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildren, type Child } from '@/hooks/useChildren';
-import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import { useConsents, type OptionalConsentKey } from '@/hooks/useConsents';
 import { clearAuthCaches } from '@/hooks/appCache';
 import { openLocationSettings, getLocationSettingsGuide } from '@/lib/openLocationSettings';
@@ -39,7 +38,6 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
   const [sharingOpen, setSharingOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [noticesOpen, setNoticesOpen] = useState(false);
-  const { requireLogin } = useLoginPrompt();
   // 아기 정보 시트. null 이면 닫힘, child 가 null 이면 새로 등록.
   const [childSheet, setChildSheet] = useState<{ child: Child | null } | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -117,6 +115,12 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
 
   const go = useCallback((href: string) => router.push(href), [router]);
 
+  // 아기 등록은 로그인한 회원만 할 수 있다. 모달로 한 번 더 묻지 않고 프로필 상자처럼 로그인 화면으로 보낸다.
+  const addChild = useCallback(() => {
+    if (!isAuthenticated) return go('/login');
+    setChildSheet({ child: null });
+  }, [isAuthenticated, go]);
+
   const logout = useCallback(async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     clearAuthCaches(); // 지속 캐시 비우기(재로그인 시 stale 방지)
@@ -173,10 +177,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
         <div className="flex gap-[10px] items-center overflow-x-auto">
           <button
             type="button"
-            onClick={() => {
-              if (!requireLogin('우리 아기를 등록하려면\n로그인이 필요해요.')) return;
-              setChildSheet({ child: null });
-            }}
+            onClick={addChild}
             aria-label="아이 추가"
             className={`${BOX} size-[50px] shrink-0 flex items-center justify-center`}
           >
@@ -187,10 +188,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
             // 아기가 없을 때 — 누르면 + 와 같이 등록으로 간다
             <button
               type="button"
-              onClick={() => {
-                if (!requireLogin('우리 아기를 등록하려면\n로그인이 필요해요.')) return;
-                setChildSheet({ child: null });
-              }}
+              onClick={addChild}
               className={`${BOX} h-[50px] flex-1 min-w-0 flex flex-col items-center justify-center text-center leading-[1.4]`}
             >
               <span className="text-[#121212] text-[16px]">등록된 아기가 없습니다.</span>
