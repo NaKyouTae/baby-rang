@@ -98,7 +98,6 @@ private final class NativeDateTimePickerController: UIViewController {
         picker.calendar = Calendar(identifier: .gregorian)
         picker.timeZone = .autoupdatingCurrent
         picker.minuteInterval = 1
-        if mode == "date" { picker.maximumDate = Date() }
         picker.addTarget(self, action: #selector(selectionChanged), for: .valueChanged)
         picker.accessibilityLabel = title
         card.addSubview(picker)

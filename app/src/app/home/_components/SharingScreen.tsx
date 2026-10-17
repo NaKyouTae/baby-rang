@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { refreshChildrenCache } from '@/hooks/useChildren';
 import ConfirmModal from './ConfirmModal';
 
@@ -31,6 +31,31 @@ type Tab = 'mine' | 'received';
 /** 목록 한 줄. 내 공유면 내보낼 사람, 받은 공유면 공유해 준 사람이다. */
 type Row = { key: string; name: string; email: string; groupId: string; userId: string | null };
 
+async function copyToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // 로컬 IP 및 일부 앱 WebView에서는 Clipboard API를 사용할 수 없어 아래 방식으로 재시도한다.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  const copied = document.execCommand('copy');
+  textarea.remove();
+  if (!copied) throw new Error('공유 코드를 복사하지 못했습니다.');
+}
+
 interface Props {
   open: boolean;
   onBack: () => void;
@@ -46,6 +71,7 @@ export default function SharingScreen({ open, onBack }: Props) {
   const [tab, setTab] = useState<Tab>('mine');
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [joinError, setJoinError] = useState('');
   const [joining, setJoining] = useState(false);
@@ -64,6 +90,13 @@ export default function SharingScreen({ open, onBack }: Props) {
   useEffect(() => {
     if (open) void fetchGroups();
   }, [open, fetchGroups]);
+
+  useEffect(
+    () => () => {
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+    },
+    [],
+  );
 
   const myGroup = groups?.find((g) => g.isOwner) ?? null;
   const code = myGroup?.code ?? '';
@@ -100,9 +133,10 @@ export default function SharingScreen({ open, onBack }: Props) {
   const copyCode = async () => {
     if (!code) return;
     try {
-      await navigator.clipboard.writeText(code);
+      await copyToClipboard(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
+      copyToastTimerRef.current = setTimeout(() => setCopied(false), 1500);
     } catch {
       /* 권한 없음 — 그냥 둔다 */
     }
@@ -211,7 +245,7 @@ export default function SharingScreen({ open, onBack }: Props) {
             </span>
           </div>
           <button type="button" onClick={copyCode} disabled={!code} className={SIDE_BUTTON}>
-            {copied ? '완료' : '복사'}
+            복사
           </button>
           <button type="button" onClick={shareCode} disabled={!code} className={SIDE_BUTTON}>
             공유
@@ -249,34 +283,44 @@ export default function SharingScreen({ open, onBack }: Props) {
         </div>
       )}
 
-      <div className={`${BOX} flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col`}>
-        {groups === null ? null : rows.length === 0 ? (
-          <p className="m-auto p-[10px] text-center text-[#808991] text-[14px] leading-[1.4]">
-            {tab === 'mine' ? '공유한 기록이 없습니다.' : '공유 받은 기록이 없습니다.'}
-          </p>
-        ) : (
-          <ul>
-            {rows.map((r) => (
-              <li
-                key={r.key}
-                className="flex items-center justify-between gap-[10px] p-[10px] border-b border-[#121212]"
-              >
-                <div className="min-w-0 flex flex-col gap-[4px] leading-[1.4]">
-                  <p className="text-[#121212] text-[16px] truncate">{r.name} 님</p>
-                  {r.email && <p className="text-[#808991] text-[14px] truncate">{r.email}</p>}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStopTarget(r)}
-                  aria-label={`${r.name} 님과 공유 중단`}
-                  className="size-[24px] shrink-0"
+      <div className="relative flex-1 min-h-0">
+        <div className={`${BOX} absolute inset-0 overflow-y-auto overscroll-contain flex flex-col`}>
+          {groups === null ? null : rows.length === 0 ? (
+            <p className="m-auto p-[10px] text-center text-[#808991] text-[14px] leading-[1.4]">
+              {tab === 'mine' ? '공유한 기록이 없습니다.' : '공유 받은 기록이 없습니다.'}
+            </p>
+          ) : (
+            <ul>
+              {rows.map((r) => (
+                <li
+                  key={r.key}
+                  className="flex items-center justify-between gap-[10px] p-[10px] border-b border-[#121212]"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/icons/close.svg" alt="" width={24} height={24} className="block" />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <div className="min-w-0 flex flex-col gap-[4px] leading-[1.4]">
+                    <p className="text-[#121212] text-[16px] truncate">{r.name} 님</p>
+                    {r.email && <p className="text-[#808991] text-[14px] truncate">{r.email}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStopTarget(r)}
+                    aria-label={`${r.name} 님과 공유 중단`}
+                    className="size-[24px] shrink-0"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/icons/close.svg" alt="" width={24} height={24} className="block" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {copied && (
+          <div
+            role="status"
+            className={`${BOX} absolute top-[10px] left-1/2 z-10 h-[20px] -translate-x-1/2 px-[8px] flex items-center text-[#121212] text-[12px] leading-[1.4] whitespace-nowrap`}
+          >
+            복사되었어요.
+          </div>
         )}
       </div>
 

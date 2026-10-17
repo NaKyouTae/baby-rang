@@ -103,7 +103,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
           <ul
             role="listbox"
             aria-label="아이 목록"
-            className={`${BOX} absolute left-0 right-0 top-[58px] z-20 max-h-[120px] overflow-y-auto overflow-x-hidden flex flex-col`}
+            className={`${BOX} absolute left-0 right-0 top-[52px] z-20 max-h-[120px] overflow-y-auto overflow-x-hidden flex flex-col`}
           >
             {groups.map((g, i) => {
               const on = g.key === current.key;
@@ -116,7 +116,7 @@ export default function ChildSwitcher({ current, groups, ageParts, onSelect, onT
                       if (!on) onSelect(g.key);
                     }}
                     // 바깥 테두리는 목록 상자가 그린다. 줄 사이에만 선을 넣어야 겹치지 않는다.
-                    className={`w-full flex items-center px-[10px] py-[6px] text-[16px] leading-[1.4] text-[#121212] text-left ${
+                    className={`w-full flex items-center px-[10px] py-[6px] text-[14px] leading-[1.4] text-[#121212] text-left ${
                       i > 0 ? 'border-t border-[#121212]' : ''
                     }`}
                     style={{ background: on ? 'rgba(255,210,0,0.1)' : undefined }}

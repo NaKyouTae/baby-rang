@@ -41,7 +41,7 @@ export function NoChildBox({ sub, loginMessage }: { sub: string; loginMessage: s
     <button
       type="button"
       onClick={() => (isAuthenticated ? router.push('/home?my=1') : openLoginPrompt(loginMessage))}
-      className={`${BOX} flex-1 min-w-0 h-[50px] flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
+      className={`${BOX} flex-1 min-w-0 h-[48px] min-h-[48px] shrink-0 flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
     >
       <span className="text-[#121212] text-[16px]">등록된 아기가 없어요</span>
       <span className="text-[#808991] text-[14px]">{sub}</span>

@@ -60,7 +60,7 @@ export default function ChildSheet({ open, child, onClose }: Props) {
   const isEdit = child !== null;
   const [name, setName] = useState('');
   const [gender, setGender] = useState<SheetGender>('male');
-  // 입력 중인 숫자(최대 8자리). 저장할 날짜는 여기서 바로 계산한다.
+  // 선택한 날짜를 YYYYMMDD 숫자로 보관한다. 저장할 날짜는 여기서 계산한다.
   const [birthDigits, setBirthDigits] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -173,25 +173,28 @@ export default function ChildSheet({ open, child, onClose }: Props) {
             </Field>
 
             <Field label="출생일/출산예정일">
-              <input
-                type="text"
-                // 숫자 패드를 띄운다. type="number" 는 구분자(. )를 못 넣고 앞자리 0 도 지운다.
-                inputMode="numeric"
-                autoComplete="off"
-                value={formatDigits(birthDigits)}
-                onChange={(e) => {
-                  const next = e.target.value.replace(/\D/g, '').slice(0, 8);
-                  // 끝 마침표만 지워졌으면 숫자도 하나 지운다 — 안 그러면 마침표가 다시 붙어 지우기가 막힌다.
-                  const deletedDotOnly =
-                    next === birthDigits && e.target.value.length < formatDigits(birthDigits).length;
-                  setBirthDigits(deletedDotOnly ? next.slice(0, -1) : next);
-                }}
-                placeholder={formatDigits(todayYmd().replace(/-/g, ''))}
-                aria-invalid={birthInvalid}
-                className={`w-full h-[52px] px-[20px] rounded-[4px] border bg-[#FDFDFE] text-[#121212] text-[16px] leading-none tabular-nums outline-none placeholder:text-[#BBC0C5] ${
-                  birthInvalid ? 'border-[#FF4040]' : 'border-[#808991] focus:border-[#121212]'
-                }`}
-              />
+              <div className="relative w-full">
+                <div
+                  className={`w-full h-[52px] px-[20px] rounded-[4px] border bg-[#FDFDFE] flex items-center text-left text-[16px] leading-none tabular-nums ${
+                    birthInvalid ? 'border-[#FF4040]' : 'border-[#808991]'
+                  } ${birthDigits ? 'text-[#121212]' : 'text-[#BBC0C5]'}`}
+                >
+                  {birthDigits ? formatDigits(birthDigits) : formatDigits(todayYmd().replace(/-/g, ''))}
+                </div>
+                <input
+                  type="date"
+                  aria-label="출생일/출산예정일 날짜 선택"
+                  aria-invalid={birthInvalid}
+                  disabled={busy}
+                  value={birthDate || ''}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  min="1900-01-01"
+                  max="2100-12-31"
+                  onChange={(event) => {
+                    if (event.target.value) setBirthDigits(event.target.value.replace(/-/g, ''));
+                  }}
+                />
+              </div>
               {birthInvalid && (
                 <p className="w-full text-[#FF4040] text-[12px] leading-[1.4]">
                   없는 날짜예요. 다시 확인해 주세요.

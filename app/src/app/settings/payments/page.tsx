@@ -57,11 +57,11 @@ function titleOf(item: PaymentItem) {
 }
 
 /** 완료가 아닌 건만 상태를 덧붙인다. 대부분이 완료라 매번 적으면 소음이다. */
-const STATUS_LABEL: Partial<Record<PaymentItem['status'], string>> = {
-  FAILED: '실패',
-  CANCELLED: '취소',
-  REFUNDED: '환불',
-  PARTIAL_REFUNDED: '부분환불',
+const STATUS_LABEL: Partial<Record<PaymentItem['status'], { label: string; color: string }>> = {
+  FAILED: { label: '실패', color: '#FF4040' },
+  CANCELLED: { label: '취소', color: '#0078F0' },
+  REFUNDED: { label: '환불', color: '#34C759' },
+  PARTIAL_REFUNDED: { label: '부분환불', color: '#34C759' },
 };
 
 /** 픽셀 디자인의 공통 상자 — 흰 바탕에 1px 검정 테두리, 모서리 4px. */
@@ -130,7 +130,7 @@ export default function PaymentsPage() {
             {items.map((item) => {
               const isPaid = item.status === 'PAID';
               const storeMethod = storeMethodOf(item);
-              const statusLabel = STATUS_LABEL[item.status];
+              const status = STATUS_LABEL[item.status];
               // 누를 수 있는 건 영수증이 있는 토스 결제와 안내를 띄울 인앱결제뿐이다.
               const clickable = isPaid && (Boolean(item.receiptUrl) || Boolean(storeMethod));
               return (
@@ -155,10 +155,10 @@ export default function PaymentsPage() {
                       <span>{formatAmount(item.amount, item.currency)}</span>
                       <span>･</span>
                       <span>{formatDate(item.approvedAt || item.createdAt)}</span>
-                      {statusLabel && (
+                      {status && (
                         <>
                           <span>･</span>
-                          <span>{statusLabel}</span>
+                          <span style={{ color: status.color }}>{status.label}</span>
                         </>
                       )}
                     </span>

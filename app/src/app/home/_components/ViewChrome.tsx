@@ -16,7 +16,7 @@ export default function ViewChrome({ onClose }: { onClose: () => void }) {
         type="button"
         onClick={onClose}
         aria-label="보기 끝내기"
-        className={`${BOX} absolute right-[20px] size-[50px] flex items-center justify-center pointer-events-auto active:translate-y-px`}
+        className={`${BOX} absolute right-[20px] size-[48px] flex items-center justify-center pointer-events-auto active:translate-y-px`}
         style={{ top: 'calc(var(--safe-area-top) + 20px)' }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

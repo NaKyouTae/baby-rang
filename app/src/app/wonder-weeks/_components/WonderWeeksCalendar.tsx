@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { kstYmdToLocalMidnight, toKstYmd } from '@/lib/childAge';
 import { WONDER_WEEKS_LEAPS, type WonderWeekLeap } from '@/lib/wonderWeeks';
 
@@ -38,7 +38,11 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 function getLeapForDate(date: Date, birthDate: Date): WonderWeekLeap | null {
-  const diffWeeks = (date.getTime() - birthDate.getTime()) / (7 * 24 * 60 * 60 * 1000);
+  // 현지 자정의 밀리초 차이는 DST 전환일에 하루 길이가 달라질 수 있어
+  // 달력 날짜를 UTC 일수로 바꿔 주차 경계가 흔들리지 않게 한다.
+  const dateDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const birthDay = Date.UTC(birthDate.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+  const diffWeeks = (dateDay - birthDay) / (7 * 24 * 60 * 60 * 1000);
   return WONDER_WEEKS_LEAPS.find((l) => diffWeeks >= l.startWeek && diffWeeks <= l.endWeek) ?? null;
 }
 
@@ -46,8 +50,8 @@ interface MonthData {
   year: number;
   month: number;
   leapDays: Set<number>;
-  /** 이 달에서 처음 시작하는 도약기. 달을 걸치는 도약기 설명이 두 번 나오지 않게 한다. */
-  newLeaps: WonderWeekLeap[];
+  /** 이 달력에 도약기 날짜가 하나라도 포함된 구간. 월 경계에서도 해당 달 아래 설명을 보인다. */
+  monthLeaps: WonderWeekLeap[];
 }
 
 interface Props {
@@ -55,8 +59,8 @@ interface Props {
 }
 
 /**
- * 출생월부터 10단계가 끝나는 달까지 달력을 한 장씩 쌓는다.
- * 도약기가 시작된 달 바로 아래에 그 도약기 설명 카드를 붙인다.
+ * 출생월부터 10단계가 끝나는 달까지 월별 달력과 도약기 설명을 하나의 목록 상자에 쌓는다.
+ * 도약기가 걸쳐 있는 모든 달력 아래에 해당 설명 카드를 붙인다.
  */
 const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(function WonderWeeksCalendar(
   { birthDate },
@@ -64,20 +68,34 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
 ) {
   const birth = useMemo(() => kstYmdToLocalMidnight(toKstYmd(birthDate)), [birthDate]);
   const todayRef = useRef<HTMLDivElement | null>(null);
+  const scrollToToday = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const today = todayRef.current;
+    const scroller = today?.closest<HTMLElement>('.wonder-weeks-calendar-scroll');
+    if (!today || !scroller) return;
+    const todayRect = today.getBoundingClientRect();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const top =
+      scroller.scrollTop +
+      todayRect.top -
+      scrollerRect.top -
+      scroller.clientHeight / 2 +
+      todayRect.height / 2;
+    scroller.scrollTo({ top, behavior });
+  }, []);
 
   useImperativeHandle(ref, () => ({
-    scrollToToday: () => todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
-  }));
+    scrollToToday: () => scrollToToday('smooth'),
+  }), [scrollToToday]);
 
-  // 들어오자마자 오늘이 있는 달을 보여준다. 페이지 안쪽 스크롤 영역만 움직인다.
+  // 레이아웃이 잡힌 다음 오늘 날짜를 고정 헤더 아래 화면 가운데로 맞춘다.
   useEffect(() => {
-    todayRef.current?.scrollIntoView({ block: 'center' });
-  }, [birth]);
+    const frame = requestAnimationFrame(() => scrollToToday());
+    return () => cancelAnimationFrame(frame);
+  }, [birth, scrollToToday]);
 
   // 10단계(79주 ≈ 553일)까지 표시
   const months = useMemo(() => {
     const endDate = addDays(birth, 553);
-    const seen = new Set<number>();
     const result: MonthData[] = [];
     let year = birth.getFullYear();
     let month = birth.getMonth();
@@ -85,19 +103,16 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
     while (year < endDate.getFullYear() || (year === endDate.getFullYear() && month <= endDate.getMonth())) {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const leapDays = new Set<number>();
-      const newLeaps: WonderWeekLeap[] = [];
+      const monthLeaps: WonderWeekLeap[] = [];
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(year, month, d);
         if (date < birth) continue;
         const leap = getLeapForDate(date, birth);
         if (!leap) continue;
         leapDays.add(d);
-        if (!seen.has(leap.leap)) {
-          seen.add(leap.leap);
-          newLeaps.push(leap);
-        }
+        if (!monthLeaps.some((item) => item.leap === leap.leap)) monthLeaps.push(leap);
       }
-      result.push({ year, month, leapDays, newLeaps });
+      result.push({ year, month, leapDays, monthLeaps });
 
       month++;
       if (month > 11) {
@@ -111,8 +126,8 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
   const today = new Date();
 
   return (
-    <div className="flex flex-col gap-[10px]">
-      {months.map(({ year, month, leapDays, newLeaps }) => {
+    <div className="w-full min-w-0">
+      {months.map(({ year, month, leapDays, monthLeaps }, monthIndex) => {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const firstDay = new Date(year, month, 1).getDay();
         // 앞뒤 빈칸까지 채워 7칸씩 끊는다
@@ -124,12 +139,15 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
         const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
 
         return (
-          <div key={`${year}-${month}`} className="flex flex-col gap-[10px]">
-            <section className={`${BOX} flex flex-col gap-[10px] p-[10px]`}>
-              <h3 className="text-[#121212] text-[14px] leading-[1.4] font-normal">
+          <div
+            key={`${year}-${month}`}
+            className={monthIndex === months.length - 1 ? 'pb-[10px]' : ''}
+          >
+            <section className="flex flex-col gap-[10px] px-[10px] pt-[10px]">
+              <h3 className="text-[#121212] text-[14px] leading-[1.4] font-normal text-center">
                 {year}년 {month + 1}월
               </h3>
-              <div className="flex flex-col gap-[10px] text-[14px] leading-[1.4] text-center">
+              <div className="flex flex-col gap-[10px] text-[12px] leading-[1.4] text-center">
                 <div className="flex">
                   {DAY_LABELS.map((label, i) => (
                     <span key={label} className={`flex-1 min-w-0 ${weekdayColor(i)}`}>
@@ -168,9 +186,20 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
               </div>
             </section>
 
-            {newLeaps.map((info) => (
-              <LeapCard key={info.leap} info={info} />
-            ))}
+            {monthLeaps.length > 0 && (
+              <div className="flex flex-col gap-[10px] px-[10px] pt-[16px]">
+                {monthLeaps.map((info) => (
+                  <LeapCard key={info.leap} info={info} />
+                ))}
+              </div>
+            )}
+
+            {/* 다음 월 제목의 pt-[10px]까지 합쳐 선 아래 간격도 16px이 되도록 맞춘다. */}
+            {monthIndex < months.length - 1 && (
+              <div className="pt-[16px] pb-[6px]" aria-hidden="true">
+                <div className="border-t border-[#121212]" />
+              </div>
+            )}
           </div>
         );
       })}
@@ -181,14 +210,12 @@ const WonderWeeksCalendar = forwardRef<WonderWeeksCalendarHandle, Props>(functio
 function LeapCard({ info }: { info: WonderWeekLeap }) {
   return (
     <section className={`${BOX} flex flex-col gap-[10px] p-[10px] text-[#121212] text-[14px] leading-[1.4]`}>
-      <div className="flex items-start justify-between gap-[8px]">
-        <h3 className="min-w-0 font-normal">
-          원더윅스 CH {info.leap}. {info.name}
-        </h3>
-        <span className="shrink-0 text-[#3078C9]">
+      <h3 className="font-normal text-center">
+        CH {info.leap}. {info.name}{' '}
+        <span className="text-[#3078C9]">
           {info.startWeek}-{info.endWeek}주차
         </span>
-      </div>
+      </h3>
 
       <div className="flex flex-col gap-[4px] p-[10px] rounded-[4px] bg-[#F7F8F9]">
         <p>[ 증상 ]</p>

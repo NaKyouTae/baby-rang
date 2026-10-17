@@ -154,7 +154,7 @@ export default function NoticesScreen({ open, onBack }: Props) {
                     />
                   </button>
                   {expanded && (
-                    <p className="border-t border-[#121212] p-[10px] text-[#121212] text-[14px] leading-[1.4] whitespace-pre-wrap break-words">
+                    <p className="border-t border-[#121212] p-[10px] text-[#121212] text-[14px] leading-[1.6] whitespace-pre-wrap break-words">
                       {n.content}
                     </p>
                   )}

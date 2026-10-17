@@ -45,6 +45,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
   // 위치 권한 팝업(디자인 그대로). 설정으로 이동은 앱이면 설정 화면, 웹이면 권한 요청으로 이어진다.
   const [locationModal, setLocationModal] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   // 안 읽은 공지가 있으면 '공지사항' 옆에 빨간 점. 열 때와 공지 화면에서 돌아올 때 다시 확인한다.
   const [hasUnreadNotice, setHasUnreadNotice] = useState(false);
@@ -161,19 +162,12 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
               <span className="text-[#121212] text-[16px] leading-[1.4] truncate">
                 {isAuthenticated ? `${user?.name ?? '아기랑 회원'} 님` : '로그인하기'}
               </span>
-              {!isAuthenticated ? (
-                <span className="text-[#808991] text-[14px] leading-[1.4] truncate">기록을 안전하게 보관하세요</span>
-              ) : (
-                user?.email && (
-                  <span className="text-[#808991] text-[14px] leading-[1.4] truncate">{user.email}</span>
-                )
-              )}
             </span>
             <Chevron />
           </button>
         )}
 
-        <div className="flex gap-[10px] items-center overflow-x-auto">
+        <div className="-mx-[20px] flex gap-[10px] items-center overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x px-[20px]">
           <button
             type="button"
             onClick={addChild}
@@ -256,7 +250,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
 
         {isAuthLoaded && isAuthenticated && (
           <div className="flex gap-[10px] items-center justify-center py-[16px] text-[#808991] text-[14px] leading-[1.4]">
-            <button type="button" onClick={logout}>
+            <button type="button" onClick={() => setLogoutOpen(true)}>
               로그아웃
             </button>
             <span>･</span>
@@ -266,7 +260,11 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
           </div>
         )}
 
-        <div className="flex flex-col gap-[16px] items-center justify-center pb-[16px]">
+        <div
+          className={`flex flex-col gap-[16px] items-center justify-center pb-[16px] ${
+            isAuthLoaded && !isAuthenticated ? 'mt-[24px]' : ''
+          }`}
+        >
           <p className="text-[#121212] text-[14px] leading-none">ⒸSpectrum</p>
           <div className="flex flex-col gap-[10px] items-center text-[#808991] text-[12px] text-center">
             <div className="flex gap-[10px] items-start justify-center">
@@ -289,6 +287,21 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
       onClose={() => setChildSheet(null)}
     />
     <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+    <ConfirmModal
+      open={logoutOpen}
+      showThumbnail={false}
+      title="로그아웃하시겠어요?"
+      description={
+        <>
+          저장된 아기 기록은 그대로 유지되며
+          <br />
+          다시 로그인하면 확인할 수 있어요.
+        </>
+      }
+      confirmLabel="로그아웃"
+      onCancel={() => setLogoutOpen(false)}
+      onConfirm={() => void logout()}
+    />
     <ConfirmModal
       open={locationModal}
       showThumbnail={false}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GrowthData, MetricType, Gender } from './growthStandards';
 import { getGrowthStandard, calcAgeMonths } from './growthStandards';
 
@@ -21,16 +21,13 @@ type GrowthChartProps = {
   }[];
 };
 
-// 차트 레이아웃 상수 — 디자인의 차트 영역 330x394.
-// 왼쪽 25px 은 세로축 숫자, 아래 20px 은 가로축 숫자(축에서 10px 아래) 자리다.
+// 최초 렌더 크기. 실제 차트 영역은 모바일 카드 너비와 가용 높이를 측정해 맞춘다.
 const CHART_W = 330;
 const CHART_H = 394;
 const PAD_L = 25;
 const PAD_R = 0;
 const PAD_T = 5;
 const PAD_B = 20;
-const PLOT_W = CHART_W - PAD_L - PAD_R;
-const PLOT_H = CHART_H - PAD_T - PAD_B;
 
 // 정상 범위 띠 색상 — 디자인 범례의 #3078C9 10%
 const BAND_COLORS = {
@@ -63,6 +60,31 @@ export default function GrowthChart({
   birthDate,
   records,
 }: GrowthChartProps) {
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+  const [chartSize, setChartSize] = useState({ width: CHART_W, height: CHART_H });
+  useEffect(() => {
+    const element = chartAreaRef.current;
+    if (!element) return;
+    const updateSize = (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return;
+      const next = { width: Math.round(width), height: Math.round(height) };
+      setChartSize((current) =>
+        current.width === next.width && current.height === next.height ? current : next,
+      );
+    };
+    const observer = new ResizeObserver(([entry]) => {
+      updateSize(entry.contentRect.width, entry.contentRect.height);
+    });
+    observer.observe(element);
+    const rect = element.getBoundingClientRect();
+    updateSize(rect.width, rect.height);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartW = chartSize.width;
+  const chartH = chartSize.height;
+  const plotW = chartW - PAD_L - PAD_R;
+  const plotH = chartH - PAD_T - PAD_B;
   const standard = getGrowthStandard(gender, metric);
   const chartData = standard.data;
 
@@ -108,8 +130,8 @@ export default function GrowthChart({
   }, [chartData, childPoints]);
 
   // 좌표 변환 함수
-  const toX = (month: number) => PAD_L + ((month - minMonth) / (maxMonth - minMonth)) * PLOT_W;
-  const toY = (val: number) => PAD_T + (1 - (val - minVal) / (maxVal - minVal)) * PLOT_H;
+  const toX = (month: number) => PAD_L + ((month - minMonth) / (maxMonth - minMonth)) * plotW;
+  const toY = (val: number) => PAD_T + (1 - (val - minVal) / (maxVal - minVal)) * plotH;
 
   // 백분위수 곡선 경로 생성
   const makePath = (data: GrowthData[], key: keyof GrowthData['percentiles']) => {
@@ -145,12 +167,9 @@ export default function GrowthChart({
 
   return (
     <div className="w-full flex-1 min-h-0 flex flex-col items-center gap-[10px]">
-      {/* SVG 차트 */}
-      <svg
-        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-        className="w-full flex-1 min-h-0 block"
-        style={{ height: 0 }}
-      >
+      {/* 차트의 실제 너비·높이를 viewBox에 반영해 글자나 선을 찌그러뜨리지 않고 꽉 채운다. */}
+      <div ref={chartAreaRef} className="mx-[10px] w-[calc(100%-20px)] flex-1 min-h-0">
+      <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-full block">
         {/* 밴드 영역 */}
         <path d={makeBand(chartData, 'p3', 'p15')} fill={BAND_COLORS.outer} />
         <path d={makeBand(chartData, 'p15', 'p50')} fill={BAND_COLORS.inner} />
@@ -163,7 +182,7 @@ export default function GrowthChart({
             key={v}
             x1={PAD_L}
             y1={toY(v)}
-            x2={CHART_W - PAD_R}
+            x2={chartW - PAD_R}
             y2={toY(v)}
             stroke="#EEF0F1"
             strokeWidth={1}
@@ -176,16 +195,16 @@ export default function GrowthChart({
           x1={PAD_L}
           y1={PAD_T}
           x2={PAD_L}
-          y2={CHART_H - PAD_B}
+          y2={chartH - PAD_B}
           stroke="#EEF0F1"
           strokeWidth={1}
         />
         {/* X축 (하단 가로) */}
         <line
           x1={PAD_L}
-          y1={CHART_H - PAD_B}
-          x2={CHART_W - PAD_R}
-          y2={CHART_H - PAD_B}
+          y1={chartH - PAD_B}
+          x2={chartW - PAD_R}
+          y2={chartH - PAD_B}
           stroke="#EEF0F1"
           strokeWidth={1}
         />
@@ -211,7 +230,7 @@ export default function GrowthChart({
           <text
             key={m}
             x={toX(m)}
-            y={CHART_H - PAD_B + 10}
+            y={chartH - PAD_B + 10}
             textAnchor={i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle'}
             dominantBaseline="hanging"
             fontSize="10"
@@ -268,6 +287,7 @@ export default function GrowthChart({
           </g>
         ))}
       </svg>
+      </div>
 
       {/* 범례 — 오른쪽 정렬 */}
       <div className="flex items-center justify-center gap-[16px]">

@@ -67,7 +67,6 @@ function recordValues(r: PhysicalGrowthRecord): string[] {
   const parts: string[] = [];
   if (r.heightCm != null) parts.push(`키 ${r.heightCm}cm`);
   if (r.weightKg != null) parts.push(`체중 ${r.weightKg}kg`);
-  if (r.headCircumCm != null) parts.push(`머리둘레 ${r.headCircumCm}cm`);
   return parts;
 }
 

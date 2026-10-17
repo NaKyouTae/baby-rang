@@ -429,7 +429,7 @@ export default function GrowthPatternClient() {
     if (nativeDatePickerPending) return;
     const cancel = openNativeDateTimePicker(
       '날짜 선택',
-      `${selectedDate}T00:00`,
+      `${todayStr}T00:00`,
       (result) => {
         nativeDatePickerCancelRef.current = null;
         setNativeDatePickerPending(false);
@@ -640,7 +640,7 @@ export default function GrowthPatternClient() {
 
       <PatternDatePickerModal
         open={datePickerOpen}
-        value={selectedDate}
+        value={todayStr}
         onClose={() => setDatePickerOpen(false)}
         onConfirm={(d) => setSelectedDate(d)}
       />
@@ -765,7 +765,8 @@ function DonutChart({
   return (
     <div className="relative w-full h-full flex items-center justify-center">
       <svg
-        viewBox={`0 0 ${VIEW} ${VIEW}`}
+        // 좌우 끝 눈금·레이블도 viewBox 안에 넣어 PatternPage 의 10px 여백을 침범하지 않게 한다.
+        viewBox={`-4 0 ${VIEW + 8} ${VIEW}`}
         preserveAspectRatio="xMidYMid meet"
         className="w-full h-full max-w-full max-h-full"
         style={{ overflow: 'visible' }}

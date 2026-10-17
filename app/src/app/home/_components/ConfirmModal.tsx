@@ -97,7 +97,7 @@ export function PriceTitle({ name, price }: { name: string; price: number }) {
     <>
       <span>{name}(</span>
       <GemIcon size={20} />
-      <span>{` ${price})를 구매할까요?`}</span>
+      <span className="ml-[4px]">{`${price})를 구매할까요?`}</span>
     </>
   );
 }

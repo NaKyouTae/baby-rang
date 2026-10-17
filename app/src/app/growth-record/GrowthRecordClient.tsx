@@ -43,14 +43,12 @@ function SwipeableRow({
   onOpenChange,
   onDelete,
   children,
-  isLast,
   rowId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
   children: ReactNode;
-  isLast: boolean;
   rowId: string;
 }) {
   const [dragX, setDragX] = useState(0);
@@ -145,9 +143,7 @@ function SwipeableRow({
       data-row-id={rowId}
       // 가로만 자른다(스와이프로 밀린 내용·삭제 버튼). 세로까지 자르면 행 아래로 3px 걸쳐 그리는
       // 손그림 구분선이 반쯤 잘려 지지직거린다. 선은 다음 행 배경에 덮이지 않게 z 를 올린다.
-      className={`relative overflow-x-clip [&::after]:z-[1] bg-[#FDFDFE] border-b border-[#121212] ${
-        isLast ? 'border-b-0' : ''
-      }`}
+      className="relative overflow-x-clip [&::after]:z-[1] bg-[#FDFDFE] border-b border-[#121212]"
     >
       {/* 삭제 버튼은 열림/드래그 중일 때만 렌더 — 닫힘 상태에서 앞쪽 컨텐츠의
           translateX 레이어 경계로 빨간 라인이 비치는 현상 방지 */}
@@ -514,7 +510,7 @@ export default function GrowthRecordPage() {
     const el = scroller.querySelector<HTMLElement>(`[data-day="${date}"]`);
     if (!el) return;
     const top =
-      scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + 1;
     scroller.scrollTo({ top, behavior: 'smooth' });
   }, []);
   useLockAppScroll();
@@ -1235,7 +1231,6 @@ export default function GrowthRecordPage() {
                 <section
                   key={group.date}
                   data-day={group.date}
-                  className="border-t border-[#121212] first:border-t-0"
                 >
                   <DayHeader
                     date={group.date}
@@ -1256,7 +1251,7 @@ export default function GrowthRecordPage() {
 
                   {/* 기록 행 */}
                   <div>
-                    {group.records.map((r, idx) => {
+                    {group.records.map((r) => {
                       const catStyle = CATEGORY_STYLE[r.type] ?? CATEGORY_STYLE.ETC;
                       const summary = summarizeRecord(r);
                       const title =
@@ -1280,7 +1275,6 @@ export default function GrowthRecordPage() {
                           onDelete={() => {
                             setDeleteTarget(r);
                           }}
-                          isLast={idx === group.records.length - 1}
                         >
                           <button
                             type="button"
@@ -1388,7 +1382,7 @@ export default function GrowthRecordPage() {
 
       <DatePickerModal
         open={showDatePicker}
-        value={sortedDays[0]?.date ?? todayString()}
+        value={todayString()}
         min={earliestDate ?? undefined}
         max={todayString()}
         onClose={() => setShowDatePicker(false)}

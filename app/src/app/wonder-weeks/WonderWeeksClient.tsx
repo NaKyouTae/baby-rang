@@ -20,8 +20,7 @@ const TOP_STACK = 116;
 /**
  * 원더윅스 — 픽셀 디자인.
  *
- * 화면 높이에 딱 맞춘다. 달력은 화면 전체에서 스크롤하고, 헤더·아이 카드·탭바는 그 위에 떠 있다
- * (디자인의 '원더윅스 화면 뷰'처럼 달력이 상자 사이로 지나간다).
+ * 화면 높이에 딱 맞추고, 헤더·아이 카드·하단 탭바 사이의 큰 달력 상자 안에서만 스크롤한다.
  */
 export default function WonderWeeksClient() {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
@@ -52,16 +51,17 @@ export default function WonderWeeksClient() {
         <ChildIdSync />
       </Suspense>
 
-      {/* 달력 — 화면 전체에서 스크롤한다. 처음엔 헤더·아이 카드 아래, 끝은 탭바 위에서 멈춘다 */}
+      {/* 바깥 큰 박스는 고정하고, 안쪽 달력·챕터 영역만 세로로 스크롤한다 */}
       <div
-        className="absolute inset-0 overflow-y-auto overscroll-contain px-[20px]"
+        className={`${BOX} absolute left-[20px] right-[20px] overflow-hidden`}
         style={{
-          paddingTop: `calc(var(--safe-area-top) + 20px + ${TOP_STACK}px)`,
-          // 광고 + 탭바(60) + 아래 여백(10) + 간격(10) 만큼 비워야 마지막 상자가 가리지 않는다.
-          paddingBottom: `calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + ${TAB_BAR_HEIGHT + 20}px)`,
+          top: `calc(var(--safe-area-top) + 20px + ${TOP_STACK}px)`,
+          bottom: `calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + ${TAB_BAR_HEIGHT + 20}px)`,
         }}
       >
-        {selectedChild && <WonderWeeksCalendar birthDate={selectedChild.birthDate} />}
+        <div className="wonder-weeks-calendar-scroll h-full w-full overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y">
+          {selectedChild && <WonderWeeksCalendar birthDate={selectedChild.birthDate} />}
+        </div>
       </div>
 
       {/* 헤더 — 달력 위에 떠 있다 */}
@@ -125,7 +125,7 @@ function NoChildBox() {
           ? router.push('/home?my=1')
           : openLoginPrompt('로그인하고 우리 아기의 원더윅스를 확인하세요.')
       }
-      className={`${BOX} flex-1 min-w-0 h-[48px] flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
+      className={`${BOX} flex-1 min-w-0 h-[48px] min-h-[48px] shrink-0 flex flex-col items-start justify-center px-[10px] text-left leading-[1.4]`}
     >
       <span className="text-[#121212] text-[16px]">등록된 아기가 없어요</span>
       <span className="text-[#808991] text-[14px]">아기를 추가하면 원더윅스를 알려드려요</span>
