@@ -569,9 +569,20 @@ export default function HomeClient() {
 
   // 기록 버튼 — 시트 없이 기본값으로 바로 저장한다(기록 화면의 빠른 버튼과 같다).
   const creatingRef = useRef(false);
+  const queuedSleepTapRef = useRef(false);
+  const createQuickRecordRef = useRef<(
+    type: GrowthType,
+    action: Exclude<ActionId, 'settings'>,
+    label: string,
+  ) => Promise<void>>(async () => {});
   const createQuickRecord = useCallback(
     async (type: GrowthType, action: Exclude<ActionId, 'settings'>, label: string) => {
-      if (!childId || creatingRef.current) return;
+      if (!childId) return;
+      if (creatingRef.current) {
+        // 수면은 연속 두 번 눌러 종료하므로 첫 저장 중 들어온 두 번째 탭을 보존한다.
+        if (type === 'SLEEP') queuedSleepTapRef.current = true;
+        return;
+      }
       creatingRef.current = true;
       const now = new Date().toISOString();
       const fd = new FormData();
@@ -584,9 +595,11 @@ export default function HomeClient() {
       const data = buildDefaultRecordData(type);
       fd.append('data', JSON.stringify(data));
       fd.append('keepImageUrls', JSON.stringify([]));
+      let succeeded = false;
       try {
         const res = await fetch('/api/growth-records', { method: 'POST', body: fd });
         if (res.ok) {
+          succeeded = true;
           showToast(`${label} 기록 완료`);
           const kind = data.kind;
           setReaction({
@@ -594,17 +607,29 @@ export default function HomeClient() {
             id: action,
             variant: kind === 'POO' || kind === 'BOTH' ? kind : 'PEE',
           });
-          reloadWidget();
-          void refreshLastRecords();
+          // 종료 탭이 대기 중이면 첫 응답의 요약 조회가 종료 후 상태를 덮지 않게 건너뛴다.
+          const hasQueuedSleepTap = type === 'SLEEP' && queuedSleepTapRef.current;
+          if (!hasQueuedSleepTap) {
+            reloadWidget();
+            void refreshLastRecords();
+          }
           // 그날 첫 기록이면 보석 1개가 들어온다. 상단 잔액을 바로 맞춘다.
           reloadInventory();
         }
       } finally {
+        const replaySleepTap = succeeded && queuedSleepTapRef.current;
+        queuedSleepTapRef.current = false;
         creatingRef.current = false;
+        if (replaySleepTap) {
+          window.setTimeout(() => {
+            void createQuickRecordRef.current('SLEEP', 'sleep', ACTION_LABEL.sleep);
+          }, 0);
+        }
       }
     },
     [childId, refreshLastRecords, reloadInventory, showToast],
   );
+  createQuickRecordRef.current = createQuickRecord;
 
   const handleAction = useCallback((id: ActionId) => {
     // 설정은 입력 폼이 아니라 마이페이지로 간다.
