@@ -34,7 +34,9 @@ const H = 26 * TILE;
 const WALL_BOTTOM = Math.round(H * 0.4);
 // 앱이 아기가 다니는 범위로 쓰는 값(scene.ts layout). 하단 안전 영역은 아이폰 기준 34.
 const WALK = { x0: 1.5 * TILE, x1: W - 1.5 * TILE, y0: (WALL_TILES + 5) * TILE, y1: H - 34 - 46 };
-// 모달 높이 안에 스크롤 없이 들어가는 표시 배율
+// 보여 주는 높이 — 방 전체가 아니라 아이템 둘레만 잘라 보여 준다. 아기 세계는 방 전체 그대로 돌린다.
+const VIEW_H = 14 * TILE;
+// 넓은 화면(모달 오른쪽 칸)의 표시 배율. 좁은 화면은 가로를 꽉 채운다.
 const DISPLAY = 1.1;
 const COLOR = { wall: "#EEF0F1", floor: "#DFE0E1" };
 
@@ -122,6 +124,13 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
     if (first) setMonths(monthsFor(first));
   }, [options, behaviorId]);
 
+  // 아이템과 그 앞에 선 아기가 가운데 오도록 잘라 낼 위쪽 끝
+  const itemTop = (surface === "WALL" ? 2 : WALL_TILES + 4) * TILE;
+  const viewTop = Math.min(
+    H - VIEW_H,
+    Math.max(0, Math.round(itemTop + (Math.max(1, tileH) * TILE) / 2 + TILE - VIEW_H / 2)),
+  );
+
   const pickBehavior = (id: string) => {
     setBehaviorId(id);
     const b = options.find((o) => o.id === id);
@@ -138,7 +147,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
     const w = Math.max(1, tileW) * TILE;
     const h = Math.max(1, tileH) * TILE;
     const x0 = Math.max(0, Math.round((W / TILE - Math.max(1, tileW)) / 2)) * TILE;
-    const y0 = (surface === "WALL" ? 2 : WALL_TILES + 4) * TILE;
+    const y0 = itemTop;
     const x1 = x0 + w;
     const y1 = y0 + h;
 
@@ -175,6 +184,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
     if (baby && behavior) baby.only = behavior.id;
 
     const draw = () => {
+      ctx.setTransform(1, 0, 0, 1, 0, -viewTop);
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = COLOR.wall;
       ctx.fillRect(0, 0, W, WALL_BOTTOM);
@@ -252,7 +262,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [img, category, surface, tileW, tileH, flip, withBaby, surfaceFill, aff, behavior, months]);
+  }, [img, category, surface, tileW, tileH, flip, withBaby, surfaceFill, aff, behavior, months, itemTop, viewTop]);
 
   const note = failed
     ? "이미지를 불러오지 못했습니다."
@@ -265,14 +275,20 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
           : `${months}개월 아기가 앱처럼 행동을 고릅니다. 이 아이템을 쓰는 행동이 더 자주 나옵니다.`;
 
   return (
-    <div className="w-[240px] space-y-2">
+    <div className="w-full space-y-2 sm:w-[240px]">
       <Label>앱 미리보기</Label>
       <canvas
         ref={canvasRef}
         width={W}
-        height={H}
-        className="block rounded-lg ring-1 ring-border"
-        style={{ width: W * DISPLAY, height: H * DISPLAY, imageRendering: "pixelated" }}
+        height={VIEW_H}
+        className="block h-auto w-full rounded-lg ring-1 ring-border sm:w-[var(--preview-w)]"
+        style={
+          {
+            "--preview-w": `${W * DISPLAY}px`,
+            aspectRatio: `${W} / ${VIEW_H}`,
+            imageRendering: "pixelated",
+          } as React.CSSProperties
+        }
       />
 
       {withBaby && options.length > 0 && (

@@ -373,10 +373,10 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
             </DialogDescription>
           </DialogHeader>
 
-          {/* 왼쪽 폼만 스크롤하고 오른쪽 미리보기는 고정한다 */}
-          <div className="flex min-h-0 overflow-hidden px-6">
-            <div className="flex min-h-0 flex-1 gap-6">
-              <div className="min-w-0 flex-1 space-y-4 overflow-y-auto pt-1 pb-6 pr-1">
+          {/* 넓은 화면은 왼쪽 폼만 스크롤하고 오른쪽 미리보기는 고정한다. 좁은 화면은 미리보기를 위에 두고 함께 스크롤한다. */}
+          <div className="min-h-0 overflow-y-auto px-6 sm:flex sm:overflow-hidden">
+            <div className="flex flex-col gap-4 sm:min-h-0 sm:flex-1 sm:flex-row sm:gap-6">
+              <div className="min-w-0 space-y-4 pb-6 sm:flex-1 sm:overflow-y-auto sm:pt-1 sm:pr-1">
                 <div className="space-y-2">
                   <Label>스프라이트 이미지</Label>
                   <div className="flex items-start gap-3">
@@ -595,7 +595,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   </p>
                 </div>
               </div>
-              <div className="shrink-0 overflow-hidden pt-1 pb-6">
+              <div className="order-first pt-1 sm:order-none sm:shrink-0 sm:overflow-hidden sm:pb-6">
                 <RoomItemPreview
                   category={form.category}
                   surface={form.surface}
@@ -608,7 +608,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
             </div>
           </div>
 
-          <DialogFooter className="items-center border-t px-6 py-4">
+          <DialogFooter className="flex-row flex-wrap items-center justify-end gap-2 border-t px-6 py-4 sm:space-x-0">
             {!form.name && (
               <p className="mr-auto text-[11px] text-muted-foreground">
                 이름을 입력해야 저장할 수 있습니다.

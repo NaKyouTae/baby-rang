@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, scaleFor } from './tiles';
+import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, scaleFor } from './tiles';
 import { MAX_SCALE, getSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
 import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, layout, warmRoomImages, type Layout } from './scene';
 import {
@@ -122,7 +122,7 @@ export default function PixelScreen(props: Props) {
 
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number; scale: number } | null>(null);
+  const [size, setSize] = useState<{ w: number; h: number; scale: number; shift: number } | null>(null);
   // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
   // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
   const rows = size ? Math.max(ROOM_H_TILES, Math.floor(size.h / TILE)) : ROOM_H_TILES;
@@ -200,7 +200,9 @@ export default function PixelScreen(props: Props) {
       const r = host.getBoundingClientRect();
       if (!r.width || !r.height) return;
       const scale = scaleFor(r.width, r.height);
-      setSize({ w: ROOM_W, h: Math.floor(r.height / scale), scale });
+      // 상태바가 덮는 만큼은 이미 가려져 있으니, 모자란 만큼만 방을 위로 올린다(웹은 상태바가 0).
+      const shift = Math.max(0, Math.round(TOP_HIDDEN * scale - measureSafeTop()));
+      setSize({ w: ROOM_W, h: Math.floor((r.height + shift) / scale), scale, shift });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -637,8 +639,8 @@ export default function PixelScreen(props: Props) {
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
       {/* 방 무대 — 평소엔 화면 폭과 같고, 화면이 최소 높이보다 짧을 때만 좁아져 가운데에 선다. */}
       <div
-        className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex flex-col"
-        style={{ width: size ? size.w * size.scale : '100%' }}
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col"
+        style={{ width: size ? size.w * size.scale : '100%', top: size ? -size.shift : 0 }}
       >
         {/* 기본 벽지·바닥 — 캔버스 뒤에 원본 해상도로 깐다. 벽지·바닥재를 고르면 캔버스가 그 위를 덮는다.
             방 크기를 재기 전(첫 렌더)부터 그린다. 크기를 잰 뒤에 그리면 그만큼 바닥이 늦게 떠 깜빡인다.
@@ -683,6 +685,16 @@ export default function PixelScreen(props: Props) {
       </div>
     </div>
   );
+}
+
+/** 상태바 높이(CSS px). env() 는 커스텀 속성 값으로 읽으면 풀리지 않을 수 있어 요소 높이로 잰다. */
+function measureSafeTop() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;visibility:hidden;pointer-events:none;height:var(--safe-area-top)';
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
 }
 
 /** 방 밖으로 나간 배치를 안으로 당긴다. 저장값은 건드리지 않고 그릴 때만 쓴다. */
