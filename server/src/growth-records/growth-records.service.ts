@@ -167,6 +167,9 @@ export class GrowthRecordsService {
       lastFeedingAt: feeding?.startAt ?? null,
       lastSleepAt: sleepAt ?? null,
       canEndSleep: this.canFinishHomeSleep(latestRecord),
+      pendingSleepRecordId: this.canFinishHomeSleep(latestRecord)
+        ? (latestRecord?.id ?? null)
+        : null,
       lastDiaperAt: diaper?.startAt ?? null,
       // 전체 아이 목록(순서 고정) — 위젯 페이징용
       children: all.map((c) => ({ id: c.id, name: c.name })),

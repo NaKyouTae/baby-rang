@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 interface LastRecords {
   childId: string;
   canEndSleep: boolean;
+  pendingSleepRecordId: string | null;
   sleepAt: string | null;
   feedingAt: string | null;
   diaperAt: string | null;
@@ -35,6 +36,8 @@ async function fetchLastRecords(childId: string): Promise<LastRecords | null | u
     return {
       childId,
       canEndSleep: data.canEndSleep === true,
+      pendingSleepRecordId:
+        typeof data.pendingSleepRecordId === 'string' ? data.pendingSleepRecordId : null,
       sleepAt: data.lastSleepAt,
       feedingAt: data.lastFeedingAt,
       diaperAt: data.lastDiaperAt,

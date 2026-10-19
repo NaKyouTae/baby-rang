@@ -570,6 +570,8 @@ export default function HomeClient() {
   // 기록 버튼 — 시트 없이 기본값으로 바로 저장한다(기록 화면의 빠른 버튼과 같다).
   const creatingRef = useRef(false);
   const queuedSleepTapRef = useRef(false);
+  const pendingSleepRecordRef = useRef<{ childId: string; recordId: string } | null>(null);
+  const finishedSleepRecordRef = useRef<string | null>(null);
   const createQuickRecordRef = useRef<(
     type: GrowthType,
     action: Exclude<ActionId, 'settings'>,
@@ -583,24 +585,54 @@ export default function HomeClient() {
         if (type === 'SLEEP') queuedSleepTapRef.current = true;
         return;
       }
+      if (type !== 'SLEEP') pendingSleepRecordRef.current = null;
       creatingRef.current = true;
       const now = new Date().toISOString();
       const fd = new FormData();
-      fd.append('childId', childId);
-      fd.append('type', type);
-      fd.append('quickRecord', 'true');
-      fd.append('startAt', now);
-      if (TYPE_CONFIG[type].showEndPicker) fd.append('endAt', now);
-      fd.append('memo', '');
       const data = buildDefaultRecordData(type);
-      fd.append('data', JSON.stringify(data));
-      fd.append('keepImageUrls', JSON.stringify([]));
+      const summarySleepRecordId =
+        lastRecords?.childId === childId && lastRecords.canEndSleep
+          ? lastRecords.pendingSleepRecordId
+          : null;
+      const pendingSleepRecordId =
+        type === 'SLEEP'
+          ? (pendingSleepRecordRef.current?.childId === childId
+              ? pendingSleepRecordRef.current.recordId
+              : summarySleepRecordId !== finishedSleepRecordRef.current
+                ? summarySleepRecordId
+                : null)
+          : null;
+      if (pendingSleepRecordId) {
+        fd.append('endAt', now);
+      } else {
+        fd.append('childId', childId);
+        fd.append('type', type);
+        fd.append('quickRecord', 'true');
+        fd.append('startAt', now);
+        if (TYPE_CONFIG[type].showEndPicker) fd.append('endAt', now);
+        fd.append('memo', '');
+        fd.append('data', JSON.stringify(data));
+        fd.append('keepImageUrls', JSON.stringify([]));
+      }
       let succeeded = false;
       try {
-        const res = await fetch('/api/growth-records', { method: 'POST', body: fd });
+        const res = await fetch(
+          pendingSleepRecordId ? `/api/growth-records/${pendingSleepRecordId}` : '/api/growth-records',
+          { method: pendingSleepRecordId ? 'PATCH' : 'POST', body: fd },
+        );
         if (res.ok) {
           succeeded = true;
-          showToast(`${label} 기록 완료`);
+          const savedRecord = await res.json().catch(() => null);
+          if (type === 'SLEEP') {
+            if (pendingSleepRecordId) {
+              pendingSleepRecordRef.current = null;
+              finishedSleepRecordRef.current = pendingSleepRecordId;
+            } else {
+              pendingSleepRecordRef.current =
+                typeof savedRecord?.id === 'string' ? { childId, recordId: savedRecord.id } : null;
+            }
+          }
+          showToast(pendingSleepRecordId ? '수면 종료 기록 완료' : `${label} 기록 완료`);
           const kind = data.kind;
           setReaction({
             key: Date.now(),
@@ -627,7 +659,7 @@ export default function HomeClient() {
         }
       }
     },
-    [childId, refreshLastRecords, reloadInventory, showToast],
+    [childId, lastRecords, refreshLastRecords, reloadInventory, showToast],
   );
   createQuickRecordRef.current = createQuickRecord;
 

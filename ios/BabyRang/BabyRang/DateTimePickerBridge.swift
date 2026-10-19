@@ -58,7 +58,7 @@ private final class NativeDateTimePickerController: UIViewController {
     private let initial: Date
     private let mode: String
     private let picker = UIDatePicker()
-    private let feedback = UISelectionFeedbackGenerator()
+    private let feedback = UIImpactFeedbackGenerator(style: .light)
     private var finished = false
     var onResult: ((String?) -> Void)?
 
@@ -154,7 +154,7 @@ private final class NativeDateTimePickerController: UIViewController {
     }
 
     @objc private func selectionChanged() {
-        feedback.selectionChanged()
+        feedback.impactOccurred(intensity: 0.65)
         feedback.prepare()
     }
 

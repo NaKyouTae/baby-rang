@@ -85,7 +85,7 @@ struct WebView: UIViewRepresentable {
         private let onLoad: () -> Void
         private let adSlot: AdSlotModel
         private var hasNotifiedLoad = false
-        private let selectionFeedback = UISelectionFeedbackGenerator()
+        private let selectionFeedback = UIImpactFeedbackGenerator(style: .light)
         /// 인앱결제 요청을 처리한다. makeUIView 에서 webView 를 물려준다.
         let storeKit = StoreKitBridge()
         /// 카카오톡 앱 로그인을 처리한다.
@@ -137,7 +137,7 @@ struct WebView: UIViewRepresentable {
                 return
             }
             if message.name == "selectionFeedback" {
-                selectionFeedback.selectionChanged()
+                selectionFeedback.impactOccurred(intensity: 0.65)
                 selectionFeedback.prepare()
                 return
             }

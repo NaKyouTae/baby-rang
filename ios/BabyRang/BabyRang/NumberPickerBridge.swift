@@ -56,7 +56,7 @@ private final class NativeNumberPickerController: UIViewController, UIPickerView
     private let labels: [String]
     private let initial: Int
     private let picker = UIPickerView()
-    private let feedback = UISelectionFeedbackGenerator()
+    private let feedback = UIImpactFeedbackGenerator(style: .light)
     private var lastSelection: Int
     private var finished = false
     var onResult: ((Int?) -> Void)?
@@ -130,7 +130,7 @@ private final class NativeNumberPickerController: UIViewController, UIPickerView
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         guard row != lastSelection else { return }
         lastSelection = row
-        feedback.selectionChanged()
+        feedback.impactOccurred(intensity: 0.65)
         feedback.prepare()
     }
 
