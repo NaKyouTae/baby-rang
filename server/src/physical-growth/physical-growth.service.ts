@@ -43,15 +43,7 @@ export class PhysicalGrowthService {
     if (!input.measuredAt || !/^\d{4}-\d{2}-\d{2}$/.test(input.measuredAt)) {
       throw new BadRequestException('measuredAt must be YYYY-MM-DD');
     }
-    if (
-      input.heightCm == null &&
-      input.weightKg == null &&
-      input.headCircumCm == null
-    ) {
-      throw new BadRequestException(
-        '키, 몸무게, 머리둘레 중 하나 이상 입력해주세요.',
-      );
-    }
+    // 측정일만 필수다. 키·몸무게·머리둘레는 모두 선택이라 측정일만 있는 기록도 만든다.
 
     return this.prisma.$transaction(async (tx) => {
       const record = await tx.physicalGrowth.create({
@@ -75,9 +67,9 @@ export class PhysicalGrowthService {
     id: string,
     input: {
       measuredAt?: string;
-      heightCm?: number;
-      weightKg?: number;
-      headCircumCm?: number;
+      heightCm?: number | null;
+      weightKg?: number | null;
+      headCircumCm?: number | null;
       memo?: string;
     },
   ) {

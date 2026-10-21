@@ -116,11 +116,13 @@ export class GrowthRecordsService {
     // 요청된 아이가 접근 가능 목록에 있으면 그 아이, 아니면 첫 아이.
     const selected = (childId && all.find((c) => c.id === childId)) || all[0];
 
+    // 홈·위젯의 '수유' 칸은 먹은 기록 전체 중 가장 최근 것이다. 마지막이 이유식이면 이유식 시각을 보여준다.
     const FEEDING_TYPES: GrowthRecordType[] = [
       'BREASTFEEDING',
       'FORMULA',
       'PUMPED_FEEDING',
       'MILK',
+      'BABY_FOOD',
     ];
     // 수유·기저귀: 시작 시각 기준
     const latestByStart = (where: Prisma.GrowthRecordWhereInput) =>

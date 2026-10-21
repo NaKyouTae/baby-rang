@@ -40,10 +40,10 @@ export class PhysicalGrowthController {
   update(@Req() req, @Param('id') id: string, @Body() body: any) {
     return this.service.update(req.user.id, id, {
       measuredAt: body.measuredAt,
-      heightCm: body.heightCm != null ? Number(body.heightCm) : undefined,
-      weightKg: body.weightKg != null ? Number(body.weightKg) : undefined,
-      headCircumCm:
-        body.headCircumCm != null ? Number(body.headCircumCm) : undefined,
+      // 수정에서는 null 이 '값 지움'이다. 빼고 보내면(undefined) 그대로 둔다.
+      heightCm: optionalNumber(body.heightCm),
+      weightKg: optionalNumber(body.weightKg),
+      headCircumCm: optionalNumber(body.headCircumCm),
       memo: body.memo,
     });
   }
@@ -52,4 +52,11 @@ export class PhysicalGrowthController {
   remove(@Req() req, @Param('id') id: string) {
     return this.service.remove(req.user.id, id);
   }
+}
+
+/** undefined 는 그대로(변경 없음), null·빈 문자열은 null(지움), 나머지는 숫자. */
+function optionalNumber(v: unknown): number | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null || v === '') return null;
+  return Number(v);
 }

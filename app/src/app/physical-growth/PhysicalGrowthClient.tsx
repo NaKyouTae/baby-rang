@@ -172,16 +172,23 @@ export default function PhysicalGrowthClient() {
   };
 
   const handleSave = async () => {
-    if (!selected) return;
-    if (!heightCm && !weightKg && !headCircumCm) return;
+    if (!selected || !measuredAt) return;
     setSaving(true);
 
+    // 측정일만 필수, 키·몸무게는 선택이다.
     const body: Record<string, unknown> = {
       childId: selected.id,
       measuredAt,
     };
-    if (heightCm) body.heightCm = parseFloat(heightCm);
-    if (weightKg) body.weightKg = parseFloat(weightKg);
+    if (editingId) {
+      // 수정에서 칸을 비우면 그 값을 지운다(null). 빼고 보내면 서버가 예전 값을 그대로 둔다.
+      body.heightCm = heightCm ? parseFloat(heightCm) : null;
+      body.weightKg = weightKg ? parseFloat(weightKg) : null;
+    } else {
+      if (heightCm) body.heightCm = parseFloat(heightCm);
+      if (weightKg) body.weightKg = parseFloat(weightKg);
+    }
+    // 머리둘레는 입력칸이 없어 기존 값만 그대로 넘긴다.
     if (headCircumCm) body.headCircumCm = parseFloat(headCircumCm);
     if (memo.trim()) body.memo = memo.trim();
 
@@ -251,6 +258,7 @@ export default function PhysicalGrowthClient() {
       openLoginPrompt('로그인하고 우리 아기의 성장 기록을 시작하세요.');
       return;
     }
+    // 측정일은 추가 버튼을 누른 날로 채운다(resetForm). 화면을 오래 띄워 둬도 그날 날짜가 들어간다.
     resetForm();
     setShowForm(true);
   };
@@ -374,6 +382,8 @@ export default function PhysicalGrowthClient() {
                 >
                   <span className="min-w-0 flex flex-col gap-[4px] leading-[1.4] whitespace-nowrap">
                     <span className="flex flex-wrap gap-x-[10px] items-center text-[16px] text-[#121212]">
+                      {/* 키·몸무게는 선택이라 측정일만 있는 기록도 있다 */}
+                      {values.length === 0 && <span className="text-[#808991]">측정값 없음</span>}
                       {values.map((v, i) => (
                         <span key={v} className="flex gap-[10px] items-center">
                           {i > 0 && <span aria-hidden>･</span>}
@@ -435,7 +445,7 @@ export default function PhysicalGrowthClient() {
 
             {/* 키 */}
             <div className="flex flex-col gap-[8px]">
-              <p className={FIELD_LABEL}>키(cm)</p>
+              <p className={FIELD_LABEL}>키(cm) (선택)</p>
               <input
                 type="number"
                 inputMode="decimal"
@@ -450,7 +460,7 @@ export default function PhysicalGrowthClient() {
 
             {/* 몸무게 */}
             <div className="flex flex-col gap-[8px]">
-              <p className={FIELD_LABEL}>몸무게(kg)</p>
+              <p className={FIELD_LABEL}>몸무게(kg) (선택)</p>
               <input
                 type="number"
                 inputMode="decimal"

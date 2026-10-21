@@ -153,7 +153,7 @@ export default function GemStore({
       </div>
 
       <div
-        className={`${BOX} h-[48px] shrink-0 flex gap-[10px] items-center justify-center px-[10px]`}
+        className={`${BOX} h-[50px] shrink-0 flex gap-[10px] items-center justify-center px-[10px]`}
       >
         <span className="text-[#121212] text-[16px] leading-none tracking-[2px]">내 보석</span>
         <span className="flex gap-[10px] items-center">
