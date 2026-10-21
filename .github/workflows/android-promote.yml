@@ -1,0 +1,164 @@
+name: Android Promote
+
+# 이미 올라간 AAB를 다른 트랙으로 승격한다(새로 빌드하지 않는다).
+#
+# android-release.yml 은 태그를 밀면 내부 테스트까지만 올린다. 그 뒤 프로덕션 출시는
+# 사람이 판단할 일이라 수동 실행으로 분리해 둔다.
+#
+# 서비스 계정 키는 레포 시크릿에만 둔다. 로컬에 두고 쓰면 사본이 흩어지고,
+# 잃어버리면 출시가 막힌다(실제로 그런 적이 있다).
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode:
+        description: '승격할 versionCode (예: 24)'
+        required: true
+        type: string
+      track:
+        description: '올릴 트랙'
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - beta
+          - alpha
+      releaseNotes:
+        description: '릴리스 노트(ko-KR). 비우면 기존 노트를 유지한다.'
+        required: false
+        type: string
+
+jobs:
+  promote:
+    name: Play 트랙 승격
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: 패키지명 확인
+        id: pkg
+        run: |
+          set -euo pipefail
+          PACKAGE_ID=$(grep -oE 'applicationId "[^"]+"' android/app/build.gradle | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "id=$PACKAGE_ID" >> "$GITHUB_OUTPUT"
+          echo "패키지: $PACKAGE_ID"
+
+      - name: 트랙 승격
+        env:
+          SA_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PACKAGE_ID: ${{ steps.pkg.outputs.id }}
+          VERSION_CODE: ${{ inputs.versionCode }}
+          TRACK: ${{ inputs.track }}
+          RELEASE_NOTES: ${{ inputs.releaseNotes }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$SA_JSON" > "${RUNNER_TEMP}/sa.json"
+          node - <<'JS'
+          const crypto = require('crypto');
+          const fs = require('fs');
+
+          const sa = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/sa.json`, 'utf8'));
+          const pkg = process.env.PACKAGE_ID;
+          const versionCode = process.env.VERSION_CODE;
+          const track = process.env.TRACK;
+          const notes = process.env.RELEASE_NOTES || '';
+          const BASE = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${pkg}`;
+
+          const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+
+          async function token() {
+            const now = Math.floor(Date.now() / 1000);
+            const claim = {
+              iss: sa.client_email,
+              scope: 'https://www.googleapis.com/auth/androidpublisher',
+              aud: 'https://oauth2.googleapis.com/token',
+              iat: now,
+              exp: now + 3600,
+            };
+            const unsigned = `${b64({ alg: 'RS256', typ: 'JWT' })}.${b64(claim)}`;
+            const sig = crypto.sign('RSA-SHA256', Buffer.from(unsigned), sa.private_key).toString('base64url');
+            const res = await fetch('https://oauth2.googleapis.com/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                assertion: `${unsigned}.${sig}`,
+              }),
+            });
+            const data = await res.json();
+            if (!data.access_token) throw new Error(`토큰 발급 실패: ${JSON.stringify(data)}`);
+            return data.access_token;
+          }
+
+          async function call(method, url, body) {
+            const res = await fetch(url, {
+              method,
+              headers: {
+                Authorization: `Bearer ${AT}`,
+                ...(body ? { 'Content-Type': 'application/json' } : {}),
+                ...(method === 'POST' && !body ? { 'Content-Length': '0' } : {}),
+              },
+              ...(body ? { body: JSON.stringify(body) } : {}),
+            });
+            const text = await res.text();
+            const data = text ? JSON.parse(text) : {};
+            if (!res.ok) throw new Error(`${method} ${url} → ${res.status} ${text.slice(0, 400)}`);
+            return data;
+          }
+
+          const AT = await token();
+
+          const edit = await call('POST', `${BASE}/edits`);
+          console.log(`edit=${edit.id}`);
+
+          // 승격할 번들이 실제로 올라와 있는지 먼저 확인한다.
+          const bundles = await call('GET', `${BASE}/edits/${edit.id}/bundles`);
+          const codes = (bundles.bundles || []).map((b) => String(b.versionCode));
+          if (!codes.includes(String(versionCode))) {
+            throw new Error(`versionCode ${versionCode} 가 업로드되어 있지 않습니다. 올라온 것: ${codes.join(', ')}`);
+          }
+
+          // 노트를 비워 두면 해당 트랙의 기존 노트를 그대로 쓴다.
+          let releaseNotes;
+          if (notes.trim()) {
+            releaseNotes = [{ language: 'ko-KR', text: notes }];
+          } else {
+            const cur = await call('GET', `${BASE}/edits/${edit.id}/tracks/${track}`).catch(() => ({}));
+            releaseNotes = (cur.releases || [])[0]?.releaseNotes;
+          }
+
+          const gradle = fs.readFileSync('android/app/build.gradle', 'utf8');
+          const versionName = (gradle.match(/versionName "([^"]+)"/) || [])[1] || versionCode;
+
+          const body = {
+            track,
+            releases: [
+              {
+                name: `${versionName} (${versionCode})`,
+                versionCodes: [String(versionCode)],
+                status: 'completed',
+                ...(releaseNotes ? { releaseNotes } : {}),
+              },
+            ],
+          };
+          const updated = await call('PUT', `${BASE}/edits/${edit.id}/tracks/${track}`, body);
+          console.log('트랙 수정:', JSON.stringify(updated.releases));
+
+          await call('POST', `${BASE}/edits/${edit.id}:validate`);
+          console.log('검증 OK');
+
+          await call('POST', `${BASE}/edits/${edit.id}:commit`);
+          console.log(`✅ ${track} 승격 완료: ${versionName} (${versionCode})`);
+          JS
+
+      - name: 요약
+        run: |
+          {
+            echo "### Play 트랙 승격"
+            echo ""
+            echo "- 패키지: \`${{ steps.pkg.outputs.id }}\`"
+            echo "- versionCode: **${{ inputs.versionCode }}**"
+            echo "- 트랙: \`${{ inputs.track }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
