@@ -222,20 +222,22 @@ export default function DecorateSheet({
                         className="relative flex flex-col gap-[4px] items-center justify-center"
                       >
                         <span
-                          className="size-[50px] flex items-center justify-center rounded-[4px] border overflow-hidden"
+                          className="size-[50px] p-[4px] flex items-center justify-center rounded-[4px] border overflow-hidden"
                           style={
                             mine
                               ? { background: '#FDFDFE', borderColor: '#121212' }
                               : { background: '#F7F8F9', borderColor: '#BBC0C5' }
                           }
                         >
-                          {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다 */}
+                          {/* 그림이 아직 없는 아이템은 디자인대로 빈 상자로 둔다.
+                              그림마다 여백·비율이 달라 cover 로 채우면 가장자리가 잘린다.
+                              안쪽 여백을 두고 contain 으로 넣어 모두 같은 틀 안에 온전히 보이게 한다. */}
                           {item.imageUrl && (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={item.imageUrl}
                               alt=""
-                              className="size-full object-cover"
+                              className="size-full object-contain"
                               style={{ imageRendering: 'pixelated', opacity: mine ? 1 : 0.5 }}
                             />
                           )}
