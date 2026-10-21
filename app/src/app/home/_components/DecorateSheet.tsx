@@ -212,6 +212,8 @@ export default function DecorateSheet({
                 <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
                   {visible.map((item) => {
                     const mine = isOwned(item);
+                    // 유료인데 보유 중이면 구매한 아이템. 무료 아이템과 겉모습이 같아 따로 표시한다.
+                    const bought = item.priceCoins > 0 && mine;
                     return (
                       <button
                         key={item.id}
@@ -248,6 +250,20 @@ export default function DecorateSheet({
                         {!mine && (
                           <span className="absolute left-[36px] top-[4px]">
                             <GemIcon size={10} />
+                          </span>
+                        )}
+                        {/* 구매한 아이템은 같은 자리에 체크 뱃지를 단다 */}
+                        {bought && (
+                          <span
+                            aria-label="구매함"
+                            className="absolute left-[35px] top-[3px] size-[12px] flex items-center justify-center rounded-[2px] border border-[#121212] bg-[#3078C9]"
+                          >
+                            <svg width="8" height="8" viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden>
+                              {/* 픽셀 체크. 열마다 2px 높이 막대를 계단처럼 쌓는다 */}
+                              {[[1, 3], [2, 4], [3, 5], [4, 4], [5, 3], [6, 2]].map(([x, y]) => (
+                                <rect key={x} x={x} y={y} width="1" height="2" fill="#FDFDFE" />
+                              ))}
+                            </svg>
                           </span>
                         )}
                       </button>
