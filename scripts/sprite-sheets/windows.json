@@ -2,23 +2,23 @@
   "items": [
     {
       "name": "window-grid",
-      "w": 48,
-      "h": 48
-    },
-    {
-      "name": "window-arch",
-      "w": 32,
-      "h": 48
-    },
-    {
-      "name": "window-round",
       "w": 32,
       "h": 32
     },
     {
+      "name": "window-arch",
+      "w": 16,
+      "h": 32
+    },
+    {
+      "name": "window-round",
+      "w": 16,
+      "h": 16
+    },
+    {
       "name": "window-curtain",
-      "w": 64,
-      "h": 48
+      "w": 48,
+      "h": 32
     }
   ]
 }

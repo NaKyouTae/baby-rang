@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { preload } from "react-dom";
 import HomeClient from "./_components/HomeClient";
-import { DEFAULT_FLOORING, DEFAULT_WALLPAPER } from "./_components/scene";
 
 export const metadata: Metadata = {
   title: "홈",
@@ -11,9 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  // 홈을 바로 열 때도 바닥 그림을 HTML 과 함께 받기 시작한다
-  preload(DEFAULT_WALLPAPER, { as: "image" });
-  preload(DEFAULT_FLOORING, { as: "image" });
   return (
     <>
       {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 이 링크가 없으면

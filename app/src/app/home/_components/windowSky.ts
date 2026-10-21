@@ -54,9 +54,17 @@ const PALETTES: Record<SkyPhase, Record<SkyCondition, Palette | null>> = {
   },
 };
 
-/** 기기 시각으로 시간대를 고른다. 해 뜨고 지는 무렵(5~7시, 17~19시)은 노을이다. */
+/**
+ * 기기 시각으로 시간대를 고른다. 해 뜨고 지는 무렵(5~7시, 17~19시)은 노을이다.
+ * 방 조명(roomEffects 의 tintAt)도 같은 경계로 바뀐다 — 창밖과 방 안의 시간대가 어긋나지 않게.
+ */
 export function phaseAt(date: Date): SkyPhase {
-  const h = date.getHours();
+  return phaseAtHour(date.getHours() + date.getMinutes() / 60);
+}
+
+/** 시각(0~24, 소수 가능)의 시간대 */
+export function phaseAtHour(hour: number): SkyPhase {
+  const h = ((hour % 24) + 24) % 24;
   if (h >= 7 && h < 17) return 'day';
   if ((h >= 5 && h < 7) || (h >= 17 && h < 19)) return 'dusk';
   return 'night';
@@ -180,18 +188,25 @@ const painted = new Map<string, HTMLCanvasElement>();
 /**
  * 방에 그릴 크기로 줄인 창문 그림(sprite)에 하늘을 다시 칠한 그림.
  * 같은 그림·크기·날씨면 한 번만 만든다. 판별이 안 되면 받은 그림을 그대로 돌려준다.
+ *
+ * step 은 시간 흐름(150ms 마다 1). 구름은 8 step(1.2초)에 한 칸씩 오른쪽으로 흘러가고(창 폭에서 돌아온다),
+ * 비는 step 마다 내려온다. 같은 단계면 같은 그림이라 캐시된다 — 구름은 창 폭, 비는 20 가지에서 돈다.
  */
 export function paintWindowSky(
   url: string,
   img: HTMLImageElement,
   sprite: HTMLCanvasElement,
   sky: WindowSky,
+  step = 0,
 ): HTMLCanvasElement {
   const palette = PALETTES[sky.phase][sky.condition];
   if (!palette) return sprite;
   const W = sprite.width;
   const H = sprite.height;
-  const key = `${url}@${W}x${H}|${sky.condition}-${sky.phase}`;
+  const rainy = !!palette.drop;
+  const cloudShift = rainy ? 0 : Math.floor(step / 8) % W;
+  const rainShift = rainy ? step % 20 : 0;
+  const key = `${url}@${W}x${H}|${sky.condition}-${sky.phase}|${cloudShift}:${rainShift}`;
   const hit = painted.get(key);
   if (hit) return hit;
 
@@ -242,17 +257,31 @@ export function paintWindowSky(
   const star = palette.star ? hex(palette.star) : null;
   const drop = palette.drop ? hex(palette.drop) : null;
   const flake = palette.flake ? hex(palette.flake) : null;
+  // 구름 흐름 — 하늘 자리(하늘·구름)에서만, 왼쪽으로 cloudShift 만큼 떨어진 자리가 구름이었으면 구름으로 칠한다
+  const moved = cloudShift ? new Uint8Array(kinds) : kinds;
+  if (cloudShift) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const k = kinds[y * W + x];
+        if (k !== 1 && k !== 2) continue;
+        const sx = (((x - cloudShift) % W) + W) % W;
+        moved[y * W + x] = kinds[y * W + sx] === 2 ? 2 : 1;
+      }
+    }
+  }
   for (let y = 0; y < H; y++) {
     const t = Math.round(((y - skyTop) / Math.max(1, skyBottom - skyTop)) * 3) / 3;
     const base = mix(top, bottom, t);
     for (let x = 0; x < W; x++) {
-      const k = kinds[y * W + x];
+      const k = moved[y * W + x];
       if (!k) continue;
       // 자리마다 고정된 난수 — 별·눈송이가 매 프레임 튀지 않는다
       const h = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
       let c = k === 1 ? base : k === 2 ? cloud : mix(base, white, 0.3);
       if (star && k === 1 && h % 41 === 0) c = star;
-      if (drop && k !== 2 && (x + (y >> 1)) % 4 === 0 && y % 5 < 3) c = drop;
+      // 빗줄기 — rainShift 만큼 아래로 내려온 자리에 찍는다
+      const ry = y - rainShift * 2 + 40;
+      if (drop && k !== 2 && (x + (ry >> 1)) % 4 === 0 && ry % 5 < 3) c = drop;
       if (flake && h % 11 === 0) c = flake;
       const o = (y * W + x) * 4;
       px[o] = c[0];

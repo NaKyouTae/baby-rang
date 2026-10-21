@@ -8,32 +8,32 @@
     {
       "name": "walker",
       "w": 32,
-      "h": 32
+      "h": 16
     },
     {
       "name": "toy-blocks",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     },
     {
       "name": "teddy-bear",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     },
     {
       "name": "toy-basket",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     },
     {
       "name": "plant",
-      "w": 32,
-      "h": 48
+      "w": 16,
+      "h": 32
     },
     {
       "name": "mood-light",
       "w": 16,
-      "h": 32
+      "h": 16
     }
   ]
 }

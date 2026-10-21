@@ -840,10 +840,6 @@ export default function HomeClient() {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, flipX: !p.flipX } : p)));
   }, []);
 
-  const handleResizePlacement = useCallback((id: string, scale: number, tileX: number, tileY: number) => {
-    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, scale, tileX, tileY } : p)));
-  }, []);
-
   const handleRemovePlacement = useCallback((id: string) => {
     setPlacements((prev) => prev.filter((p) => p.id !== id));
     setRemoveTarget(null);
@@ -863,7 +859,6 @@ export default function HomeClient() {
         editing={editing}
         onMovePlacement={handleMovePlacement}
         onTapPlacement={handleFlipPlacement}
-        onResizePlacement={handleResizePlacement}
         onLongPressPlacement={setRemoveTarget}
         focusId={focusPlacementId}
         onPet={handlePet}

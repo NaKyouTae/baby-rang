@@ -2,18 +2,18 @@
   "items": [
     {
       "name": "garland",
-      "w": 64,
+      "w": 48,
       "h": 16
     },
     {
       "name": "frame-animal",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     },
     {
       "name": "frame-landscape",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     },
     {
       "name": "frame-heart",
@@ -22,18 +22,18 @@
     },
     {
       "name": "wall-shelf",
-      "w": 48,
-      "h": 32
+      "w": 32,
+      "h": 16
     },
     {
       "name": "height-chart",
       "w": 16,
-      "h": 64
+      "h": 48
     },
     {
       "name": "wall-clock",
-      "w": 32,
-      "h": 32
+      "w": 16,
+      "h": 16
     }
   ]
 }

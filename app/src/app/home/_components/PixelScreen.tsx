@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, scaleFor } from './tiles';
-import { MAX_SCALE, getSpriteAt, getWindowSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
-import type { WindowSky } from './windowSky';
-import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, layout, warmRoomImages, type Layout } from './scene';
+import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, pixelScaleFor } from './tiles';
+import { getSpriteAt, getWindowSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
+import { phaseAtHour, type WindowSky } from './windowSky';
+import { floorBottomOf, layout, type Layout } from './scene';
+import { ROOM_VOID, drawBaseboard, drawDefaultFloor, drawDefaultWall, drawRoomFrame } from './roomTiles';
+import { Dust, drawEditGrid, drawFootprint, drawItemShadow, drawLighting, isLamp, tintAt } from './roomEffects';
 import {
   BED_FRONT,
   HEAD_TOP,
@@ -44,8 +46,6 @@ interface Props {
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
   /** 끌지도 길게 누르지도 않고 뗀 탭. 좌우 반전에 쓴다. */
   onTapPlacement: (id: string) => void;
-  /** 크기 배율을 바꾼다. 아랫변 가운데를 기준으로 커지므로 자리도 같이 넘긴다. */
-  onResizePlacement: (id: string, scale: number, tileX: number, tileY: number) => void;
   onLongPressPlacement: (placement: Placement) => void;
   /** 바깥에서 고르게 할 가구. 바뀔 때마다 그 가구를 누른 것처럼 선택한다. */
   focusId?: string | null;
@@ -116,7 +116,6 @@ export default function PixelScreen(props: Props) {
     editing,
     onMovePlacement,
     onTapPlacement,
-    onResizePlacement,
     onLongPressPlacement,
     focusId = null,
     onPet,
@@ -126,10 +125,24 @@ export default function PixelScreen(props: Props) {
 
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number; scale: number; shift: number } | null>(null);
+  /**
+   * w·h 캔버스 크기(방 픽셀, 방 밖 여백 포함) · scale 방 픽셀 하나의 CSS 크기 · shift 위로 올린 높이(CSS)
+   * offsetX 캔버스 안에서 방(12칸)이 시작하는 x · left 캔버스를 둘 CSS x(기기 픽셀에 맞춤)
+   */
+  const [size, setSize] = useState<{
+    w: number;
+    h: number;
+    scale: number;
+    shift: number;
+    offsetX: number;
+    left: number;
+    /** 아래 안전 영역(방 픽셀) */
+    safeBottom: number;
+  } | null>(null);
   // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
   // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
-  const rows = size ? Math.max(ROOM_H_TILES, Math.floor(size.h / TILE)) : ROOM_H_TILES;
+  // 방이 상자라 바닥이 끝나는 곳(floorBottom)까지만 놓을 수 있다.
+  const rows = size ? Math.floor(floorBottomOf(size.h, size.safeBottom) / TILE) : ROOM_H_TILES;
 
   // 드래그 중인 가구. 렌더 루프가 테두리를 그리려고 읽는다.
   const dragIdRef = useRef<string | null>(null);
@@ -151,9 +164,6 @@ export default function PixelScreen(props: Props) {
     setLastFocusId(focusId);
     if (editing && focusId) setSelectedId(focusId);
   }
-
-  // 홈으로 바로 들어온 경우에도 디코딩을 일찍 시작한다(로그인 화면에서 이미 했다면 아무것도 안 한다)
-  useEffect(() => warmRoomImages(), []);
 
   const layoutRef = useRef<Layout | null>(null);
   const petRef = useRef<(nx: number, ny: number) => void>(() => {});
@@ -201,18 +211,29 @@ export default function PixelScreen(props: Props) {
     preloadSprites([wallpaperUrl, flooringUrl]);
   }, [wallpaperUrl, flooringUrl]);
 
-  // 가로는 항상 12칸(ROOM_W)이고 배율로 화면 폭을 채운다. 세로는 화면 비율대로 남는 만큼 바닥이 길어진다.
-  // 그래서 어느 기기에서든 가구가 같은 칸, 같은 벽 경계에 보인다.
+  // 방은 가로 12칸(ROOM_W)이고, 방 픽셀 하나를 기기 픽셀 정수 개로 키운다(pixelScaleFor).
+  // 정수배라 화면 폭과 딱 맞지 않으면 남는 폭은 방 양옆에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
+  // 세로는 화면 비율대로 남는 만큼 바닥이 길어진다. 어느 기기에서든 가구가 같은 칸, 같은 벽 경계에 보인다.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
     const measure = () => {
       const r = host.getBoundingClientRect();
       if (!r.width || !r.height) return;
-      const scale = scaleFor(r.width, r.height);
+      const dpr = window.devicePixelRatio || 1;
+      const snap = (v: number) => Math.round(v * dpr) / dpr;
+      const scale = pixelScaleFor(r.width, r.height, dpr) / dpr;
       // 상태바가 덮는 만큼은 이미 가려져 있으니, 모자란 만큼만 방을 위로 올린다(웹은 상태바가 0).
-      const shift = Math.max(0, Math.round(TOP_HIDDEN * scale - measureSafeTop()));
-      setSize({ w: ROOM_W, h: Math.floor((r.height + shift) / scale), scale, shift });
+      const shift = Math.max(0, snap(TOP_HIDDEN * scale - measureSafeTop()));
+      // 양옆 1픽셀씩 더 그려 둔다. 가운데 맞춤을 기기 픽셀로 반올림해도 화면 끝에 빈 줄이 남지 않게.
+      const w = Math.max(ROOM_W, Math.ceil(r.width / scale) + 2);
+      const h = Math.ceil((r.height + shift) / scale);
+      const offsetX = Math.floor((w - ROOM_W) / 2);
+      // 방(12칸) 가운데가 화면 가운데에 오게 둔다. 기기 픽셀 경계에 맞춰야 픽셀이 반 칸씩 어긋나지 않는다.
+      const left = snap(r.width / 2 - (offsetX + ROOM_W / 2) * scale);
+      const safeCss = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom'));
+      const safeBottom = Number.isFinite(safeCss) ? Math.round(safeCss / scale) : 0;
+      setSize({ w, h, scale, shift, offsetX, left, safeBottom });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -226,13 +247,7 @@ export default function PixelScreen(props: Props) {
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    const css = getComputedStyle(document.documentElement);
-    const safeBottom = (() => {
-      const v = parseFloat(css.getPropertyValue('--safe-area-bottom'));
-      return Number.isFinite(v) ? Math.round(v / size.scale) : 0;
-    })();
-
-    const L: Layout = layout(size.w, size.h, safeBottom);
+    const L: Layout = layout(size.w, size.h, size.safeBottom, size.offsetX);
     layoutRef.current = L;
 
     const wallBottom = FLOOR_TOP;
@@ -329,6 +344,31 @@ export default function PixelScreen(props: Props) {
       world.props = editingRef.current ? [] : live;
     };
     const hearts: { x: number; y: number; at: number }[] = [];
+    const dust = new Dust();
+    /** 가구별 지금 불투명도 — 아이를 가리면 서서히 흐려졌다가 아이가 나오면 서서히 돌아온다 */
+    const fade = new Map<string, number>();
+    // 로컬에서 시간대 조명을 확인하려고 주소에 ?hour=21 처럼 시각을 줄 수 있다(화면 연출만 바뀐다)
+    const hourParam = Number(new URLSearchParams(location.search).get('hour'));
+    const hourOverride = Number.isFinite(hourParam) && location.search.includes('hour=') ? hourParam : null;
+    /** 바닥에 놓인 가구인가 — 러그·창문·벽에 건 것(아랫변이 벽 안)은 그림자를 드리우지 않는다 */
+    const onFloor = (p: Placement) =>
+      p.category !== 'RUG' && p.category !== 'WINDOW' && (p.tileY + hOf(p)) * TILE > FLOOR_TOP;
+    /** 벽에 거는 것끼리, 바닥에 놓는 것끼리만 겹침을 따진다. 러그는 밑에 깔리므로 겹쳐도 된다. */
+    const zoneOf = (p: Placement) => (p.category === 'WINDOW' || (p.tileY + hOf(p)) * TILE <= FLOOR_TOP ? 'wall' : 'floor');
+    const blockedAt = (p: Placement) =>
+      p.category !== 'RUG' &&
+      placementsRef.current.some(
+        (q) =>
+          q.id !== p.id &&
+          q.category !== 'RUG' &&
+          zoneOf(q) === zoneOf(p) &&
+          q.tileX < p.tileX + wOf(p) &&
+          p.tileX < q.tileX + wOf(q) &&
+          q.tileY < p.tileY + hOf(p) &&
+          p.tileY < q.tileY + hOf(q),
+      );
+    /** 기거나 걷는 행동 — 발밑에 먼지가 인다(빠를수록 자주) */
+    const DUST_GAP: Record<string, number> = { crawl: 260, cruise: 300, toddle: 220, walk: 240, run: 140, pushWalker: 220 };
 
     // 쓰다듬기 — 누른 곳에서 가장 가까운 아이가 반응한다
     petRef.current = (nx, ny) => {
@@ -360,7 +400,11 @@ export default function PixelScreen(props: Props) {
       world.night = hour >= 20 || hour < 7;
       // 꾸미는 동안에도 아이들은 논다. 공·보행기만 놓인 자리에 고정해 집어 옮길 수 있게 한다(syncWorld).
       updateWorld(world, dt);
-      for (const b of babies) updateActor(b, now, dt, world);
+      for (const b of babies) {
+        updateActor(b, now, dt, world);
+        const gap = DUST_GAP[b.act];
+        if (b.moving && !b.reaction && gap) dust.step(b, b.x, b.y, now, gap);
+      }
 
       // 캔버스는 아기 해상도(RES)만큼 촘촘하다. 좌표는 전부 방 픽셀로 쓰고 여기서 한 번 키운다.
       // 방·가구는 칸마다 RES×RES 로 그대로 커지고, 아기 그림만 그 격자를 다 쓴다.
@@ -368,20 +412,39 @@ export default function PixelScreen(props: Props) {
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, L.w, L.h);
 
-      // 기본 벽지·바닥은 캔버스 뒤에 깔린 이미지다. 고른 벽지·바닥재만 캔버스에 덮는다.
       const slots = slotsRef.current;
 
-      // 벽지·바닥재 — 자리가 고정돼 있어 벽/바닥 전체를 타일로 채운다
+      // 벽지·바닥재 — 자리가 고정돼 있어 벽/바닥 전체를 타일로 채운다.
+      // 고른 것이 없거나 그림을 아직 못 받았으면 코드로 찍은 기본 벽지·마루를 깐다(아기·가구와 같은 픽셀 격자).
+      // 무늬는 방 왼쪽 끝(offsetX)에 맞춰 반복해 방 밖 여백까지 같은 격자로 이어진다.
       const tileFill = (url: string | null, y0: number, y1: number) => {
         // 타일 크기로 미리 줄인 그림을 1:1 로 깐다
         const img = url ? getSpriteAt(url, TILE, TILE) : null;
-        if (!img) return;
+        if (!img) return false;
+        const startX = L.offsetX - Math.ceil(L.offsetX / TILE) * TILE;
         for (let ty = y0; ty < y1; ty += TILE) {
-          for (let tx = 0; tx < L.w; tx += TILE) ctx.drawImage(img, tx, ty);
+          for (let tx = startX; tx < L.w; tx += TILE) ctx.drawImage(img, tx, ty);
         }
+        return true;
       };
-      tileFill(slots.wallpaperUrl, 0, wallBottom);
-      tileFill(slots.flooringUrl, wallBottom, L.h);
+      // 방은 상자다 — 방 바깥(양옆 여백, 바닥 아래)은 어둡게 비우고, 벽·바닥은 방 안에만 깐다
+      ctx.fillStyle = ROOM_VOID;
+      ctx.fillRect(0, 0, L.w, L.h);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(L.offsetX, 0, ROOM_W, L.floorBottom);
+      ctx.clip();
+      if (!tileFill(slots.wallpaperUrl, 0, wallBottom)) drawDefaultWall(ctx, L.offsetX, L.w, wallBottom);
+      if (!tileFill(slots.flooringUrl, wallBottom, L.floorBottom)) {
+        drawDefaultFloor(ctx, L.offsetX, L.w, wallBottom, L.floorBottom);
+      }
+      drawBaseboard(ctx, L.w, wallBottom);
+      // 꾸미기 중에는 칸 격자를 보여 준다 — 가구가 칸에 맞춰 붙는다는 걸 알 수 있게
+      if (editingRef.current) drawEditGrid(ctx, L.offsetX, ROOM_W, L.floorBottom, TILE);
+      ctx.restore();
+      drawRoomFrame(ctx, L.offsetX, L.offsetX + ROOM_W, L.floorBottom);
+      // 발밑 먼지 — 바닥 높이라 가구·아기보다 먼저 그린다
+      dust.draw(ctx, now);
 
       /**
        * 그리기 순서.
@@ -395,7 +458,16 @@ export default function PixelScreen(props: Props) {
       const furniture: { id: string; base: number; rect: Rect; draw: () => void }[] = [];
       const dynamics: { depth: number; rect: Rect; after?: string; draw: () => void }[] = [];
       const all = placementsRef.current;
+      // 창밖 시간대와 방 조명은 같은 시각으로 정한다(확인용 ?hour= 도 둘 다에 먹는다)
+      const clock = new Date();
+      const hourNow = hourOverride ?? clock.getHours() + clock.getMinutes() / 60;
+      const skyPhase = phaseAtHour(hourNow);
       const ordered = [...all.filter((p) => p.category === 'RUG'), ...all.filter((p) => p.category !== 'RUG')];
+      // 아이 몸이 차지하는 자리(그림 칸보다 좁게 — 머리부터 발까지). 앞쪽 가구가 이 자리를 덮으면 그 가구를 흐리게 한다.
+      // 스타듀밸리처럼 캐릭터를 가리는 앞쪽 물체만 반투명해져, 가구 뒤로 간 아이가 사라지지 않는다.
+      const bodies = babies
+        .filter((b) => !b.inBed)
+        .map((b) => ({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 24, y1: b.y, depth: actorDepth(b), spot: b.spot?.id }));
 
       for (const p of ordered) {
         // 공·보행기는 지금 위치에 따로 그린다
@@ -423,18 +495,34 @@ export default function PixelScreen(props: Props) {
         const py0 = p.tileY * TILE;
         const pw = Math.round(wOf(p) * TILE);
         const ph = Math.round(hOf(p) * TILE);
-        const sky = windowSkyRef.current;
+        // 창문 밖 하늘 — 모든 창문이 지금 시간대(낮·노을·밤)로 칠해진다. 날씨는 날씨 창문만 따른다(나머지는 맑음).
+        const isWindow = p.category === 'WINDOW' || p.dynamicSlot === 'WEATHER';
+        const sky: WindowSky = {
+          condition: p.dynamicSlot === 'WEATHER' ? (windowSkyRef.current?.condition ?? 'clear') : 'clear',
+          phase: skyPhase,
+        };
         const img = !p.imageUrl
           ? null
-          : p.dynamicSlot === 'WEATHER' && sky
-            ? getWindowSpriteAt(p.imageUrl, pw, ph, sky)
+          : isWindow
+            ? getWindowSpriteAt(p.imageUrl, pw, ph, sky, Math.floor(now / 150))
             : getSpriteAt(p.imageUrl, pw, ph);
         const dragging = dragIdRef.current === p.id || selectedRef.current === p.id;
+        const shadow = onFloor(p);
+        const base = (p.tileY + hOf(p)) * TILE;
+        const rect = { x0: px0, y0: py0, x1: px0 + pw, y1: py0 + ph };
+        // 이 가구가 아이보다 앞(아랫변이 발보다 아래)에 있고 아이 몸을 덮는가. 앉거나 올라탄 그 가구는 빼고.
+        const covers =
+          p.category !== 'RUG' && bodies.some((o) => o.spot !== p.id && base > o.depth && overlap(rect, o));
+        const alpha0 = fade.get(p.id) ?? 1;
+        const alpha = alpha0 + ((covers ? 0.45 : 1) - alpha0) * Math.min(1, dt * 8);
+        fade.set(p.id, alpha);
         furniture.push({
           id: p.id,
-          base: p.category === 'RUG' ? -Infinity : (p.tileY + hOf(p)) * TILE,
-          rect: { x0: px0, y0: py0, x1: px0 + pw, y1: py0 + ph },
+          base: p.category === 'RUG' ? -Infinity : base,
+          rect,
           draw: () => {
+            if (shadow) drawItemShadow(ctx, img, px0, py0, pw, ph, p.flipX);
+            ctx.globalAlpha = alpha;
             if (img && p.flipX) {
               ctx.save();
               ctx.translate(px0 + pw, py0);
@@ -448,11 +536,9 @@ export default function PixelScreen(props: Props) {
               ctx.fillStyle = 'rgba(122,90,54,.35)';
               ctx.fillRect(px0, py0, pw, ph);
             }
-            if (dragging) {
-              ctx.strokeStyle = '#FFFBEF';
-              ctx.lineWidth = 1;
-              ctx.strokeRect(px0 + 0.5, py0 + 0.5, pw - 1, ph - 1);
-            }
+            ctx.globalAlpha = 1;
+            // 고르거나 옮기는 가구 — 차지하는 칸을 초록(비었음)·빨강(다른 가구와 겹침)으로 덮는다
+            if (dragging) drawFootprint(ctx, px0, py0, pw, ph, blockedAt(p));
           },
         });
       }
@@ -507,6 +593,15 @@ export default function PixelScreen(props: Props) {
         const group = insertAt.get(i);
         if (group) for (const d of group.sort((a, b) => a.depth - b.depth)) d.draw();
         if (i < furniture.length) furniture[i].draw();
+      }
+
+      // 시간대 조명 — 저녁은 주황빛, 밤은 어둑하게. 밤에는 조명 아이템 둘레만 밝게 남긴다.
+      const tint = tintAt(hourNow);
+      if (tint.a > 0) {
+        const lamps = all
+          .filter(isLamp)
+          .map((p) => ({ x: L.offsetX + (p.tileX + wOf(p) / 2) * TILE, y: (p.tileY + hOf(p) * 0.35) * TILE }));
+        drawLighting(ctx, L.w, L.h, tint, lamps);
       }
 
       // 하트 — 쓰다듬으면 머리 위로 떠오른다
@@ -631,49 +726,15 @@ export default function PixelScreen(props: Props) {
     dragIdRef.current = null;
   };
 
-  /** 배율을 바꾼다. 아랫변 가운데를 붙잡고 커지게 해서 바닥에 놓인 자리가 튀지 않게 한다. */
-  const fits = (p: Placement, scale: number) => p.tileW * scale <= ROOM_W_TILES && p.tileH * scale <= rows;
-  const resizeTo = (p: Placement, scale: number) => {
-    if (scale < 1 || scale > MAX_SCALE || !fits(p, scale)) return;
-    const nw = p.tileW * scale;
-    const nh = p.tileH * scale;
-    const tx = p.tileX + Math.round((wOf(p) - nw) / 2);
-    const ty = p.tileY + (hOf(p) - nh);
-    onResizePlacement(
-      p.id,
-      scale,
-      Math.min(Math.max(tx, 0), ROOM_W_TILES - nw),
-      Math.min(Math.max(ty, 0), rows - nh),
-    );
-  };
-
-  const found = editing && selectedId ? placements.find((p) => p.id === selectedId) : null;
-  const selected = found ? clampToRoom(found, rows) : null;
-
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
-      {/* 방 무대 — 평소엔 화면 폭과 같고, 화면이 최소 높이보다 짧을 때만 좁아져 가운데에 선다. */}
-      <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col"
-        style={{ width: size ? size.w * size.scale : '100%', top: size ? -size.shift : 0 }}
-      >
-        {/* 기본 벽지·바닥 — 캔버스 뒤에 원본 해상도로 깐다. 벽지·바닥재를 고르면 캔버스가 그 위를 덮는다.
-            방 크기를 재기 전(첫 렌더)부터 그린다. 크기를 잰 뒤에 그리면 그만큼 바닥이 늦게 떠 깜빡인다.
-            벽 높이는 방 폭에 비례하므로(FLOOR_TOP / ROOM_W) 재기 전에도 aspect-ratio 로 캔버스와 같은 경계가 나온다. */}
+      {/* 방 무대 — 캔버스 크기(방 픽셀 × 정수배)를 그대로 쓴다. 화면보다 조금 넓으면 양옆이 잘린다.
+          기본 벽지·바닥도 캔버스에 찍으므로 그림을 따로 받을 일이 없다(첫 화면부터 바로 그려진다). */}
+      {size && (
         <div
-          aria-hidden
-          className="w-full shrink-0"
-          style={{
-            aspectRatio: `${ROOM_W} / ${FLOOR_TOP}`,
-            background: `#EEF0F1 url(${DEFAULT_WALLPAPER}) center / 100% 100% no-repeat`,
-          }}
-        />
-        <div
-          aria-hidden
-          className="w-full flex-1"
-          style={{ background: `#D8DBDE url(${DEFAULT_FLOORING}) top center / cover no-repeat` }}
-        />
-        {size && (
+          className="absolute"
+          style={{ left: size.left, top: -size.shift, width: size.w * size.scale, height: size.h * size.scale }}
+        >
           <canvas
             ref={canvasRef}
             width={size.w * RES}
@@ -683,21 +744,12 @@ export default function PixelScreen(props: Props) {
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
             aria-label={`${kids.map((k) => k.name).join(', ')}의 방`}
-            // 뒤에 깐 기본 벽지·바닥 위에 겹친다
             className="absolute inset-0 w-full h-full"
             // 이게 없으면 브라우저가 보간해서 픽셀 아트가 뭉개진다
             style={{ imageRendering: 'pixelated', touchAction: 'manipulation' }}
           />
-        )}
-        {size && selected && (
-          <ScaleControl
-            placement={selected}
-            room={size}
-            canGrow={(selected.scale ?? 1) < MAX_SCALE && fits(selected, (selected.scale ?? 1) + 1)}
-            onChange={(scale) => resizeTo(selected, scale)}
-          />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -717,63 +769,6 @@ function clampToRoom(p: Placement, rows: number): Placement {
   const tileX = Math.min(Math.max(p.tileX, 0), Math.max(0, ROOM_W_TILES - wOf(p)));
   const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, rows - hOf(p)));
   return tileX === p.tileX && tileY === p.tileY ? p : { ...p, tileX, tileY };
-}
-
-const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
-
-/**
- * 고른 가구 위에 띄우는 크기 버튼(− 배율 +).
- * 마우스와 터치에서 똑같이 동작해야 해서 핀치 대신 버튼으로 둔다.
- */
-function ScaleControl({
-  placement: p,
-  room,
-  canGrow,
-  onChange,
-}: {
-  placement: Placement;
-  room: { w: number; h: number };
-  canGrow: boolean;
-  onChange: (scale: number) => void;
-}) {
-  const scale = p.scale ?? 1;
-  const top = (p.tileY * TILE) / room.h;
-  const bottom = ((p.tileY + hOf(p)) * TILE) / room.h;
-  const center = ((p.tileX + wOf(p) / 2) * TILE) / room.w;
-  // 방 위쪽에 붙은 가구는 버튼이 화면 밖으로 나가므로 아래에 띄운다
-  const below = top < 0.12;
-  return (
-    <div
-      className={`${BOX} absolute z-10 flex items-center h-[36px]`}
-      style={{
-        left: `clamp(64px, ${center * 100}%, calc(100% - 64px))`,
-        top: `${(below ? bottom : top) * 100}%`,
-        transform: below ? 'translate(-50%, 8px)' : 'translate(-50%, calc(-100% - 8px))',
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => onChange(scale - 1)}
-        disabled={scale <= 1}
-        aria-label="작게"
-        className="w-[40px] h-full flex items-center justify-center text-[18px] text-[#121212] active:translate-y-px disabled:text-[#DFE0E1]"
-      >
-        −
-      </button>
-      <span className="min-w-[32px] text-center text-[12px] leading-[1.4] text-[#121212] tabular-nums" aria-live="polite">
-        {scale}배
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(scale + 1)}
-        disabled={!canGrow}
-        aria-label="크게"
-        className="w-[40px] h-full flex items-center justify-center text-[18px] text-[#121212] active:translate-y-px disabled:text-[#DFE0E1]"
-      >
-        +
-      </button>
-    </div>
-  );
 }
 
 /** 좌우 반전이 필요하면 뒤집어서 그린다. h 를 주면 그 크기로 늘려 그린다. */

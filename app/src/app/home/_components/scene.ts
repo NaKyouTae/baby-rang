@@ -10,36 +10,28 @@
  *   3) 빈 바닥을 두지 않고 소품으로 채운다
  */
 
-import { TILE, WALL_TILES } from './tiles';
+import { ROOM_W, TILE, WALL_TILES } from './tiles';
 
 export interface Layout {
   w: number;
   h: number;
   offsetX: number;
+  /** 바닥이 끝나는 y. 그 아래(하단 탭바 뒤)는 방 바깥이다. */
+  floorBottom: number;
   walk: { x0: number; x1: number; y0: number; y1: number };
 }
 
 /**
- * 기본 벽지·바닥 — 벽지나 바닥재를 고르지 않은 방은 모두 이 그림이다.
- * 픽셀 캔버스에 넣으면 흐려지므로 캔버스 뒤에 원본 해상도 그대로 깐다(PixelScreen).
- * 이미지는 public 에 있어 별도 다운로드 목록 없이 첫 화면에 바로 쓴다.
+ * 바닥 끝에서 캔버스 아래 끝(안전 영역 제외)까지의 높이(방 픽셀). 하단 탭바가 이 자리에 뜬다.
+ * 방을 상자로 보이게 바닥은 탭바 바로 위에서 끝내고 앞쪽 마감선을 그린다.
  */
-export const DEFAULT_WALLPAPER = '/room/default-wallpaper.png';
-export const DEFAULT_FLOORING = '/room/default-flooring.webp';
+export const BELOW_FLOOR = 48;
+/** 바닥 끝에서 아이 발까지 띄우는 높이 — 앞쪽 마감선에 발이 걸치지 않게 */
+const FEET_GAP = 6;
 
-/**
- * 기본 벽지·바닥을 미리 받아 디코딩까지 해 둔다. 홈에 들어오기 전 화면(로그인 등)에서 부르면
- * 홈의 첫 화면에 바닥이 늦게 떠 깜빡이는 일이 없다. 디코딩한 그림은 이 배열이 붙잡고 있는 동안 메모리에 남는다.
- */
-const warmed: HTMLImageElement[] = [];
-export function warmRoomImages() {
-  if (typeof window === 'undefined' || warmed.length) return;
-  for (const src of [DEFAULT_WALLPAPER, DEFAULT_FLOORING]) {
-    const img = new Image();
-    img.src = src;
-    img.decode?.().catch(() => {});
-    warmed.push(img);
-  }
+/** 바닥이 끝나는 y — 캔버스 높이(h)와 아래 안전 영역(방 픽셀)으로 정한다. */
+export function floorBottomOf(h: number, safeBottom: number) {
+  return h - safeBottom - BELOW_FLOOR;
 }
 
 /**
@@ -65,18 +57,23 @@ export type CategoryTabId = (typeof CATEGORY_TABS)[number]['id'];
 
 /* ------------------------------------------------------------------ 레이아웃 */
 
-export function layout(w: number, h: number, safeBottom: number): Layout {
+/**
+ * w·h 는 캔버스 전체(방 밖 여백 포함), offsetX 는 그 안에서 방(가로 12칸)이 시작하는 x.
+ * 정수배로만 키우느라 화면 폭이 12칸보다 조금 넓으면 그만큼 방 양옆이 남는다.
+ */
+export function layout(w: number, h: number, safeBottom: number, offsetX = 0): Layout {
+  const floorBottom = floorBottomOf(h, safeBottom);
   return {
     w,
     h,
-    // 방이 캔버스 가로를 꽉 채우므로 가운데 정렬 오프셋이 필요 없다
-    offsetX: 0,
-    // 아이가 돌아다니는 범위. 위는 벽, 아래는 하단 UI 를 피한다.
+    offsetX,
+    floorBottom,
+    // 아이가 돌아다니는 범위. 위는 벽, 아래는 하단 UI 를 피한다. 가로는 방 안(12칸)에서만.
     walk: {
-      x0: 1.5 * TILE,
-      x1: w - 1.5 * TILE,
+      x0: offsetX + 1.5 * TILE,
+      x1: offsetX + ROOM_W - 1.5 * TILE,
       y0: (WALL_TILES + 3) * TILE,
-      y1: h - safeBottom - 46,
+      y1: floorBottom - FEET_GAP,
     },
   };
 }

@@ -42,8 +42,13 @@ export type Placement = {
 export const MAX_SCALE = 3;
 
 /** 화면에서 차지하는 가로·세로 칸 — 원래 칸 수 × 배율 */
-export const wOf = (p: Pick<Placement, 'tileW' | 'scale'>) => p.tileW * (p.scale ?? 1);
-export const hOf = (p: Pick<Placement, 'tileH' | 'scale'>) => p.tileH * (p.scale ?? 1);
+/**
+ * 차지하는 칸 수. 크기 배율(scale)은 쓰지 않는다 — 키운 가구는 픽셀이 아기보다 2~3배 굵어져
+ * 한 화면에 픽셀 크기가 섞인다(스타듀밸리처럼 모든 그림이 같은 픽셀 크기여야 깔끔하다).
+ * 크기가 다른 가구가 필요하면 그림을 따로 만든다. 저장된 scale 값은 지우지 않고 무시만 한다.
+ */
+export const wOf = (p: Pick<Placement, 'tileW'>) => p.tileW;
+export const hOf = (p: Pick<Placement, 'tileH'>) => p.tileH;
 
 /**
  * 스프라이트 이미지 캐시.
@@ -108,11 +113,12 @@ export function getSpriteAt(url: string, w: number, h: number): HTMLCanvasElemen
  * 창문(dynamicSlot = WEATHER) 그림. 줄인 그림에 지금 날씨·시간대 하늘을 칠한다.
  * 맑은 낮이거나 판별이 안 되면 줄인 그림 그대로다.
  */
-export function getWindowSpriteAt(url: string, w: number, h: number, sky: WindowSky): HTMLCanvasElement | null {
+/** step 은 하늘 움직임(구름 흐름·빗줄기)의 시간 단계 — paintWindowSky 참고 */
+export function getWindowSpriteAt(url: string, w: number, h: number, sky: WindowSky, step = 0): HTMLCanvasElement | null {
   const sprite = getSpriteAt(url, w, h);
   const img = cache.get(url);
   if (!sprite || !img) return sprite;
-  return paintWindowSky(url, img, sprite, sky);
+  return paintWindowSky(url, img, sprite, sky, step);
 }
 
 /**
