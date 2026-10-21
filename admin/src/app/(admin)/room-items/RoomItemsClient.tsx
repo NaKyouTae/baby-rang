@@ -296,29 +296,46 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
         </Card>
       )}
 
-      <div className="space-y-3">
+      {/* 그림을 보고 고르는 화면이라 바둑판으로 늘어놓는다. 칸은 화면 폭에 맞춰 늘거나 준다. */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
         {visible.map((item) => (
           <Card
             key={item.id}
-            className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4 transition-shadow hover:shadow-md"
+            className={`flex flex-col overflow-hidden transition-shadow hover:shadow-md ${item.isActive ? "" : "opacity-60"}`}
           >
-            <div className="relative w-full sm:w-20 h-16 shrink-0 rounded-lg overflow-hidden ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => startEdit(item)}
+              aria-label={`${item.name} 수정`}
+              className="relative aspect-square w-full p-4 bg-[hsl(212_25%_96%)] border-b flex items-center justify-center"
+            >
               {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.imageUrl}
                   alt=""
-                  className="max-w-full max-h-full"
+                  className="max-w-full max-h-full object-contain"
                   style={{ imageRendering: "pixelated" }}
                 />
               ) : (
-                <span className="text-[10px] text-muted-foreground">코드 생성</span>
+                <span className="text-[11px] text-muted-foreground">코드 생성</span>
               )}
-            </div>
+              <Badge
+                variant={item.isActive ? "success" : "secondary"}
+                className="absolute right-2 top-2 text-[10px]"
+              >
+                {item.isActive ? "노출" : "숨김"}
+              </Badge>
+            </button>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-1 flex-col gap-2 p-3">
+              <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-sm text-foreground truncate">{item.name}</p>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {item.priceCoins > 0 ? `${item.priceCoins}코인` : "무료"}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
                 <Badge variant="secondary" className="text-[10px]">
                   {CATEGORY[item.category] ?? item.category}
                 </Badge>
@@ -335,24 +352,16 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                     {AFFORDANCE[a] ?? a}
                   </Badge>
                 ))}
-                <Badge variant={item.isActive ? "success" : "secondary"} className="text-[10px]">
-                  {item.isActive ? "노출" : "숨김"}
-                </Badge>
               </div>
-              <p className="text-xs text-muted-foreground/80 truncate mt-1 font-mono">
+              <p className="text-[11px] text-muted-foreground/80 truncate font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
-                {" · "}
-                {item.priceCoins > 0 ? `${item.priceCoins}코인` : "무료"}
               </p>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-end sm:justify-center">
-              <div className="flex gap-1.5">
-                <Button variant="outline" size="sm" onClick={() => startEdit(item)}>
+              <div className="mt-auto flex gap-1.5 pt-1">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(item)}>
                   <Pencil className="h-3 w-3" />
                   수정
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => remove(item)}>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => remove(item)}>
                   <Trash2 className="h-3 w-3" />
                   삭제
                 </Button>
