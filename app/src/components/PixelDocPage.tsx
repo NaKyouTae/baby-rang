@@ -25,8 +25,9 @@ export default function PixelDocPage({
   const router = useRouter();
   const pathname = usePathname();
   // 뒤로 갈 곳이 없으면(새로고침·딥링크) 들어온 자리로 보낸다.
-  // /settings/* 는 마이페이지에서 들어오므로 마이페이지를 연 홈으로 간다.
-  const fallback = pathname.startsWith('/settings/') ? '/home?my=1' : '/home';
+  // /settings/* 와 문의하기는 마이페이지에서 들어오므로 마이페이지를 연 홈으로 간다.
+  const fromMyPage = pathname.startsWith('/settings/') || pathname === '/support';
+  const fallback = fromMyPage ? '/home?my=1' : '/home';
   const goBack = () => (canGoBack() ? router.back() : router.replace(fallback));
 
   // 앱 셸의 공통 스크롤을 잠가 본문 끝에서 페이지 전체로 스크롤이 전달되지 않게 한다.

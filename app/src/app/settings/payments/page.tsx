@@ -97,8 +97,9 @@ export default function PaymentsPage() {
   const goBack = () => (canGoBack() ? router.back() : router.replace('/home?my=1'));
 
   return (
+    // 화면 높이에 고정하고 리스트 상자만 스크롤한다. 페이지 전체가 스크롤되면 제목 줄까지 밀려 올라간다.
     <div
-      className="min-h-[100dvh] flex flex-col gap-[10px] bg-[#F7F8F9] px-[20px]"
+      className="h-screen-safe overflow-hidden flex flex-col gap-[10px] bg-[#F7F8F9] px-[20px]"
       style={{
         fontFamily: 'Galmuri11Fig, Galmuri11, monospace',
         paddingTop: 'calc(var(--safe-area-top) + 20px)',
@@ -118,7 +119,7 @@ export default function PaymentsPage() {
         <span aria-hidden className="size-[24px]" />
       </div>
 
-      <div className={`${BOX} flex-1 flex flex-col overflow-hidden`}>
+      <div className={`${BOX} flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain`}>
         {loading ? (
           <Notice><Loading /></Notice>
         ) : error ? (
