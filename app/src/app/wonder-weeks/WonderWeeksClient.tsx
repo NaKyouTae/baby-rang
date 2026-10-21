@@ -56,7 +56,7 @@ export default function WonderWeeksClient() {
         className={`${BOX} absolute left-[20px] right-[20px] overflow-hidden`}
         style={{
           top: `calc(var(--safe-area-top) + 20px + ${TOP_STACK}px)`,
-          bottom: `calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + ${TAB_BAR_HEIGHT + 20}px)`,
+          bottom: `calc(var(--bottom-nav-space) + ${TAB_BAR_HEIGHT + 20}px)`,
         }}
       >
         <div className="wonder-weeks-calendar-scroll h-full w-full overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y">

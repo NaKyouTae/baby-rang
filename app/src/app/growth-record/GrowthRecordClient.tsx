@@ -1011,7 +1011,7 @@ export default function GrowthRecordPage() {
         fontFamily: PIXEL_FONT,
         paddingTop: 'calc(var(--safe-area-top) + 20px)',
         // 광고 자리는 이 화면 위에 그대로 떠 있다. 그만큼 비워야 탭바가 가리지 않는다.
-        paddingBottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 10px)',
+        paddingBottom: 'calc(var(--bottom-nav-space) + 10px)',
       }}
     >
       {/* 픽셀 폰트 — React 19 가 head 로 끌어올린다. 다른 픽셀 화면과 같은 링크다. */}

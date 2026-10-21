@@ -138,7 +138,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
         paddingTop: 'calc(var(--safe-area-top) + 20px)',
         // 광고 자리는 이 화면 위에 그대로 떠 있다. 그만큼 비워야 끝이 가리지 않는다.
         paddingBottom:
-          'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 20px)',
+          'calc(var(--bottom-nav-space) + 20px)',
       }}
     >
       <div className="px-[20px] flex flex-col gap-[10px]">

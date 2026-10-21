@@ -40,12 +40,16 @@ html {
   color-scheme: light;
 
   --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* 앱은 WebView 를 화면 맨 아래까지 늘리고, env() 가 내비게이션 바를 못 잡는 기기(안드로이드)를 위해
+     네이티브가 --native-safe-area-bottom 을 직접 심는다. 둘 중 큰 값을 쓴다. */
+  --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--native-safe-area-bottom, 0px));
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --bottom-ad-banner-height: 50px;
-  /* 하단 네비게이션은 없앴다. 이름은 그대로 두고 하단 광고 바 높이만 잡는다. */
-  --bottom-nav-space: calc(var(--bottom-ad-banner-height) + var(--safe-area-bottom));
+  /* 하단 네비게이션은 없앴다. 이름은 그대로 두고 하단 광고 바가 차지하는 높이만 잡는다.
+     광고는 화면 맨 아래에 붙어 홈 인디케이터 영역과 겹치므로 더하지 않고 큰 쪽을 쓴다.
+     광고가 접히면(높이 0) 홈 인디케이터만큼은 비워 둔다. */
+  --bottom-nav-space: max(var(--bottom-ad-banner-height), var(--safe-area-bottom));
 }
 
 body {

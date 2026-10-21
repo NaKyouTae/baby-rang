@@ -105,19 +105,26 @@ struct BabyRangApp: App {
                 // safe area 밖(상태바/홈 인디케이터 영역)은 흰색으로 채운다.
                 Color.white.ignoresSafeArea()
 
-                // WebView 는 safe area 에 맞춘다(.ignoresSafeArea 제거).
-                // .ignoresSafeArea() 가 있으면 WebView 가 시스템 UI 영역까지 늘어나
-                // 뷰포트(innerHeight)가 실제 보이는 화면보다 커지고, 그 결과
-                // fixed bottom:0 하단 네비가 화면 아래로 밀려나 안 보였다.
-                // safe area 에 맞추면 WebView 뷰포트 = 실제 보이는 영역이 되어 네비가 보인다.
+                // WebView 는 화면 전체(상태바·홈 인디케이터 영역 포함)에 깐다.
+                // 하단 광고를 화면 맨 아래에 붙이기 위해서다. safe area 안에 두면 광고 아래에
+                // 홈 인디케이터 높이만큼 빈 띠가 남는다.
+                // 상태바·홈 인디케이터에 가리면 안 되는 요소는 웹이 env(safe-area-inset-*) 로 비운다.
+                // ⚠️ 아래쪽만 무시하면 SwiftUI 가 WebView 를 safe area 기준 가운데에 놓아
+                //    위로 몇 pt 내려가고 아래로 그만큼 화면 밖으로 삐져나간다. 사방을 다 무시한다.
+                // .container 만 무시해 키보드 영역은 그대로 피한다.
+                // 예전에 사방을 무시했을 때 fixed 하단 바가 화면 밖으로 밀렸던 문제는
+                // 스크롤뷰 자동 인셋 때문이라 WebView.swift 에서 .never 로 끈다.
                 WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!, adSlot: adSlot) {
                     isWebViewLoaded = true
                 }
+                .ignoresSafeArea(.container)
 
                 // 배너는 웹 하단바가 비워 둔 광고 슬롯 위에 겹쳐 놓는다.
                 // WebView 아래에 쌓으면 하단 네비보다 더 아래에 깔려서 보기 나쁘다.
                 // 정확한 좌표는 웹이 재서 알려준다(AdSlotModel).
+                // WebView 와 같은 좌표계(화면 전체)로 맞춰야 웹이 잰 bottomInset 이 그대로 맞는다.
                 BottomBannerSlot(slot: adSlot, canLoad: isAdSDKReady)
+                    .ignoresSafeArea(.container)
 
                 SplashView()
                     .ignoresSafeArea()
@@ -263,13 +270,15 @@ private struct SlotGeometry: ViewModifier {
             content
                 .frame(width: slot.width ?? proxy.size.width)
                 .padding(.bottom, slot.bottomInset ?? 0)
-                // 웹 뷰포트 기준 left 를 그대로 쓴다. WebView 가 safe area 안에
-                // 놓여 있어 두 좌표계의 원점이 같다.
+                // 웹 뷰포트 기준 left 를 그대로 쓴다. WebView 와 이 뷰 모두 화면 전체를
+                // 덮어 두 좌표계의 원점이 같다.
                 .offset(x: slot.left)
                 // 아래(bottom)·왼쪽(leading) 기준 정렬.
                 // topLeading 으로 두면 배너가 화면 맨 위로 올라가 상태바를 덮는다.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
+        // 웹 뷰포트가 화면 전체이므로 기준도 화면 전체로 둔다.
+        .ignoresSafeArea(.container)
     }
 }
 
@@ -277,11 +286,15 @@ private struct SplashView: View {
     var body: some View {
         // Launch Screen storyboard와 동일한 렌더링(scaleAspectFill + clip)을 유지해야
         // 시스템 런치 → SwiftUI splash 전환 시 이미지 크기가 점프하지 않음.
-        Image("baby-rang launch screen_1")
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // 이미지는 overlay 로 얹는다. aspect fill 이미지를 그대로 두면 레이아웃 크기가 화면보다 커지고
+        // (iPhone 17 Pro 에서 874pt 화면에 886pt), 같은 ZStack 의 WebView 까지 그만큼 커져
+        // 하단이 화면 밖으로 밀린다. 바탕 색이 화면 크기를 정하고 이미지는 그 안에서 채운 뒤 잘린다.
+        Color(red: 241 / 255, green: 242 / 255, blue: 244 / 255)
+            .overlay(
+                Image("baby-rang launch screen_1")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            )
             .clipped()
-            .background(Color(red: 241 / 255, green: 242 / 255, blue: 244 / 255))
     }
 }

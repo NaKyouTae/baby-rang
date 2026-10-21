@@ -297,7 +297,7 @@ function ActionColumn({
         [side]: 20,
         // MODE 행의 아래(118 + 44)부터 하단 탭바의 위까지를 중앙 정렬 영역으로 쓴다.
         top: 'calc(var(--safe-area-top) + 162px)',
-        bottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 70px)',
+        bottom: 'calc(var(--bottom-nav-space) + 70px)',
       }}
     >
       {actions.map((a, i) =>

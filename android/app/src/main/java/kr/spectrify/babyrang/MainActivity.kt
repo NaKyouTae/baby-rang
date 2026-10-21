@@ -11,6 +11,11 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.widget.FrameLayout
 import androidx.core.app.ActivityCompat
@@ -62,6 +67,8 @@ class MainActivity : AppCompatActivity() {
     private var adLoaded = false
     /** 웹이 마지막으로 알려준 슬롯. 아직 못 받았으면 null. */
     private var adSlot: AdSlot? = null
+    /** 제스처 내비게이션 핸들 높이(CSS px). 웹의 --native-safe-area-bottom 으로 심는다. */
+    private var nativeSafeBottomCssPx = 0f
 
     @SuppressLint("SetJavaScriptEnabled")
     /** 스플래시를 이미 걷었는지(또는 걷기로 예약했는지). 중복 호출을 막는다. */
@@ -100,9 +107,15 @@ class MainActivity : AppCompatActivity() {
         //    스플래시 테마(Theme.BabyRang.Starting)를 실제 앱 테마로 갈아끼우는 일을 하므로,
         //    순서가 바뀌면 스플래시 색이 적용되지 않는다.
         installSplashScreen()
+        // 화면 맨 아래까지 그려 하단 광고를 바닥에 붙인다. 앱은 라이트 고정이라 아이콘은 어둡게 둔다.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applySystemBarInsets()
         dateTimePicker = NativeDateTimePicker(this) { script ->
             binding.webView.evaluateJavascript(script, null)
         }
@@ -133,6 +146,8 @@ class MainActivity : AppCompatActivity() {
             // 몇 초씩 걸린다. iOS 의 didCommit 과 같은 자리다.
             override fun onPageCommitVisible(view: WebView, url: String) {
                 hideSplash()
+                // 새 문서가 열리면 앞서 심은 CSS 변수가 사라지므로 다시 심는다.
+                pushNativeSafeBottom()
             }
 
             override fun shouldOverrideUrlLoading(
@@ -477,6 +492,41 @@ class MainActivity : AppCompatActivity() {
         adfitView?.destroy()
         billing.destroy()
         super.onDestroy()
+    }
+
+    /**
+     * 시스템 바 영역을 직접 비운다(예전 fitsSystemWindows 대신).
+     *
+     * 하단 광고를 화면 맨 아래에 붙이려면 WebView 가 내비게이션 바 영역까지 이어져야 한다.
+     * - 제스처 내비게이션: 얇은 핸들뿐이라 그 아래까지 WebView 를 늘린다. 핸들 높이는 웹에
+     *   --native-safe-area-bottom 으로 알려 iOS 홈 인디케이터와 똑같이 처리하게 한다.
+     *   (안드로이드 WebView 의 env(safe-area-inset-bottom) 은 내비게이션 바를 못 잡는 버전이 많다.)
+     * - 3버튼 내비게이션: 버튼이 광고를 덮어 오클릭이 나므로 예전처럼 버튼 위에서 끝낸다.
+     *   tappableElement 가 바로 이 '누를 수 있는 바' 높이라, 제스처 모드에서는 0 이다.
+     * - 키보드가 열리면 키보드 위에서 끝낸다(adjustResize 대신).
+     */
+    private fun applySystemBarInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            val tappable = insets.getInsets(WindowInsetsCompat.Type.tappableElement()).bottom
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val bottomPadding = maxOf(tappable, ime)
+            view.setPadding(bars.left, bars.top, bars.right, bottomPadding)
+
+            val safeBottomPx = if (ime > 0) 0 else (bars.bottom - tappable).coerceAtLeast(0)
+            nativeSafeBottomCssPx = safeBottomPx / resources.displayMetrics.density
+            pushNativeSafeBottom()
+            WindowInsetsCompat.CONSUMED
+        }
+    }
+
+    /** 제스처 핸들 높이를 웹 CSS 변수로 심는다. 1 CSS px = 1dp(textZoom 100, 와이드 뷰포트 끔). */
+    private fun pushNativeSafeBottom() {
+        val js = "document.documentElement.style.setProperty(" +
+            "'--native-safe-area-bottom','${nativeSafeBottomCssPx}px')"
+        binding.webView.evaluateJavascript(js, null)
     }
 
     /** 앱 설정 화면을 연다. 웹의 openLocationSettings() 가 호출한다. */

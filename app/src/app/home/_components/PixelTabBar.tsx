@@ -38,7 +38,7 @@ export default function PixelTabBar({ active }: { active: TabId }) {
     <div
       className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-[20px] pointer-events-none"
       style={{
-        bottom: 'calc(var(--bottom-ad-banner-height) + max(var(--safe-area-bottom), 0px) + 10px)',
+        bottom: 'calc(var(--bottom-nav-space) + 10px)',
         fontFamily: 'Galmuri11Fig, Galmuri11, monospace',
       }}
     >

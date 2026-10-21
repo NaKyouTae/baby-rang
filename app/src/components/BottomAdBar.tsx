@@ -61,11 +61,9 @@ export default function BottomAdBar() {
     <div
       // 에러/404 화면이 이 속성으로 하단 바를 숨긴다.
       data-bottom-nav-root
-      // 흰 배경은 광고 슬롯에만 둔다. 바깥에 두면 세이프에어리어(홈 인디케이터) 패딩까지
-      // 흰색으로 칠해져, 광고 아래에 빈 흰 띠가 생긴다. 픽셀 홈처럼 배경이 흰색이 아닌
-      // 화면에서 특히 도드라진다. 투명하게 두면 뒤 화면이 그대로 이어져 보인다.
+      // 화면 맨 아래에 바로 붙인다. 세이프에어리어(홈 인디케이터) 만큼 띄우면 광고 아래에
+      // 빈 띠가 남는다. 위쪽 요소들은 --bottom-nav-space 로 이 바와의 간격을 잡는다.
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50"
-      style={{ paddingBottom: "var(--safe-area-bottom)" }}
     >
       <div
         id={APP_AD_SLOT_ID}

@@ -2,13 +2,13 @@
 <!--
   WebView 위에 네이티브 배너를 얹을 수 있도록 FrameLayout 으로 겹쳐 둔다.
   iOS 와 같은 구조: 웹이 알려주는 슬롯 좌표에 배너를 배치한다.
+  시스템 바 여백은 fitsSystemWindows 대신 MainActivity.applySystemBarInsets 가 잡는다.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
-    android:fitsSystemWindows="true">
+    android:background="@android:color/white">
 
     <WebView
         android:id="@+id/webView"

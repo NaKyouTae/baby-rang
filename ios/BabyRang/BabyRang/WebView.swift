@@ -58,6 +58,10 @@ struct WebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.scrollView.bounces = false
+        // WebView 가 상태바·홈 인디케이터 영역까지 덮는다(BabyRangApp). 스크롤뷰가 그만큼
+        // 콘텐츠 인셋을 자동으로 더하면 웹이 env(safe-area-inset-*) 로 비우는 것과 겹쳐
+        // 두 번 밀린다. 인셋은 웹이 env() 로만 처리하게 한다.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
         webView.backgroundColor = .white
 
