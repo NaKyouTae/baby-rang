@@ -55,9 +55,10 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$SA_JSON" > "${RUNNER_TEMP}/sa.json"
-          node - <<'JS'
-          const crypto = require('crypto');
-          const fs = require('fs');
+          node --input-type=module - <<'JS'
+          // top-level await 를 쓰므로 ES 모듈로 실행한다(require 와 섞으면 Node 가 형식을 못 정한다).
+          import crypto from 'node:crypto';
+          import fs from 'node:fs';
 
           const sa = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/sa.json`, 'utf8'));
           const pkg = process.env.PACKAGE_ID;
