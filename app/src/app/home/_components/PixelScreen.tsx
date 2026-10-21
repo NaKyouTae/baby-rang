@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, scaleFor } from './tiles';
-import { MAX_SCALE, getSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
+import { MAX_SCALE, getSpriteAt, getWindowSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
+import type { WindowSky } from './windowSky';
 import { DEFAULT_FLOORING, DEFAULT_WALLPAPER, layout, warmRoomImages, type Layout } from './scene';
 import {
   BED_FRONT,
@@ -51,6 +52,8 @@ interface Props {
   onPet: () => void;
   /** 기록을 저장했을 때 아이들이 보여 줄 반응. key 가 바뀔 때마다 한 번 재생한다. */
   reaction?: RoomReaction | null;
+  /** 날씨 창문(dynamicSlot = WEATHER) 밖에 칠할 하늘. 없으면 그림 그대로 그린다. */
+  windowSky?: WindowSky;
 }
 
 export interface RoomReaction {
@@ -118,6 +121,7 @@ export default function PixelScreen(props: Props) {
     focusId = null,
     onPet,
     reaction,
+    windowSky,
   } = props;
 
   const hostRef = useRef<HTMLDivElement>(null);
@@ -184,6 +188,12 @@ export default function PixelScreen(props: Props) {
     placementsRef.current = placements.map((p) => clampToRoom(p, rows));
     preloadSprites(placements.map((p) => p.imageUrl));
   }, [placements, rows]);
+
+  // 창문 밖 하늘도 렌더 루프가 매 프레임 읽는다. 날씨가 바뀌어도 루프를 다시 세우지 않는다.
+  const windowSkyRef = useRef(windowSky);
+  useEffect(() => {
+    windowSkyRef.current = windowSky;
+  }, [windowSky]);
 
   const slotsRef = useRef({ wallpaperUrl, flooringUrl });
   useEffect(() => {
@@ -413,7 +423,12 @@ export default function PixelScreen(props: Props) {
         const py0 = p.tileY * TILE;
         const pw = Math.round(wOf(p) * TILE);
         const ph = Math.round(hOf(p) * TILE);
-        const img = p.imageUrl ? getSpriteAt(p.imageUrl, pw, ph) : null;
+        const sky = windowSkyRef.current;
+        const img = !p.imageUrl
+          ? null
+          : p.dynamicSlot === 'WEATHER' && sky
+            ? getWindowSpriteAt(p.imageUrl, pw, ph, sky)
+            : getSpriteAt(p.imageUrl, pw, ph);
         const dragging = dragIdRef.current === p.id || selectedRef.current === p.id;
         furniture.push({
           id: p.id,

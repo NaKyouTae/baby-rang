@@ -33,6 +33,7 @@ import GemStore from './GemStore';
 import MyPage from './MyPage';
 import { formatElapsed, useLastRecords } from './useLastRecords';
 import { useHistoryPanels } from './useHistoryPanels';
+import { useWindowSky } from './useWindowSky';
 
 type DemoChild = { id: string; name: string; gender: string; birthDate: string };
 
@@ -257,6 +258,8 @@ export default function HomeClient() {
   // 보기 모드 — 카드·버튼·탭바를 걷어내고 방만 본다.
   const [viewing, setViewing] = useState(false);
   const [placements, setPlacements] = useState<Placement[]>(loadSavedPlacements);
+  // 방에 날씨 창문이 있으면 현재 위치의 날씨를 받아 창문 밖 하늘에 반영한다
+  const windowSky = useWindowSky(placements.some((p) => p.dynamicSlot === 'WEATHER'));
   const [slots, setSlots] = useState<Slots>(loadSavedSlots);
   // 서버의 방 버전. 공동 양육자가 먼저 바꿨으면 저장이 거절된다.
   const [version, setVersion] = useState(0);
@@ -412,6 +415,7 @@ export default function HomeClient() {
               tileW: item.tileW,
               tileH: item.tileH,
               affordances: item.affordances,
+              dynamicSlot: item.dynamicSlot ?? null,
             };
           }),
         );
@@ -463,6 +467,7 @@ export default function HomeClient() {
           flipX: sp.flipX ?? false,
           scale: sp.scale ?? 1,
           affordances: sp.item.affordances,
+          dynamicSlot: sp.item.dynamicSlot ?? null,
         }));
         const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
           it ? { id: it.id, imageUrl: it.imageUrl } : null;
@@ -817,6 +822,7 @@ export default function HomeClient() {
         tileH: item.tileH,
         flipX: false,
         affordances: item.affordances,
+        dynamicSlot: item.dynamicSlot ?? null,
       },
     ]);
   }, []);
@@ -862,6 +868,7 @@ export default function HomeClient() {
         focusId={focusPlacementId}
         onPet={handlePet}
         reaction={reaction}
+        windowSky={windowSky}
       />
 
       {viewing ? (

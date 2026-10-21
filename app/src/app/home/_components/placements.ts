@@ -1,3 +1,5 @@
+import { paintWindowSky, type WindowSky } from './windowSky';
+
 /**
  * 방에 놓인 가구 한 개.
  *
@@ -30,6 +32,11 @@ export type Placement = {
    * 예전에 저장된 배치에는 없을 수 있어 선택값이다 — 없으면 분류로 짐작한다.
    */
   affordances?: string[];
+  /**
+   * 그림이 실시간 데이터로 바뀌는 자리(어드민 RoomItem.dynamicSlot). WEATHER 면 창문 밖 하늘을
+   * 지금 날씨·시간대로 칠한다. 예전에 저장된 배치에는 없어 선택값이다 — 카탈로그를 받으면 채워진다.
+   */
+  dynamicSlot?: string | null;
 };
 
 export const MAX_SCALE = 3;
@@ -95,6 +102,17 @@ export function getSpriteAt(url: string, w: number, h: number): HTMLCanvasElemen
     scaled.set(key, c);
   }
   return c;
+}
+
+/**
+ * 창문(dynamicSlot = WEATHER) 그림. 줄인 그림에 지금 날씨·시간대 하늘을 칠한다.
+ * 맑은 낮이거나 판별이 안 되면 줄인 그림 그대로다.
+ */
+export function getWindowSpriteAt(url: string, w: number, h: number, sky: WindowSky): HTMLCanvasElement | null {
+  const sprite = getSpriteAt(url, w, h);
+  const img = cache.get(url);
+  if (!sprite || !img) return sprite;
+  return paintWindowSky(url, img, sprite, sky);
 }
 
 /**

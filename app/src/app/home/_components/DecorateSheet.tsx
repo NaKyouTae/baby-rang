@@ -22,6 +22,8 @@ export type RoomItem = {
   priceCoins: number;
   /** 아기가 이 아이템으로 할 수 있는 것. 서버가 아직 안 내려주면 없다. */
   affordances?: string[];
+  /** 그림이 실시간 데이터로 바뀌는 자리. WEATHER 면 창문 밖 하늘을 날씨대로 칠한다. */
+  dynamicSlot?: string | null;
 };
 
 /**
