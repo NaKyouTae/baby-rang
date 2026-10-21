@@ -331,8 +331,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
         </Card>
       )}
 
-      {/* 그림을 보고 고르는 화면이라 바둑판으로 늘어놓는다. 칸은 화면 폭에 맞춰 늘거나 준다. */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
+      {/* 그림을 보고 고르는 화면이라 바둑판으로 늘어놓는다. 모바일은 3열 고정, 넓은 화면은 폭에 맞춰 늘거나 준다. */}
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] sm:gap-3">
         {visible.map((item) => (
           <Card
             key={item.id}
@@ -351,7 +351,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 <img
                   src={item.imageUrl}
                   alt=""
-                  className="absolute inset-0 size-full object-contain p-4"
+                  className="absolute inset-0 size-full object-contain p-2 sm:p-4"
                   style={{ imageRendering: "pixelated" }}
                 />
               ) : (
@@ -359,16 +359,16 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               )}
               <Badge
                 variant={item.isActive ? "success" : "secondary"}
-                className="absolute right-2 top-2 text-[10px]"
+                className="absolute right-1 top-1 px-1.5 text-[10px] sm:right-2 sm:top-2"
               >
                 {item.isActive ? "노출" : "숨김"}
               </Badge>
             </button>
 
-            <div className="flex flex-1 flex-col gap-2 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-sm text-foreground truncate">{item.name}</p>
-                <span className="shrink-0 text-xs text-muted-foreground">
+            <div className="flex flex-1 flex-col gap-1.5 p-2 sm:gap-2 sm:p-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                <p className="font-semibold text-xs sm:text-sm text-foreground truncate">{item.name}</p>
+                <span className="shrink-0 text-[11px] sm:text-xs text-muted-foreground">
                   {item.priceCoins > 0 ? `${item.priceCoins}코인` : "무료"}
                 </span>
               </div>
@@ -405,17 +405,31 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   </Badge>
                 )}
               </button>
-              <p className="text-[11px] text-muted-foreground/80 truncate font-mono">
+              {/* 모바일 3열에서는 칸이 좁아 키는 숨긴다(수정 창에서 볼 수 있다) */}
+              <p className="hidden sm:block text-[11px] text-muted-foreground/80 truncate font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
               </p>
-              <div className="mt-auto flex gap-1.5 pt-1">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(item)}>
+              {/* 모바일은 아이콘만 보인다 */}
+              <div className="mt-auto flex gap-1 pt-1 sm:gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 flex-1 px-0 sm:px-3"
+                  aria-label="수정"
+                  onClick={() => startEdit(item)}
+                >
                   <Pencil className="h-3 w-3" />
-                  수정
+                  <span className="hidden sm:inline">수정</span>
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => remove(item)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 flex-1 px-0 sm:px-3"
+                  aria-label="삭제"
+                  onClick={() => remove(item)}
+                >
                   <Trash2 className="h-3 w-3" />
-                  삭제
+                  <span className="hidden sm:inline">삭제</span>
                 </Button>
               </div>
             </div>
