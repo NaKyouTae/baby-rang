@@ -119,7 +119,6 @@ function toMenu(value: unknown): ActionId[] {
   return value.filter((id): id is ActionId => typeof id === 'string' && known.has(id)).slice(0, MENU_SLOTS);
 }
 
-const sameMenu = (a: ActionId[], b: ActionId[]) => a.length === b.length && a.every((id, i) => id === b[i]);
 
 function saveMenuToServer(menu: ActionId[]) {
   fetch('/api/screen-preference', {
@@ -243,7 +242,9 @@ export default function HomeClient() {
   // 편집 모드에 들어갈 때는 고른 탭 없이 시작한다. 탭을 눌러야 시트가 열린다.
   const [sheetCategory, setSheetCategory] = useState<CategoryTabId | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Placement | null>(null);
-  const [menu, setMenu] = useState<ActionId[]>(loadSavedMenu);
+  // 기록 버튼 구성. 로그인 사용자는 계정에 저장된 구성을 받기 전까지 null 이라 버튼을 그리지 않는다.
+  // 기본 구성을 먼저 그렸다가 사용자 구성으로 바뀌며 버튼이 뒤바뀌어 보이는 것을 막는다(편집 버튼만 늘 보인다).
+  const [menu, setMenu] = useState<ActionId[] | null>(null);
   // 보유 목록과 재화. 비로그인 데모는 무료 아이템만 쓸 수 있다.
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
   const [coins, setCoins] = useState(0);
@@ -333,6 +334,7 @@ export default function HomeClient() {
   }, [placements]);
 
   useEffect(() => {
+    if (!menu) return;
     try {
       localStorage.setItem(MENU_KEY, JSON.stringify(menu));
     } catch {
@@ -341,25 +343,34 @@ export default function HomeClient() {
   }, [menu]);
 
   // 계정에 저장된 기록 버튼 구성을 받아 온다. 기기마다 달라 보이지 않게 서버 값이 이긴다.
-  // 서버에 아직 없으면(계정 저장 전에 이 기기에서 바꿔 둔 사용자) 이 기기의 구성을 한 번 올려 둔다.
-  // 받아 오는 사이 사용자가 먼저 바꿨으면 그 값을 지킨다.
+  // 가입할 때 기본 구성이 DB 에 저장되므로 보통은 바로 사용자 값이 온다.
+  // 그 전에 가입해 서버에 아직 없는 사용자는 이 기기의 구성(없으면 기본 구성)을 한 번 올려 둔다.
+  // 비로그인 데모는 이 기기의 구성을 쓴다. 받아 오는 사이 사용자가 먼저 바꿨으면 그 값을 지킨다.
   const menuTouchedRef = useRef(false);
   useEffect(() => {
-    if (!isAuthLoaded || !isAuthenticated) return;
+    if (!isAuthLoaded) return;
+    if (!isAuthenticated) {
+      if (!menuTouchedRef.current) setMenu(loadSavedMenu());
+      return;
+    }
     let alive = true;
     fetch('/api/screen-preference', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!alive || !d || menuTouchedRef.current) return;
-        const saved = toMenu(d.recordMenu);
+        if (!alive || menuTouchedRef.current) return;
+        const saved = toMenu(d?.recordMenu);
         if (saved.length) {
           setMenu(saved);
           return;
         }
         const local = loadSavedMenu();
-        if (!sameMenu(local, DEFAULT_MENU)) saveMenuToServer(local);
+        setMenu(local);
+        if (d) saveMenuToServer(local);
       })
-      .catch(() => {});
+      // 못 받으면 이 기기에 남은 마지막 구성으로 그린다. 버튼이 아예 안 뜨는 것보다 낫다.
+      .catch(() => {
+        if (alive && !menuTouchedRef.current) setMenu(loadSavedMenu());
+      });
     return () => {
       alive = false;
     };
@@ -875,7 +886,7 @@ export default function HomeClient() {
           gems={coins}
           stats={stats}
           sleepPending={!isDemo && lastRecords?.canEndSleep === true}
-          menu={menu}
+          menu={menu ?? []}
           onAction={handleAction}
           onDecorate={handleDecorate}
           onView={() => setViewing(true)}
@@ -897,7 +908,7 @@ export default function HomeClient() {
         coins={coins}
         onPurchase={handlePurchase}
         onCharge={openGems}
-        menu={menu}
+        menu={menu ?? []}
         onChangeMenu={handleChangeMenu}
       />
 
