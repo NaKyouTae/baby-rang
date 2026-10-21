@@ -1,0 +1,58 @@
+{
+  "items": [
+    {
+      "name": "wallpaper-mint-stripe",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "wallpaper-cloud",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "wallpaper-star-moon",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "wallpaper-heart-dot",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "wallpaper-yellow-check",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "wallpaper-leaf",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "flooring-light-wood",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "flooring-puzzle-mat",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    },
+    {
+      "name": "flooring-dot-carpet",
+      "w": 16,
+      "h": 16,
+      "tile": true
+    }
+  ]
+}

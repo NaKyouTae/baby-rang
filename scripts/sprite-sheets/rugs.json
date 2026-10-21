@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "name": "rug-round",
+      "w": 80,
+      "h": 48
+    },
+    {
+      "name": "rug-cloud",
+      "w": 80,
+      "h": 48
+    },
+    {
+      "name": "rug-bear",
+      "w": 64,
+      "h": 48
+    },
+    {
+      "name": "rug-rainbow",
+      "w": 80,
+      "h": 48
+    },
+    {
+      "name": "rug-playmat",
+      "w": 96,
+      "h": 64
+    },
+    {
+      "name": "rug-star",
+      "w": 48,
+      "h": 48
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "items": [
+    {
+      "name": "montessori-shelf",
+      "w": 48,
+      "h": 48
+    },
+    {
+      "name": "front-bookshelf",
+      "w": 48,
+      "h": 48
+    },
+    {
+      "name": "easel-board",
+      "w": 48,
+      "h": 48
+    },
+    {
+      "name": "mobile-stand",
+      "w": 32,
+      "h": 48
+    },
+    {
+      "name": "bouncer",
+      "w": 32,
+      "h": 32
+    },
+    {
+      "name": "slide",
+      "w": 64,
+      "h": 48
+    },
+    {
+      "name": "floor-mirror",
+      "w": 32,
+      "h": 48
+    },
+    {
+      "name": "wardrobe",
+      "w": 48,
+      "h": 64
+    },
+    {
+      "name": "dresser",
+      "w": 48,
+      "h": 48
+    }
+  ]
+}

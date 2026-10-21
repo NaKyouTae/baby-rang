@@ -46,3 +46,6 @@ twa/*.keystore
 # 네이버 로그인 검수 제출 자료 (pptx/pdf/캡처) — 저장소에 올리지 않는다.
 naver-review/
 Claude outputs/
+
+# 방 꾸미기 아이템 시트 자르기 결과(scripts/slice-sprites.mjs)
+scripts/sprite-out/

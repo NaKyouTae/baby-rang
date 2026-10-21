@@ -1,0 +1,39 @@
+{
+  "items": [
+    {
+      "name": "crib",
+      "w": 64,
+      "h": 48
+    },
+    {
+      "name": "daybed",
+      "w": 80,
+      "h": 48
+    },
+    {
+      "name": "bumper-bed",
+      "w": 80,
+      "h": 48
+    },
+    {
+      "name": "kids-sofa",
+      "w": 48,
+      "h": 32
+    },
+    {
+      "name": "beanbag",
+      "w": 32,
+      "h": 32
+    },
+    {
+      "name": "high-chair",
+      "w": 32,
+      "h": 48
+    },
+    {
+      "name": "growing-chair",
+      "w": 32,
+      "h": 48
+    }
+  ]
+}

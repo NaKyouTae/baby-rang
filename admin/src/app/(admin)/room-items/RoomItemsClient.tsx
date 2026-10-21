@@ -228,6 +228,41 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
     router.refresh();
   };
 
+  // 액션(쓰임새)만 보고 고치는 모달. 카드의 액션 뱃지를 누르면 열린다.
+  const [actionItem, setActionItem] = useState<RoomItem | null>(null);
+  const [actionDraft, setActionDraft] = useState<string[]>([]);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const openActions = (item: RoomItem) => {
+    setActionItem(item);
+    setActionDraft(item.affordances ?? []);
+  };
+
+  const toggleAction = (value: string) =>
+    setActionDraft((prev) => (prev.includes(value) ? prev.filter((x) => x !== value) : [...prev, value]));
+
+  // 액션만 보낸다. 다른 값은 서버가 그대로 둔다.
+  const saveActions = async () => {
+    if (!actionItem) return;
+    setActionBusy(true);
+    try {
+      const res = await fetch(`/api/room-items/${actionItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affordances: actionDraft }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || "저장에 실패했습니다.");
+        return;
+      }
+      setActionItem(null);
+      router.refresh();
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
   // 분류별 개수. 아이템이 하나도 없는 분류는 칩으로 띄우지 않는다 —
   // 눌러도 빈 목록만 나와서 고장처럼 보인다.
   const counts = useMemo(() => {
@@ -307,14 +342,16 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               type="button"
               onClick={() => startEdit(item)}
               aria-label={`${item.name} 수정`}
-              className="relative aspect-square w-full p-4 bg-[hsl(212_25%_96%)] border-b flex items-center justify-center"
+              className="relative aspect-square w-full bg-[hsl(212_25%_96%)] border-b flex items-center justify-center"
             >
               {item.imageUrl ? (
+                // 칸 크기는 aspect-square 가 정한다. 그림은 그 안을 꽉 채운 상자에 contain 으로 넣어
+                // 세로로 긴 그림이 칸을 늘리지 않게 한다(max-h-full 은 비율로 정한 높이를 기준으로 못 쓴다).
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.imageUrl}
                   alt=""
-                  className="max-w-full max-h-full object-contain"
+                  className="absolute inset-0 size-full object-contain p-4"
                   style={{ imageRendering: "pixelated" }}
                 />
               ) : (
@@ -347,12 +384,27 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                     {DYNAMIC[item.dynamicSlot] ?? item.dynamicSlot}
                   </Badge>
                 )}
-                {item.affordances?.map((a) => (
-                  <Badge key={a} variant="outline" className="text-[10px]">
-                    {AFFORDANCE[a] ?? a}
-                  </Badge>
-                ))}
               </div>
+              {/* 액션 — 누르면 미리보기와 함께 액션만 고치는 모달이 열린다 */}
+              <button
+                type="button"
+                onClick={() => openActions(item)}
+                aria-label={`${item.name} 액션 보기`}
+                className="flex flex-wrap gap-1 rounded-md text-left outline-offset-2 hover:opacity-80"
+              >
+                {item.affordances?.length ? (
+                  item.affordances.map((a) => (
+                    <Badge key={a} variant="outline" className="text-[10px]">
+                      {AFFORDANCE[a] ?? a}
+                    </Badge>
+                  ))
+                ) : (
+                  <Badge variant="outline" className="border-dashed text-[10px] text-muted-foreground">
+                    <Plus className="h-3 w-3" />
+                    액션 설정
+                  </Badge>
+                )}
+              </button>
               <p className="text-[11px] text-muted-foreground/80 truncate font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
               </p>
@@ -370,6 +422,61 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
           </Card>
         ))}
       </div>
+
+      <Dialog open={!!actionItem} onOpenChange={(v) => !v && !actionBusy && setActionItem(null)}>
+        <DialogContent className="max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0 sm:max-w-md">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle>{actionItem?.name} 액션</DialogTitle>
+            <DialogDescription>
+              눌러서 켜고 끕니다. 켠 액션은 아래 미리보기의 아기가 바로 따라 합니다.
+            </DialogDescription>
+          </DialogHeader>
+          {actionItem && (
+            <div className="min-h-0 overflow-y-auto px-6 pb-4 space-y-3">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="액션">
+                {Object.entries(AFFORDANCE).map(([v, label]) => {
+                  const on = actionDraft.includes(v);
+                  return (
+                    <Button
+                      key={v}
+                      type="button"
+                      size="sm"
+                      variant={on ? "default" : "outline"}
+                      aria-pressed={on}
+                      onClick={() => toggleAction(v)}
+                    >
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+              {actionDraft.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {DEFAULT_AFFORDANCE[actionItem.category]
+                    ? `비워 두면 분류에 따라 '${DEFAULT_AFFORDANCE[actionItem.category].map((a) => AFFORDANCE[a]).join("·")}'(으)로 씁니다.`
+                    : "비워 두면 아기가 쓰지 않는 장식으로 둡니다."}
+                </p>
+              )}
+              <RoomItemPreview
+                category={actionItem.category}
+                surface={actionItem.surface}
+                tileW={actionItem.tileW}
+                tileH={actionItem.tileH}
+                imageUrl={actionItem.imageUrl ?? ""}
+                affordances={actionDraft}
+              />
+            </div>
+          )}
+          <DialogFooter className="flex-row items-center justify-end gap-2 border-t px-6 py-4 sm:space-x-0">
+            <Button variant="outline" onClick={() => setActionItem(null)} disabled={actionBusy}>
+              취소
+            </Button>
+            <Button onClick={saveActions} disabled={actionBusy}>
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
         {/* 본문만 스크롤하고 머리·버튼은 고정한다. 폼이 길어 저장하려고 끝까지 내리지 않게. */}
