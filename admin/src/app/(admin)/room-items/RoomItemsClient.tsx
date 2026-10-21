@@ -32,6 +32,10 @@ export type RoomItem = {
   affordances?: string[];
   dynamicSlot: string | null;
   imageUrl: string | null;
+  /** 옆모습(오른쪽을 보는 모습). 있으면 앱 꾸미기에서 정면 ↔ 옆으로 돌려 놓을 수 있다. */
+  sideImageUrl?: string | null;
+  sideTileW?: number | null;
+  sideTileH?: number | null;
   priceCoins: number;
   isActive: boolean;
 };
@@ -106,6 +110,10 @@ const empty = {
   affordances: [] as string[],
   dynamicSlot: "",
   imageUrl: "",
+  sideImageUrl: "",
+  /** 0 이면 정하지 않음 — 앱이 정면 칸 수를 가로·세로 바꿔 쓴다 */
+  sideTileW: 0,
+  sideTileH: 0,
   priceCoins: 0,
   isActive: true,
 };
@@ -125,7 +133,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
 
   // 스프라이트 PNG 업로드. 배너와 같은 저장소(Supabase Storage)를 쓰고
   // 돌려받은 주소를 imageUrl 에 넣는다 — 바이너리는 DB 에 넣지 않는다.
-  const uploadSprite = async (file: File) => {
+  // side 면 옆모습 그림으로 올린다(스프라이트 키는 정면 그림으로만 정한다)
+  const uploadSprite = async (file: File, side = false) => {
     setUploading(true);
     try {
       const fd = new FormData();
@@ -133,6 +142,10 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       const res = await fetch("/api/room-items/upload", { method: "POST", body: fd });
       if (!res.ok) throw new Error("upload failed");
       const data = await res.json();
+      if (side) {
+        setForm((prev) => ({ ...prev, sideImageUrl: data.url }));
+        return;
+      }
       const derived = keyFromFileName(file.name);
       setForm((prev) => ({
         ...prev,
@@ -167,6 +180,9 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       affordances: item.affordances ?? [],
       dynamicSlot: item.dynamicSlot ?? "",
       imageUrl: item.imageUrl ?? "",
+      sideImageUrl: item.sideImageUrl ?? "",
+      sideTileW: item.sideTileW ?? 0,
+      sideTileH: item.sideTileH ?? 0,
       priceCoins: item.priceCoins,
       isActive: item.isActive,
     });
@@ -185,6 +201,9 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       const body = {
         ...form,
         dynamicSlot: form.dynamicSlot || null,
+        sideImageUrl: form.sideImageUrl || null,
+        sideTileW: form.sideImageUrl && form.sideTileW > 0 ? form.sideTileW : null,
+        sideTileH: form.sideImageUrl && form.sideTileH > 0 ? form.sideTileH : null,
         // 그림 없이 등록하면(코드로 그리는 가구) 키를 만들어 준다
         spriteKey: form.spriteKey || fallbackKey(form.category),
       };
@@ -408,6 +427,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               {/* 모바일 3열에서는 칸이 좁아 키는 숨긴다(수정 창에서 볼 수 있다) */}
               <p className="hidden sm:block text-[11px] text-muted-foreground/80 truncate font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
+                {item.sideImageUrl && ` · 옆 ${item.sideTileW ?? item.tileH}×${item.sideTileH ?? item.tileW}칸`}
               </p>
               {/* 모바일은 아이콘만 보인다 */}
               <div className="mt-auto flex gap-1 pt-1 sm:gap-1.5">
@@ -659,6 +679,75 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                 <p className="-mt-2 text-[11px] text-muted-foreground">
                   가로·세로 칸은 그림 크기이자, 아기가 이 아이템을 쓸 때 다가가는 자리입니다.
                 </p>
+
+                <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
+                  <Label>옆모습 (선택)</Label>
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-16 h-16 shrink-0 rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center overflow-hidden">
+                      {form.sideImageUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={form.sideImageUrl}
+                            alt=""
+                            className="max-w-full max-h-full"
+                            style={{ imageRendering: "pixelated" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => set("sideImageUrl", "")}
+                            className="absolute top-0.5 right-0.5 rounded bg-black/55 p-0.5 text-white"
+                            aria-label="옆모습 지우기"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">없음</span>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
+                        <Upload className="h-3.5 w-3.5" />
+                        {uploading ? "업로드 중" : "옆모습 PNG 올리기"}
+                        <input
+                          type="file"
+                          accept="image/png,image/webp"
+                          className="hidden"
+                          disabled={uploading}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) uploadSprite(f, true);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.sideTileW}
+                          onChange={(e) => set("sideTileW", Math.max(0, Number(e.target.value) || 0))}
+                          aria-label="옆모습 가로 칸"
+                          placeholder="가로 칸"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.sideTileH}
+                          onChange={(e) => set("sideTileH", Math.max(0, Number(e.target.value) || 0))}
+                          aria-label="옆모습 세로 칸"
+                          placeholder="세로 칸"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    오른쪽을 보는 옆모습을 올리면, 앱 꾸미기에서 가구를 누를 때마다 정면 → 옆(오른쪽) → 옆(왼쪽)으로 돌아갑니다.
+                    왼쪽은 이 그림을 좌우 반전해 씁니다. 칸 수를 0 으로 두면 정면 칸 수의 가로·세로를 바꿔 씁니다
+                    {` (지금이면 ${form.tileH}×${form.tileW}칸)`}.
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">

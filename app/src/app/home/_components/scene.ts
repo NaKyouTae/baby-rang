@@ -16,20 +16,17 @@ export interface Layout {
   w: number;
   h: number;
   offsetX: number;
-  /** 바닥이 끝나는 y. 그 아래(하단 탭바 뒤)는 방 바깥이다. */
+  /** 아기·가구가 쓸 수 있는 바닥의 아래 끝 y. 그 아래는 하단 탭바가 덮는다(바닥 그림은 화면 끝까지 그린다). */
   floorBottom: number;
   walk: { x0: number; x1: number; y0: number; y1: number };
 }
 
-/**
- * 바닥 끝에서 캔버스 아래 끝(안전 영역 제외)까지의 높이(방 픽셀). 하단 탭바가 이 자리에 뜬다.
- * 방을 상자로 보이게 바닥은 탭바 바로 위에서 끝내고 앞쪽 마감선을 그린다.
- */
+/** 쓸 수 있는 바닥 끝에서 캔버스 아래 끝(안전 영역 제외)까지의 높이(방 픽셀). 하단 탭바가 이 자리에 뜬다. */
 export const BELOW_FLOOR = 48;
-/** 바닥 끝에서 아이 발까지 띄우는 높이 — 앞쪽 마감선에 발이 걸치지 않게 */
+/** 쓸 수 있는 바닥 끝에서 아이 발까지 띄우는 높이 */
 const FEET_GAP = 6;
 
-/** 바닥이 끝나는 y — 캔버스 높이(h)와 아래 안전 영역(방 픽셀)으로 정한다. */
+/** 쓸 수 있는 바닥의 아래 끝 y — 캔버스 높이(h)와 아래 안전 영역(방 픽셀)으로 정한다. */
 export function floorBottomOf(h: number, safeBottom: number) {
   return h - safeBottom - BELOW_FLOOR;
 }

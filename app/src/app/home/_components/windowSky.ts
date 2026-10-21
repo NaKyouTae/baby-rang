@@ -56,7 +56,7 @@ const PALETTES: Record<SkyPhase, Record<SkyCondition, Palette | null>> = {
 
 /**
  * 기기 시각으로 시간대를 고른다. 해 뜨고 지는 무렵(5~7시, 17~19시)은 노을이다.
- * 방 조명(roomEffects 의 tintAt)도 같은 경계로 바뀐다 — 창밖과 방 안의 시간대가 어긋나지 않게.
+ * 홈의 밤·노을은 창문 하늘로만 보여 준다(방 전체 조명은 쓰지 않는다).
  */
 export function phaseAt(date: Date): SkyPhase {
   return phaseAtHour(date.getHours() + date.getMinutes() / 60);

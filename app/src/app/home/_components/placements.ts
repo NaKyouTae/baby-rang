@@ -24,8 +24,14 @@ export type Placement = {
    * 예전에 저장된 배치에는 없어 선택값이다.
    */
   scale?: number;
-  /** 좌우 반전. 그림이 정면 한 장뿐이라 방향은 이것 하나로 바꾼다. */
+  /** 좌우 반전. 옆모습이면 반전한 쪽이 왼쪽을 보는 모습이다. */
   flipX: boolean;
+  /** 정면 / 옆모습. 옆모습 그림(sideImageUrl)이 있는 아이템만 옆으로 둘 수 있다. 예전 배치에는 없어 선택값이다. */
+  facing?: 'FRONT' | 'SIDE';
+  /** 옆모습(오른쪽을 보는 모습) 그림과 칸 수(어드민 값). 칸 수가 없으면 정면 칸 수의 가로·세로를 바꿔 쓴다. */
+  sideImageUrl?: string | null;
+  sideTileW?: number | null;
+  sideTileH?: number | null;
   /**
    * 아기가 이 아이템으로 무엇을 할 수 있는지(어드민 RoomItem.affordances).
    * HOLD 붙잡기 · SOFT_FLOOR 푹신한 바닥 · BALL 공 · PUSH_WALKER 보행기 · PLAY 장난감 · SLEEP 침대 · SEAT 의자 · SLIDE 미끄럼틀.
@@ -47,8 +53,14 @@ export const MAX_SCALE = 3;
  * 한 화면에 픽셀 크기가 섞인다(스타듀밸리처럼 모든 그림이 같은 픽셀 크기여야 깔끔하다).
  * 크기가 다른 가구가 필요하면 그림을 따로 만든다. 저장된 scale 값은 지우지 않고 무시만 한다.
  */
-export const wOf = (p: Pick<Placement, 'tileW'>) => p.tileW;
-export const hOf = (p: Pick<Placement, 'tileH'>) => p.tileH;
+type Sized = Pick<Placement, 'tileW' | 'tileH' | 'facing' | 'sideImageUrl' | 'sideTileW' | 'sideTileH'>;
+/** 옆으로 놓였는가 — 옆모습 그림이 없으면 방향 값이 남아 있어도 정면으로 본다 */
+export const isSide = (p: Pick<Placement, 'facing' | 'sideImageUrl'>) => p.facing === 'SIDE' && !!p.sideImageUrl;
+export const wOf = (p: Sized) => (isSide(p) ? (p.sideTileW ?? p.tileH) : p.tileW);
+export const hOf = (p: Sized) => (isSide(p) ? (p.sideTileH ?? p.tileW) : p.tileH);
+/** 지금 방향의 그림 */
+export const imageOf = (p: Pick<Placement, 'imageUrl' | 'facing' | 'sideImageUrl'>) =>
+  isSide(p) ? p.sideImageUrl! : p.imageUrl;
 
 /**
  * 스프라이트 이미지 캐시.

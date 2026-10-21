@@ -498,6 +498,9 @@ export class AdminController {
         affordances: body.affordances ?? [],
         dynamicSlot: body.dynamicSlot || null,
         imageUrl: body.imageUrl ?? null,
+        sideImageUrl: body.sideImageUrl || null,
+        sideTileW: body.sideTileW ?? null,
+        sideTileH: body.sideTileH ?? null,
         priceCoins: body.priceCoins ?? 0,
         sortOrder: body.sortOrder ?? 0,
         isActive: body.isActive ?? true,
@@ -525,6 +528,11 @@ export class AdminController {
           dynamicSlot: body.dynamicSlot || null,
         }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.sideImageUrl !== undefined && {
+          sideImageUrl: body.sideImageUrl || null,
+        }),
+        ...(body.sideTileW !== undefined && { sideTileW: body.sideTileW }),
+        ...(body.sideTileH !== undefined && { sideTileH: body.sideTileH }),
         ...(body.priceCoins !== undefined && {
           priceCoins: body.priceCoins ?? 0,
         }),

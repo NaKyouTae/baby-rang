@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, pixelScaleFor } from './tiles';
-import { getSpriteAt, getWindowSpriteAt, hOf, preloadSprites, wOf, type Placement } from './placements';
+import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, preloadSprites, wOf, type Placement } from './placements';
 import { phaseAtHour, type WindowSky } from './windowSky';
-import { floorBottomOf, layout, type Layout } from './scene';
-import { ROOM_VOID, drawBaseboard, drawDefaultFloor, drawDefaultWall, drawRoomFrame } from './roomTiles';
-import { Dust, drawEditGrid, drawFootprint, drawItemShadow, drawLighting, isLamp, tintAt } from './roomEffects';
+import { layout, type Layout } from './scene';
+import { drawDefaultFloor, drawDefaultWall } from './roomTiles';
+import { Dust, drawEditGrid, drawItemShadow } from './roomEffects';
 import {
   BED_FRONT,
   HEAD_TOP,
@@ -141,8 +141,17 @@ export default function PixelScreen(props: Props) {
   } | null>(null);
   // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
   // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
-  // 방이 상자라 바닥이 끝나는 곳(floorBottom)까지만 놓을 수 있다.
-  const rows = size ? Math.floor(floorBottomOf(size.h, size.safeBottom) / TILE) : ROOM_H_TILES;
+  // 가구를 놓을 수 있는 범위 — 보이는 화면 전체. 좌우는 방(12칸) 밖 여백까지, 아래는 화면 맨 아래까지
+  // 놓을 수 있다. UI(탭바·버튼)와 겹치거나 화면 끝에 조금 걸쳐도 된다. 칸 좌표는 방 왼쪽 끝이 0 이라
+  // 방 왼쪽 밖은 음수다.
+  const bounds: PlaceBounds = size
+    ? {
+        minX: -Math.ceil(size.offsetX / TILE),
+        maxX: ROOM_W_TILES + Math.ceil((size.w - size.offsetX - ROOM_W) / TILE),
+        rows: Math.ceil(size.h / TILE),
+      }
+    : { minX: 0, maxX: ROOM_W_TILES, rows: ROOM_H_TILES };
+  const { minX, maxX, rows } = bounds;
 
   // 드래그 중인 가구. 렌더 루프가 테두리를 그리려고 읽는다.
   const dragIdRef = useRef<string | null>(null);
@@ -195,9 +204,9 @@ export default function PixelScreen(props: Props) {
   const placementsRef = useRef(placements);
   useEffect(() => {
     // 긴 화면에서 아래쪽에 놓은 가구는 짧은 화면에선 방 밖에 있다. 그릴 때만 안으로 당긴다.
-    placementsRef.current = placements.map((p) => clampToRoom(p, rows));
-    preloadSprites(placements.map((p) => p.imageUrl));
-  }, [placements, rows]);
+    placementsRef.current = placements.map((p) => clampToRoom(p, { minX, maxX, rows }));
+    preloadSprites(placements.flatMap((p) => [p.imageUrl, p.sideImageUrl ?? null]));
+  }, [placements, minX, maxX, rows]);
 
   // 창문 밖 하늘도 렌더 루프가 매 프레임 읽는다. 날씨가 바뀌어도 루프를 다시 세우지 않는다.
   const windowSkyRef = useRef(windowSky);
@@ -334,6 +343,8 @@ export default function PixelScreen(props: Props) {
           // 침대에서는 그림 칸 전체로 매트리스 위치를 잡고, 반전해 놓았으면 머리도 반대로 둔다
           box: { x0, x1, y0, y1 },
           flip: p.flipX,
+          // 옆으로 돌려 놓은 침대는 세로로 길어 아기도 세로로 눕는다
+          vertical: isSide(p),
         };
         if (spot.x1 - spot.x0 >= 8) spots.push(spot);
       }
@@ -347,26 +358,12 @@ export default function PixelScreen(props: Props) {
     const dust = new Dust();
     /** 가구별 지금 불투명도 — 아이를 가리면 서서히 흐려졌다가 아이가 나오면 서서히 돌아온다 */
     const fade = new Map<string, number>();
-    // 로컬에서 시간대 조명을 확인하려고 주소에 ?hour=21 처럼 시각을 줄 수 있다(화면 연출만 바뀐다)
+    // 로컬에서 창밖 시간대를 확인하려고 주소에 ?hour=21 처럼 시각을 줄 수 있다(화면 연출만 바뀐다)
     const hourParam = Number(new URLSearchParams(location.search).get('hour'));
     const hourOverride = Number.isFinite(hourParam) && location.search.includes('hour=') ? hourParam : null;
     /** 바닥에 놓인 가구인가 — 러그·창문·벽에 건 것(아랫변이 벽 안)은 그림자를 드리우지 않는다 */
     const onFloor = (p: Placement) =>
       p.category !== 'RUG' && p.category !== 'WINDOW' && (p.tileY + hOf(p)) * TILE > FLOOR_TOP;
-    /** 벽에 거는 것끼리, 바닥에 놓는 것끼리만 겹침을 따진다. 러그는 밑에 깔리므로 겹쳐도 된다. */
-    const zoneOf = (p: Placement) => (p.category === 'WINDOW' || (p.tileY + hOf(p)) * TILE <= FLOOR_TOP ? 'wall' : 'floor');
-    const blockedAt = (p: Placement) =>
-      p.category !== 'RUG' &&
-      placementsRef.current.some(
-        (q) =>
-          q.id !== p.id &&
-          q.category !== 'RUG' &&
-          zoneOf(q) === zoneOf(p) &&
-          q.tileX < p.tileX + wOf(p) &&
-          p.tileX < q.tileX + wOf(q) &&
-          q.tileY < p.tileY + hOf(p) &&
-          p.tileY < q.tileY + hOf(q),
-      );
     /** 기거나 걷는 행동 — 발밑에 먼지가 인다(빠를수록 자주) */
     const DUST_GAP: Record<string, number> = { crawl: 260, cruise: 300, toddle: 220, walk: 240, run: 140, pushWalker: 220 };
 
@@ -427,22 +424,11 @@ export default function PixelScreen(props: Props) {
         }
         return true;
       };
-      // 방은 상자다 — 방 바깥(양옆 여백, 바닥 아래)은 어둡게 비우고, 벽·바닥은 방 안에만 깐다
-      ctx.fillStyle = ROOM_VOID;
-      ctx.fillRect(0, 0, L.w, L.h);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(L.offsetX, 0, ROOM_W, L.floorBottom);
-      ctx.clip();
+      // 벽·바닥은 화면 끝까지 채운다(방 밖 여백·몰딩 없이)
       if (!tileFill(slots.wallpaperUrl, 0, wallBottom)) drawDefaultWall(ctx, L.offsetX, L.w, wallBottom);
-      if (!tileFill(slots.flooringUrl, wallBottom, L.floorBottom)) {
-        drawDefaultFloor(ctx, L.offsetX, L.w, wallBottom, L.floorBottom);
-      }
-      drawBaseboard(ctx, L.w, wallBottom);
+      if (!tileFill(slots.flooringUrl, wallBottom, L.h)) drawDefaultFloor(ctx, L.offsetX, L.w, wallBottom, L.h);
       // 꾸미기 중에는 칸 격자를 보여 준다 — 가구가 칸에 맞춰 붙는다는 걸 알 수 있게
-      if (editingRef.current) drawEditGrid(ctx, L.offsetX, ROOM_W, L.floorBottom, TILE);
-      ctx.restore();
-      drawRoomFrame(ctx, L.offsetX, L.offsetX + ROOM_W, L.floorBottom);
+      if (editingRef.current) drawEditGrid(ctx, L.offsetX, L.w, L.h, TILE);
       // 발밑 먼지 — 바닥 높이라 가구·아기보다 먼저 그린다
       dust.draw(ctx, now);
 
@@ -458,7 +444,7 @@ export default function PixelScreen(props: Props) {
       const furniture: { id: string; base: number; rect: Rect; draw: () => void }[] = [];
       const dynamics: { depth: number; rect: Rect; after?: string; draw: () => void }[] = [];
       const all = placementsRef.current;
-      // 창밖 시간대와 방 조명은 같은 시각으로 정한다(확인용 ?hour= 도 둘 다에 먹는다)
+      // 창밖 시간대 — 밤·노을은 창문 하늘로만 보여 준다(확인용 ?hour= 도 먹는다)
       const clock = new Date();
       const hourNow = hourOverride ?? clock.getHours() + clock.getMinutes() / 60;
       const skyPhase = phaseAtHour(hourNow);
@@ -476,7 +462,8 @@ export default function PixelScreen(props: Props) {
           const pr = moving.prop;
           const pw = Math.round(wOf(p) * TILE);
           const ph = Math.round(hOf(p) * TILE);
-          const img = p.imageUrl ? getSpriteAt(p.imageUrl, pw, ph) : null;
+          const src = imageOf(p);
+          const img = src ? getSpriteAt(src, pw, ph) : null;
           const flip = pr.flip !== p.flipX;
           // 아이템 그림이 없으면 코드로 그린 공·보행기를 쓴다
           const sp = img ? null : propSprite(pr);
@@ -501,11 +488,13 @@ export default function PixelScreen(props: Props) {
           condition: p.dynamicSlot === 'WEATHER' ? (windowSkyRef.current?.condition ?? 'clear') : 'clear',
           phase: skyPhase,
         };
-        const img = !p.imageUrl
+        // 옆으로 놓았으면 옆모습 그림을 쓴다(왼쪽을 보면 flipX 로 뒤집는다)
+        const src = imageOf(p);
+        const img = !src
           ? null
           : isWindow
-            ? getWindowSpriteAt(p.imageUrl, pw, ph, sky, Math.floor(now / 150))
-            : getSpriteAt(p.imageUrl, pw, ph);
+            ? getWindowSpriteAt(src, pw, ph, sky, Math.floor(now / 150))
+            : getSpriteAt(src, pw, ph);
         const dragging = dragIdRef.current === p.id || selectedRef.current === p.id;
         const shadow = onFloor(p);
         const base = (p.tileY + hOf(p)) * TILE;
@@ -537,8 +526,12 @@ export default function PixelScreen(props: Props) {
               ctx.fillRect(px0, py0, pw, ph);
             }
             ctx.globalAlpha = 1;
-            // 고르거나 옮기는 가구 — 차지하는 칸을 초록(비었음)·빨강(다른 가구와 겹침)으로 덮는다
-            if (dragging) drawFootprint(ctx, px0, py0, pw, ph, blockedAt(p));
+            // 고르거나 옮기는 가구는 흰 테두리로 표시한다(겹쳐 놓아도 된다)
+            if (dragging) {
+              ctx.strokeStyle = '#FFFBEF';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(px0 + 0.5, py0 + 0.5, pw - 1, ph - 1);
+            }
           },
         });
       }
@@ -550,8 +543,9 @@ export default function PixelScreen(props: Props) {
         const bed = b.inBed && b.spot ? all.find((p) => p.id === b.spot!.id) : null;
         // 의자·미끄럼틀 위에 있으면 그 아이템 바로 위에 그린다
         const seat = b.aboard && b.spot ? all.find((p) => p.id === b.spot!.id) : null;
-        const bedImg = bed?.imageUrl
-          ? getSpriteAt(bed.imageUrl, Math.round(wOf(bed) * TILE), Math.round(hOf(bed) * TILE))
+        const bedSrc = bed ? imageOf(bed) : null;
+        const bedImg = bedSrc
+          ? getSpriteAt(bedSrc, Math.round(wOf(bed!) * TILE), Math.round(hOf(bed!) * TILE))
           : null;
         dynamics.push({
           depth: actorDepth(b),
@@ -593,15 +587,6 @@ export default function PixelScreen(props: Props) {
         const group = insertAt.get(i);
         if (group) for (const d of group.sort((a, b) => a.depth - b.depth)) d.draw();
         if (i < furniture.length) furniture[i].draw();
-      }
-
-      // 시간대 조명 — 저녁은 주황빛, 밤은 어둑하게. 밤에는 조명 아이템 둘레만 밝게 남긴다.
-      const tint = tintAt(hourNow);
-      if (tint.a > 0) {
-        const lamps = all
-          .filter(isLamp)
-          .map((p) => ({ x: L.offsetX + (p.tileX + wOf(p) / 2) * TILE, y: (p.tileY + hOf(p) * 0.35) * TILE }));
-        drawLighting(ctx, L.w, L.h, tint, lamps);
       }
 
       // 하트 — 쓰다듬으면 머리 위로 떠오른다
@@ -704,7 +689,7 @@ export default function PixelScreen(props: Props) {
     // 타일 격자에 붙인다. 자유 배치로 두면 가구가 미세하게 어긋나 지저분해진다.
     const tx = Math.round((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
     const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
-    const clampedX = Math.min(Math.max(tx, 0), ROOM_W_TILES - wOf(target));
+    const clampedX = Math.min(Math.max(tx, minX), maxX - wOf(target));
     const clampedY = Math.min(Math.max(ty, 0), rows - hOf(target));
     if (clampedX === target.tileX && clampedY === target.tileY) return;
     movedRef.current = true;
@@ -764,10 +749,13 @@ function measureSafeTop() {
   return h;
 }
 
-/** 방 밖으로 나간 배치를 안으로 당긴다. 저장값은 건드리지 않고 그릴 때만 쓴다. */
-function clampToRoom(p: Placement, rows: number): Placement {
-  const tileX = Math.min(Math.max(p.tileX, 0), Math.max(0, ROOM_W_TILES - wOf(p)));
-  const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, rows - hOf(p)));
+/** 가구를 놓을 수 있는 칸 범위. minX·maxX 는 가로 칸(방 왼쪽 끝이 0), rows 는 세로 칸 수. */
+type PlaceBounds = { minX: number; maxX: number; rows: number };
+
+/** 화면 밖으로 나간 배치를 안으로 당긴다. 저장값은 건드리지 않고 그릴 때만 쓴다. */
+function clampToRoom(p: Placement, b: PlaceBounds): Placement {
+  const tileX = Math.min(Math.max(p.tileX, b.minX), Math.max(b.minX, b.maxX - wOf(p)));
+  const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, b.rows - hOf(p)));
   return tileX === p.tileX && tileY === p.tileY ? p : { ...p, tileX, tileY };
 }
 

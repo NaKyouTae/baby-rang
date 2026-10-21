@@ -24,6 +24,10 @@ export type RoomItem = {
   affordances?: string[];
   /** 그림이 실시간 데이터로 바뀌는 자리. WEATHER 면 창문 밖 하늘을 날씨대로 칠한다. */
   dynamicSlot?: string | null;
+  /** 옆모습(오른쪽을 보는 모습) 그림과 칸 수. 있으면 꾸미기에서 옆으로 돌려 놓을 수 있다. */
+  sideImageUrl?: string | null;
+  sideTileW?: number | null;
+  sideTileH?: number | null;
 };
 
 /**

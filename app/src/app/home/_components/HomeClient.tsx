@@ -15,7 +15,7 @@ import { TYPE_CONFIG, type GrowthType } from '../../growth-record/types';
 import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
 import RemoveSheet from './RemoveSheet';
-import { preloadSprites, type Placement } from './placements';
+import { hOf, isSide, preloadSprites, wOf, type Placement } from './placements';
 import { ROOM_W_TILES, WALL_TILES } from './tiles';
 import RoomChrome, {
   ACTION_LABEL,
@@ -416,6 +416,9 @@ export default function HomeClient() {
               tileH: item.tileH,
               affordances: item.affordances,
               dynamicSlot: item.dynamicSlot ?? null,
+              sideImageUrl: item.sideImageUrl ?? null,
+              sideTileW: item.sideTileW ?? null,
+              sideTileH: item.sideTileH ?? null,
             };
           }),
         );
@@ -450,6 +453,7 @@ export default function HomeClient() {
           tileX: number;
           tileY: number;
           flipX: boolean;
+          facing?: 'FRONT' | 'SIDE';
           scale?: number;
           item: RoomItem;
         };
@@ -465,9 +469,13 @@ export default function HomeClient() {
           tileW: sp.item.tileW,
           tileH: sp.item.tileH,
           flipX: sp.flipX ?? false,
+          facing: sp.facing ?? 'FRONT',
           scale: sp.scale ?? 1,
           affordances: sp.item.affordances,
           dynamicSlot: sp.item.dynamicSlot ?? null,
+          sideImageUrl: sp.item.sideImageUrl ?? null,
+          sideTileW: sp.item.sideTileW ?? null,
+          sideTileH: sp.item.sideTileH ?? null,
         }));
         const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
           it ? { id: it.id, imageUrl: it.imageUrl } : null;
@@ -759,6 +767,7 @@ export default function HomeClient() {
             tileX: p.tileX,
             tileY: p.tileY,
             flipX: p.flipX,
+            facing: isSide(p) ? 'SIDE' : 'FRONT',
             scale: p.scale ?? 1,
             zOffset: i,
           })),
@@ -821,8 +830,12 @@ export default function HomeClient() {
         tileW: item.tileW,
         tileH: item.tileH,
         flipX: false,
+        facing: 'FRONT',
         affordances: item.affordances,
         dynamicSlot: item.dynamicSlot ?? null,
+        sideImageUrl: item.sideImageUrl ?? null,
+        sideTileW: item.sideTileW ?? null,
+        sideTileH: item.sideTileH ?? null,
       },
     ]);
   }, []);
@@ -836,8 +849,32 @@ export default function HomeClient() {
     });
   }, []);
 
+  /**
+   * 꾸미기에서 가구를 탭하면 방향을 바꾼다.
+   *   옆모습이 있는 아이템: 정면 → 옆(오른쪽) → 옆(왼쪽) → 정면
+   *   옆모습이 없는 아이템: 좌우 반전만
+   * 방향이 바뀌면 칸 수도 바뀐다. 아랫변 가운데를 붙잡고 돌려 바닥에 놓인 자리가 튀지 않게 하고, 방 밖으로 나가면 안으로 당긴다.
+   */
   const handleFlipPlacement = useCallback((id: string) => {
-    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, flipX: !p.flipX } : p)));
+    setPlacements((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        if (!p.sideImageUrl) return { ...p, flipX: !p.flipX };
+        const next: Placement = !isSide(p)
+          ? { ...p, facing: 'SIDE', flipX: false }
+          : !p.flipX
+            ? { ...p, flipX: true }
+            : { ...p, facing: 'FRONT', flipX: false };
+        const nw = wOf(next);
+        const nh = hOf(next);
+        return {
+          ...next,
+          // 방 밖 여백까지 놓을 수 있다(서버도 -2칸까지 받는다). 화면 밖은 그릴 때 안으로 당긴다.
+          tileX: Math.min(Math.max(-2, p.tileX + Math.round((wOf(p) - nw) / 2)), ROOM_W_TILES + 2 - nw),
+          tileY: Math.max(0, p.tileY + hOf(p) - nh),
+        };
+      }),
+    );
   }, []);
 
   const handleRemovePlacement = useCallback((id: string) => {
@@ -875,6 +912,7 @@ export default function HomeClient() {
           saving={saving}
           activeTab={sheetCategory}
           onPickTab={handlePickTab}
+          onCollapse={() => setDecorating(false)}
         />
       ) : (
         <RoomChrome

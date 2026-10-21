@@ -52,6 +52,8 @@ export type Spot = {
   y1: number;
   box?: { x0: number; x1: number; y0: number; y1: number };
   flip?: boolean;
+  /** 옆으로 돌려 놓은 침대 — 세로로 길어서 아기도 머리를 위로 두고 세로로 눕는다 */
+  vertical?: boolean;
 };
 /** 움직이는 장난감. 위치는 바닥에 닿는 점(아래 가운데)이다. */
 export type Prop = {
@@ -776,6 +778,23 @@ export function actorSprite(a: Actor) {
       frameCache.set(key, list);
     }
     return { img: list[a.frame % list.length], left: snap(a.x) - CX, top: snap(a.y) - G, width: W, height: H, flip: false };
+  }
+  if (a.act === 'sleep' && a.inBed && a.spot?.vertical) {
+    // 옆으로 돌려 놓은 침대 — 원래 누운 그림이 머리가 위인 세로라 돌리지 않고 그대로 눕힌다
+    const key = `${a.months}:${a.gender}:sleep:flat`;
+    let flat = frameCache.get(key);
+    if (!flat) {
+      flat = buildFrames('sleep', a.months, a.gender, 'down', { noProps: true }).map(toCanvas);
+      frameCache.set(key, flat);
+    }
+    return {
+      img: flat[a.frame % flat.length],
+      left: snap(a.x - LYING_CENTER.x),
+      top: snap(a.y - LYING_CENTER.y),
+      width: W,
+      height: H,
+      flip: false,
+    };
   }
   if (a.act === 'sleep' && a.inBed) {
     // 침대에서는 머리를 왼쪽(머리판)으로 두고 가로로 눕는다

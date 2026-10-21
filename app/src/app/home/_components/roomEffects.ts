@@ -1,6 +1,6 @@
 /**
  * 방 연출 — 스타듀밸리 실내의 분위기를 만드는 것들.
- *   가구 그림자 · 시간대 조명 · 꾸미기 칸 표시 · 아기 발밑 먼지
+ *   가구 그림자 · 꾸미기 칸 표시 · 아기 발밑 먼지
  * 모두 방 픽셀 좌표로 그린다(PixelScreen 의 캔버스가 이미 방 픽셀 격자다).
  */
 
@@ -71,112 +71,16 @@ export function drawItemShadow(
   ctx.fillRect(left + 2, base + 1, w - 4, 1);
 }
 
-// ───────────────────────── 시간대 조명 ─────────────────────────
-
-/**
- * [시각(시), r, g, b, 불투명도] — 사이는 선형으로 섞는다. 낮에는 아무것도 얹지 않는다.
- * 경계는 창밖 하늘(windowSky 의 phaseAtHour)과 같다: 5~7시 새벽노을 · 7~17시 낮 · 17~19시 저녁노을 · 그 외 밤.
- */
-const KEYS: [number, number, number, number, number][] = [
-  [0, 18, 24, 62, 0.42],
-  [5, 18, 24, 62, 0.42],
-  [6, 150, 100, 140, 0.18],
-  [7, 255, 200, 150, 0],
-  [17, 255, 160, 70, 0],
-  [18, 255, 140, 60, 0.15],
-  [19, 120, 60, 100, 0.3],
-  [19.5, 18, 24, 62, 0.42],
-  [24, 18, 24, 62, 0.42],
-];
-
-export type Tint = { r: number; g: number; b: number; a: number };
-
-/** 시각(0~24, 소수 가능)의 방 조명 색. */
-export function tintAt(hour: number): Tint {
-  const h = ((hour % 24) + 24) % 24;
-  let i = 0;
-  while (i < KEYS.length - 2 && KEYS[i + 1][0] <= h) i++;
-  const [h0, r0, g0, b0, a0] = KEYS[i];
-  const [h1, r1, g1, b1, a1] = KEYS[i + 1];
-  const t = h1 === h0 ? 0 : (h - h0) / (h1 - h0);
-  const lerp = (a: number, b: number) => a + (b - a) * t;
-  return { r: lerp(r0, r1), g: lerp(g0, g1), b: lerp(b0, b1), a: lerp(a0, a1) };
-}
-
-/** 어두울 때 빛을 내는 아이템 — 무드등·스탠드처럼 이름이나 키로 고른다. */
-export function isLamp(p: { name: string; spriteKey: string }) {
-  return /등|조명|램프/.test(p.name) || /lamp|light/i.test(p.spriteKey);
-}
-
-let overlay: HTMLCanvasElement | null = null;
-
-/**
- * 방 전체에 시간대 색을 얹는다. 저녁은 주황빛, 밤은 남색으로 어둑하게.
- * 밤에는 조명 아이템 둘레만 어둠을 걷어내고 따뜻한 빛을 살짝 더한다.
- */
-export function drawLighting(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  tint: Tint,
-  lamps: { x: number; y: number }[],
-) {
-  if (tint.a <= 0.005) return;
-  if (!overlay) overlay = document.createElement('canvas');
-  if (overlay.width !== w || overlay.height !== h) {
-    overlay.width = w;
-    overlay.height = h;
-  }
-  const o = overlay.getContext('2d')!;
-  o.globalCompositeOperation = 'source-over';
-  o.clearRect(0, 0, w, h);
-  o.fillStyle = `rgba(${tint.r | 0},${tint.g | 0},${tint.b | 0},${tint.a.toFixed(3)})`;
-  o.fillRect(0, 0, w, h);
-  // 어두울수록(밤) 조명이 또렷하다
-  const strength = Math.min(1, tint.a / 0.42);
-  if (strength > 0.3) {
-    o.globalCompositeOperation = 'destination-out';
-    for (const l of lamps) {
-      const g = o.createRadialGradient(l.x, l.y, 2, l.x, l.y, 44);
-      g.addColorStop(0, `rgba(0,0,0,${0.95 * strength})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      o.fillStyle = g;
-      o.fillRect(l.x - 44, l.y - 44, 88, 88);
-    }
-  }
-  ctx.drawImage(overlay, 0, 0);
-  if (strength > 0.3) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    for (const l of lamps) {
-      const g = ctx.createRadialGradient(l.x, l.y, 1, l.x, l.y, 28);
-      g.addColorStop(0, `rgba(255,190,110,${0.22 * strength})`);
-      g.addColorStop(1, 'rgba(255,190,110,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(l.x - 28, l.y - 28, 56, 56);
-    }
-    ctx.restore();
-  }
-}
-
 // ───────────────────────── 꾸미기 칸 표시 ─────────────────────────
 
-/** 꾸미기 모드의 칸 격자 — 방 안 벽·바닥에 16px 칸마다 옅은 선. */
-export function drawEditGrid(ctx: CanvasRenderingContext2D, x0: number, w: number, floorBottom: number, tile: number) {
+/**
+ * 꾸미기 모드의 칸 격자 — 화면 전체(가구를 놓을 수 있는 곳 전부)에 16px 칸마다 옅은 선.
+ * 세로선은 방 왼쪽 끝(originX)에 맞춰 방 밖 여백까지 같은 칸으로 이어진다.
+ */
+export function drawEditGrid(ctx: CanvasRenderingContext2D, originX: number, w: number, h: number, tile: number) {
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  for (let x = x0 + tile; x < x0 + w; x += tile) ctx.fillRect(x, 0, 1, floorBottom);
-  for (let y = tile; y < floorBottom; y += tile) ctx.fillRect(x0, y, w, 1);
-}
-
-/** 고른 가구가 차지하는 칸 — 비었으면 초록, 다른 가구와 겹치면 빨강. 가구 위에 반투명으로 덮는다. */
-export function drawFootprint(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, blocked: boolean) {
-  ctx.fillStyle = blocked ? 'rgba(230,80,80,0.32)' : 'rgba(90,200,120,0.28)';
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = blocked ? 'rgba(200,40,40,0.9)' : 'rgba(40,150,80,0.9)';
-  ctx.fillRect(x, y, w, 1);
-  ctx.fillRect(x, y + h - 1, w, 1);
-  ctx.fillRect(x, y, 1, h);
-  ctx.fillRect(x + w - 1, y, 1, h);
+  for (let x = originX - Math.floor(originX / tile) * tile; x < w; x += tile) ctx.fillRect(x, 0, 1, h);
+  for (let y = tile; y < h; y += tile) ctx.fillRect(0, y, w, 1);
 }
 
 // ───────────────────────── 발밑 먼지 ─────────────────────────

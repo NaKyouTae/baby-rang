@@ -7,6 +7,11 @@ import { ChildrenService } from '../children/children.service';
  * 기기에 따라 12~13칸 사이에서 움직인다. 넉넉히 둔다.
  */
 const MAX_TILE_X = 16;
+/**
+ * 가로 타일 하한. 화면이 방(12칸)보다 조금 넓은 기기에서는 방 왼쪽 밖 여백에도 가구를 놓을 수 있어
+ * 방 왼쪽 끝(0)보다 두 칸까지 왼쪽을 받는다.
+ */
+const MIN_TILE_X = -2;
 /** 세로도 기기마다 보이는 높이가 달라 저장만 허용하는 상한을 둔다. */
 const MAX_TILE_Y = 40;
 
@@ -21,6 +26,8 @@ type PlacementInput = {
   tileX: number;
   tileY: number;
   flipX?: boolean;
+  /** 정면 / 옆모습. 옆모습은 아이템에 옆모습 그림이 있을 때만. */
+  facing?: 'FRONT' | 'SIDE';
   scale?: number;
   zOffset?: number;
 };
@@ -111,10 +118,19 @@ export class RoomsService {
           `'${item.name}' 의 크기는 1~${MAX_SCALE}배만 고를 수 있습니다.`,
         );
       }
-      if (p.tileX < 0 || p.tileX + item.tileW * scale > MAX_TILE_X) {
+      const side = p.facing === 'SIDE';
+      if (side && !item.sideImageUrl) {
+        throw new BadRequestException(
+          `'${item.name}' 은 옆모습이 없어 옆으로 놓을 수 없습니다.`,
+        );
+      }
+      // 옆모습은 칸 수가 따로 있다. 정해 두지 않았으면 정면 칸 수를 가로·세로 바꿔 쓴다.
+      const w = side ? (item.sideTileW ?? item.tileH) : item.tileW;
+      const h = side ? (item.sideTileH ?? item.tileW) : item.tileH;
+      if (p.tileX < MIN_TILE_X || p.tileX + w * scale > MAX_TILE_X) {
         throw new BadRequestException(`'${item.name}' 이 방 밖으로 나갑니다.`);
       }
-      if (p.tileY < 0 || p.tileY + item.tileH * scale > MAX_TILE_Y) {
+      if (p.tileY < 0 || p.tileY + h * scale > MAX_TILE_Y) {
         throw new BadRequestException(
           `'${item.name}' 을 놓을 수 없는 자리입니다.`,
         );
@@ -164,6 +180,7 @@ export class RoomsService {
             tileX: p.tileX,
             tileY: p.tileY,
             flipX: p.flipX ?? false,
+            facing: p.facing === 'SIDE' ? 'SIDE' : 'FRONT',
             scale: p.scale ?? 1,
             zOffset: p.zOffset ?? 0,
           })),
