@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, pixelScaleFor } from './tiles';
+import {
+  FLOOR_TOP,
+  PLACE_MARGIN_X,
+  PLACE_MAX_ROWS,
+  ROOM_H_TILES,
+  ROOM_W,
+  ROOM_W_TILES,
+  TILE,
+  TOP_HIDDEN,
+  pixelScaleFor,
+} from './tiles';
 import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { phaseAtHour, type WindowSky } from './windowSky';
 import { layout, type Layout } from './scene';
@@ -151,12 +161,12 @@ export default function PixelScreen(props: Props) {
   // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
   // 가구를 놓을 수 있는 범위 — 보이는 화면 전체. 좌우는 방(12칸) 밖 여백까지, 아래는 화면 맨 아래까지
   // 놓을 수 있다. UI(탭바·버튼)와 겹치거나 화면 끝에 조금 걸쳐도 된다. 칸 좌표는 방 왼쪽 끝이 0 이라
-  // 방 왼쪽 밖은 음수다.
+  // 방 왼쪽 밖은 음수다. 서버가 받는 범위(PLACE_MARGIN_X·PLACE_MAX_ROWS)를 넘지 않게 자른다.
   const bounds: PlaceBounds = size
     ? {
-        minX: -Math.ceil(size.offsetX / TILE),
-        maxX: ROOM_W_TILES + Math.ceil((size.w - size.offsetX - ROOM_W) / TILE),
-        rows: Math.ceil(size.h / TILE),
+        minX: -Math.min(PLACE_MARGIN_X, Math.ceil(size.offsetX / TILE)),
+        maxX: ROOM_W_TILES + Math.min(PLACE_MARGIN_X, Math.ceil((size.w - size.offsetX - ROOM_W) / TILE)),
+        rows: Math.min(PLACE_MAX_ROWS, Math.ceil(size.h / TILE)),
       }
     : { minX: 0, maxX: ROOM_W_TILES, rows: ROOM_H_TILES };
   const { minX, maxX, rows } = bounds;

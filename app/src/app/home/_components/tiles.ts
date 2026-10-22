@@ -17,6 +17,13 @@ export const ROOM_H_TILES = 20;
 export const ROOM_W = ROOM_W_TILES * TILE; // 192
 export const ROOM_H = ROOM_H_TILES * TILE; // 320
 
+/**
+ * 방(12칸) 좌우 밖으로 가구를 놓을 수 있는 칸 수와, 놓을 수 있는 세로 칸 상한.
+ * 화면을 줄여 보여 주면(VIEW_ZOOM) 방 밖 여백이 넓어져 거기까지 놓을 수 있다. 서버(rooms.service)도 같은 값으로 받는다.
+ */
+export const PLACE_MARGIN_X = 6;
+export const PLACE_MAX_ROWS = 60;
+
 /** 위에서 몇 줄이 벽인가. 톱다운 실내는 벽을 위쪽 띠로만 보여준다. 디자인 비율(벽 4 : 바닥 6)에 맞춘 값. */
 export const WALL_TILES = 10;
 export const FLOOR_TOP = WALL_TILES * TILE; // 160

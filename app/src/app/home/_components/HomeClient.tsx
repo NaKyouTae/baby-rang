@@ -16,7 +16,7 @@ import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
 import RemoveSheet from './RemoveSheet';
 import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
-import { ROOM_W_TILES, WALL_TILES } from './tiles';
+import { PLACE_MARGIN_X, ROOM_W_TILES, WALL_TILES } from './tiles';
 import RoomChrome, {
   ACTION_LABEL,
   DEFAULT_MENU,
@@ -868,9 +868,12 @@ export default function HomeClient() {
         const nh = hOf(next);
         return {
           ...next,
-          // 방 밖 여백까지 놓을 수 있다(서버도 -2칸까지 받는다). 화면 밖은 그릴 때 안으로 당긴다.
+          // 방 밖 여백까지 놓을 수 있다(서버도 같은 범위를 받는다). 화면 밖은 그릴 때 안으로 당긴다.
           // 반 칸 단위로 놓을 수 있어 가운데를 그대로 유지한다
-          tileX: Math.min(Math.max(-2, p.tileX + (wOf(p) - nw) / 2), ROOM_W_TILES + 2 - nw),
+          tileX: Math.min(
+            Math.max(-PLACE_MARGIN_X, p.tileX + (wOf(p) - nw) / 2),
+            ROOM_W_TILES + PLACE_MARGIN_X - nw,
+          ),
           tileY: Math.max(0, p.tileY + hOf(p) - nh),
         };
       }),

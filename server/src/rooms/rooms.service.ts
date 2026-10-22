@@ -3,17 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
 
 /**
- * 가로 타일 수 상한. 클라이언트가 화면 폭에 맞춰 배율을 정하므로
- * 기기에 따라 12~13칸 사이에서 움직인다. 넉넉히 둔다.
+ * 방(12칸) 좌우 밖으로 받는 칸 수. 앱이 방을 줄여 보여 주면(VIEW_ZOOM) 화면 끝까지 방 밖 여백이 생기고
+ * 거기에도 가구를 놓을 수 있다. 앱 tiles.ts 의 PLACE_MARGIN_X 와 같은 값이다.
  */
-const MAX_TILE_X = 16;
-/**
- * 가로 타일 하한. 화면이 방(12칸)보다 조금 넓은 기기에서는 방 왼쪽 밖 여백에도 가구를 놓을 수 있어
- * 방 왼쪽 끝(0)보다 두 칸까지 왼쪽을 받는다.
- */
-const MIN_TILE_X = -2;
-/** 세로도 기기마다 보이는 높이가 달라 저장만 허용하는 상한을 둔다. */
-const MAX_TILE_Y = 40;
+const PLACE_MARGIN_X = 6;
+/** 가로 타일 하한·상한. 방 왼쪽 끝이 0 이라 왼쪽 밖은 음수다. */
+const MIN_TILE_X = -PLACE_MARGIN_X;
+const MAX_TILE_X = 12 + PLACE_MARGIN_X;
+/** 세로도 기기마다 보이는 높이가 달라 저장만 허용하는 상한을 둔다. 앱 tiles.ts 의 PLACE_MAX_ROWS 와 같다. */
+const MAX_TILE_Y = 60;
 
 /** 자리가 고정된 분류. 배치가 아니라 방의 속성이라 좌표를 받지 않는다. */
 const FIXED_CATEGORIES = new Set(['WALLPAPER', 'FLOORING']);
