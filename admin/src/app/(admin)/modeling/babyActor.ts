@@ -184,6 +184,8 @@ export interface Actor {
   frameClock: number;
   /** 기록 반응 중이면 하던 행동을 멈추고 이 애니메이션만 보여 준다 */
   reaction?: { id: RecordId; variant: DiaperVariant; start: number; until: number };
+  /** 사용자가 들어 올려 옮기는 중 — 스스로 움직이지 않고 손가락을 따라간다 */
+  held?: boolean;
 }
 
 export function createActor(months: number, gender: string, x: number, y: number, startAt: number): Actor {
@@ -615,6 +617,16 @@ function reactionFrame(r: NonNullable<Actor['reaction']>, now: number) {
 /** 한 프레임 진행. 아이템 목록은 꾸미기로 바뀔 수 있어 매번 받는다. */
 export function updateActor(a: Actor, now: number, dt: number, world: World) {
   const { bounds } = world;
+  if (a.held) {
+    // 들려 있는 동안은 그 자세 그대로 버둥대기만 한다
+    a.frameClock += dt;
+    const per = 1 / BY_ID[a.act].fps;
+    while (a.frameClock >= per) {
+      a.frameClock -= per;
+      a.frame++;
+    }
+    return;
+  }
   if (a.reaction) {
     if (now < a.reaction.until) {
       a.frame = reactionFrame(a.reaction, now);
@@ -752,6 +764,109 @@ export function updateActor(a: Actor, now: number, dt: number, world: World) {
     a.frame = 0;
     a.frameClock = 0;
   }
+}
+
+/* ------------------------------------------------------------------ 들어서 옮기기 */
+
+/**
+ * 옮겨 놓은 자리에서 머무는 시간(ms). 스스로 못 움직이는 아기는 그 뒤에도 그 자리에서 다른 행동을 고른다.
+ * 너무 짧으면 놓자마자 다른 행동으로 바뀌어 옮긴 보람이 없다.
+ */
+const PLACED_MS = 25000;
+
+/** 그 개월에 할 수 있는 행동 중 고른 것들을 점수 비율대로 하나 뽑는다 */
+function pickFrom(ws: { id: BehaviorId; w: number }[]) {
+  const sum = ws.reduce((t, x) => t + x.w, 0);
+  return pick(ws.map((x) => ({ id: x.id, w: x.w / sum })));
+}
+
+/** 들고 있을 때 자세 — 그 개월에 하는 제자리 자세(앉기 → 누워서 버둥 순). 다리를 버둥대는 그림이 들린 느낌을 낸다. */
+function heldPose(months: number): BehaviorId {
+  const ids = behaviorWeights(months).map((w) => w.id);
+  return (['sit', 'lying', 'tummy'] as BehaviorId[]).find((id) => ids.includes(id)) ?? ids.find((id) => !BY_ID[id].needs && !BY_ID[id].roams) ?? 'lying';
+}
+
+/**
+ * 아기를 들어 올린다. 하던 행동·쥐고 있던 장난감은 내려놓는다.
+ * 기기 전 아기는 스스로 방을 못 돌아다니니, 부모가 옮겨 주듯 사용자가 자리를 바꿔 준다.
+ */
+export function pickUpActor(a: Actor) {
+  release(a);
+  a.reaction = undefined;
+  a.moving = false;
+  a.traveling = false;
+  a.next = null;
+  a.held = true;
+  a.act = heldPose(a.months);
+  a.facing = 'down';
+  a.flip = false;
+  a.frame = 0;
+  a.frameClock = 0;
+}
+
+/** 들고 있는 아기를 옮긴다(발 위치). */
+export function moveHeldActor(a: Actor, x: number, y: number) {
+  a.x = x;
+  a.y = y;
+}
+
+/**
+ * 들고 있던 아기를 내려놓는다. 놓은 자리의 아이템에 맞는 행동을 바로 시작한다.
+ *   침대 → 눕혀 재우기 · 의자 → 앉히기 · 붙잡는 가구 → 잡고 서기 · 장난감 → 옆에 앉아 놀기
+ *   그 개월에 못 하는 것이면(누워만 있는 아기를 의자에) 그 자리 바닥에 내려놓는다. 러그 위면 러그에서 논다.
+ * 가구가 겹쳐 있으면 앞쪽(아랫변이 아래인) 가구부터 본다.
+ */
+export function dropActor(a: Actor, now: number, world: World) {
+  a.held = false;
+  a.until = 0;
+  a.settled = true;
+  const { bounds } = world;
+  const ws = behaviorWeights(a.months);
+  const hits = world.spots
+    .filter((s) => {
+      const b = s.box ?? s;
+      return a.x >= b.x0 && a.x <= b.x1 && a.y >= b.y0 && a.y <= b.y1 + 4;
+    })
+    .sort((p, q) => (q.box ?? q).y1 - (p.box ?? p).y1);
+
+  for (const spot of hits) {
+    for (const aff of spot.aff) {
+      const opts = ws.filter((w) => BY_ID[w.id].needs === aff);
+      if (!opts.length) continue;
+      const id = pickFrom(opts);
+      a.spot = spot;
+      if (aff === 'hold') {
+        // 가구 앞(옆으로 놓았으면 앞면 옆)에 세운다
+        const at = spot.side
+          ? sideHoldPoint(spot, bounds)
+          : { x: clamp(a.x, spot.x0 + 3, spot.x1 - 3), y: clamp(spot.y1 + 2, bounds.y0, bounds.y1) };
+        a.x = at.x;
+        a.y = at.y;
+      } else if (aff === 'play') {
+        const left = a.x < (spot.x0 + spot.x1) / 2 && spot.x0 - 9 >= bounds.x0;
+        a.x = left ? spot.x0 - 9 : spot.x1 + 9;
+        a.y = clamp(spot.y1 - 1, bounds.y0, bounds.y1);
+      }
+      // 침대·의자·미끄럼틀은 begin 이 그 위 자리로 옮긴다
+      begin(a, id, now);
+      a.until = now + Math.max(holdFor(id), PLACED_MS);
+      return;
+    }
+  }
+
+  // 바닥에 내려놓는다 — 아직 못 쓰는 가구 위에 놓았으면 그 가구 바로 앞 바닥에 둔다.
+  // 다니는 범위 안으로 당기고, 러그 위면 러그를 쓰는 행동을 더 자주 한다.
+  const solid = hits.find((s) => !s.aff.includes('soft'));
+  if (solid) a.y = (solid.box ?? solid).y1 + 3;
+  a.x = clamp(a.x, bounds.x0, bounds.x1);
+  a.y = clamp(a.y, bounds.y0, bounds.y1);
+  a.spot = hits.find((s) => s.aff.includes('soft')) ?? null;
+  const floor = ws
+    .filter((w) => !BY_ID[w.id].needs && !BY_ID[w.id].roams)
+    .map((w) => ({ id: w.id, w: a.spot && BY_ID[w.id].boost === 'soft' ? w.w * 3 : w.w }));
+  const id = floor.length ? pickFrom(floor) : heldPose(a.months);
+  begin(a, id, now);
+  a.until = now + Math.max(holdFor(id), PLACED_MS);
 }
 
 /** 쓰다듬으면 하던 걸 멈추고 잠깐 이쪽을 본다. */
@@ -897,6 +1012,8 @@ export function propSprite(p: Prop) {
 
 /** 아기 그리기 순서용 깊이. 침대 안에서 자거나 의자·미끄럼틀 위에 있으면 그 그림 위에 와야 한다. */
 export function actorDepth(a: Actor) {
+  // 들고 있는 아기는 모든 가구 위에 그린다
+  if (a.held) return Infinity;
   return (a.inBed || a.aboard) && a.spot ? (a.spot.box ?? a.spot).y1 + 0.5 : a.y;
 }
 

@@ -24,7 +24,10 @@ import {
   actorSprite,
   createActor,
   createProp,
+  dropActor,
+  moveHeldActor,
   petActor,
+  pickUpActor,
   propDepth,
   reactActor,
   propSprite,
@@ -36,6 +39,7 @@ import {
   type World,
 } from './babyActor';
 import { RES, type Affordance, type DiaperVariant, type RecordId } from './babySprite';
+import { carryTarget, drawHands, startCarry, updateCarry, type Carry } from './caretaker';
 
 /** 방에 나오는 아이 한 명. 다둥이면 여러 명이 같은 방에 함께 있다. */
 export interface RoomKid {
@@ -107,6 +111,15 @@ function affordancesOf(p: Placement): Affordance[] {
 const isProp = (aff: Affordance[]) => aff.includes('ball') || aff.includes('walker');
 /** 방금 놓은 아이템으로 치는 시간 — 이 동안 그 아이템을 쓰는 행동이 2.5배 자주 나온다 */
 const NOVEL_MS = 30 * 60 * 1000;
+/**
+ * 보호자 손이 기지 못하는 아기를 옮겨 주는 간격(ms) — [처음, 그다음 최소, 그다음 최대].
+ * 로컬에서 바로 보려면 주소에 ?carry=fast 를 붙인다.
+ */
+const CARRY_GAP = [3 * 60_000, 10 * 60_000, 20 * 60_000] as const;
+const CARRY_GAP_FAST = [5_000, 15_000, 25_000] as const;
+
+/** 아기를 이만큼 꾹 누르면 들어 올린다(ms). 쓰다듬기(짧게 누르기)와 헷갈리지 않을 만큼. */
+const PICK_UP_MS = 350;
 
 /**
  * 화면을 떠났다 돌아와도 아이들이 하던 걸 이어서 하도록 아이·장난감 상태를 모듈에 들고 있는다.
@@ -194,6 +207,18 @@ export default function PixelScreen(props: Props) {
 
   const layoutRef = useRef<Layout | null>(null);
   const petRef = useRef<(nx: number, ny: number) => void>(() => {});
+  /**
+   * 아기 들어서 옮기기 — 아기를 꾹 누르면 들어 올리고, 끌어서 놓은 자리(가구)에 맞춰 내려놓는다.
+   * 아기 목록·세계는 렌더 effect 안에 있어 함수로 넘겨받는다.
+   */
+  const babyRef = useRef<{
+    at: (nx: number, ny: number) => Actor | null;
+    pickUp: (a: Actor, nx: number, ny: number) => void;
+    move: (a: Actor, nx: number, ny: number) => void;
+    drop: (a: Actor) => void;
+  } | null>(null);
+  /** 누르고 있는 아기와 들어 올렸는지. 누른 자리에서 손가락이 많이 움직이면 들기를 취소한다. */
+  const holdRef = useRef<{ actor: Actor; x: number; y: number; picked: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const reactRef = useRef<(r: RoomReaction) => void>(() => {});
 
   // 기록 반응 — 다둥이면 방에 있는 아이 모두가 같은 반응을 한다
@@ -374,6 +399,33 @@ export default function PixelScreen(props: Props) {
     };
     const hearts: { x: number; y: number; at: number }[] = [];
     const dust = new Dust();
+    /**
+     * 보호자 손 — 아직 기지 못하는 아기를 때맞춰 다른 자리로 옮겨 준다(caretaker).
+     *   낮에는 10~20분마다 러그·침대·빈 바닥 중 한 곳으로, 밤에는 침대로.
+     *   잠 기록을 저장하면 반응이 끝난 뒤 바로 침대로 옮긴다(이건 기어다니는 아기도).
+     */
+    const carries = new Map<Actor, Carry>();
+    const fastCarry = new URLSearchParams(location.search).get('carry') === 'fast';
+    const gap = fastCarry ? CARRY_GAP_FAST : CARRY_GAP;
+    const carryNext = new Map<Actor, number>();
+    const wantBed = new Set<Actor>();
+    const t0 = performance.now();
+    for (const b of babies) carryNext.set(b, t0 + gap[0] * (0.7 + Math.random() * 0.6));
+    const scheduleCarries = (now: number) => {
+      if (editingRef.current) return;
+      for (const b of babies) {
+        if (carries.has(b) || b.held || b.reaction) continue;
+        const sleepy = wantBed.has(b);
+        const due = !b.locomotion && now >= (carryNext.get(b) ?? Infinity);
+        if (!sleepy && !due) continue;
+        // 밤에 이미 침대에서 자는 아기는 그대로 둔다
+        const bedOnly = sleepy || !!world.night;
+        const to = bedOnly && b.inBed ? null : carryTarget(b, world, bedOnly);
+        wantBed.delete(b);
+        carryNext.set(b, now + gap[1] + Math.random() * (gap[2] - gap[1]));
+        if (to) carries.set(b, startCarry(b, to, now));
+      }
+    };
     /** 가구별 지금 불투명도 — 아이를 가리면 서서히 흐려졌다가 아이가 나오면 서서히 돌아온다 */
     const fade = new Map<string, number>();
     // 로컬에서 창밖 시간대를 확인하려고 주소에 ?hour=21 처럼 시각을 줄 수 있다(화면 연출만 바뀐다)
@@ -396,9 +448,45 @@ export default function PixelScreen(props: Props) {
       hearts.push({ x: near.x, y: near.y, at: performance.now() });
       petActor(near, performance.now());
     };
+    // 들어서 옮기기 — 손가락 아래(발 위치는 손가락보다 조금 아래)를 따라간다
+    const HOLD_DROP = 6;
+    const feet = (nx: number, ny: number) => ({ x: nx, y: ny + HOLD_DROP });
+    babyRef.current = {
+      // 누른 곳에 그려진 아기 — 앞(아래)에 있는 아기부터
+      at: (nx, ny) => {
+        const hit = babies
+          .filter((b) => !carries.has(b))
+          .filter((b) => {
+            const { left, top, width, height } = actorSprite(b);
+            return nx >= left + 4 && nx <= left + width - 4 && ny >= top + 4 && ny <= top + height;
+          })
+          .sort((a, b) => actorDepth(b) - actorDepth(a));
+        return hit[0] ?? null;
+      },
+      pickUp: (a, nx, ny) => {
+        pickUpActor(a);
+        const f = feet(nx, ny);
+        moveHeldActor(a, f.x, f.y);
+      },
+      move: (a, nx, ny) => {
+        const f = feet(nx, ny);
+        moveHeldActor(a, f.x, f.y);
+      },
+      drop: (a) => {
+        const now = performance.now();
+        syncWorld(now);
+        dropActor(a, now, world);
+        hearts.push({ x: a.x, y: a.y, at: now });
+      },
+    };
     reactRef.current = (r) => {
       const now = performance.now();
-      for (const b of babies) reactActor(b, r.id, r.variant, now, REACTION_MS);
+      for (const b of babies) {
+        // 보호자가 옮기는 중이거나 사용자가 들고 있으면 반응은 건너뛴다
+        if (carries.has(b) || b.held) continue;
+        reactActor(b, r.id, r.variant, now, REACTION_MS);
+        if (r.id === 'sleep') wantBed.add(b);
+      }
     };
 
     let raf = 0;
@@ -415,6 +503,8 @@ export default function PixelScreen(props: Props) {
       world.night = hour >= 20 || hour < 7;
       // 꾸미는 동안에도 아이들은 논다. 공·보행기만 놓인 자리에 고정해 집어 옮길 수 있게 한다(syncWorld).
       updateWorld(world, dt);
+      scheduleCarries(now);
+      for (const [b, c] of carries) if (updateCarry(c, now, world)) carries.delete(b);
       for (const b of babies) {
         updateActor(b, now, dt, world);
         const gap = DUST_GAP[b.act];
@@ -624,6 +714,9 @@ export default function PixelScreen(props: Props) {
         if (i < furniture.length && !deferTo.has(i)) furniture[i].draw();
       }
 
+      // 보호자 손 — 가구·아기 위에 그린다
+      for (const c of carries.values()) drawHands(ctx, c, now);
+
       // 하트 — 쓰다듬으면 머리 위로 떠오른다
       for (let i = hearts.length - 1; i >= 0; i--) {
         const age = (now - hearts[i].at) / 1000;
@@ -646,7 +739,11 @@ export default function PixelScreen(props: Props) {
     };
 
     raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // 옮기던 중에 방이 다시 만들어지면(화면 크기·아이 목록이 바뀌면) 그 자리에 내려놓는다
+      for (const c of carries.values()) if (c.actor.held) dropActor(c.actor, performance.now(), world);
+    };
   }, [size, kidsKey]);
 
   /* ---------------- 입력 ---------------- */
@@ -715,11 +812,46 @@ export default function PixelScreen(props: Props) {
       setSelectedId(null);
       return;
     }
+    // 아기를 누르면 꾹 누를 때 들어 올린다. 짧게 떼면 쓰다듬기(떼는 순간에).
+    const baby = babyRef.current?.at(nx, ny);
+    if (baby) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const hold = { actor: baby, x: nx, y: ny, picked: false, timer: null as ReturnType<typeof setTimeout> | null };
+      hold.timer = setTimeout(() => {
+        hold.timer = null;
+        hold.picked = true;
+        babyRef.current?.pickUp(baby, hold.x, hold.y);
+      }, PICK_UP_MS);
+      holdRef.current = hold;
+      return;
+    }
     petRef.current(nx, ny);
     onPet();
   };
 
+  /** 아기 들기를 끝낸다. 들어 올렸으면 내려놓고, 아직이면(짧게 눌렀으면) tap 이 true 일 때 쓰다듬는다. */
+  const endHold = (tap: boolean) => {
+    const hold = holdRef.current;
+    if (!hold) return false;
+    holdRef.current = null;
+    if (hold.timer) clearTimeout(hold.timer);
+    if (hold.picked) babyRef.current?.drop(hold.actor);
+    else if (tap) {
+      petRef.current(hold.x, hold.y);
+      onPet();
+    }
+    return true;
+  };
+
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const hold = holdRef.current;
+    if (hold && layoutRef.current) {
+      const { nx, ny } = toNative(e, layoutRef.current);
+      if (hold.picked) babyRef.current?.move(hold.actor, nx, ny);
+      // 들기 전에 손가락이 움직이면 들기를 그만둔다(쓰다듬지도 않는다)
+      else if (Math.hypot(nx - hold.x, ny - hold.y) > 6) endHold(false);
+      return;
+    }
     const L = layoutRef.current;
     const id = dragIdRef.current;
     if (!L || !id) return;
@@ -742,12 +874,14 @@ export default function PixelScreen(props: Props) {
   };
 
   const handlePointerUp = () => {
+    if (endHold(true)) return;
     clearLongPress();
     // 탭은 고르기만 한다(누를 때 이미 골랐다). 방향은 고른 가구 위의 돌리기 버튼으로 바꾼다.
     dragIdRef.current = null;
   };
 
   const handlePointerCancel = () => {
+    if (endHold(false)) return;
     clearLongPress();
     dragIdRef.current = null;
   };

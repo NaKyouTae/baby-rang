@@ -31,6 +31,9 @@ import {
   actorSprite,
   createActor,
   createProp,
+  dropActor,
+  moveHeldActor,
+  pickUpActor,
   propDepth,
   propSprite,
   scoreBehaviors,
@@ -40,6 +43,7 @@ import {
   type World,
 } from "./babyActor";
 import { SD_H, SD_W, sdStand, sdWalk, type SdFrame } from "./stardewSprite";
+import { carryTarget, drawHands, startCarry, updateCarry, type Carry } from "./caretaker";
 
 type View = "room" | "still" | "looks";
 
@@ -151,6 +155,8 @@ function Simulation({
   // 방금 켠 아이템 — 홈에서 새로 놓은 가구처럼 한동안 더 자주 쓴다
   const [novel, setNovel] = useState<{ key: Affordance; at: number }[]>([]);
   const [current, setCurrent] = useState<Partial<Record<Gender, string>>>({});
+  // 옮겨 주기 시연 — 누를 때마다 숫자가 올라가고, 방마다 아기를 들어 다른 자리로 옮겨 놓는다
+  const [carry, setCarry] = useState(0);
   const [now, setNow] = useState(0);
   useEffect(() => {
     setNow(Date.now());
@@ -182,6 +188,7 @@ function Simulation({
                 items={items}
                 novel={novelKeys}
                 night={night}
+                carry={carry}
                 onBehavior={(label) => setCurrent((c) => ({ ...c, [g.key]: label }))}
               />
               <figcaption className="text-xs text-muted-foreground">
@@ -228,7 +235,22 @@ function Simulation({
             >
               {night ? "밤" : "낮"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setCarry((c) => c + 1)}
+              disabled={!playing}
+            >
+              보호자가 옮겨 주기
+            </Button>
           </div>
+          {!createActor(month, "female", 0, 0, 0).locomotion && (
+            <p className="mb-3 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
+              {month}개월은 아직 기지 못해 스스로 자리를 옮기지 않습니다. 보호자 손이 몇 초마다 러그·침대·바닥으로 옮겨 줍니다
+              (홈은 10~20분마다, 밤에는 침대로, 잠 기록을 저장하면 침대로). 아기를 꾹 눌러 직접 옮길 수도 있습니다.
+            </p>
+          )}
           <ul className="space-y-1.5">
             {weights.map((x) => {
               const label = LABEL[x.id];
@@ -252,6 +274,7 @@ function Simulation({
           <p className="mt-3 text-xs text-muted-foreground">
             행동 점수 = 개월 가중치 × 필요한 아이템이 있는가 × 관련 아이템 가산(러그 2배) × 새 아이템 가산(2.5배) × 밤이면
             침대에서 자기 4배. 아이템이 필요한 행동은 그 개월의 이동 수단으로 아이템까지 간 다음 시작한다.
+            아기를 꾹 눌러 끌어다 놓으면 놓은 자리(침대·러그·가구)에 맞는 행동을 바로 시작한다.
           </p>
         </div>
       </CardContent>
@@ -529,7 +552,8 @@ function RoomCanvas({ canvasRef, label }: { canvasRef: React.RefObject<HTMLCanva
       width={ROOM_W * RES}
       height={ROOM_H * RES}
       className="rounded-lg border border-border"
-      style={{ width: ROOM_W * ROOM_SCALE, height: ROOM_H * ROOM_SCALE, imageRendering: "pixelated" }}
+      // touchAction — 시뮬레이션 방에서 아기를 끌 때 화면이 스크롤되지 않게
+      style={{ width: ROOM_W * ROOM_SCALE, height: ROOM_H * ROOM_SCALE, imageRendering: "pixelated", touchAction: "none" }}
       aria-label={label}
     />
   );
@@ -713,6 +737,11 @@ function drawLayer(
 }
 
 /** 엔진 한 벌을 캔버스에 돌린다. 장난감과 아기를 y 로 정렬해 앞뒤가 맞게 그린다. */
+/** 시뮬레이션에서 보호자 손이 기지 못하는 아기를 옮겨 주는 간격(ms). 홈은 10~20분이지만 보려고 짧게 둔다. */
+const SIM_CARRY_GAP = [6_000, 12_000] as const;
+/** 홈과 같은 꾹 누르기 시간(ms) */
+const PICK_UP_MS = 350;
+
 function runEngine(
   ctx: CanvasRenderingContext2D,
   room: HTMLCanvasElement,
@@ -720,6 +749,8 @@ function runEngine(
   actor: Actor,
   playing: boolean,
   onLabel?: (label: string) => void,
+  /** 홈처럼 아기를 꾹 눌러 옮길 수 있게 하고, 옮겨 주기 시연을 받는다 */
+  control?: { carry?: () => void },
 ) {
   ctx.setTransform(RES, 0, 0, RES, 0, 0);
   ctx.imageSmoothingEnabled = false;
@@ -737,7 +768,11 @@ function runEngine(
   };
   const report = () => {
     if (!onLabel) return;
-    const label = actor.traveling && actor.next ? `${LABEL[actor.next]} 하러 가는 중` : LABEL[actor.act];
+    const label = actor.held
+      ? "안겨서 옮겨지는 중"
+      : actor.traveling && actor.next
+        ? `${LABEL[actor.next]} 하러 가는 중`
+        : LABEL[actor.act];
     if (label !== lastLabel) onLabel((lastLabel = label));
   };
   let prev = performance.now();
@@ -745,18 +780,84 @@ function runEngine(
   report();
   draw();
   if (!playing) return () => {};
+
+  // 보호자 손 — 홈과 같은 caretaker. 기지 못하는 아기는 몇 초마다 저절로, 옮겨 주기 버튼을 누르면 바로 옮긴다.
+  let carry: Carry | null = null;
+  let nextCarry = performance.now() + SIM_CARRY_GAP[0];
+  const beginCarry = (now: number) => {
+    if (carry || actor.held) return;
+    const to = carryTarget(actor, world, !!world.night);
+    if (to) carry = startCarry(actor, to, now);
+    nextCarry = now + SIM_CARRY_GAP[0] + Math.random() * (SIM_CARRY_GAP[1] - SIM_CARRY_GAP[0]);
+  };
+  if (control) control.carry = () => beginCarry(performance.now());
+
+  // 꾹 눌러 옮기기 — 홈 PixelScreen 과 같은 조작
+  const canvas = ctx.canvas;
+  let press: { x: number; y: number; timer: ReturnType<typeof setTimeout> | null; picked: boolean } | null = null;
+  const toRoom = (e: PointerEvent) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * ROOM_W, y: ((e.clientY - r.top) / r.height) * ROOM_H };
+  };
+  const onDown = (e: PointerEvent) => {
+    if (carry) return;
+    const p = toRoom(e);
+    const s = actorSprite(actor);
+    if (p.x < s.left || p.x > s.left + s.width || p.y < s.top || p.y > s.top + s.height) return;
+    canvas.setPointerCapture(e.pointerId);
+    const cur = { x: p.x, y: p.y, timer: null as ReturnType<typeof setTimeout> | null, picked: false };
+    cur.timer = setTimeout(() => {
+      cur.timer = null;
+      cur.picked = true;
+      pickUpActor(actor);
+      moveHeldActor(actor, cur.x, cur.y + 6);
+    }, PICK_UP_MS);
+    press = cur;
+  };
+  const onMove = (e: PointerEvent) => {
+    if (!press) return;
+    const p = toRoom(e);
+    if (press.picked) moveHeldActor(actor, p.x, p.y + 6);
+    else if (Math.hypot(p.x - press.x, p.y - press.y) > 4) end();
+  };
+  const end = () => {
+    if (!press) return;
+    if (press.timer) clearTimeout(press.timer);
+    if (press.picked) dropActor(actor, performance.now(), world);
+    press = null;
+  };
+  if (control) {
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", end);
+    canvas.addEventListener("pointercancel", end);
+  }
+
   let raf = 0;
   const tick = (now: number) => {
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
+    if (control && !actor.locomotion && !press && now >= nextCarry) beginCarry(now);
+    if (carry && updateCarry(carry, now, world)) carry = null;
     updateWorld(world, dt);
     updateActor(actor, now, dt, world);
     report();
     draw();
+    if (carry) drawHands(ctx, carry, now);
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(raf);
+  return () => {
+    cancelAnimationFrame(raf);
+    if (press?.timer) clearTimeout(press.timer);
+    if (control) {
+      control.carry = undefined;
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", end);
+      canvas.removeEventListener("pointercancel", end);
+    }
+  };
 }
 
 /** 개월 시뮬레이션 방 */
@@ -767,6 +868,7 @@ function SimRoom({
   items,
   novel,
   night,
+  carry,
   onBehavior,
 }: {
   months: number;
@@ -775,9 +877,12 @@ function SimRoom({
   items: Affordance[];
   novel: Affordance[];
   night: boolean;
+  /** 바뀔 때마다 아기를 들어 다른 자리로 옮겨 놓는다(0 은 처음 값이라 무시) */
+  carry: number;
   onBehavior: (label: string) => void;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const control = useRef<{ carry?: () => void }>({});
   const report = useRef(onBehavior);
   useEffect(() => {
     report.current = onBehavior;
@@ -791,8 +896,12 @@ function SimRoom({
     const list = itemsKey ? (itemsKey.split(",") as Affordance[]) : [];
     const world = simWorld(months, list, novelKey ? (novelKey.split(",") as Affordance[]) : [], night);
     const actor = createActor(months, gender, ROOM_W * 0.4, ROOM_H * 0.7, performance.now() + 300);
-    return runEngine(ctx, simRoomCanvas(months, list), world, actor, playing, (l) => report.current(l));
+    return runEngine(ctx, simRoomCanvas(months, list), world, actor, playing, (l) => report.current(l), control.current);
   }, [months, gender, playing, itemsKey, novelKey, night]);
+
+  useEffect(() => {
+    if (carry) control.current.carry?.();
+  }, [carry]);
 
   return <RoomCanvas canvasRef={ref} label={`${gender === "female" ? "여아" : "남아"} ${months}개월 시뮬레이션`} />;
 }

@@ -190,6 +190,14 @@ export default function ChildSheet({ open, child, onClose }: Props) {
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   min="1900-01-01"
                   max="2100-12-31"
+                  // 데스크톱 브라우저는 투명한 날짜 칸을 눌러도 달력 아이콘이 아니면 선택 창이 안 열린다. 직접 연다.
+                  onClick={(event) => {
+                    try {
+                      event.currentTarget.showPicker?.();
+                    } catch {
+                      /* 지원하지 않거나 막힌 브라우저는 기본 동작에 맡긴다 */
+                    }
+                  }}
                   onChange={(event) => {
                     if (event.target.value) setBirthDigits(event.target.value.replace(/-/g, ''));
                   }}
