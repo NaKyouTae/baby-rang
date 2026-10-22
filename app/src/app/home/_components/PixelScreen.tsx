@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   FLOOR_TOP,
-  PLACE_MARGIN_X,
-  PLACE_MAX_ROWS,
   ROOM_H_TILES,
   ROOM_W,
   ROOM_W_TILES,
   TILE,
   TOP_HIDDEN,
-  pixelScaleFor,
+  VIEW_MARGIN_TILES,
+  VIEW_ROWS,
+  viewScaleFor,
 } from './tiles';
 import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { phaseAtHour, type WindowSky } from './windowSky';
@@ -170,17 +170,12 @@ export default function PixelScreen(props: Props) {
     /** 보이는 화면 폭(CSS) */
     viewW: number;
   } | null>(null);
-  // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
-  // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
-  // 가구를 놓을 수 있는 범위 — 보이는 화면 전체. 좌우는 방(12칸) 밖 여백까지, 아래는 화면 맨 아래까지
-  // 놓을 수 있다. UI(탭바·버튼)와 겹치거나 화면 끝에 조금 걸쳐도 된다. 칸 좌표는 방 왼쪽 끝이 0 이라
-  // 방 왼쪽 밖은 음수다. 서버가 받는 범위(PLACE_MARGIN_X·PLACE_MAX_ROWS)를 넘지 않게 자른다.
+  // 가구를 놓을 수 있는 범위 — 어느 기기든 같은 무대(VIEW_W × VIEW_H). 좌우는 방(12칸) 밖 2칸씩,
+  // 세로는 무대 아래 끝까지. 화면이 무대보다 크면 남는 곳은 벽·바닥만 이어 보이고 가구는 놓지 않는다.
+  // 기기마다 범위가 같아야 웹에서 끝에 붙인 가구가 앱에서 안으로 당겨지지 않는다. 칸 좌표는 방 왼쪽 끝이 0 이라
+  // 방 왼쪽 밖은 음수다.
   const bounds: PlaceBounds = size
-    ? {
-        minX: -Math.min(PLACE_MARGIN_X, Math.ceil(size.offsetX / TILE)),
-        maxX: ROOM_W_TILES + Math.min(PLACE_MARGIN_X, Math.ceil((size.w - size.offsetX - ROOM_W) / TILE)),
-        rows: Math.min(PLACE_MAX_ROWS, Math.ceil(size.h / TILE)),
-      }
+    ? { minX: -VIEW_MARGIN_TILES, maxX: ROOM_W_TILES + VIEW_MARGIN_TILES, rows: VIEW_ROWS }
     : { minX: 0, maxX: ROOM_W_TILES, rows: ROOM_H_TILES };
   const { minX, maxX, rows } = bounds;
 
@@ -263,9 +258,9 @@ export default function PixelScreen(props: Props) {
     preloadSprites([wallpaperUrl, flooringUrl]);
   }, [wallpaperUrl, flooringUrl]);
 
-  // 방은 가로 12칸(ROOM_W)이고, 방 픽셀 하나를 기기 픽셀 몇 개(0.5 단위)로 키운다(pixelScaleFor).
-  // 배율이 끊어져 화면 폭과 딱 맞지 않으면 남는 폭은 방 양옆에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
-  // 세로는 화면 비율대로 남는 만큼 바닥이 길어진다. 어느 기기에서든 가구가 같은 칸, 같은 벽 경계에 보인다.
+  // 어느 기기든 같은 무대(VIEW_W × VIEW_H, tiles.ts)가 화면에 꼭 들어가게 배율을 정한다(viewScaleFor).
+  // 무대가 화면보다 작으면 남는 곳은 방 양옆·아래에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
+  // 콘텐츠 영역(상태바 아래) 맨 위에는 어느 기기든 방의 TOP_HIDDEN 높이가 온다. 그래서 웹·앱이 같은 칸, 같은 벽 경계를 보여 준다.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -274,9 +269,10 @@ export default function PixelScreen(props: Props) {
       if (!r.width || !r.height) return;
       const dpr = window.devicePixelRatio || 1;
       const snap = (v: number) => Math.round(v * dpr) / dpr;
-      const scale = pixelScaleFor(r.width, r.height, dpr) / dpr;
+      const safeTop = measureSafeTop();
+      const scale = viewScaleFor(r.width, r.height - safeTop);
       // 상태바가 덮는 만큼은 이미 가려져 있으니, 모자란 만큼만 방을 위로 올린다(웹은 상태바가 0).
-      const shift = Math.max(0, snap(TOP_HIDDEN * scale - measureSafeTop()));
+      const shift = Math.max(0, snap(TOP_HIDDEN * scale - safeTop));
       // 양옆 1픽셀씩 더 그려 둔다. 가운데 맞춤을 기기 픽셀로 반올림해도 화면 끝에 빈 줄이 남지 않게.
       const w = Math.max(ROOM_W, Math.ceil(r.width / scale) + 2);
       const h = Math.ceil((r.height + shift) / scale);

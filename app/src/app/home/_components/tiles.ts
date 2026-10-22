@@ -30,28 +30,34 @@ export const FLOOR_TOP = WALL_TILES * TILE; // 160
 
 /**
  * 방 맨 위에서 화면 밖(상태바 뒤)으로 숨기는 높이(논리 픽셀).
- * iOS 에선 상태바(약 59pt)가 벽 윗부분을 이만큼 덮는다. 상태바가 없는 웹은 그만큼 방을 위로 올려
- * 어느 기기에서든 보이는 벽·바닥 비율을 같게 맞춘다.
+ * 콘텐츠 영역(상태바 아래) 맨 위에 보이는 방의 높이가 어느 기기든 이 값이 되도록 방을 위로 올린다.
+ * iOS 상태바(약 59pt)보다 커야 앱에서도 웹과 같은 자리가 맨 위에 온다.
  */
-export const TOP_HIDDEN = 28;
+export const TOP_HIDDEN = 40;
 
 /**
- * 화면에 맞춘 확대 배율 — 방 픽셀 하나가 기기 화면 픽셀 몇 개인지. 0.5 단위다.
+ * 어느 기기든 똑같이 보여 주는 방 무대(논리 픽셀) — 가로 VIEW_W, 세로 VIEW_H(TOP_HIDDEN 아래부터).
  *
- * 아무 실수나 쓰면 픽셀마다 크기가 달라진다(390px 아이폰에서 6.09배면 어떤 픽셀은 6칸, 어떤 건 7칸).
- * 그러면 같은 1px 외곽선도 굵기가 들쭉날쭉해 조잡해 보인다. 그래서 배율은 정수를 기본으로 하되,
- * 기기 픽셀이 적은 화면(웹 dpr 1)에서는 정수 한 단계가 너무 커(2배 → 1배는 절반) 0.5 단계까지 허용한다.
- * 남는 몇 픽셀은 늘리지 않고 방 밖 벽·바닥으로 채운다.
- * 화면이 최소 높이(ROOM_H)보다 짧으면 높이에 맞춰 줄인다 — 가구가 잘리는 것보다 낫다.
- * 꽉 맞춘 배율에 VIEW_ZOOM 을 곱해 한 단계 멀리서(위에서) 내려다보듯 조금 작게 보여 준다.
+ * 화면 폭·기기 픽셀 비율(dpr)에 맞춰 배율을 정하면 기기마다 보이는 칸 수가 달라져,
+ * 웹에서 화면 끝에 붙인 가구가 앱에서는 안으로 당겨져 보인다. 그래서 무대 크기를 고정하고
+ * 이 무대가 화면에 꼭 들어가는 배율(실수)을 쓴다. 무대 밖으로 남는 화면은 벽·바닥을 이어 그려 채우고, 가구는 놓지 않는다.
+ * 가로는 방(12칸)에 양옆 2칸씩 여백을 더한 16칸이다.
  */
-export function pixelScaleFor(cssWidth: number, cssHeight: number, dpr: number) {
-  const fit = Math.min((cssWidth * dpr) / ROOM_W, (cssHeight * dpr) / ROOM_H);
-  return Math.max(1, Math.floor(fit * VIEW_ZOOM * 2) / 2);
-}
+export const VIEW_W = 16 * TILE; // 256
+export const VIEW_H = 30 * TILE; // 480
+/** 무대 양옆 여백 칸 수 — 방 밖으로 가구를 놓을 수 있는 칸 */
+export const VIEW_MARGIN_TILES = (VIEW_W - ROOM_W) / 2 / TILE; // 2
+/** 무대 안에서 가구를 놓을 수 있는 세로 칸 수(방 맨 위부터) */
+export const VIEW_ROWS = Math.floor((TOP_HIDDEN + VIEW_H) / TILE); // 32
 
-/** 화면에 꽉 맞춘 크기 대비 보여 주는 비율. 1 이면 가로 12칸이 화면 폭을 채운다. */
-export const VIEW_ZOOM = 0.85;
+/**
+ * 방 픽셀 하나의 CSS 크기. 무대(VIEW_W × VIEW_H)가 콘텐츠 영역에 꼭 들어가는 가장 큰 값이다.
+ * 정수배가 아니라 고해상도 화면에서 픽셀 굵기가 기기 픽셀 한 개만큼 들쭉날쭉할 수 있지만,
+ * 웹·앱·기기 어디서든 같은 칸이 같은 자리에 보이는 것을 우선한다.
+ */
+export function viewScaleFor(cssWidth: number, contentHeight: number) {
+  return Math.min(cssWidth / VIEW_W, contentHeight / VIEW_H);
+}
 
 /** 타일 좌표 → 캔버스 픽셀 좌표(왼쪽 위). */
 export function tileToPx(offsetX: number, tx: number, ty: number) {
