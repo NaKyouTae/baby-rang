@@ -29,16 +29,22 @@ export const FLOOR_TOP = WALL_TILES * TILE; // 160
 export const TOP_HIDDEN = 28;
 
 /**
- * 화면에 맞춘 확대 배율 — 방 픽셀 하나가 기기 화면 픽셀 몇 개인지. 반드시 정수다.
+ * 화면에 맞춘 확대 배율 — 방 픽셀 하나가 기기 화면 픽셀 몇 개인지. 0.5 단위다.
  *
- * 정수가 아니면 픽셀마다 크기가 달라진다(390px 아이폰에서 6.09배면 어떤 픽셀은 6칸, 어떤 건 7칸).
- * 그러면 같은 1px 외곽선도 굵기가 들쭉날쭉해 조잡해 보인다. 스타듀밸리처럼 모든 픽셀을 같은 크기로 찍으려고
- * 가로 12칸이 화면 폭 안에 들어오는 가장 큰 정수배를 쓰고, 남는 몇 픽셀은 늘리지 않고 방 밖 벽·바닥으로 채운다.
+ * 아무 실수나 쓰면 픽셀마다 크기가 달라진다(390px 아이폰에서 6.09배면 어떤 픽셀은 6칸, 어떤 건 7칸).
+ * 그러면 같은 1px 외곽선도 굵기가 들쭉날쭉해 조잡해 보인다. 그래서 배율은 정수를 기본으로 하되,
+ * 기기 픽셀이 적은 화면(웹 dpr 1)에서는 정수 한 단계가 너무 커(2배 → 1배는 절반) 0.5 단계까지 허용한다.
+ * 남는 몇 픽셀은 늘리지 않고 방 밖 벽·바닥으로 채운다.
  * 화면이 최소 높이(ROOM_H)보다 짧으면 높이에 맞춰 줄인다 — 가구가 잘리는 것보다 낫다.
+ * 꽉 맞춘 배율에 VIEW_ZOOM 을 곱해 한 단계 멀리서(위에서) 내려다보듯 조금 작게 보여 준다.
  */
 export function pixelScaleFor(cssWidth: number, cssHeight: number, dpr: number) {
-  return Math.max(1, Math.floor(Math.min((cssWidth * dpr) / ROOM_W, (cssHeight * dpr) / ROOM_H)));
+  const fit = Math.min((cssWidth * dpr) / ROOM_W, (cssHeight * dpr) / ROOM_H);
+  return Math.max(1, Math.floor(fit * VIEW_ZOOM * 2) / 2);
 }
+
+/** 화면에 꽉 맞춘 크기 대비 보여 주는 비율. 1 이면 가로 12칸이 화면 폭을 채운다. */
+export const VIEW_ZOOM = 0.85;
 
 /** 타일 좌표 → 캔버스 픽셀 좌표(왼쪽 위). */
 export function tileToPx(offsetX: number, tx: number, ty: number) {

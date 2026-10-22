@@ -28,6 +28,8 @@ export type RoomItem = {
   sideImageUrl?: string | null;
   sideTileW?: number | null;
   sideTileH?: number | null;
+  /** 뒷모습(벽 쪽을 보는 모습) 그림. 있으면 꾸미기에서 뒤로 돌려 놓을 수 있다. */
+  backImageUrl?: string | null;
 };
 
 /**

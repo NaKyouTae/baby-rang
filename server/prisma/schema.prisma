@@ -594,10 +594,11 @@ enum RoomItemCategory {
 }
 
 // 어디에 붙는가. 벽에 거는 것과 바닥에 놓는 것은 좌표의 의미가 다르다.
-/// 가구가 보는 방향. 옆모습은 오른쪽을 보고, 왼쪽은 flipX 로 뒤집는다.
+/// 가구가 보는 방향. 옆모습은 오른쪽을 보고, 왼쪽은 flipX 로 뒤집는다. 뒷모습은 정면과 칸 수가 같다.
 enum RoomFacing {
   FRONT
   SIDE
+  BACK
 }
 
 enum RoomSurface {
@@ -645,6 +646,8 @@ model RoomItem {
   sideImageUrl String?
   sideTileW    Int?
   sideTileH    Int?
+  // 뒷모습(벽 쪽을 보는 모습). 있으면 꾸미기에서 뒤로 돌려 놓을 수 있다. 칸 수는 정면과 같다.
+  backImageUrl String?
   // 0 이면 무료, 0 보다 크면 코인으로 산다. 획득 방법을 따로 두지 않는다.
   priceCoins  Int              @default(0)
   sortOrder   Int              @default(0)
@@ -691,8 +694,9 @@ model RoomPlacement {
   roomId    String
   itemId    String
   /// 타일 좌표(왼쪽 위 기준). 픽셀로 저장하면 타일 크기를 바꿀 때 전부 깨진다.
-  tileX     Int
-  tileY     Int
+  /// 반 칸(0.5) 단위까지 받는다 — 한 칸 단위로는 러그 가운데에 소파를 딱 맞추지 못하는 경우가 있다.
+  tileX     Float
+  tileY     Float
   /// 좌우 반전. 옆모습이면 반전한 쪽이 왼쪽을 보는 모습이다.
   flipX     Boolean  @default(false)
   /// 정면 / 옆모습. 옆모습은 아이템에 옆모습 그림이 있을 때만 고를 수 있다.

@@ -26,12 +26,17 @@ export type Placement = {
   scale?: number;
   /** 좌우 반전. 옆모습이면 반전한 쪽이 왼쪽을 보는 모습이다. */
   flipX: boolean;
-  /** 정면 / 옆모습. 옆모습 그림(sideImageUrl)이 있는 아이템만 옆으로 둘 수 있다. 예전 배치에는 없어 선택값이다. */
-  facing?: 'FRONT' | 'SIDE';
+  /**
+   * 정면 / 옆모습 / 뒷모습. 그 그림(sideImageUrl·backImageUrl)이 있는 아이템만 옆·뒤로 둘 수 있다.
+   * 예전 배치에는 없어 선택값이다.
+   */
+  facing?: Facing;
   /** 옆모습(오른쪽을 보는 모습) 그림과 칸 수(어드민 값). 칸 수가 없으면 정면 칸 수의 가로·세로를 바꿔 쓴다. */
   sideImageUrl?: string | null;
   sideTileW?: number | null;
   sideTileH?: number | null;
+  /** 뒷모습(벽 쪽을 보는 모습) 그림. 칸 수는 정면과 같다. */
+  backImageUrl?: string | null;
   /**
    * 아기가 이 아이템으로 무엇을 할 수 있는지(어드민 RoomItem.affordances).
    * HOLD 붙잡기 · SOFT_FLOOR 푹신한 바닥 · BALL 공 · PUSH_WALKER 보행기 · PLAY 장난감 · SLEEP 침대 · SEAT 의자 · SLIDE 미끄럼틀.
@@ -45,6 +50,8 @@ export type Placement = {
   dynamicSlot?: string | null;
 };
 
+export type Facing = 'FRONT' | 'SIDE' | 'BACK';
+
 export const MAX_SCALE = 3;
 
 /** 화면에서 차지하는 가로·세로 칸 — 원래 칸 수 × 배율 */
@@ -54,13 +61,36 @@ export const MAX_SCALE = 3;
  * 크기가 다른 가구가 필요하면 그림을 따로 만든다. 저장된 scale 값은 지우지 않고 무시만 한다.
  */
 type Sized = Pick<Placement, 'tileW' | 'tileH' | 'facing' | 'sideImageUrl' | 'sideTileW' | 'sideTileH'>;
+type Faced = Pick<Placement, 'facing' | 'sideImageUrl' | 'backImageUrl'>;
 /** 옆으로 놓였는가 — 옆모습 그림이 없으면 방향 값이 남아 있어도 정면으로 본다 */
 export const isSide = (p: Pick<Placement, 'facing' | 'sideImageUrl'>) => p.facing === 'SIDE' && !!p.sideImageUrl;
+/** 뒤로 놓였는가 — 뒷모습 그림이 없으면 정면으로 본다 */
+export const isBack = (p: Pick<Placement, 'facing' | 'backImageUrl'>) => p.facing === 'BACK' && !!p.backImageUrl;
+/** 실제로 그려지는 방향 */
+export const facingOf = (p: Faced): Facing => (isSide(p) ? 'SIDE' : isBack(p) ? 'BACK' : 'FRONT');
 export const wOf = (p: Sized) => (isSide(p) ? (p.sideTileW ?? p.tileH) : p.tileW);
 export const hOf = (p: Sized) => (isSide(p) ? (p.sideTileH ?? p.tileW) : p.tileH);
 /** 지금 방향의 그림 */
-export const imageOf = (p: Pick<Placement, 'imageUrl' | 'facing' | 'sideImageUrl'>) =>
-  isSide(p) ? p.sideImageUrl! : p.imageUrl;
+export const imageOf = (p: Pick<Placement, 'imageUrl'> & Faced) =>
+  isSide(p) ? p.sideImageUrl! : isBack(p) ? p.backImageUrl! : p.imageUrl;
+
+/**
+ * 돌리기 버튼을 누를 때 다음 방향. 한 바퀴 돌면 네 방향을 다 거친다.
+ *   정면 → 옆(오른쪽) → 뒤 → 옆(왼쪽) → 정면
+ * 그림이 없는 방향은 건너뛴다(옆모습만 있으면 정면 → 오른쪽 → 왼쪽, 뒷모습만 있으면 정면 ↔ 뒤).
+ * 돌릴 방향이 없으면 null.
+ */
+export function nextTurn(p: Faced & Pick<Placement, 'flipX'>): Pick<Placement, 'facing' | 'flipX'> | null {
+  const turns: Pick<Placement, 'facing' | 'flipX'>[] = [{ facing: 'FRONT', flipX: false }];
+  if (p.sideImageUrl) turns.push({ facing: 'SIDE', flipX: false });
+  if (p.backImageUrl) turns.push({ facing: 'BACK', flipX: false });
+  if (p.sideImageUrl) turns.push({ facing: 'SIDE', flipX: true });
+  if (turns.length === 1) return null;
+  const now = facingOf(p);
+  // 정면·뒤는 뒤집혀 있어도 같은 자리로 본다
+  const i = turns.findIndex((t) => t.facing === now && (now !== 'SIDE' || t.flipX === p.flipX));
+  return turns[(i + 1) % turns.length];
+}
 
 /**
  * 스프라이트 이미지 캐시.

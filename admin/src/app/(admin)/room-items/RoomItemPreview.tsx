@@ -72,21 +72,64 @@ function behaviorsFor(aff: Affordance[]): Behavior[] {
 /** 그 행동을 보기 좋은 개월. 가장 흔한 개월로 맞추되, 아이템까지 가려면 기어야 하므로 6개월 밑으로는 내리지 않는다. */
 const monthsFor = (b: Behavior) => Math.max(b.typical, b.from, b.needs && b.needs !== "bed" ? 6 : 0);
 
+type Facing = "FRONT" | "SIDE" | "BACK";
+
 type Props = {
   category: string;
   surface: string;
   tileW: number;
   tileH: number;
   imageUrl: string;
+  /** 옆모습(오른쪽을 보는 모습). 칸 수가 0 이면 정면 칸 수의 가로·세로를 바꿔 쓴다. */
+  sideImageUrl?: string;
+  sideTileW?: number;
+  sideTileH?: number;
+  /** 뒷모습. 칸 수는 정면과 같다. */
+  backImageUrl?: string;
   /** 어드민에서 고른 쓰임새(DB 값). 비우면 분류로 짐작한다. */
   affordances: string[];
 };
 
-export default function RoomItemPreview({ category, surface, tileW, tileH, imageUrl, affordances }: Props) {
+export default function RoomItemPreview({
+  category,
+  surface,
+  tileW: frontW,
+  tileH: frontH,
+  imageUrl: frontUrl,
+  sideImageUrl = "",
+  sideTileW = 0,
+  sideTileH = 0,
+  backImageUrl = "",
+  affordances,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [failed, setFailed] = useState(false);
   const [flip, setFlip] = useState(false);
+  const [facing, setFacing] = useState<Facing>("FRONT");
+
+  // 앱 꾸미기의 돌리기 버튼과 같은 순서 — 정면 → 옆(오른쪽) → 뒤 → 옆(왼쪽). 그림이 없는 방향은 건너뛴다.
+  const turns = useMemo(() => {
+    const t: { facing: Facing; flip: boolean }[] = [{ facing: "FRONT", flip: false }];
+    if (sideImageUrl) t.push({ facing: "SIDE", flip: false });
+    if (backImageUrl) t.push({ facing: "BACK", flip: false });
+    if (sideImageUrl) t.push({ facing: "SIDE", flip: true });
+    return t;
+  }, [sideImageUrl, backImageUrl]);
+  // 그림을 지워 그 방향이 사라지면 정면으로 본다
+  const now: Facing =
+    (facing === "SIDE" && !sideImageUrl) || (facing === "BACK" && !backImageUrl) ? "FRONT" : facing;
+  const rotate = () => {
+    const i = turns.findIndex((t) => t.facing === now && (now !== "SIDE" || t.flip === flip));
+    const next = turns[(i + 1) % turns.length];
+    setFacing(next.facing);
+    setFlip(next.flip);
+  };
+  const side = now === "SIDE";
+  const imageUrl = side ? sideImageUrl : now === "BACK" ? backImageUrl : frontUrl;
+  const tileW = side ? sideTileW || frontH : frontW;
+  const tileH = side ? sideTileH || frontW : frontH;
+  const facingLabel = side ? (flip ? "옆(왼쪽)" : "옆(오른쪽)") : now === "BACK" ? "뒤" : "정면";
   const [withBaby, setWithBaby] = useState(true);
   // null 은 아직 안 고름 — 아이템만의 행동을 골라 둔다. "" 는 '자유롭게'를 직접 고른 것.
   const [behaviorId, setBehaviorId] = useState<string | null>(null);
@@ -171,6 +214,8 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
           // 침대·의자·미끄럼틀은 그림 칸 전체로 눕는/앉는/타는 자리를 잡는다. 반전하면 방향도 바뀐다.
           box: { x0, x1, y0, y1 },
           flip,
+          // 옆으로 돌려 놓은 가구 — 앱처럼 침대는 세로로 눕고, 붙잡기·의자는 옆모습으로 쓴다
+          side,
         };
         if (spot.x1 - spot.x0 >= 8) world.spots.push(spot);
       }
@@ -262,7 +307,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [img, category, surface, tileW, tileH, flip, withBaby, surfaceFill, aff, behavior, months, itemTop, viewTop]);
+  }, [img, category, surface, tileW, tileH, flip, side, withBaby, surfaceFill, aff, behavior, months, itemTop, viewTop]);
 
   const note = failed
     ? "이미지를 불러오지 못했습니다."
@@ -271,7 +316,7 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
       : !aff.length
         ? "쓰임새가 없어 아기가 이 아이템을 쓰지 않습니다. 점선은 차지하는 칸입니다."
         : behavior
-          ? `${months}개월 아기가 '${behavior.label}'만 반복합니다. ${behavior.note}`
+          ? null
           : `${months}개월 아기가 앱처럼 행동을 고릅니다. 이 아이템을 쓰는 행동이 더 자주 나옵니다.`;
 
   return (
@@ -318,17 +363,37 @@ export default function RoomItemPreview({ category, surface, tileW, tileH, image
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Switch id="previewFlip" checked={flip} onCheckedChange={setFlip} disabled={surfaceFill} />
-          <Label htmlFor="previewFlip" className="text-xs">좌우 반전</Label>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={rotate}
+          disabled={surfaceFill || turns.length < 2}
+          aria-label="방향 돌리기"
+          title="방향 돌리기"
+          className="flex h-7 w-7 items-center justify-center rounded-md border border-input text-sm hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <span aria-hidden>↻</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setFlip((v) => !v)}
+          disabled={surfaceFill}
+          aria-label="좌우 뒤집기"
+          aria-pressed={flip}
+          title="좌우 뒤집기"
+          className={`flex h-7 w-7 items-center justify-center rounded-md border text-sm disabled:opacity-40 ${
+            flip ? "border-primary bg-primary text-primary-foreground" : "border-input hover:bg-accent"
+          }`}
+        >
+          <span aria-hidden>⇄</span>
+        </button>
+        {!surfaceFill && <span className="text-xs text-muted-foreground">{facingLabel}</span>}
+        <div className="ml-auto flex items-center gap-2">
           <Switch id="previewBaby" checked={withBaby} onCheckedChange={setWithBaby} />
           <Label htmlFor="previewBaby" className="text-xs">아기</Label>
         </div>
       </div>
-      <p className="text-[11px] text-muted-foreground">{note}</p>
+      {note && <p className="text-[11px] text-muted-foreground">{note}</p>}
     </div>
   );
 }

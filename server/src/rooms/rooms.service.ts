@@ -26,8 +26,8 @@ type PlacementInput = {
   tileX: number;
   tileY: number;
   flipX?: boolean;
-  /** 정면 / 옆모습. 옆모습은 아이템에 옆모습 그림이 있을 때만. */
-  facing?: 'FRONT' | 'SIDE';
+  /** 정면 / 옆모습 / 뒷모습. 옆·뒷모습은 아이템에 그 그림이 있을 때만. */
+  facing?: 'FRONT' | 'SIDE' | 'BACK';
   scale?: number;
   zOffset?: number;
 };
@@ -118,10 +118,21 @@ export class RoomsService {
           `'${item.name}' 의 크기는 1~${MAX_SCALE}배만 고를 수 있습니다.`,
         );
       }
+      // 좌표는 반 칸(0.5) 단위까지만 받는다 — 8px 단위로 붙어야 픽셀이 반으로 쪼개지지 않는다
+      if (!Number.isInteger(p.tileX * 2) || !Number.isInteger(p.tileY * 2)) {
+        throw new BadRequestException(
+          `'${item.name}' 의 자리는 반 칸 단위여야 합니다.`,
+        );
+      }
       const side = p.facing === 'SIDE';
       if (side && !item.sideImageUrl) {
         throw new BadRequestException(
           `'${item.name}' 은 옆모습이 없어 옆으로 놓을 수 없습니다.`,
+        );
+      }
+      if (p.facing === 'BACK' && !item.backImageUrl) {
+        throw new BadRequestException(
+          `'${item.name}' 은 뒷모습이 없어 뒤로 놓을 수 없습니다.`,
         );
       }
       // 옆모습은 칸 수가 따로 있다. 정해 두지 않았으면 정면 칸 수를 가로·세로 바꿔 쓴다.
@@ -180,7 +191,8 @@ export class RoomsService {
             tileX: p.tileX,
             tileY: p.tileY,
             flipX: p.flipX ?? false,
-            facing: p.facing === 'SIDE' ? 'SIDE' : 'FRONT',
+            facing:
+              p.facing === 'SIDE' || p.facing === 'BACK' ? p.facing : 'FRONT',
             scale: p.scale ?? 1,
             zOffset: p.zOffset ?? 0,
           })),

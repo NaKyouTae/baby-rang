@@ -74,12 +74,18 @@ export function drawItemShadow(
 // ───────────────────────── 꾸미기 칸 표시 ─────────────────────────
 
 /**
- * 꾸미기 모드의 칸 격자 — 화면 전체(가구를 놓을 수 있는 곳 전부)에 16px 칸마다 옅은 선.
+ * 꾸미기 모드의 칸 격자 — 화면 전체(가구를 놓을 수 있는 곳 전부)에 16px 칸마다 옅은 선, 그 사이 반 칸 선은 더 옅게.
  * 세로선은 방 왼쪽 끝(originX)에 맞춰 방 밖 여백까지 같은 칸으로 이어진다.
  */
 export function drawEditGrid(ctx: CanvasRenderingContext2D, originX: number, w: number, h: number, tile: number) {
+  const startX = originX - Math.floor(originX / tile) * tile;
+  // 반 칸 선 — 가구가 반 칸(8px) 단위로 붙으므로 가운데 맞추기를 돕는다. 칸 선보다 옅게.
+  const half = tile / 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  for (let x = startX + half; x < w; x += tile) ctx.fillRect(x, 0, 1, h);
+  for (let y = half; y < h; y += tile) ctx.fillRect(0, y, w, 1);
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
-  for (let x = originX - Math.floor(originX / tile) * tile; x < w; x += tile) ctx.fillRect(x, 0, 1, h);
+  for (let x = startX; x < w; x += tile) ctx.fillRect(x, 0, 1, h);
   for (let y = tile; y < h; y += tile) ctx.fillRect(0, y, w, 1);
 }
 

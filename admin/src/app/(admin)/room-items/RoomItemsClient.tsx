@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,8 @@ export type RoomItem = {
   sideImageUrl?: string | null;
   sideTileW?: number | null;
   sideTileH?: number | null;
+  /** 뒷모습(벽 쪽을 보는 모습). 있으면 앱 꾸미기에서 뒤로 돌려 놓을 수 있다. 칸 수는 정면과 같다. */
+  backImageUrl?: string | null;
   priceCoins: number;
   isActive: boolean;
 };
@@ -114,6 +116,7 @@ const empty = {
   /** 0 이면 정하지 않음 — 앱이 정면 칸 수를 가로·세로 바꿔 쓴다 */
   sideTileW: 0,
   sideTileH: 0,
+  backImageUrl: "",
   priceCoins: 0,
   isActive: true,
 };
@@ -133,8 +136,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
 
   // 스프라이트 PNG 업로드. 배너와 같은 저장소(Supabase Storage)를 쓰고
   // 돌려받은 주소를 imageUrl 에 넣는다 — 바이너리는 DB 에 넣지 않는다.
-  // side 면 옆모습 그림으로 올린다(스프라이트 키는 정면 그림으로만 정한다)
-  const uploadSprite = async (file: File, side = false) => {
+  // view 가 side·back 이면 옆모습·뒷모습 그림으로 올린다(스프라이트 키는 정면 그림으로만 정한다)
+  const uploadSprite = async (file: File, view: "front" | "side" | "back" = "front") => {
     setUploading(true);
     try {
       const fd = new FormData();
@@ -142,8 +145,8 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       const res = await fetch("/api/room-items/upload", { method: "POST", body: fd });
       if (!res.ok) throw new Error("upload failed");
       const data = await res.json();
-      if (side) {
-        setForm((prev) => ({ ...prev, sideImageUrl: data.url }));
+      if (view !== "front") {
+        setForm((prev) => ({ ...prev, [view === "side" ? "sideImageUrl" : "backImageUrl"]: data.url }));
         return;
       }
       const derived = keyFromFileName(file.name);
@@ -183,6 +186,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
       sideImageUrl: item.sideImageUrl ?? "",
       sideTileW: item.sideTileW ?? 0,
       sideTileH: item.sideTileH ?? 0,
+      backImageUrl: item.backImageUrl ?? "",
       priceCoins: item.priceCoins,
       isActive: item.isActive,
     });
@@ -204,6 +208,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
         sideImageUrl: form.sideImageUrl || null,
         sideTileW: form.sideImageUrl && form.sideTileW > 0 ? form.sideTileW : null,
         sideTileH: form.sideImageUrl && form.sideTileH > 0 ? form.sideTileH : null,
+        backImageUrl: form.backImageUrl || null,
         // 그림 없이 등록하면(코드로 그리는 가구) 키를 만들어 준다
         spriteKey: form.spriteKey || fallbackKey(form.category),
       };
@@ -428,6 +433,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               <p className="hidden sm:block text-[11px] text-muted-foreground/80 truncate font-mono">
                 {item.spriteKey} · {item.tileW}×{item.tileH}칸
                 {item.sideImageUrl && ` · 옆 ${item.sideTileW ?? item.tileH}×${item.sideTileH ?? item.tileW}칸`}
+                {item.backImageUrl && " · 뒤"}
               </p>
               {/* 모바일은 아이콘만 보인다 */}
               <div className="mt-auto flex gap-1 pt-1 sm:gap-1.5">
@@ -528,69 +534,58 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
             <div className="flex flex-col gap-4 sm:min-h-0 sm:flex-1 sm:flex-row sm:gap-6">
               <div className="min-w-0 space-y-4 pb-6 sm:flex-1 sm:overflow-y-auto sm:pt-1 sm:pr-1">
                 <div className="space-y-2">
-                  <Label>스프라이트 이미지</Label>
-                  <div className="flex items-start gap-3">
-                    <div className="relative w-20 h-20 shrink-0 rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center overflow-hidden">
-                      {form.imageUrl ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={form.imageUrl}
-                            alt=""
-                            className="max-w-full max-h-full"
-                            style={{ imageRendering: "pixelated" }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => set("imageUrl", "")}
-                            className="absolute top-0.5 right-0.5 rounded bg-black/55 p-0.5 text-white"
-                            aria-label="이미지 지우기"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">코드 생성</span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
-                          <Upload className="h-3.5 w-3.5" />
-                          {uploading ? "업로드 중" : "PNG 올리기"}
-                          <input
-                            type="file"
-                            accept="image/png,image/webp"
-                            className="hidden"
-                            disabled={uploading}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) uploadSprite(f);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id="isActive"
-                            checked={form.isActive}
-                            onCheckedChange={(v: boolean) => set("isActive", v)}
-                          />
-                          <Label htmlFor="isActive">노출</Label>
-                        </div>
-                      </div>
-                      <Input
-                        value={form.imageUrl}
-                        onChange={(e) => set("imageUrl", e.target.value)}
-                        placeholder="비우면 코드로 그립니다"
-                        className="font-mono text-xs"
+                  <div className="flex items-center justify-between">
+                    <Label>그림 · 칸 수</Label>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="isActive"
+                        checked={form.isActive}
+                        onCheckedChange={(v: boolean) => set("isActive", v)}
                       />
+                      <Label htmlFor="isActive">노출</Label>
                     </div>
                   </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <ViewSlot
+                      label="정면"
+                      url={form.imageUrl}
+                      empty="코드 생성"
+                      uploading={uploading}
+                      onUpload={(f) => uploadSprite(f)}
+                      onClear={() => set("imageUrl", "")}
+                      w={form.tileW}
+                      h={form.tileH}
+                      onW={(v) => set("tileW", v)}
+                      onH={(v) => set("tileH", v)}
+                    />
+                    <ViewSlot
+                      label="옆 (오른쪽)"
+                      url={form.sideImageUrl}
+                      empty="없음"
+                      uploading={uploading}
+                      onUpload={(f) => uploadSprite(f, "side")}
+                      onClear={() => set("sideImageUrl", "")}
+                      // 0 이면 비워 두고, 정면 칸 수를 가로·세로 바꾼 값을 흐리게 보여 준다
+                      w={form.sideTileW || ""}
+                      h={form.sideTileH || ""}
+                      placeholderW={form.tileH}
+                      placeholderH={form.tileW}
+                      // 비우면 0 — 정면 칸 수를 가로·세로 바꿔 쓴다
+                      allowEmpty
+                      onW={(v) => set("sideTileW", v)}
+                      onH={(v) => set("sideTileH", v)}
+                    />
+                    <ViewSlot
+                      label="뒤"
+                      url={form.backImageUrl}
+                      empty="없음"
+                      uploading={uploading}
+                      onUpload={(f) => uploadSprite(f, "back")}
+                      onClear={() => set("backImageUrl", "")}
+                    />
+                  </div>
                   <p className="text-[11px] text-muted-foreground">
-                    배경이 투명한 PNG 를 올리세요. 크기는 타일 16px 기준으로 (가로 칸 × 16) ×
-                    (세로 칸 × 16) 입니다. 예: 3×3칸이면 48×48.
+                    한 칸은 16px 입니다.
                   </p>
                 </div>
 
@@ -615,11 +610,11 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                     />
                   </div>
                 </div>
-                <p className="-mt-2 text-[11px] text-muted-foreground">
-                  {editing
-                    ? "스프라이트 키는 코드가 그림을 찾는 이름이라 바꿀 수 없습니다. 다른 그림으로 교체해도 키는 그대로 유지됩니다."
-                    : "올린 파일 이름에서 자동으로 만들어집니다. (crib_wood.png → crib_wood) 파일 이름이 한글이면 알아볼 수 없는 키가 생기니 영문으로 지어주세요."}
-                </p>
+                {!editing && (
+                  <p className="-mt-2 text-[11px] text-muted-foreground">
+                    올린 파일 이름에서 자동으로 만들어집니다. (crib_wood.png → crib_wood) 파일 이름이 한글이면 알아볼 수 없는 키가 생기니 영문으로 지어주세요.
+                  </p>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -656,101 +651,6 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="tileW">가로 칸</Label>
-                    <Input
-                      id="tileW"
-                      type="number"
-                      min={1}
-                      value={form.tileW}
-                      onChange={(e) => set("tileW", Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tileH">세로 칸</Label>
-                    <Input
-                      id="tileH"
-                      type="number"
-                      min={1}
-                      value={form.tileH}
-                      onChange={(e) => set("tileH", Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-                <p className="-mt-2 text-[11px] text-muted-foreground">
-                  가로·세로 칸은 그림 크기이자, 아기가 이 아이템을 쓸 때 다가가는 자리입니다.
-                </p>
-
-                <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
-                  <Label>옆모습 (선택)</Label>
-                  <div className="flex items-start gap-3">
-                    <div className="relative w-16 h-16 shrink-0 rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] flex items-center justify-center overflow-hidden">
-                      {form.sideImageUrl ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={form.sideImageUrl}
-                            alt=""
-                            className="max-w-full max-h-full"
-                            style={{ imageRendering: "pixelated" }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => set("sideImageUrl", "")}
-                            className="absolute top-0.5 right-0.5 rounded bg-black/55 p-0.5 text-white"
-                            aria-label="옆모습 지우기"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">없음</span>
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-accent">
-                        <Upload className="h-3.5 w-3.5" />
-                        {uploading ? "업로드 중" : "옆모습 PNG 올리기"}
-                        <input
-                          type="file"
-                          accept="image/png,image/webp"
-                          className="hidden"
-                          disabled={uploading}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) uploadSprite(f, true);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={form.sideTileW}
-                          onChange={(e) => set("sideTileW", Math.max(0, Number(e.target.value) || 0))}
-                          aria-label="옆모습 가로 칸"
-                          placeholder="가로 칸"
-                        />
-                        <Input
-                          type="number"
-                          min={0}
-                          value={form.sideTileH}
-                          onChange={(e) => set("sideTileH", Math.max(0, Number(e.target.value) || 0))}
-                          aria-label="옆모습 세로 칸"
-                          placeholder="세로 칸"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    오른쪽을 보는 옆모습을 올리면, 앱 꾸미기에서 가구를 누를 때마다 정면 → 옆(오른쪽) → 옆(왼쪽)으로 돌아갑니다.
-                    왼쪽은 이 그림을 좌우 반전해 씁니다. 칸 수를 0 으로 두면 정면 칸 수의 가로·세로를 바꿔 씁니다
-                    {` (지금이면 ${form.tileH}×${form.tileW}칸)`}.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
                     <Label htmlFor="priceCoins">가격(코인) · 0이면 무료</Label>
                     <Input
                       id="priceCoins"
@@ -777,11 +677,9 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                     </select>
                   </div>
                 </div>
-                <p className="-mt-2 text-[11px] text-muted-foreground">
-                  실시간 슬롯은 그림이 데이터에 따라 바뀌는 자리입니다. 날씨는 창문 하늘을
-                  현재 날씨·시간대에 맞춰 바꾸려는 것으로, 앱에는 아직 연결되지 않았습니다.
-                </p>
-
+              </div>
+              {/* 오른쪽 열 — 아기 쓰임새를 고르면 바로 아래 미리보기에서 아기가 어떻게 쓰는지 본다 */}
+              <div className="order-first space-y-4 pt-1 sm:order-none sm:w-[240px] sm:shrink-0 sm:overflow-y-auto sm:pb-6">
                 <div className="space-y-2">
                   <Label>아기 쓰임새</Label>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="아기 쓰임새">
@@ -805,22 +703,24 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                       );
                     })}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    홈의 아기가 이 아이템으로 할 수 있는 행동을 정합니다. 공·보행기는 꼭 골라야 아기가 가지고 놉니다.
-                    {affordances.length === 0 &&
-                      (DEFAULT_AFFORDANCE[form.category]
-                        ? ` 비워 두면 분류에 따라 '${DEFAULT_AFFORDANCE[form.category].map((a) => AFFORDANCE[a]).join("·")}'(으)로 씁니다.`
-                        : " 비워 두면 아기가 쓰지 않는 장식으로 둡니다.")}
-                  </p>
+                  {affordances.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {DEFAULT_AFFORDANCE[form.category]
+                        ? `비워 두면 분류에 따라 '${DEFAULT_AFFORDANCE[form.category].map((a) => AFFORDANCE[a]).join("·")}'(으)로 씁니다.`
+                        : "비워 두면 아기가 쓰지 않는 장식으로 둡니다."}
+                    </p>
+                  )}
                 </div>
-              </div>
-              <div className="order-first pt-1 sm:order-none sm:shrink-0 sm:overflow-hidden sm:pb-6">
                 <RoomItemPreview
                   category={form.category}
                   surface={form.surface}
                   tileW={form.tileW}
                   tileH={form.tileH}
                   imageUrl={form.imageUrl}
+                  sideImageUrl={form.sideImageUrl}
+                  sideTileW={form.sideTileW}
+                  sideTileH={form.sideTileH}
+                  backImageUrl={form.backImageUrl}
                   affordances={affordances}
                 />
               </div>
@@ -843,5 +743,154 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * 아이템 한 방향(정면·옆·뒤)의 그림과 칸 수. 사각형을 누르면 PNG 를 올리고, 아래에 가로·세로 칸을 둔다.
+ * onW·onH 가 없으면 칸 수 입력 대신 '정면과 동일'을 보여 준다(뒷모습은 정면과 칸 수가 같다).
+ */
+function ViewSlot({
+  label,
+  url,
+  empty,
+  uploading,
+  onUpload,
+  onClear,
+  w,
+  h,
+  placeholderW,
+  placeholderH,
+  allowEmpty = false,
+  onW,
+  onH,
+}: {
+  label: string;
+  url: string | null | undefined;
+  empty: string;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onClear: () => void;
+  w?: number | "";
+  h?: number | "";
+  placeholderW?: number;
+  placeholderH?: number;
+  /** 비워 둘 수 있는 칸(비우면 0 을 넘긴다). 아니면 비운 채 나가면 원래 값으로 돌아간다. */
+  allowEmpty?: boolean;
+  onW?: (v: number) => void;
+  onH?: (v: number) => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <p className="text-xs font-medium">{label}</p>
+      <div className="relative aspect-square w-full">
+        <label
+          className={`flex h-full w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] hover:ring-primary ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          aria-label={`${label} 그림 올리기`}
+        >
+          {url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" className="max-h-full max-w-full" style={{ imageRendering: "pixelated" }} />
+          ) : (
+            <span className="flex flex-col items-center gap-1 text-[10px] text-muted-foreground">
+              <Upload className="h-4 w-4" />
+              {uploading ? "업로드 중" : empty}
+            </span>
+          )}
+          <input
+            type="file"
+            accept="image/png,image/webp"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUpload(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {url && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute top-1 right-1 rounded bg-black/55 p-0.5 text-white"
+            aria-label={`${label} 그림 지우기`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      {!onW || !onH ? (
+        // 칸 수를 따로 두지 않는 방향(뒷모습) — 입력 대신 안내만
+        <p className="flex h-8 items-center justify-center text-xs text-muted-foreground">칸 수 정면과 동일</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-1.5">
+          <TileInput
+            value={w}
+            placeholder={placeholderW}
+            allowEmpty={allowEmpty}
+            onChange={onW}
+            aria-label={`${label} 가로 칸`}
+          />
+          <TileInput
+            value={h}
+            placeholder={placeholderH}
+            allowEmpty={allowEmpty}
+            onChange={onH}
+            aria-label={`${label} 세로 칸`}
+          />
+        </div>
+      )}
+      {onW && onH && <p className="text-center text-[10px] text-muted-foreground">가로 × 세로 칸</p>}
+    </div>
+  );
+}
+
+/**
+ * 칸 수 입력. 1 이상의 정수만 받는다(0·음수는 입력되지 않는다).
+ * 입력 중에는 칸을 다 지울 수 있다 — allowEmpty 면 비운 값을 0 으로 넘기고, 아니면 비운 채 나가면 원래 값으로 돌아간다.
+ */
+function TileInput({
+  value,
+  placeholder,
+  allowEmpty,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  value: number | "" | undefined;
+  placeholder?: number;
+  allowEmpty: boolean;
+  onChange: (v: number) => void;
+  "aria-label": string;
+}) {
+  const [text, setText] = useState(value ? String(value) : "");
+  // 바깥 값이 바뀌면(다른 아이템을 열거나 저장 후) 따라간다
+  useEffect(() => {
+    setText(value ? String(value) : "");
+  }, [value]);
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      value={text}
+      placeholder={placeholder !== undefined ? String(placeholder) : undefined}
+      onChange={(e) => {
+        const t = e.target.value.replace(/[^0-9]/g, "");
+        if (t === "") {
+          setText("");
+          if (allowEmpty) onChange(0);
+          return;
+        }
+        const n = Number(t);
+        if (n < 1) return;
+        setText(String(n));
+        onChange(n);
+      }}
+      onBlur={() => {
+        if (!text && !allowEmpty) setText(value ? String(value) : "");
+      }}
+      aria-label={ariaLabel}
+      className="h-8 px-2 text-center text-sm"
+    />
   );
 }

@@ -501,6 +501,7 @@ export class AdminController {
         sideImageUrl: body.sideImageUrl || null,
         sideTileW: body.sideTileW ?? null,
         sideTileH: body.sideTileH ?? null,
+        backImageUrl: body.backImageUrl || null,
         priceCoins: body.priceCoins ?? 0,
         sortOrder: body.sortOrder ?? 0,
         isActive: body.isActive ?? true,
@@ -533,6 +534,9 @@ export class AdminController {
         }),
         ...(body.sideTileW !== undefined && { sideTileW: body.sideTileW }),
         ...(body.sideTileH !== undefined && { sideTileH: body.sideTileH }),
+        ...(body.backImageUrl !== undefined && {
+          backImageUrl: body.backImageUrl || null,
+        }),
         ...(body.priceCoins !== undefined && {
           priceCoins: body.priceCoins ?? 0,
         }),

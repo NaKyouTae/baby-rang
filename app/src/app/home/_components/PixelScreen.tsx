@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FLOOR_TOP, ROOM_H_TILES, ROOM_W, ROOM_W_TILES, TILE, TOP_HIDDEN, pixelScaleFor } from './tiles';
-import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, preloadSprites, wOf, type Placement } from './placements';
+import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { phaseAtHour, type WindowSky } from './windowSky';
 import { layout, type Layout } from './scene';
 import { drawDefaultFloor, drawDefaultWall } from './roomTiles';
@@ -45,10 +45,12 @@ interface Props {
   editing: boolean;
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
   /**
-   * 고른 가구 위에 뜨는 돌리기 버튼. 옆모습이 있는 가구는 정면 → 옆(오른쪽) → 옆(왼쪽), 없으면 좌우 반전.
+   * 고른 가구 위쪽의 돌리기 버튼. 정면 → 옆(오른쪽) → 뒤 → 옆(왼쪽), 그림이 없는 방향은 건너뛴다.
    * 가구를 탭하면 고르기만 한다 — 탭마다 돌아가면 고르려고 누르다 방향이 바뀌어 버린다.
    */
   onRotatePlacement: (id: string) => void;
+  /** 고른 가구 오른쪽의 뒤집기 버튼. 좌우 반전. */
+  onFlipPlacement: (id: string) => void;
   onLongPressPlacement: (placement: Placement) => void;
   /** 바깥에서 고르게 할 가구. 바뀔 때마다 그 가구를 누른 것처럼 선택한다. */
   focusId?: string | null;
@@ -119,6 +121,7 @@ export default function PixelScreen(props: Props) {
     editing,
     onMovePlacement,
     onRotatePlacement,
+    onFlipPlacement,
     onLongPressPlacement,
     focusId = null,
     onPet,
@@ -141,6 +144,8 @@ export default function PixelScreen(props: Props) {
     left: number;
     /** 아래 안전 영역(방 픽셀) */
     safeBottom: number;
+    /** 보이는 화면 폭(CSS) */
+    viewW: number;
   } | null>(null);
   // 가구를 놓을 수 있는 세로 칸 수. 화면이 길면 보이는 바닥 끝까지 놓게 한다.
   // 최소 높이(ROOM_H_TILES)는 어느 기기든 보장된다.
@@ -223,8 +228,8 @@ export default function PixelScreen(props: Props) {
     preloadSprites([wallpaperUrl, flooringUrl]);
   }, [wallpaperUrl, flooringUrl]);
 
-  // 방은 가로 12칸(ROOM_W)이고, 방 픽셀 하나를 기기 픽셀 정수 개로 키운다(pixelScaleFor).
-  // 정수배라 화면 폭과 딱 맞지 않으면 남는 폭은 방 양옆에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
+  // 방은 가로 12칸(ROOM_W)이고, 방 픽셀 하나를 기기 픽셀 몇 개(0.5 단위)로 키운다(pixelScaleFor).
+  // 배율이 끊어져 화면 폭과 딱 맞지 않으면 남는 폭은 방 양옆에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
   // 세로는 화면 비율대로 남는 만큼 바닥이 길어진다. 어느 기기에서든 가구가 같은 칸, 같은 벽 경계에 보인다.
   useEffect(() => {
     const host = hostRef.current;
@@ -245,7 +250,7 @@ export default function PixelScreen(props: Props) {
       const left = snap(r.width / 2 - (offsetX + ROOM_W / 2) * scale);
       const safeCss = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom'));
       const safeBottom = Number.isFinite(safeCss) ? Math.round(safeCss / scale) : 0;
-      setSize({ w, h, scale, shift, offsetX, left, safeBottom });
+      setSize({ w, h, scale, shift, offsetX, left, safeBottom, viewW: r.width });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -644,16 +649,22 @@ export default function PixelScreen(props: Props) {
     };
   };
 
-  /** 그 지점에 놓인 가구. 나중에 놓은 것이 위에 있으므로 뒤에서부터 찾는다. */
+  /**
+   * 그 지점에 놓인 가구. 나중에 놓은 것이 위에 있으므로 뒤에서부터 찾는다.
+   * 러그는 언제나 맨 아래에 그려지므로 다른 가구를 먼저 찾는다 — 러그를 나중에 옮겼어도 그 위 소파를 집을 수 있게.
+   */
   const pickPlacement = (L: Layout, nx: number, ny: number) => {
     const list = placementsRef.current;
-    for (let i = list.length - 1; i >= 0; i--) {
-      const p = list[i];
+    const hit = (p: Placement) => {
       const x0 = L.offsetX + p.tileX * TILE;
       const y0 = p.tileY * TILE;
-      const w = wOf(p) * TILE;
-      const h = hOf(p) * TILE;
-      if (nx >= x0 && nx <= x0 + w && ny >= y0 && ny <= y0 + h) return p;
+      return nx >= x0 && nx <= x0 + wOf(p) * TILE && ny >= y0 && ny <= y0 + hOf(p) * TILE;
+    };
+    for (const rugPass of [false, true]) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const p = list[i];
+        if ((p.category === 'RUG') === rugPass && hit(p)) return p;
+      }
     }
     return null;
   };
@@ -706,9 +717,11 @@ export default function PixelScreen(props: Props) {
     const target = placementsRef.current.find((p) => p.id === id);
     if (!target) return;
 
-    // 타일 격자에 붙인다. 자유 배치로 두면 가구가 미세하게 어긋나 지저분해진다.
-    const tx = Math.round((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
-    const ty = Math.round(ny / TILE - dragOffsetRef.current.ty);
+    // 반 칸(8px) 격자에 붙인다. 자유 배치로 두면 가구가 미세하게 어긋나 지저분해지고,
+    // 한 칸 단위면 러그 가운데에 소파를 딱 맞추지 못하는 경우가 있다. 8px 단위라 픽셀은 쪼개지지 않는다.
+    const snap = (v: number) => Math.round(v * 2) / 2;
+    const tx = snap((nx - L.offsetX) / TILE - dragOffsetRef.current.tx);
+    const ty = snap(ny / TILE - dragOffsetRef.current.ty);
     const clampedX = Math.min(Math.max(tx, minX), maxX - wOf(target));
     const clampedY = Math.min(Math.max(ty, 0), rows - hOf(target));
     if (clampedX === target.tileX && clampedY === target.tileY) return;
@@ -735,7 +748,7 @@ export default function PixelScreen(props: Props) {
 
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
-      {/* 방 무대 — 캔버스 크기(방 픽셀 × 정수배)를 그대로 쓴다. 화면보다 조금 넓으면 양옆이 잘린다.
+      {/* 방 무대 — 캔버스 크기(방 픽셀 × 배율)를 그대로 쓴다. 화면보다 조금 넓으면 양옆이 잘린다.
           기본 벽지·바닥도 캔버스에 찍으므로 그림을 따로 받을 일이 없다(첫 화면부터 바로 그려진다). */}
       {size && (
         <div
@@ -756,14 +769,18 @@ export default function PixelScreen(props: Props) {
             style={{ imageRendering: 'pixelated', touchAction: 'manipulation' }}
           />
           {selected && (
-            <RotateControl
-              x={(size.offsetX + (selected.tileX + wOf(selected) / 2) * TILE) * size.scale}
+            <TransformControls
+              left={(size.offsetX + selected.tileX * TILE) * size.scale}
+              right={(size.offsetX + selected.tileX * TILE + wOf(selected) * TILE) * size.scale}
               top={selected.tileY * TILE * size.scale}
               bottom={(selected.tileY + hOf(selected)) * TILE * size.scale}
-              // 상단 카드·상태바에 가리는 높이면 가구 아래에 띄운다
+              // 상단 카드·상태바에 가리는 높이면 돌리기 버튼을 가구 아래에 띄운다
               below={selected.tileY * TILE * size.scale - size.shift < 120}
-              canTurn={!!selected.sideImageUrl}
+              // 화면 오른쪽 끝(꾸미기 메뉴 쪽)에 붙으면 뒤집기 버튼을 왼쪽에 띄운다
+              flipOnLeft={size.left + (size.offsetX + (selected.tileX + wOf(selected)) * TILE) * size.scale > size.viewW - 140}
+              canTurn={!!nextTurn(selected)}
               onRotate={() => onRotatePlacement(selected.id)}
+              onFlip={() => onFlipPlacement(selected.id)}
             />
           )}
         </div>
@@ -795,39 +812,64 @@ function clampToRoom(p: Placement, b: PlaceBounds): Placement {
 const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 
 /**
- * 고른 가구 위에 띄우는 버튼. 옆모습이 있으면 "돌리기"(정면 → 옆 오른쪽 → 옆 왼쪽), 없으면 "뒤집기"(좌우 반전).
- * x·top·bottom 은 방 무대 안의 CSS 좌표(가구 가로 가운데, 위·아래 끝).
+ * 고른 가구의 선택 창에 붙는 버튼 두 개.
+ *   위쪽 가운데 — 돌리기(축 회전). 정면 → 옆(오른쪽) → 뒤 → 옆(왼쪽).
+ *     옆·뒷모습 그림이 없는 가구도 버튼은 보이되 흐리게 막아 둔다(어드민에서 그림을 올리면 돌아간다).
+ *   오른쪽 가운데 — 뒤집기(좌우 반전).
+ * left·right·top·bottom 은 방 무대 안의 CSS 좌표(가구 선택 창의 네 변).
  */
-function RotateControl({
-  x,
+function TransformControls({
+  left,
+  right,
   top,
   bottom,
   below,
+  flipOnLeft,
   canTurn,
   onRotate,
+  onFlip,
 }: {
-  x: number;
+  left: number;
+  right: number;
   top: number;
   bottom: number;
   below: boolean;
+  flipOnLeft: boolean;
   canTurn: boolean;
   onRotate: () => void;
+  onFlip: () => void;
 }) {
+  const btn = `${BOX} absolute z-10 size-[36px] flex items-center justify-center text-[18px] leading-none text-[#121212] active:translate-y-px`;
   return (
-    <button
-      type="button"
-      onClick={onRotate}
-      aria-label={canTurn ? '가구 방향 돌리기' : '가구 좌우 뒤집기'}
-      className={`${BOX} absolute z-10 h-[36px] px-[12px] flex items-center gap-[4px] text-[14px] leading-[1.4] text-[#121212] whitespace-nowrap active:translate-y-px`}
-      style={{
-        left: x,
-        top: below ? bottom : top,
-        transform: below ? 'translate(-50%, 8px)' : 'translate(-50%, calc(-100% - 8px))',
-      }}
-    >
-      <span aria-hidden>{canTurn ? '↻' : '⇄'}</span>
-      {canTurn ? '돌리기' : '뒤집기'}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={onRotate}
+        disabled={!canTurn}
+        aria-label={canTurn ? '가구 방향 돌리기' : '옆모습·뒷모습 그림이 없어 돌릴 수 없는 가구'}
+        className={`${btn} disabled:opacity-40 disabled:active:translate-y-0`}
+        style={{
+          left: (left + right) / 2,
+          top: below ? bottom : top,
+          transform: below ? 'translate(-50%, 8px)' : 'translate(-50%, calc(-100% - 8px))',
+        }}
+      >
+        <span aria-hidden>↻</span>
+      </button>
+      <button
+        type="button"
+        onClick={onFlip}
+        aria-label="가구 좌우 뒤집기"
+        className={btn}
+        style={{
+          left: flipOnLeft ? left : right,
+          top: (top + bottom) / 2,
+          transform: flipOnLeft ? 'translate(calc(-100% - 8px), -50%)' : 'translate(8px, -50%)',
+        }}
+      >
+        <span aria-hidden>⇄</span>
+      </button>
+    </>
   );
 }
 

@@ -15,7 +15,7 @@ import { TYPE_CONFIG, type GrowthType } from '../../growth-record/types';
 import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
 import RemoveSheet from './RemoveSheet';
-import { hOf, isSide, preloadSprites, wOf, type Placement } from './placements';
+import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { ROOM_W_TILES, WALL_TILES } from './tiles';
 import RoomChrome, {
   ACTION_LABEL,
@@ -202,7 +202,7 @@ if (typeof window !== 'undefined') {
     preloadSprites([
       slots.wallpaper?.imageUrl ?? null,
       slots.flooring?.imageUrl ?? null,
-      ...loadSavedPlacements().map((p) => p.imageUrl),
+      ...loadSavedPlacements().map(imageOf),
     ]);
   } catch {
     /* 저장소를 못 읽으면 평소처럼 effect 에서 받는다 */
@@ -333,7 +333,7 @@ export default function HomeClient() {
 
 
   useEffect(() => {
-    preloadSprites(placements.map((p) => p.imageUrl));
+    preloadSprites(placements.map(imageOf));
   }, [placements]);
 
   useEffect(() => {
@@ -419,6 +419,7 @@ export default function HomeClient() {
               sideImageUrl: item.sideImageUrl ?? null,
               sideTileW: item.sideTileW ?? null,
               sideTileH: item.sideTileH ?? null,
+              backImageUrl: item.backImageUrl ?? null,
             };
           }),
         );
@@ -453,7 +454,7 @@ export default function HomeClient() {
           tileX: number;
           tileY: number;
           flipX: boolean;
-          facing?: 'FRONT' | 'SIDE';
+          facing?: Placement['facing'];
           scale?: number;
           item: RoomItem;
         };
@@ -476,6 +477,7 @@ export default function HomeClient() {
           sideImageUrl: sp.item.sideImageUrl ?? null,
           sideTileW: sp.item.sideTileW ?? null,
           sideTileH: sp.item.sideTileH ?? null,
+          backImageUrl: sp.item.backImageUrl ?? null,
         }));
         const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
           it ? { id: it.id, imageUrl: it.imageUrl } : null;
@@ -488,7 +490,7 @@ export default function HomeClient() {
         persistRoom(loaded, nextSlots);
         setVersion(data.version ?? 0);
         preloadSprites([
-          ...loaded.map((pl) => pl.imageUrl),
+          ...loaded.map(imageOf),
           ...Object.values(nextSlots).map((v) => v?.imageUrl ?? null),
         ]);
       })
@@ -767,7 +769,7 @@ export default function HomeClient() {
             tileX: p.tileX,
             tileY: p.tileY,
             flipX: p.flipX,
-            facing: isSide(p) ? 'SIDE' : 'FRONT',
+            facing: facingOf(p),
             scale: p.scale ?? 1,
             zOffset: i,
           })),
@@ -823,7 +825,8 @@ export default function HomeClient() {
         spriteKey: item.spriteKey,
         imageUrl: item.imageUrl,
         category: item.category,
-        tileX: Math.max(0, Math.round((ROOM_W_TILES - item.tileW) / 2)),
+        // 반 칸 단위로 놓을 수 있어 폭이 홀수여도 방 정가운데에 놓인다
+        tileX: Math.max(0, (ROOM_W_TILES - item.tileW) / 2),
         // 벽에 거는 것(창문·액자)은 벽 쪽에, 나머지는 바닥 가운데에 놓는다.
         // 창문이 바닥 한가운데 떨어지면 뭘 잘못한 줄 안다.
         tileY: item.surface === 'WALL' ? 2 : WALL_TILES + 2,
@@ -836,6 +839,7 @@ export default function HomeClient() {
         sideImageUrl: item.sideImageUrl ?? null,
         sideTileW: item.sideTileW ?? null,
         sideTileH: item.sideTileH ?? null,
+        backImageUrl: item.backImageUrl ?? null,
       },
     ]);
   }, []);
@@ -850,31 +854,32 @@ export default function HomeClient() {
   }, []);
 
   /**
-   * 꾸미기에서 고른 가구의 돌리기 버튼을 누르면 방향을 바꾼다.
-   *   옆모습이 있는 아이템: 정면 → 옆(오른쪽) → 옆(왼쪽) → 정면
-   *   옆모습이 없는 아이템: 좌우 반전만
+   * 꾸미기에서 고른 가구의 위쪽 돌리기 버튼 — 정면 → 옆(오른쪽) → 뒤 → 옆(왼쪽)으로 돌린다(nextTurn).
    * 방향이 바뀌면 칸 수도 바뀐다. 아랫변 가운데를 붙잡고 돌려 바닥에 놓인 자리가 튀지 않게 하고, 방 밖으로 나가면 안으로 당긴다.
    */
   const handleRotatePlacement = useCallback((id: string) => {
     setPlacements((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
-        if (!p.sideImageUrl) return { ...p, flipX: !p.flipX };
-        const next: Placement = !isSide(p)
-          ? { ...p, facing: 'SIDE', flipX: false }
-          : !p.flipX
-            ? { ...p, flipX: true }
-            : { ...p, facing: 'FRONT', flipX: false };
+        const turn = nextTurn(p);
+        if (!turn) return p;
+        const next: Placement = { ...p, ...turn };
         const nw = wOf(next);
         const nh = hOf(next);
         return {
           ...next,
           // 방 밖 여백까지 놓을 수 있다(서버도 -2칸까지 받는다). 화면 밖은 그릴 때 안으로 당긴다.
-          tileX: Math.min(Math.max(-2, p.tileX + Math.round((wOf(p) - nw) / 2)), ROOM_W_TILES + 2 - nw),
+          // 반 칸 단위로 놓을 수 있어 가운데를 그대로 유지한다
+          tileX: Math.min(Math.max(-2, p.tileX + (wOf(p) - nw) / 2), ROOM_W_TILES + 2 - nw),
           tileY: Math.max(0, p.tileY + hOf(p) - nh),
         };
       }),
     );
+  }, []);
+
+  /** 오른쪽 뒤집기 버튼 — 좌우 반전. 옆으로 놓았으면 오른쪽 ↔ 왼쪽을 보게 된다. 칸 수는 그대로다. */
+  const handleFlipPlacement = useCallback((id: string) => {
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, flipX: !p.flipX } : p)));
   }, []);
 
   const handleRemovePlacement = useCallback((id: string) => {
@@ -896,6 +901,7 @@ export default function HomeClient() {
         editing={editing}
         onMovePlacement={handleMovePlacement}
         onRotatePlacement={handleRotatePlacement}
+        onFlipPlacement={handleFlipPlacement}
         onLongPressPlacement={setRemoveTarget}
         focusId={focusPlacementId}
         onPet={handlePet}
