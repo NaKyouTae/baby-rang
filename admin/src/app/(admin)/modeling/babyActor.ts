@@ -188,7 +188,11 @@ export interface Actor {
   held?: boolean;
 }
 
-export function createActor(months: number, gender: string, x: number, y: number, startAt: number): Actor {
+/** 행동·그림은 0~24개월까지 있다. 그보다 큰 아이는 24개월로 보여 준다(행동이 하나도 없으면 아기를 만들 수 없다). */
+const MAX_MONTHS = 24;
+
+export function createActor(rawMonths: number, gender: string, x: number, y: number, startAt: number): Actor {
+  const months = Math.min(Math.max(0, Math.floor(rawMonths) || 0), MAX_MONTHS);
   const ws = behaviorWeights(months);
   const locomotion = ws.filter((w) => LOCOMOTION.includes(w.id)).sort((a, b) => b.w - a.w)[0]?.id ?? null;
   const first = ws.find((w) => !BY_ID[w.id].needs) ?? ws[0];
