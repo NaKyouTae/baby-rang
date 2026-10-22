@@ -409,6 +409,27 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
                   </Badge>
                 )}
               </div>
+              {/* 방향별 그림 — 올린 방향은 진하게, 안 올린 방향은 점선으로. 벽지·바닥재는 돌리지 않아 뺀다. */}
+              {item.category !== "WALLPAPER" && item.category !== "FLOORING" && (
+                <div className="flex gap-1" aria-label="방향별 그림">
+                  {(
+                    [
+                      ["앞", item.imageUrl],
+                      ["옆", item.sideImageUrl],
+                      ["뒤", item.backImageUrl],
+                    ] as const
+                  ).map(([label, url]) => (
+                    <Badge
+                      key={label}
+                      variant={url ? "default" : "outline"}
+                      className={`text-[10px] ${url ? "" : "border-dashed text-muted-foreground"}`}
+                      aria-label={`${label} 그림 ${url ? "있음" : "없음"}`}
+                    >
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
               {/* 액션 — 누르면 미리보기와 함께 액션만 고치는 모달이 열린다 */}
               <button
                 type="button"
