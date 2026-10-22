@@ -850,12 +850,12 @@ export default function HomeClient() {
   }, []);
 
   /**
-   * 꾸미기에서 가구를 탭하면 방향을 바꾼다.
+   * 꾸미기에서 고른 가구의 돌리기 버튼을 누르면 방향을 바꾼다.
    *   옆모습이 있는 아이템: 정면 → 옆(오른쪽) → 옆(왼쪽) → 정면
    *   옆모습이 없는 아이템: 좌우 반전만
    * 방향이 바뀌면 칸 수도 바뀐다. 아랫변 가운데를 붙잡고 돌려 바닥에 놓인 자리가 튀지 않게 하고, 방 밖으로 나가면 안으로 당긴다.
    */
-  const handleFlipPlacement = useCallback((id: string) => {
+  const handleRotatePlacement = useCallback((id: string) => {
     setPlacements((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p;
@@ -895,7 +895,7 @@ export default function HomeClient() {
         placements={placements}
         editing={editing}
         onMovePlacement={handleMovePlacement}
-        onTapPlacement={handleFlipPlacement}
+        onRotatePlacement={handleRotatePlacement}
         onLongPressPlacement={setRemoveTarget}
         focusId={focusPlacementId}
         onPet={handlePet}

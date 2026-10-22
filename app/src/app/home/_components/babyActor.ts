@@ -52,8 +52,13 @@ export type Spot = {
   y1: number;
   box?: { x0: number; x1: number; y0: number; y1: number };
   flip?: boolean;
-  /** 옆으로 돌려 놓은 침대 — 세로로 길어서 아기도 머리를 위로 두고 세로로 눕는다 */
-  vertical?: boolean;
+  /**
+   * 옆으로 돌려 놓은 가구 — 앞면이 오른쪽을 본다(flip 이면 왼쪽).
+   *   침대: 세로로 길어 아기도 머리를 위로 두고 세로로 눕는다
+   *   붙잡기: 앞면 옆에 서서 가구 쪽을 보고 짚는다(잡고 걷기는 가구를 따라 위아래로)
+   *   의자·소파: 앞면 쪽을 보고 옆모습으로 앉는다
+   */
+  side?: boolean;
 };
 /** 움직이는 장난감. 위치는 바닥에 닿는 점(아래 가운데)이다. */
 export type Prop = {
@@ -320,6 +325,16 @@ function bedSpot(spot: Spot) {
  */
 const SEAT = { x: 0.5, y: 0.55 };
 
+/**
+ * 옆으로 놓은 가구를 붙잡고 설 자리(발 위치). 앞면(오른쪽, 반전이면 왼쪽) 바로 옆, 가구 아래쪽 절반 안의 아무 높이.
+ * 잡고 걷기는 이 자리를 다시 골라 앞면을 따라 위아래로 오간다.
+ */
+function sideHoldPoint(spot: Spot, bounds: Bounds) {
+  const x = spot.flip ? spot.x0 - 5 : spot.x1 + 5;
+  const depth = Math.min(10, (spot.y1 - spot.y0) / 2);
+  return { x: clamp(x, bounds.x0, bounds.x1), y: clamp(spot.y1 - rnd(0, depth), bounds.y0, bounds.y1) };
+}
+
 function seatSpot(spot: Spot) {
   const b = spot.box ?? spot;
   return { x: b.x0 + (b.x1 - b.x0) * SEAT.x, y: b.y0 + (b.y1 - b.y0) * SEAT.y };
@@ -422,16 +437,23 @@ function begin(a: Actor, id: BehaviorId, now: number) {
     a.x = at.x;
     a.y = at.y + seatDrop(a.months);
     a.aboard = true;
-    a.facing = 'down';
-    a.flip = false;
+    // 옆으로 놓은 의자는 앞면 쪽을 보고 옆모습으로 앉는다
+    a.facing = a.spot.side ? 'side' : 'down';
+    a.flip = !!a.spot.side && !!a.spot.flip;
   } else if (b.needs === 'slide' && a.spot) {
     // 사다리 아래에 도착하면 한 번 타기 시작한다
     a.aboard = true;
     a.rideStart = now;
     rideSlide(a, a.spot, now);
   } else if (b.needs === 'hold') {
-    a.facing = 'up';
-    a.flip = false;
+    if (a.spot?.side) {
+      // 가구가 아기 옆에 있다 — 앞면이 오른쪽이면 아기는 그 오른쪽에 서서 왼쪽(가구)을 본다
+      a.facing = 'side';
+      a.flip = !a.spot.flip;
+    } else {
+      a.facing = 'up';
+      a.flip = false;
+    }
   } else if (id === 'ballChase' || id === 'ballKick') {
     a.facing = 'side';
     a.flip = a.strikeDir < 0;
@@ -464,9 +486,15 @@ function choose(a: Actor, now: number, world: World) {
 
   if (b.needs === 'hold') {
     const spot = preferNovel(itemsFor(a, world, 'hold') as Spot[], world);
-    const pad = Math.min(6, (spot.x1 - spot.x0) / 2);
     a.spot = spot;
-    if (travel(a, id, rnd(spot.x0 + pad, spot.x1 - pad), spot.y1 + 2)) return;
+    if (spot.side) {
+      // 옆으로 놓은 가구는 앞면(오른쪽, 반전이면 왼쪽) 옆에 붙어 선다
+      const at = sideHoldPoint(spot, bounds);
+      if (travel(a, id, at.x, at.y)) return;
+    } else {
+      const pad = Math.min(6, (spot.x1 - spot.x0) / 2);
+      if (travel(a, id, rnd(spot.x0 + pad, spot.x1 - pad), spot.y1 + 2)) return;
+    }
   } else if (b.needs === 'bed') {
     const spot = preferNovel(itemsFor(a, world, 'bed') as Spot[], world);
     a.spot = spot;
@@ -475,7 +503,10 @@ function choose(a: Actor, now: number, world: World) {
   } else if (b.needs === 'seat') {
     const spot = preferNovel(itemsFor(a, world, 'seat') as Spot[], world);
     a.spot = spot;
-    if (travel(a, id, clamp(seatSpot(spot).x, bounds.x0, bounds.x1), clamp(spot.y1 + 2, bounds.y0, bounds.y1))) return;
+    // 옆으로 놓은 의자·소파는 앞면 쪽에서 다가간다
+    const x = spot.side ? (spot.flip ? spot.x0 - 4 : spot.x1 + 4) : seatSpot(spot).x;
+    const y = spot.side ? spot.y1 - 2 : spot.y1 + 2;
+    if (travel(a, id, clamp(x, bounds.x0, bounds.x1), clamp(y, bounds.y0, bounds.y1))) return;
   } else if (b.needs === 'slide') {
     const spot = preferNovel(itemsFor(a, world, 'slide') as Spot[], world);
     const at = slidePoint(spot, 'base');
@@ -643,7 +674,13 @@ export function updateActor(a: Actor, now: number, dt: number, world: World) {
       }
     }
   } else if (!a.traveling && b.roams && now >= a.restUntil && now < a.until) {
-    if (a.act === 'cruise' && a.spot) {
+    if (a.act === 'cruise' && a.spot?.side) {
+      // 옆으로 놓은 가구는 앞면을 따라 위아래로 게걸음한다
+      const at = sideHoldPoint(a.spot, bounds);
+      moveTo(a, a.x, at.y, ['side']);
+      a.facing = 'side';
+      a.flip = !a.spot.flip;
+    } else if (a.act === 'cruise' && a.spot) {
       const pad = Math.min(6, (a.spot.x1 - a.spot.x0) / 2);
       moveTo(a, rnd(a.spot.x0 + pad, a.spot.x1 - pad), a.y, ['up']);
       a.facing = 'up';
@@ -779,7 +816,7 @@ export function actorSprite(a: Actor) {
     }
     return { img: list[a.frame % list.length], left: snap(a.x) - CX, top: snap(a.y) - G, width: W, height: H, flip: false };
   }
-  if (a.act === 'sleep' && a.inBed && a.spot?.vertical) {
+  if (a.act === 'sleep' && a.inBed && a.spot?.side) {
     // 옆으로 돌려 놓은 침대 — 원래 누운 그림이 머리가 위인 세로라 돌리지 않고 그대로 눕힌다
     const key = `${a.months}:${a.gender}:sleep:flat`;
     let flat = frameCache.get(key);

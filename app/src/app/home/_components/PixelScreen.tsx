@@ -44,8 +44,11 @@ interface Props {
   /** 꾸미기 모드에서만 가구를 집을 수 있다. */
   editing: boolean;
   onMovePlacement: (id: string, tileX: number, tileY: number) => void;
-  /** 끌지도 길게 누르지도 않고 뗀 탭. 좌우 반전에 쓴다. */
-  onTapPlacement: (id: string) => void;
+  /**
+   * 고른 가구 위에 뜨는 돌리기 버튼. 옆모습이 있는 가구는 정면 → 옆(오른쪽) → 옆(왼쪽), 없으면 좌우 반전.
+   * 가구를 탭하면 고르기만 한다 — 탭마다 돌아가면 고르려고 누르다 방향이 바뀌어 버린다.
+   */
+  onRotatePlacement: (id: string) => void;
   onLongPressPlacement: (placement: Placement) => void;
   /** 바깥에서 고르게 할 가구. 바뀔 때마다 그 가구를 누른 것처럼 선택한다. */
   focusId?: string | null;
@@ -115,7 +118,7 @@ export default function PixelScreen(props: Props) {
     placements,
     editing,
     onMovePlacement,
-    onTapPlacement,
+    onRotatePlacement,
     onLongPressPlacement,
     focusId = null,
     onPet,
@@ -343,8 +346,8 @@ export default function PixelScreen(props: Props) {
           // 침대에서는 그림 칸 전체로 매트리스 위치를 잡고, 반전해 놓았으면 머리도 반대로 둔다
           box: { x0, x1, y0, y1 },
           flip: p.flipX,
-          // 옆으로 돌려 놓은 침대는 세로로 길어 아기도 세로로 눕는다
-          vertical: isSide(p),
+          // 옆으로 돌려 놓은 가구 — 침대는 세로로 눕고, 붙잡기·의자는 앞면 쪽에서 옆모습으로 쓴다
+          side: isSide(p),
         };
         if (spot.x1 - spot.x0 >= 8) spots.push(spot);
       }
@@ -570,23 +573,40 @@ export default function PixelScreen(props: Props) {
         });
       }
 
-      // 움직이는 것마다 끼워 넣을 자리 — 자기를 가리는 가구 중 가장 먼저 놓인 것 바로 앞
+      // 움직이는 것마다 끼워 넣을 자리 — 겹친 뒤쪽 가구는 모두 지난 뒤, 자기를 가리는 가구보다는 앞.
+      // 앞쪽 가구가 뒤쪽 가구보다 먼저 놓였으면(뒤 소파·앞 빈백) 앞쪽 가구를 아이 다음으로 미뤄 그린다.
+      // 그래야 아이가 뒤 소파에 가려지지 않고, 앞 빈백만 아이를 덮어 흐려진다.
       const insertAt = new Map<number, typeof dynamics>();
+      const deferTo = new Map<number, number>();
       for (const d of dynamics) {
         let k = furniture.length;
         if (d.after) {
           const i = furniture.findIndex((f) => f.id === d.after);
           if (i >= 0) k = i + 1;
         } else {
-          const i = furniture.findIndex((f) => f.base > d.depth && overlap(f.rect, d.rect));
-          if (i >= 0) k = i;
+          const first = furniture.findIndex((f) => f.base > d.depth && overlap(f.rect, d.rect));
+          if (first >= 0) {
+            let lastBehind = -1;
+            furniture.forEach((f, i) => {
+              if (f.base <= d.depth && overlap(f.rect, d.rect)) lastBehind = i;
+            });
+            k = Math.max(first, lastBehind + 1);
+            furniture.forEach((f, i) => {
+              if (i < k && f.base > d.depth && overlap(f.rect, d.rect)) deferTo.set(i, Math.max(deferTo.get(i) ?? 0, k));
+            });
+          }
         }
         insertAt.set(k, [...(insertAt.get(k) ?? []), d]);
       }
+      const deferred = new Map<number, typeof furniture>();
+      for (const [i, k] of deferTo) deferred.set(k, [...(deferred.get(k) ?? []), furniture[i]]);
       for (let i = 0; i <= furniture.length; i++) {
         const group = insertAt.get(i);
         if (group) for (const d of group.sort((a, b) => a.depth - b.depth)) d.draw();
-        if (i < furniture.length) furniture[i].draw();
+        // 아이를 가려야 하는데 먼저 놓였던 앞쪽 가구 — 앞뒤 순서(아랫변)대로
+        const late = deferred.get(i);
+        if (late) for (const f of late.sort((a, b) => a.base - b.base)) f.draw();
+        if (i < furniture.length && !deferTo.has(i)) furniture[i].draw();
       }
 
       // 하트 — 쓰다듬으면 머리 위로 떠오른다
@@ -700,16 +720,18 @@ export default function PixelScreen(props: Props) {
 
   const handlePointerUp = () => {
     clearLongPress();
-    // 길게 누르기가 이미 처리됐으면 dragId 가 비어 있어 여기로 오지 않는다
-    const tapped = dragIdRef.current && !movedRef.current ? dragIdRef.current : null;
+    // 탭은 고르기만 한다(누를 때 이미 골랐다). 방향은 고른 가구 위의 돌리기 버튼으로 바꾼다.
     dragIdRef.current = null;
-    if (tapped) onTapPlacement(tapped);
   };
 
   const handlePointerCancel = () => {
     clearLongPress();
     dragIdRef.current = null;
   };
+
+  // 고른 가구 — 돌리기 버튼을 그 위에 띄운다. 화면 밖으로 나간 배치는 그려지는 자리(안으로 당긴 값)를 쓴다.
+  const found = editing && selectedId ? placements.find((p) => p.id === selectedId) : null;
+  const selected = found ? clampToRoom(found, bounds) : null;
 
   return (
     <div ref={hostRef} className="absolute inset-0 overflow-hidden">
@@ -733,6 +755,17 @@ export default function PixelScreen(props: Props) {
             // 이게 없으면 브라우저가 보간해서 픽셀 아트가 뭉개진다
             style={{ imageRendering: 'pixelated', touchAction: 'manipulation' }}
           />
+          {selected && (
+            <RotateControl
+              x={(size.offsetX + (selected.tileX + wOf(selected) / 2) * TILE) * size.scale}
+              top={selected.tileY * TILE * size.scale}
+              bottom={(selected.tileY + hOf(selected)) * TILE * size.scale}
+              // 상단 카드·상태바에 가리는 높이면 가구 아래에 띄운다
+              below={selected.tileY * TILE * size.scale - size.shift < 120}
+              canTurn={!!selected.sideImageUrl}
+              onRotate={() => onRotatePlacement(selected.id)}
+            />
+          )}
         </div>
       )}
     </div>
@@ -757,6 +790,45 @@ function clampToRoom(p: Placement, b: PlaceBounds): Placement {
   const tileX = Math.min(Math.max(p.tileX, b.minX), Math.max(b.minX, b.maxX - wOf(p)));
   const tileY = Math.min(Math.max(p.tileY, 0), Math.max(0, b.rows - hOf(p)));
   return tileX === p.tileX && tileY === p.tileY ? p : { ...p, tileX, tileY };
+}
+
+const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
+
+/**
+ * 고른 가구 위에 띄우는 버튼. 옆모습이 있으면 "돌리기"(정면 → 옆 오른쪽 → 옆 왼쪽), 없으면 "뒤집기"(좌우 반전).
+ * x·top·bottom 은 방 무대 안의 CSS 좌표(가구 가로 가운데, 위·아래 끝).
+ */
+function RotateControl({
+  x,
+  top,
+  bottom,
+  below,
+  canTurn,
+  onRotate,
+}: {
+  x: number;
+  top: number;
+  bottom: number;
+  below: boolean;
+  canTurn: boolean;
+  onRotate: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRotate}
+      aria-label={canTurn ? '가구 방향 돌리기' : '가구 좌우 뒤집기'}
+      className={`${BOX} absolute z-10 h-[36px] px-[12px] flex items-center gap-[4px] text-[14px] leading-[1.4] text-[#121212] whitespace-nowrap active:translate-y-px`}
+      style={{
+        left: x,
+        top: below ? bottom : top,
+        transform: below ? 'translate(-50%, 8px)' : 'translate(-50%, calc(-100% - 8px))',
+      }}
+    >
+      <span aria-hidden>{canTurn ? '↻' : '⇄'}</span>
+      {canTurn ? '돌리기' : '뒤집기'}
+    </button>
+  );
 }
 
 /** 좌우 반전이 필요하면 뒤집어서 그린다. h 를 주면 그 크기로 늘려 그린다. */

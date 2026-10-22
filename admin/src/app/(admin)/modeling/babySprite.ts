@@ -139,7 +139,7 @@ export const BEHAVIORS: Behavior[] = [
     note: '앉아서 한 손을 펴고, 다른 손 검지로 손바닥을 콕콕 찍는다. 손가락을 따로 쓰기 시작하는 9개월 무렵부터 한다.' },
   { id: 'merong', label: '메롱', from: 10, to: 24, typical: 14, facings: ['down', 'side'], frames: 8, fps: 6, roams: false, curve: [10, 14, 24, 24], weight: 0.25,
     note: '쪽쪽이를 빼고 혀를 쏙 내밀며 장난스럽게 웃는다. 걷기 전에는 앉아서, 걷기 시작하면 서서 한다.' },
-  { id: 'chairSit', label: '의자에 앉기', from: 12, to: 24, typical: 15, facings: ['down'], frames: 8, fps: 4, roams: false, curve: [12, 15, 24, 24], weight: 0.6, needs: 'seat',
+  { id: 'chairSit', label: '의자에 앉기', from: 12, to: 24, typical: 15, facings: ['down', 'side'], frames: 8, fps: 4, roams: false, curve: [12, 15, 24, 24], weight: 0.6, needs: 'seat',
     note: '의자·소파 앞까지 가서 기어올라 앉는다. 다리를 늘어뜨리고 발을 번갈아 달랑거린다. 혼자 의자에 기어오르기는 12~18개월.' },
   { id: 'slide', label: '미끄럼틀 타기', from: 15, to: 24, typical: 20, facings: ['side', 'up'], frames: 8, fps: 8, roams: false, curve: [15, 20, 24, 24], weight: 0.7, needs: 'slide',
     note: '사다리로 가서 뒷모습으로 오른 뒤, 꼭대기에 앉아 두 팔을 들고 미끄러져 내려온다. 내려오면 다시 사다리로 간다. 낮은 미끄럼틀은 18개월 무렵부터 혼자 탄다. (뒷모습=사다리 오르기, 옆모습=타고 내려오기)' },
@@ -1572,6 +1572,37 @@ function chairSit(k: Ctx, ph: number) {
 }
 
 /**
+ * 의자에 앉기 — 옆모습(오른쪽을 본다). 옆으로 돌려 놓은 소파·의자에 앉을 때.
+ * 허벅지는 앉는 면을 따라 앞으로 뻗고, 정강이는 의자 앞으로 늘어뜨려 번갈아 달랑거린다. 두 손은 엉덩이 옆을 짚는다.
+ */
+function chairSitSide(k: Ctx, ph: number) {
+  const { m } = k;
+  const hipY = G - seatDrop(k.months);
+  const hip: P = [CX - 2, hipY];
+  const chest = pol(hip, -90 + 4 + Math.sin(ph) * 2, m.torso);
+  const legOf = (far: boolean) => {
+    const hj = add(hip, far ? 0.8 : 0, far ? -0.6 : 0.4);
+    const knee: P = [hj[0] + m.thigh + 0.6, hj[1] + 0.4];
+    const swing = Math.max(0, Math.sin(ph + (far ? Math.PI : 0)));
+    const ankle = pol(knee, 90 - 28 * swing, m.shin);
+    leg(k, hj, knee, ankle, pol(ankle, -10 - 20 * swing, m.foot), far);
+  };
+  const armOf = (far: boolean) => {
+    const sh = add(chest, far ? 0.8 : 0, far ? 0.2 : 1.0);
+    const [el, wr] = ik(sh, [hip[0] + 2.4 + (far ? 0.8 : 0), hipY + 0.6], m.ua, m.fa, 1);
+    arm(k, sh, el, wr, far);
+  };
+  armOf(true);
+  legOf(true);
+  torso(k, hip, chest, 'side');
+  legOf(false);
+  armOf(false);
+  const hc = headOn(k, chest, 2);
+  neck(k, chest, hc);
+  head(k, hc, 'side');
+}
+
+/**
  * 미끄럼틀 사다리 오르기 — 뒷모습. 한 손이 위 칸을 잡을 때 반대쪽 무릎을 올린다.
  * 사다리는 아이템 그림에 있으므로 그리지 않는다. 손이 머리에 가리지 않게 머리 다음에 팔을 그린다.
  */
@@ -1652,7 +1683,7 @@ export function buildFrames(
         sit(k, Math.PI / 2, f, 0, 'rest');
         break;
       case 'gonji': sit(k, ph, f, 0, 'gonji'); break;
-      case 'chairSit': chairSit(k, ph); break;
+      case 'chairSit': if (f === 'side') chairSitSide(k, ph); else chairSit(k, ph); break;
       case 'slide':
         // 뒷모습은 사다리 오르기, 옆모습은 두 팔을 들고 타고 내려오기
         if (f === 'up') climb(k, ph);
