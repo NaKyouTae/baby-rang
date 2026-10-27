@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { animate, motion, useMotionValue, type PanInfo } from 'framer-motion';
 import { useSelectedChild } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
+import { fetchAndCache, peekCached } from '@/hooks/appCache';
+import { PATTERN_VIEW_MODE_KEY, patternRangeUrl } from '@/lib/tabData';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import PatternDatePickerModal from './PatternDatePickerModal';
 import { openNativeDateTimePicker } from '@/lib/nativeDateTimePicker';
@@ -54,7 +56,7 @@ function tint5(hex: string): string {
 }
 
 const STORAGE_KEY = 'growth-pattern:selectedTypes';
-const VIEW_MODE_KEY = 'growth-pattern:viewMode';
+const VIEW_MODE_KEY = PATTERN_VIEW_MODE_KEY;
 
 // 차트 카드 좌우 스와이프로 날짜 이동 — 손가락을 뗐을 때의 판정 기준.
 const SWIPE_MIN_DISTANCE = 12; // 이보다 작으면 탭/흔들림으로 보고 무시
@@ -88,6 +90,32 @@ function shiftDate(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);
   return toDateStr(d);
+}
+/** 기록을 날짜별로 묶는다. 자정을 넘긴 기록은 걸친 날짜마다 넣는다(최대 7일). */
+function toDayMap(data: GrowthRecord[]): Record<string, GrowthRecord[]> {
+  const map: Record<string, GrowthRecord[]> = {};
+  for (const r of data) {
+    const sMs = new Date(r.startAt).getTime();
+    const eMs = r.endAt ? new Date(r.endAt).getTime() : sMs;
+    const startKey = toDateStr(new Date(sMs));
+    (map[startKey] ||= []).push(r);
+    if (eMs > sMs) {
+      const endKey = toDateStr(new Date(eMs));
+      if (endKey !== startKey) {
+        let cursor = sMs;
+        for (let i = 0; i < 7; i++) {
+          const cur = new Date(cursor);
+          cur.setHours(24, 0, 0, 0);
+          if (cur.getTime() >= eMs) break;
+          const key = toDateStr(cur);
+          if (key !== startKey) (map[key] ||= []).push(r);
+          cursor = cur.getTime();
+          if (key === endKey) break;
+        }
+      }
+    }
+  }
+  return map;
 }
 function fromDateStr(date: string): Date {
   return new Date(`${date}T00:00:00`);
@@ -223,6 +251,8 @@ export default function GrowthPatternClient() {
       if (raw) {
         const arr = JSON.parse(raw) as GrowthType[];
         if (Array.isArray(arr)) {
+          // 저장해 둔 필터를 마운트 뒤에 복원한다(서버 렌더와 어긋나지 않게 effect 에서)
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setSelectedTypes(
             new Set(arr.filter((t) => (MENU_TYPES as string[]).includes(t))),
           );
@@ -263,60 +293,27 @@ export default function GrowthPatternClient() {
   const reqIdRef = useRef(0);
   const loadRecords = useCallback(async () => {
     if (!selectedChild) return;
-    // 좌측(가장 오래된) 컬럼의 새벽 시간대에 자정을 넘긴 전날 기록이 표시되도록
-    // 표시 범위(-6)보다 하루 더 앞당겨 페치한다. 추가된 하루는 컬럼으로 노출되지 않고
-    // forward spill 을 통해 dates[0] 새벽 영역만 채운다.
-    // 스와이프 페이징을 위해 앞뒤로 한 페이지(일=1일, 주=7일)씩 더 받아둔다 —
-    // 손가락을 따라 들어오는 옆 페이지가 빈 화면이 되지 않도록.
-    const step = viewMode === 'day' ? 1 : 7;
-    const from = shiftDate(selectedDate, -7 - step);
-    const to = shiftDate(selectedDate, step);
+    // 범위 계산은 tabData 의 patternRangeUrl — 홈에서 미리 받은 응답과 같은 주소라야 캐시가 맞물린다.
+    const url = patternRangeUrl(selectedChild.id, selectedDate, viewMode);
     const myId = ++reqIdRef.current;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/growth-records/range?childId=${selectedChild.id}&from=${from}&to=${to}`,
-      );
-      if (reqIdRef.current !== myId) return;
-      if (!res.ok) {
-        setDays({});
-        setLoading(false);
-        return;
-      }
-      const data = (await res.json()) as GrowthRecord[];
-      if (reqIdRef.current !== myId) return;
-      const map: Record<string, GrowthRecord[]> = {};
-      for (const r of data) {
-        const sMs = new Date(r.startAt).getTime();
-        const eMs = r.endAt ? new Date(r.endAt).getTime() : sMs;
-        const startKey = toDateStr(new Date(sMs));
-        (map[startKey] ||= []).push(r);
-        if (eMs > sMs) {
-          const endKey = toDateStr(new Date(eMs));
-          if (endKey !== startKey) {
-            let cursor = sMs;
-            for (let i = 0; i < 7; i++) {
-              const cur = new Date(cursor);
-              cur.setHours(24, 0, 0, 0);
-              if (cur.getTime() >= eMs) break;
-              const key = toDateStr(cur);
-              if (key !== startKey) (map[key] ||= []).push(r);
-              cursor = cur.getTime();
-              if (key === endKey) break;
-            }
-          }
-        }
-      }
-      setDays(map);
+    // 마지막으로 받은 응답이 있으면 바로 그리고, 뒤에서 새로 받아 바꿔 넣는다(빈 화면·로딩 없이)
+    const cached = peekCached<GrowthRecord[]>(url);
+    if (cached) {
+      setDays(toDayMap(cached));
       setLoading(false);
-    } catch {
-      if (reqIdRef.current !== myId) return;
-      setDays({});
-      setLoading(false);
+    } else {
+      setLoading(true);
     }
+    const data = await fetchAndCache<GrowthRecord[]>(url);
+    if (reqIdRef.current !== myId) return;
+    if (data) setDays(toDayMap(data));
+    else if (!cached) setDays({});
+    setLoading(false);
   }, [selectedChild, selectedDate, viewMode]);
 
   useEffect(() => {
+    // 기록은 받아 온 뒤에 반영한다 — 캐시가 있으면 그걸 먼저 그리고 뒤에서 새로 받는다
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRecords();
   }, [loadRecords]);
 

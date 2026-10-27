@@ -184,6 +184,10 @@ export interface Actor {
   frameClock: number;
   /** 기록 반응 중이면 하던 행동을 멈추고 이 애니메이션만 보여 준다 */
   reaction?: { id: RecordId; variant: DiaperVariant; start: number; until: number };
+  /** 방금 놓인 아이템 — 다음 행동은 이 아이템으로 고른다(attractActor) */
+  prefer?: string | null;
+  /** 그 아이템에 도착해 쓰기 시작한 시각 — 렌더러가 보고 하트를 띄운다 */
+  cheerAt?: number;
   /** 사용자가 들어 올려 옮기는 중 — 스스로 움직이지 않고 손가락을 따라간다 */
   held?: boolean;
 }
@@ -281,10 +285,35 @@ function pick(ws: { id: BehaviorId; w: number }[]): BehaviorId {
 }
 
 /** 새로 놓은 아이템을 먼저 고른다 */
-function preferNovel<T extends { id: string }>(list: T[], world: World): T {
+function preferNovel<T extends { id: string }>(list: T[], world: World, prefer?: string | null): T {
+  // 방금 놓아 준 아이템이 있으면 그것부터
+  const chosen = prefer ? list.find((x) => x.id === prefer) : undefined;
+  if (chosen) return chosen;
   const fresh = list.filter((x) => world.novel.has(x.id));
   const from = fresh.length ? fresh : list;
   return from[Math.floor(Math.random() * from.length)];
+}
+
+/** 아이템 id 의 쓰임새 — 방에 놓인 자리(spots)나 장난감(props)에서 찾는다 */
+function preferredAffordances(id: string, world: World): Affordance[] {
+  const spot = world.spots.find((s) => s.id === id);
+  if (spot) return spot.aff;
+  const prop = world.props.find((p) => p.id === id);
+  return prop ? [prop.kind] : [];
+}
+
+/**
+ * 아이템을 막 놓았을 때 — 하던 행동을 멈추고 그 아이템으로 다가가 쓰게 한다. 도착하면 cheerAt 이 찍힌다.
+ * 그 아이템으로 할 수 있는 행동이 없으면(개월수가 안 됐거나 장식) 평소처럼 고른다.
+ */
+export function attractActor(a: Actor, itemId: string) {
+  if (a.reaction || a.held) return;
+  release(a);
+  a.prefer = itemId;
+  a.moving = false;
+  a.traveling = false;
+  a.next = null;
+  a.until = 0;
 }
 
 function moveTo(a: Actor, x: number, y: number, allowed: Facing[]) {
@@ -427,6 +456,11 @@ function begin(a: Actor, id: BehaviorId, now: number) {
   a.restUntil = now + 400;
   const item = a.prop ?? a.spot;
   if (item) a.lastItem = { id: item.id, at: now };
+  // 방금 놓아 준 아이템에 도착했다 — 렌더러가 하트를 띄운다
+  if (item && a.prefer === item.id) {
+    a.cheerAt = now;
+    a.prefer = null;
+  }
 
   if (b.needs === 'bed' && a.spot) {
     // 침대 앞에 도착하면 안으로 들어가 눕는다
@@ -486,12 +520,22 @@ function choose(a: Actor, now: number, world: World) {
   const ws = scoreBehaviors(a, world, now);
   let id = pick(ws);
   if (id === a.act && ws.length > 1) id = pick(ws);
+  // 방금 놓아 준 아이템이 있으면 그 아이템을 쓰는 행동을 고른다(할 수 있는 것 중 점수가 가장 높은 것)
+  if (a.prefer) {
+    const affs = preferredAffordances(a.prefer, world);
+    const usable = ws.filter((x) => {
+      const bb = BY_ID[x.id];
+      return (bb.needs && affs.includes(bb.needs)) || (bb.boost && affs.includes(bb.boost));
+    });
+    if (usable.length) id = usable.sort((p, q) => q.w - p.w)[0].id;
+    else a.prefer = null;
+  }
   const b = BY_ID[id];
   const { bounds } = world;
   a.until = 0;
 
   if (b.needs === 'hold') {
-    const spot = preferNovel(itemsFor(a, world, 'hold') as Spot[], world);
+    const spot = preferNovel(itemsFor(a, world, 'hold') as Spot[], world, a.prefer);
     a.spot = spot;
     if (spot.side) {
       // 옆으로 놓은 가구는 앞면(오른쪽, 반전이면 왼쪽) 옆에 붙어 선다
@@ -502,38 +546,38 @@ function choose(a: Actor, now: number, world: World) {
       if (travel(a, id, rnd(spot.x0 + pad, spot.x1 - pad), spot.y1 + 2)) return;
     }
   } else if (b.needs === 'bed') {
-    const spot = preferNovel(itemsFor(a, world, 'bed') as Spot[], world);
+    const spot = preferNovel(itemsFor(a, world, 'bed') as Spot[], world, a.prefer);
     a.spot = spot;
     // 움직일 수 있으면 침대 앞까지 간다. 못 움직이면 바로 눕는다(begin 이 침대 안으로 옮긴다).
     if (a.locomotion && travel(a, id, clamp((spot.x0 + spot.x1) / 2, bounds.x0, bounds.x1), spot.y1 + 3)) return;
   } else if (b.needs === 'seat') {
-    const spot = preferNovel(itemsFor(a, world, 'seat') as Spot[], world);
+    const spot = preferNovel(itemsFor(a, world, 'seat') as Spot[], world, a.prefer);
     a.spot = spot;
     // 옆으로 놓은 의자·소파는 앞면 쪽에서 다가간다
     const x = spot.side ? (spot.flip ? spot.x0 - 4 : spot.x1 + 4) : seatSpot(spot).x;
     const y = spot.side ? spot.y1 - 2 : spot.y1 + 2;
     if (travel(a, id, clamp(x, bounds.x0, bounds.x1), clamp(y, bounds.y0, bounds.y1))) return;
   } else if (b.needs === 'slide') {
-    const spot = preferNovel(itemsFor(a, world, 'slide') as Spot[], world);
+    const spot = preferNovel(itemsFor(a, world, 'slide') as Spot[], world, a.prefer);
     const at = slidePoint(spot, 'base');
     a.spot = spot;
     if (travel(a, id, clamp(at.x, bounds.x0, bounds.x1), clamp(at.y + 2, bounds.y0, bounds.y1))) return;
   } else if (b.needs === 'play') {
     // 장난감 옆에 앉아 장난감 쪽을 본다
-    const spot = preferNovel(itemsFor(a, world, 'play') as Spot[], world);
+    const spot = preferNovel(itemsFor(a, world, 'play') as Spot[], world, a.prefer);
     const left = spot.x0 - 9 >= bounds.x0;
     a.spot = spot;
     const x = left ? spot.x0 - 9 : spot.x1 + 9;
     if (travel(a, id, x, clamp(spot.y1 - 1, bounds.y0, bounds.y1))) return;
   } else if (b.needs === 'ball') {
-    const ball = preferNovel(itemsFor(a, world, 'ball') as Prop[], world);
+    const ball = preferNovel(itemsFor(a, world, 'ball') as Prop[], world, a.prefer);
     a.prop = ball;
     ball.heldBy = a;
     // 공 굴리기는 공을 다리 사이에 두고 앉는다
     const at = id === 'ballRoll' ? { x: ball.x, y: clamp(ball.y - 6, bounds.y0, bounds.y1) } : ballApproach(a, ball, world);
     if (travel(a, id, at.x, at.y)) return;
   } else if (b.needs === 'walker') {
-    const walker = preferNovel(itemsFor(a, world, 'walker') as Prop[], world);
+    const walker = preferNovel(itemsFor(a, world, 'walker') as Prop[], world, a.prefer);
     a.prop = walker;
     walker.heldBy = a;
     // 손잡이 쪽(보행기 왼쪽)으로 가서 오른쪽으로 민다
@@ -541,7 +585,7 @@ function choose(a: Actor, now: number, world: World) {
   } else if (b.boost) {
     const soft = itemsFor(a, world, b.boost) as Spot[];
     if (soft.length) {
-      const rug = preferNovel(soft, world);
+      const rug = preferNovel(soft, world, a.prefer);
       a.spot = rug;
       const x = rnd(rug.x0 + 8, rug.x1 - 8);
       const y = clamp(rnd(rug.y0 + 6, rug.y1 - 1), bounds.y0, bounds.y1);

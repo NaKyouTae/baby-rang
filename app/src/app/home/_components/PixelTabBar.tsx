@@ -1,6 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { selectedChildId } from '@/hooks/appCache';
+import { prefetchTabs, type TabId as DataTabId } from '@/lib/tabData';
 import {
   TabGrowthIcon,
   TabPatternIcon,
@@ -10,6 +13,16 @@ import {
 } from './icons';
 
 export type TabId = 'room' | 'record' | 'pattern' | 'growth' | 'weeks';
+
+/** 데이터를 미리 받아 둘 수 있는 탭(아기방·원더윅스는 따로 받을 데이터가 없거나 홈이 직접 받는다) */
+const DATA_TAB: Partial<Record<TabId, DataTabId>> = { record: 'record', pattern: 'pattern', growth: 'growth' };
+
+/** 다른 탭 데이터를 미리 받는다 — 탭을 눌렀을 때 빈 화면 없이 바로 그려지게 */
+function prefetchOtherTabs(active: TabId) {
+  if (!selectedChildId) return;
+  const tabs = (Object.keys(DATA_TAB) as TabId[]).filter((t) => t !== active).map((t) => DATA_TAB[t]!);
+  prefetchTabs(selectedChildId, tabs);
+}
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; href: string }[] = [
   { id: 'room', label: '아기방', icon: <TabRoomIcon />, href: '/home' },
@@ -34,6 +47,17 @@ export const TAB_BAR_HEIGHT = 60;
  * 내용이 가리지 않게 쓰는 쪽에서 아래를 비울 것(흐름 안이면 TAB_BAR_HEIGHT 만큼).
  */
 export default function PixelTabBar({ active }: { active: TabId }) {
+  // 지금 화면이 자리 잡은 뒤 한가할 때 다른 탭 데이터를 미리 받아 둔다
+  useEffect(() => {
+    const run = () => prefetchOtherTabs(active);
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(run, { timeout: 2500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(run, 1200);
+    return () => clearTimeout(t);
+  }, [active]);
+
   return (
     <div
       className="fixed left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 px-[20px] pointer-events-none"
@@ -67,7 +91,17 @@ export default function PixelTabBar({ active }: { active: TabId }) {
             {body}
           </div>
         ) : (
-          <Link key={t.id} href={t.href} className={cls} style={tabStyle}>
+          <Link
+            key={t.id}
+            href={t.href}
+            className={cls}
+            style={tabStyle}
+            // 손가락이 닿는 순간 그 탭 데이터를 받기 시작한다(미리 받은 지 30초 안이면 건너뛴다)
+            onPointerDown={() => {
+              const tab = DATA_TAB[t.id];
+              if (tab && selectedChildId) prefetchTabs(selectedChildId, [tab]);
+            }}
+          >
             {body}
           </Link>
         );

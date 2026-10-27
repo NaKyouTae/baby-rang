@@ -19,11 +19,12 @@ export async function POST(req: NextRequest) {
   }
   const { token } = (await res.json()) as { token: string };
   const out = NextResponse.json({ ok: true });
+  // 한 번 로그인하면 사실상 계속 유지한다(1년). 로그아웃 버튼을 누르거나 쿠키를 지우면 풀린다.
   out.cookies.set("admin_token", token, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 365,
   });
   return out;
 }

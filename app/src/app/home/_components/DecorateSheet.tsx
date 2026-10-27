@@ -9,6 +9,9 @@ import MenuPicker from './MenuPicker';
 import { loadRoomItems, refreshRoomItems } from './roomItems';
 import type { ActionId } from './RoomChrome';
 import { LoadingBlock } from '@/components/Loading';
+import ItemBabyPreview from './ItemBabyPreview';
+import { itemPreview } from './affordances';
+import type { Gender } from './babySprite';
 
 export type RoomItem = {
   id: string;
@@ -59,6 +62,9 @@ interface Props {
   /** 메뉴 탭에서 쓰는 기록 버튼 선택 */
   menu: ActionId[];
   onChangeMenu: (next: ActionId[]) => void;
+  /** 아기 반응 미리보기에 쓰는 우리 아이 개월수·성별 */
+  babyMonths: number;
+  babyGender: Gender;
 }
 
 export default function DecorateSheet({
@@ -73,6 +79,8 @@ export default function DecorateSheet({
   onCharge,
   menu,
   onChangeMenu,
+  babyMonths,
+  babyGender,
 }: Props) {
   const [items, setItems] = useState<RoomItem[] | null>(null);
   const [buying, setBuying] = useState<RoomItem | null>(null);
@@ -220,6 +228,8 @@ export default function DecorateSheet({
                 <div className="grid grid-cols-[repeat(6,50px)] justify-between gap-y-[10px]">
                   {visible.map((item) => {
                     const mine = isOwned(item);
+                    // 놓으면 아기가 이 아이템으로 하는 행동 — 칸 모서리 아기와 이름 아래 한 줄로 보여 준다
+                    const preview = itemPreview(item, babyMonths);
                     // 유료인데 보유 중이면 구매한 아이템. 무료 아이템과 겉모습이 같아 따로 표시한다.
                     const bought = item.priceCoins > 0 && mine;
                     return (
@@ -256,6 +266,24 @@ export default function DecorateSheet({
                         >
                           {item.name}
                         </span>
+                        {preview && (
+                          <>
+                            <span className="absolute right-[-8px] top-[26px] pointer-events-none">
+                              <ItemBabyPreview
+                                behavior={preview.behavior}
+                                months={babyMonths}
+                                gender={babyGender}
+                                ready={preview.ready}
+                              />
+                            </span>
+                            <span
+                              className="-mt-[4px] text-[10px] leading-[1.4] text-center whitespace-nowrap"
+                              style={{ color: preview.ready ? '#3078C9' : '#BBC0C5' }}
+                            >
+                              {preview.ready ? preview.label : `${preview.from}개월부터`}
+                            </span>
+                          </>
+                        )}
                         {/* 미보유 유료 아이템은 보석 뱃지를 단다 */}
                         {!mine && (
                           <span className="absolute left-[36px] top-[4px]">

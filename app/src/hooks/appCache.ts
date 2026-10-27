@@ -71,6 +71,8 @@ export function clearAuthCaches() {
   cachedUser = null;
   cachedChildren = [];
   childrenCacheLoaded = true;
+  // 화면 데이터도 계정 것이다
+  clearSwrCache();
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.removeItem(AUTH_LS_KEY);
@@ -155,6 +157,98 @@ export async function cachedFetch<T>(url: string, ttl = DEFAULT_TTL): Promise<T>
 export function invalidateCache(urlPrefix: string) {
   for (const key of fetchCache.keys()) {
     if (key.startsWith(urlPrefix)) fetchCache.delete(key);
+  }
+}
+
+// --- 화면 데이터 캐시(stale-while-revalidate) ---
+// 탭을 열 때 마지막으로 받은 응답을 바로 그리고, 뒤에서 새로 받아 바꿔 넣는다.
+// 메모리에 두고 localStorage 에도 남겨 앱을 다시 열어도 바로 보인다(최근 SWR_MAX 개만).
+// 홈에서 다른 탭 데이터를 미리 받아 두면(prefetchCached) 처음 여는 탭도 빈 화면 없이 열린다.
+const SWR_LS_PREFIX = 'baby-rang:swr:';
+const SWR_INDEX_KEY = 'baby-rang:swr-index';
+const SWR_MAX = 30;
+const swrMem = new Map<string, unknown>();
+const swrFetchedAt = new Map<string, number>();
+const swrInflight = new Map<string, Promise<unknown>>();
+
+function swrPersist(url: string, data: unknown) {
+  lsWrite(SWR_LS_PREFIX + url, data);
+  const index = (lsRead<string[]>(SWR_INDEX_KEY) ?? []).filter((u) => u !== url);
+  index.push(url);
+  // 오래된 것부터 지워 localStorage 가 끝없이 커지지 않게 한다
+  while (index.length > SWR_MAX) {
+    const old = index.shift()!;
+    try {
+      window.localStorage.removeItem(SWR_LS_PREFIX + old);
+    } catch {
+      /* ignore */
+    }
+  }
+  lsWrite(SWR_INDEX_KEY, index);
+}
+
+/** 마지막으로 받은 응답(없으면 undefined). 네트워크는 쓰지 않는다. */
+export function peekCached<T>(url: string): T | undefined {
+  if (swrMem.has(url)) return swrMem.get(url) as T;
+  const stored = lsRead<T>(SWR_LS_PREFIX + url);
+  if (stored === null) return undefined;
+  swrMem.set(url, stored);
+  return stored;
+}
+
+/**
+ * 새로 받아 캐시에 넣는다. 같은 주소를 받는 중이면 그 요청을 같이 기다린다(미리 받기와 겹쳐도 한 번만 나간다).
+ * 실패하면 undefined — 화면은 이전 값을 그대로 두면 된다.
+ */
+export function fetchAndCache<T>(url: string): Promise<T | undefined> {
+  const pending = swrInflight.get(url);
+  if (pending) return pending as Promise<T | undefined>;
+  const p = fetch(url, { cache: 'no-store' })
+    .then(async (res) => {
+      if (!res.ok) return undefined;
+      const data = (await res.json()) as T;
+      swrMem.set(url, data);
+      swrFetchedAt.set(url, Date.now());
+      swrPersist(url, data);
+      return data;
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      swrInflight.delete(url);
+    });
+  swrInflight.set(url, p);
+  return p;
+}
+
+/** 미리 받아 둔다. maxAgeMs 안에 받은 적이 있으면 건너뛴다. */
+export function prefetchCached(urls: string[], maxAgeMs = 30_000) {
+  const now = Date.now();
+  for (const url of urls) {
+    if (now - (swrFetchedAt.get(url) ?? 0) < maxAgeMs) continue;
+    void fetchAndCache(url);
+  }
+}
+
+/** 방금(maxAgeMs 안에) 받은 응답인가 — 그러면 화면이 다시 요청하지 않아도 된다. */
+export function isFreshCached(url: string, maxAgeMs = 10_000) {
+  return Date.now() - (swrFetchedAt.get(url) ?? 0) < maxAgeMs;
+}
+
+function clearSwrCache() {
+  swrMem.clear();
+  swrFetchedAt.clear();
+  if (typeof window === 'undefined') return;
+  for (const url of lsRead<string[]>(SWR_INDEX_KEY) ?? []) {
+    try {
+      window.localStorage.removeItem(SWR_LS_PREFIX + url);
+    } catch {
+      /* ignore */
+    }
+  }
+  try {
+    window.localStorage.removeItem(SWR_INDEX_KEY);
+  } catch {
+    /* ignore */
   }
 }
 

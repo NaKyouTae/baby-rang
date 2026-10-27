@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSelectedChild, type Child } from '@/hooks/useChildren';
 import { useRefreshOnForeground } from '@/hooks/useRefreshOnForeground';
+import { fetchAndCache, peekCached } from '@/hooks/appCache';
+import { physicalGrowthUrl } from '@/lib/tabData';
 import BottomSheet from '@/components/BottomSheet';
 import ConfirmModal from '../home/_components/ConfirmModal';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
@@ -137,19 +139,20 @@ export default function PhysicalGrowthClient() {
     };
   }, [showForm]);
 
+  // 마지막으로 받은 기록을 바로 그리고, 뒤에서 새로 받아 바꿔 넣는다(홈에서 미리 받아 두기도 한다)
   const fetchRecords = useCallback(async () => {
     if (!selected) return;
-    setLoading(true);
+    const url = physicalGrowthUrl(selected.id);
+    const cached = peekCached<PhysicalGrowthRecord[]>(url);
+    if (cached) setRecords(cached);
+    else {
+      // 처음 보는 아이 — 다른 아이 기록이 잠깐 보이지 않게 비운다
+      setRecords([]);
+      setLoading(true);
+    }
     try {
-      const res = await fetch(
-        `/api/physical-growth?childId=${selected.id}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setRecords(data);
-      }
-    } catch {
-      // ignore
+      const data = await fetchAndCache<PhysicalGrowthRecord[]>(url);
+      if (data) setRecords(data);
     } finally {
       setLoading(false);
     }

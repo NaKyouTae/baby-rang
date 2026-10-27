@@ -15,6 +15,7 @@ import {
 import { getSpriteAt, getWindowSpriteAt, hOf, imageOf, isSide, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { phaseAtHour, type WindowSky } from './windowSky';
 import { layout, type Layout } from './scene';
+import { affordancesOf } from './affordances';
 import { drawDefaultFloor, drawDefaultWall } from './roomTiles';
 import { Dust, drawEditGrid, drawItemShadow } from './roomEffects';
 import {
@@ -30,6 +31,7 @@ import {
   pickUpActor,
   propDepth,
   reactActor,
+  attractActor,
   propSprite,
   updateActor,
   updateWorld,
@@ -84,30 +86,6 @@ export interface RoomReaction {
 /** 기록 반응을 보여 주는 시간 */
 const REACTION_MS = 5000;
 
-/**
- * 아이템 쓰임새. 어드민에서 아이템마다 정한 값을 쓰고, 정하지 않은 아이템은 분류로 짐작한다.
- * 공·보행기는 분류로 알 수 없어 반드시 어드민에서 정해야 한다.
- */
-const CATEGORY_AFFORDANCE: Partial<Record<string, Affordance[]>> = {
-  FURNITURE: ['hold'],
-  BED: ['hold', 'bed'],
-  RUG: ['soft'],
-  TOY: ['play'],
-};
-const AFFORDANCE_OF: Record<string, Affordance> = {
-  HOLD: 'hold',
-  SOFT_FLOOR: 'soft',
-  BALL: 'ball',
-  PUSH_WALKER: 'walker',
-  PLAY: 'play',
-  SLEEP: 'bed',
-  SEAT: 'seat',
-  SLIDE: 'slide',
-};
-function affordancesOf(p: Placement): Affordance[] {
-  if (p.affordances?.length) return p.affordances.map((a) => AFFORDANCE_OF[a]).filter(Boolean);
-  return CATEGORY_AFFORDANCE[p.category] ?? [];
-}
 const isProp = (aff: Affordance[]) => aff.includes('ball') || aff.includes('walker');
 /** 방금 놓은 아이템으로 치는 시간 — 이 동안 그 아이템을 쓰는 행동이 2.5배 자주 나온다 */
 const NOVEL_MS = 30 * 60 * 1000;
@@ -215,11 +193,19 @@ export default function PixelScreen(props: Props) {
   /** 누르고 있는 아기와 들어 올렸는지. 누른 자리에서 손가락이 많이 움직이면 들기를 취소한다. */
   const holdRef = useRef<{ actor: Actor; x: number; y: number; picked: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null);
   const reactRef = useRef<(r: RoomReaction) => void>(() => {});
+  const attractRef = useRef<(itemId: string) => void>(() => {});
 
   // 기록 반응 — 다둥이면 방에 있는 아이 모두가 같은 반응을 한다
   useEffect(() => {
     if (reaction) reactRef.current(reaction);
   }, [reaction]);
+  // 아이템을 막 놓으면 가장 가까운 아이가 그 아이템으로 다가가 쓰고, 도착하면 하트를 띄운다
+  useEffect(() => {
+    if (!focusId) return;
+    // 한 프레임 뒤에 — 배치 목록(placementsRef)이 새 아이템으로 바뀐 다음이어야 찾을 수 있다
+    const raf = requestAnimationFrame(() => attractRef.current(focusId));
+    return () => cancelAnimationFrame(raf);
+  }, [focusId]);
 
   // 렌더 루프는 아이 구성이 실제로 바뀔 때만 다시 세운다.
   // kids 배열은 렌더마다 새로 만들어져서 그대로 deps 에 넣으면 아이들이 계속 제자리로 돌아간다.
@@ -394,6 +380,8 @@ export default function PixelScreen(props: Props) {
       world.props = editingRef.current ? [] : live;
     };
     const hearts: { x: number; y: number; at: number }[] = [];
+    /** 아이마다 마지막으로 하트를 띄운 도착 시각 — 같은 도착에 하트가 두 번 뜨지 않게 */
+    const cheered = new WeakMap<Actor, number>();
     const dust = new Dust();
     /**
      * 보호자 손 — 아직 기지 못하는 아기를 때맞춰 다른 자리로 옮겨 준다(caretaker).
@@ -475,6 +463,31 @@ export default function PixelScreen(props: Props) {
         hearts.push({ x: a.x, y: a.y, at: now });
       },
     };
+    attractRef.current = (itemId) => {
+      const p = placementsRef.current.find((q) => q.id === itemId);
+      if (!p) return;
+      const cx = L.offsetX + (p.tileX + wOf(p) / 2) * TILE;
+      const cy = (p.tileY + hOf(p)) * TILE;
+      const free = babies.filter((b) => !carries.has(b) && !b.held && !b.reaction);
+      if (!free.length) return;
+      const near = free.reduce((m, b) => (Math.hypot(b.x - cx, b.y - cy) < Math.hypot(m.x - cx, m.y - cy) ? b : m));
+      const now = performance.now();
+      // 장식이면 그 자리에서 하트만 띄운다
+      if (!affordancesOf(p).length) {
+        hearts.push({ x: near.x, y: near.y, at: now });
+        return;
+      }
+      if (near.locomotion) {
+        // 스스로 움직이는 아기는 걸어가거나 기어간다
+        attractActor(near, itemId);
+        return;
+      }
+      // 아직 못 기는 아기는 보호자 손이 아이템 위로 옮겨 준다. 내려놓으면 그 아이템을 쓰고 하트가 뜬다.
+      // 손이 내려오는 동안 다른 행동으로 넘어가지 않게 붙잡아 둔다.
+      near.prefer = itemId;
+      near.until = now + 5000;
+      carries.set(near, startCarry(near, { x: cx, y: (p.tileY + hOf(p) * 0.6) * TILE }, now));
+    };
     reactRef.current = (r) => {
       const now = performance.now();
       for (const b of babies) {
@@ -503,6 +516,11 @@ export default function PixelScreen(props: Props) {
       for (const [b, c] of carries) if (updateCarry(c, now, world)) carries.delete(b);
       for (const b of babies) {
         updateActor(b, now, dt, world);
+        // 방금 놓은 아이템에 도착했다 — 하트
+        if (b.cheerAt && cheered.get(b) !== b.cheerAt) {
+          cheered.set(b, b.cheerAt);
+          hearts.push({ x: b.x, y: b.y, at: now });
+        }
         const gap = DUST_GAP[b.act];
         if (b.moving && !b.reaction && gap) dust.step(b, b.x, b.y, now, gap);
       }

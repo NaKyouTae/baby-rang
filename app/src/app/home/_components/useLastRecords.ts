@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { fetchAndCache, peekCached } from '@/hooks/appCache';
 
 interface LastRecords {
   childId: string;
@@ -22,26 +23,42 @@ export function formatElapsed(iso: string | null, now: number): string {
   return m === 0 ? `${h}시간 전` : `${h}시간 ${m}분 전`;
 }
 
+type WidgetSummary = {
+  childId?: string;
+  canEndSleep?: boolean;
+  pendingSleepRecordId?: unknown;
+  lastSleepAt: string | null;
+  lastFeedingAt: string | null;
+  lastDiaperAt: string | null;
+};
+
+const summaryUrl = (childId: string) => `/api/growth-records/widget-summary?childId=${encodeURIComponent(childId)}`;
+
+function toLastRecords(childId: string, data: WidgetSummary | null | undefined): LastRecords | null {
+  // 접근할 수 없는 아이면 서버가 첫 아이로 바꿔 답한다. 다른 아이 값은 보여주지 않는다.
+  if (!data || data.childId !== childId) return null;
+  return {
+    childId,
+    canEndSleep: data.canEndSleep === true,
+    pendingSleepRecordId: typeof data.pendingSleepRecordId === 'string' ? data.pendingSleepRecordId : null,
+    sleepAt: data.lastSleepAt,
+    feedingAt: data.lastFeedingAt,
+    diaperAt: data.lastDiaperAt,
+  };
+}
+
+/** 마지막으로 받은 값 — 홈을 다시 열면 '몇 분 전'을 바로 보여 주고 뒤에서 새로 받는다 */
+function cachedLastRecords(childId: string | undefined): LastRecords | null {
+  if (!childId) return null;
+  return toLastRecords(childId, peekCached<WidgetSummary>(summaryUrl(childId)));
+}
+
 /** 실패하면 undefined — 이전 값을 그대로 두라는 뜻이다. */
 async function fetchLastRecords(childId: string): Promise<LastRecords | null | undefined> {
   try {
-    const res = await fetch(
-      `/api/growth-records/widget-summary?childId=${encodeURIComponent(childId)}`,
-      { cache: 'no-store' },
-    );
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    // 접근할 수 없는 아이면 서버가 첫 아이로 바꿔 답한다. 다른 아이 값은 보여주지 않는다.
-    if (!data || data.childId !== childId) return null;
-    return {
-      childId,
-      canEndSleep: data.canEndSleep === true,
-      pendingSleepRecordId:
-        typeof data.pendingSleepRecordId === 'string' ? data.pendingSleepRecordId : null,
-      sleepAt: data.lastSleepAt,
-      feedingAt: data.lastFeedingAt,
-      diaperAt: data.lastDiaperAt,
-    };
+    const data = await fetchAndCache<WidgetSummary>(summaryUrl(childId));
+    if (data === undefined) return undefined;
+    return toLastRecords(childId, data);
   } catch {
     return undefined;
   }
@@ -67,6 +84,9 @@ export function useLastRecords(childId: string | undefined) {
   useEffect(() => {
     if (!childId) return;
     let alive = true;
+    // 지난번 값을 먼저 보여 준다(서버 렌더와 어긋나지 않게 마운트 뒤에 채운다)
+    const cached = cachedLastRecords(childId);
+    if (cached) queueMicrotask(() => alive && setRecords(cached));
     fetchLastRecords(childId).then((next) => {
       if (!alive || next === undefined) return;
       setRecords(next);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomSheet from '@/components/BottomSheet';
 import { calcChildAge } from '@/lib/childAge';
@@ -16,7 +16,7 @@ import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
 import RemoveSheet from './RemoveSheet';
 import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
-import { ROOM_W_TILES, VIEW_MARGIN_TILES, WALL_TILES } from './tiles';
+import { ROOM_W_TILES, VIEW_MARGIN_TILES, WALL_SHIFT, WALL_TILES } from './tiles';
 import RoomChrome, {
   ACTION_LABEL,
   DEFAULT_MENU,
@@ -113,6 +113,20 @@ function loadSavedMenu(): ActionId[] {
   }
 }
 
+/**
+ * 이 기기에 남은 마지막 구성. 없으면 null — 처음 여는 기기는 기본 구성을 그렸다가 바꾸지 않고 서버 값을 기다린다.
+ * 로그아웃 때 지우므로(clearAuthCaches) 남아 있으면 지금 계정의 구성이다.
+ */
+function loadCachedMenu(): ActionId[] | null {
+  try {
+    const raw = readStored(MENU_KEY);
+    const cached = raw ? toMenu(JSON.parse(raw)) : [];
+    return cached.length ? cached : null;
+  } catch {
+    return null;
+  }
+}
+
 /** 서버에서 받은 구성 — 앱이 모르는 값(다른 버전에서 저장한 것)은 걸러 낸다 */
 function toMenu(value: unknown): ActionId[] {
   if (!Array.isArray(value)) return [];
@@ -176,14 +190,37 @@ function persistRoom(placements: Placement[], slots: Slots) {
   }
 }
 
+/**
+ * 브라우저에 저장된 배치의 좌표 기준. 6 부터 벽이 11칸이다(그 전 배치는 WALL_SHIFT 만큼 내려 옮긴다).
+ * 2·3·4·5 는 잠깐 로컬에서만 쓴 벽 15·12·11·9칸(5·2·1칸 내림, 1칸 올림) — 그 차이만큼 옮긴다.
+ */
+const LAYOUT_VERSION_KEY = 'babyrang.home.layoutVersion';
+const LAYOUT_VERSION = '6';
+const LAYOUT_SHIFT_FROM: Record<string, number> = {
+  '2': WALL_SHIFT - 5,
+  '3': WALL_SHIFT - 2,
+  '4': WALL_SHIFT - 1,
+  '5': WALL_SHIFT + 1,
+};
+
 function loadSavedPlacements(): Placement[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = readStored(STORAGE_KEY);
     // 반전이 생기기 전에 저장된 배치에는 flipX 가 없다
-    return raw
+    const list = raw
       ? (JSON.parse(raw) as Placement[]).map((p) => ({ ...p, flipX: p.flipX ?? false }))
       : [];
+    // 벽이 10칸이던 때 저장한 배치 — 벽이 늘어난 만큼 내려야 가구가 벽에 파묻히지 않는다(서버 배치는 마이그레이션으로 옮겼다)
+    const version = localStorage.getItem(LAYOUT_VERSION_KEY);
+    if (version !== LAYOUT_VERSION) {
+      const shift = (version ? LAYOUT_SHIFT_FROM[version] : undefined) ?? WALL_SHIFT;
+      const moved = list.map((p) => ({ ...p, tileY: Math.max(0, p.tileY + shift) }));
+      localStorage.setItem(LAYOUT_VERSION_KEY, LAYOUT_VERSION);
+      if (list.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(moved));
+      return moved;
+    }
+    return list;
   } catch {
     // 저장값이 깨졌으면 빈 방으로 시작한다
     return [];
@@ -243,9 +280,15 @@ export default function HomeClient() {
   // 편집 모드에 들어갈 때는 고른 탭 없이 시작한다. 탭을 눌러야 시트가 열린다.
   const [sheetCategory, setSheetCategory] = useState<CategoryTabId | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Placement | null>(null);
-  // 기록 버튼 구성. 로그인 사용자는 계정에 저장된 구성을 받기 전까지 null 이라 버튼을 그리지 않는다.
+  // 기록 버튼 구성. 이 기기에 남은 사본이 있으면 그것부터 그리고, 서버 값을 받으면 맞춘다.
+  // 사본이 없는 첫 실행은 서버 값을 받기 전까지 null 이라 버튼을 그리지 않는다 —
   // 기본 구성을 먼저 그렸다가 사용자 구성으로 바뀌며 버튼이 뒤바뀌어 보이는 것을 막는다(편집 버튼만 늘 보인다).
   const [menu, setMenu] = useState<ActionId[] | null>(null);
+  // 서버 렌더와 어긋나지 않게 마운트 뒤에 읽되, 그리기 전에 넣어 빈 화면이 한 번도 보이지 않게 한다
+  useLayoutEffect(() => {
+    const cached = loadCachedMenu();
+    if (cached) setMenu((prev) => prev ?? cached);
+  }, []);
   // 보유 목록과 재화. 비로그인 데모는 무료 아이템만 쓸 수 있다.
   const [ownedItemIds, setOwnedItemIds] = useState<string[]>([]);
   const [coins, setCoins] = useState(0);
@@ -829,7 +872,8 @@ export default function HomeClient() {
         tileX: Math.max(0, (ROOM_W_TILES - item.tileW) / 2),
         // 벽에 거는 것(창문·액자)은 벽 쪽에, 나머지는 바닥 가운데에 놓는다.
         // 창문이 바닥 한가운데 떨어지면 뭘 잘못한 줄 안다.
-        tileY: item.surface === 'WALL' ? 2 : WALL_TILES + 2,
+        // 벽 위쪽 — 맨 위는 상단 카드에 가리므로 3번째 줄부터
+        tileY: item.surface === 'WALL' ? Math.max(3, WALL_TILES - 8) : WALL_TILES + 2,
         tileW: item.tileW,
         tileH: item.tileH,
         flipX: false,
@@ -959,6 +1003,8 @@ export default function HomeClient() {
         onCharge={openGems}
         menu={menu ?? []}
         onChangeMenu={handleChangeMenu}
+        babyMonths={age.months}
+        babyGender={child.gender === 'female' ? 'female' : 'male'}
       />
 
       <MyPage

@@ -2,6 +2,8 @@
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSelectedChild } from '@/hooks/useChildren';
+import { fetchAndCache, peekCached } from '@/hooks/appCache';
+import { recordPageInitUrl } from '@/lib/tabData';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import {
   MENU_TYPES,
@@ -626,40 +628,46 @@ export default function GrowthRecordPage() {
     if (!selectedChild) return;
     let cancelled = false;
     const loadInitial = async () => {
-      // 아이 전환/진입 시 리스트를 비우지 않고, 해당 아이의 캐시를 먼저 보여준다.
-      // (캐시가 없을 때만 빈 배열 — 새 데이터가 도착하면 조용히 교체)
-      setDays(getCachedDays(selectedChild.id) ?? []);
       setHasMore(true);
       const today = todayString();
       const targets: string[] = [];
       for (let i = 0; i < PAGE_SIZE; i++) targets.push(shiftDate(today, -i));
       const from = targets[targets.length - 1];
-      const to = today;
+      // 주소는 tabData 의 recordPageInitUrl — 홈에서 미리 받은 응답과 같은 주소라야 캐시가 맞물린다
+      const url = recordPageInitUrl(selectedChild.id, today);
+      const groupInit = (data: { records?: GrowthRecord[] }) => {
+        const dateMap = new Map<string, GrowthRecord[]>();
+        for (const r of data.records ?? []) {
+          const dt = new Date(r.startAt);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+          if (!dateMap.has(d)) dateMap.set(d, []);
+          dateMap.get(d)!.push(r);
+        }
+        return targets
+          .map((d) => ({ date: d, records: dateMap.get(d) ?? [] }))
+          .filter((g) => g.records.length > 0);
+      };
+      // 아이 전환/진입 시 리스트를 비우지 않고, 해당 아이의 캐시를 먼저 보여준다.
+      // 이 화면에서 본 적이 없어도 홈에서 미리 받아 둔 응답이 있으면 그걸로 그린다.
+      // (둘 다 없을 때만 빈 배열 — 새 데이터가 도착하면 조용히 교체)
+      const prefetched = peekCached<{ records?: GrowthRecord[] }>(url);
+      setDays(getCachedDays(selectedChild.id) ?? (prefetched ? groupInit(prefetched) : []));
 
       try {
-        const res = await fetch(
-          `/api/growth-records/page-init?childId=${selectedChild.id}&from=${from}&to=${to}`,
-        );
-        if (res.ok) {
-          const data = await res.json();
+        const data = await fetchAndCache<{
+          records?: GrowthRecord[];
+          quickButtons?: unknown;
+          earliestDate?: string | null;
+        }>(url);
+        if (data) {
           if (cancelled) return;
-          const nextQuick = normalizeQuickTypes(data.quickButtons);
+          const nextQuick = normalizeQuickTypes(data.quickButtons as GrowthType[] | undefined);
           setQuickTypes(nextQuick);
           setCachedQuickTypes(nextQuick);
           const earliest = data.earliestDate ?? null;
           setEarliestDate(earliest);
-          const allRecords: GrowthRecord[] = data.records ?? [];
-          const dateMap = new Map<string, GrowthRecord[]>();
-          for (const r of allRecords) {
-            const dt = new Date(r.startAt);
-            const pad = (n: number) => String(n).padStart(2, '0');
-            const d = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-            if (!dateMap.has(d)) dateMap.set(d, []);
-            dateMap.get(d)!.push(r);
-          }
-          const grouped = targets
-            .map((d) => ({ date: d, records: dateMap.get(d) ?? [] }))
-            .filter((g) => g.records.length > 0);
+          const grouped = groupInit(data);
           setDays(grouped);
           setCachedDays(selectedChild.id, grouped);
           const nextCursor = shiftDate(from, -1);

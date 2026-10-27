@@ -24,8 +24,14 @@ export const ROOM_H = ROOM_H_TILES * TILE; // 320
 export const PLACE_MARGIN_X = 6;
 export const PLACE_MAX_ROWS = 60;
 
-/** 위에서 몇 줄이 벽인가. 톱다운 실내는 벽을 위쪽 띠로만 보여준다. 디자인 비율(벽 4 : 바닥 6)에 맞춘 값. */
-export const WALL_TILES = 10;
+/**
+ * 위에서 몇 줄이 벽인가. 톱다운 실내는 벽을 위쪽 띠로만 보여준다.
+ * 화면에 보이는 영역(맨 위 TOP_HIDDEN 아래 ~ 화면 아래 끝, 폰에서 약 516px)에서 벽 1 : 바닥 3 이 되도록 맞춘 값.
+ * 10칸에서 11칸으로 바꾸면서 저장된 배치는 모두 WALL_SHIFT 만큼 내렸다(서버 마이그레이션·브라우저 저장값).
+ */
+export const WALL_TILES = 11;
+/** 벽을 10칸 → 11칸으로 늘리며 기존 배치를 내린 칸 수. 브라우저에 남은 예전 배치를 옮길 때 쓴다. */
+export const WALL_SHIFT = 1;
 export const FLOOR_TOP = WALL_TILES * TILE; // 160
 
 /**

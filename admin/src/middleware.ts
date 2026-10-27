@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const token = req.cookies.get("admin_token")?.value;
+  // 이미 로그인했으면 로그인 화면을 건너뛴다 — 로그인 주소를 즐겨찾기로 들어와도 다시 로그인하지 않게
+  if (pathname.startsWith("/login")) {
+    return token ? NextResponse.redirect(new URL("/", req.url)) : NextResponse.next();
+  }
   if (
-    pathname.startsWith("/login") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
     return NextResponse.next();
   }
-  const token = req.cookies.get("admin_token")?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
