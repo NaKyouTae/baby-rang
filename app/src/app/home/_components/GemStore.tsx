@@ -7,14 +7,8 @@ import Loading from '@/components/Loading';
 
 type Tab = 'charge' | 'charges' | 'spends';
 
-/** 구매 내역 한 줄. PURCHASE 는 결제 충전, SIGNUP·REWARD 는 가입·기록 보상이라 금액이 없다. */
-type ChargeRow = {
-  id: string;
-  kind?: 'PURCHASE' | 'SIGNUP' | 'REWARD';
-  coins: number;
-  amount: number | null;
-  at: string;
-};
+/** 구매 내역 한 줄. 결제로 받은 보석만 온다. */
+type ChargeRow = { id: string; coins: number; amount: number; at: string };
 type SpendRow = { id: string; name: string; coins: number; at: string };
 
 const TABS: { id: Tab; label: string }[] = [
@@ -81,9 +75,7 @@ export default function GemStore({
     if (!open || tab === 'charge' || !childId) return;
     if ((tab === 'charges' ? charges : spends) !== null) return;
     let alive = true;
-    // 구매 내역에는 가입·기록 보상도 같이 받는다.
-    const query = tab === 'charges' ? '?include=rewards' : '';
-    fetch(`/api/rooms/coin-history/${tab}/${childId}${query}`)
+    fetch(`/api/rooms/coin-history/${tab}/${childId}`)
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => {
         if (!alive) return;
@@ -247,12 +239,6 @@ function ChargeList({
   );
 }
 
-function chargeTitle(r: ChargeRow) {
-  if (r.kind === 'SIGNUP') return '회원가입 보상';
-  if (r.kind === 'REWARD') return '데일리 기록 보상';
-  return `보석 ${r.coins}개 충전`;
-}
-
 function ChargeHistory({ rows }: { rows: ChargeRow[] | null }) {
   if (rows === null) return <Notice><Loading /></Notice>;
   if (!rows.length) return <Notice>구매 내역이 없습니다.</Notice>;
@@ -261,10 +247,9 @@ function ChargeHistory({ rows }: { rows: ChargeRow[] | null }) {
     <>
       {rows.map((r) => (
         <div key={r.id} className={`${ROW} flex flex-col gap-[4px]`}>
-          <p className="text-[#121212] text-[16px] leading-[1.4]">{chargeTitle(r)}</p>
+          <p className="text-[#121212] text-[16px] leading-[1.4]">보석 {r.coins}개 충전</p>
           <p className="flex gap-[10px] items-center text-[#808991] text-[14px] leading-[1.4] tabular-nums">
-            {/* 보상은 결제 금액이 없어 받은 보석 수를 적는다 */}
-            <span>{r.amount != null ? `${r.amount.toLocaleString()}원` : `보석 ${r.coins}개`}</span>
+            <span>{r.amount.toLocaleString()}원</span>
             <span>･</span>
             <span>{formatAt(r.at)}</span>
           </p>

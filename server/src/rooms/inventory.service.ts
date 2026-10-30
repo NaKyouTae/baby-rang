@@ -17,8 +17,6 @@ import {
  * 보유는 아이가 아니라 '그룹'이 갖는다. 공동 양육자가 같은 아이템을 또 살 이유가 없고,
  * 둘째가 태어나도 가구를 다시 사게 하면 안 된다.
  */
-/** 구매 내역에 같이 보여주는 보상 원장 사유. 'SIGNUP' 은 가입 보석, 'REWARD' 는 하루 한 번 기록 보상. */
-const REWARD_REASONS = ['SIGNUP', 'REWARD'] as const;
 
 @Injectable()
 export class InventoryService {
@@ -189,7 +187,6 @@ export class InventoryService {
     childId: string,
     take: number,
     skip: number,
-    includeRewards = false,
   ) {
     const groupId = await this.groupOf(userId, childId);
     const childIds = (
@@ -199,68 +196,40 @@ export class InventoryService {
       })
     ).map((c) => c.id);
 
-    const paymentWhere = {
+    // 결제로 받은 보석만 보여준다. 가입·기록 보상은 구매가 아니라 넣지 않는다.
+    const where = {
       childId: { in: childIds },
       status: 'PAID' as const,
       productType: { in: COIN_PRODUCT_TYPES },
     };
-    // 가입 보상(SIGNUP)과 기록 보상(REWARD)도 '받은 보석'이라 구매 내역에 같이 보여준다.
-    const rewardWhere = {
-      groupId,
-      reason: { in: [...REWARD_REASONS] },
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.payment.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+        select: {
+          id: true,
+          productType: true,
+          amount: true,
+          approvedAt: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.payment.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        coins: coinsFor(r.productType),
+        amount: r.amount,
+        at: r.approvedAt ?? r.createdAt,
+      })),
+      total,
+      take,
+      skip,
     };
-    // 두 출처를 시간순으로 섞어 자르므로, 각각 skip + take 만큼 읽어 합친 뒤 자른다.
-    const window = skip + take;
-    const [payments, paymentTotal, rewards, rewardTotal] =
-      await this.prisma.$transaction([
-        this.prisma.payment.findMany({
-          where: paymentWhere,
-          orderBy: { createdAt: 'desc' },
-          take: includeRewards ? window : take,
-          skip: includeRewards ? 0 : skip,
-          select: {
-            id: true,
-            productType: true,
-            amount: true,
-            approvedAt: true,
-            createdAt: true,
-          },
-        }),
-        this.prisma.payment.count({ where: paymentWhere }),
-        this.prisma.coinLedger.findMany({
-          where: includeRewards ? rewardWhere : { id: { in: [] } },
-          orderBy: { createdAt: 'desc' },
-          take: window,
-          select: { id: true, delta: true, reason: true, createdAt: true },
-        }),
-        this.prisma.coinLedger.count({
-          where: includeRewards ? rewardWhere : { id: { in: [] } },
-        }),
-      ]);
-
-    const purchaseItems = payments.map((r) => ({
-      id: r.id,
-      kind: 'PURCHASE' as const,
-      coins: coinsFor(r.productType),
-      amount: r.amount,
-      at: r.approvedAt ?? r.createdAt,
-    }));
-    if (!includeRewards) {
-      return { items: purchaseItems, total: paymentTotal, take, skip };
-    }
-
-    const rewardItems = rewards.map((r) => ({
-      id: r.id,
-      kind: r.reason as (typeof REWARD_REASONS)[number],
-      coins: r.delta,
-      amount: null,
-      at: r.createdAt,
-    }));
-    const items = [...purchaseItems, ...rewardItems]
-      .sort((a, b) => b.at.getTime() - a.at.getTime())
-      .slice(skip, skip + take);
-
-    return { items, total: paymentTotal + rewardTotal, take, skip };
   }
 
   /** 보석 사용 내역. 원장에서 음수 행만 읽는다. */

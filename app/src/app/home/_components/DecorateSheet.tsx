@@ -110,7 +110,9 @@ export default function DecorateSheet({
   const isMenuTab = active.categories.length === 0;
   // 탭 하나가 여러 시스템 분류를 묶는다 (벽지 = 벽지 + 바닥재).
   const wanted = new Set<string>(active.categories);
-  const visible = items?.filter((i) => wanted.has(i.category)) ?? [];
+  // 무료 → 구매한 유료 → 미보유 유료 순. 같은 묶음 안에서는 받은 순서를 지킨다(안정 정렬).
+  const rank = (i: RoomItem) => (i.priceCoins <= 0 ? 0 : owned.has(i.id) ? 1 : 2);
+  const visible = items?.filter((i) => wanted.has(i.category)).sort((a, b) => rank(a) - rank(b)) ?? [];
 
   // 탭을 바꾸면 목록 맨 위부터 보인다
   useLayoutEffect(() => {

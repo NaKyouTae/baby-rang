@@ -34,8 +34,7 @@ export class RoomsController {
   }
 
   /**
-   * 보석 충전 내역. 보석함의 '구매 내역' 탭.
-   * include=rewards 면 가입·기록 보상도 섞어 준다. 금액 없는 행을 모르는 예전 화면이 깨지지 않게 요청할 때만 준다.
+   * 보석 충전 내역. 보석함의 '구매 내역' 탭. 결제로 받은 보석만 준다.
    */
   @Get('coin-history/charges/:childId')
   chargeHistory(
@@ -43,14 +42,12 @@ export class RoomsController {
     @Param('childId') childId: string,
     @Query('take') take?: string,
     @Query('skip') skip?: string,
-    @Query('include') include?: string,
   ) {
     return this.inventory.chargeHistory(
       req.user.id,
       childId,
       Math.min(Number(take) || 20, 100),
       Number(skip) || 0,
-      include === 'rewards',
     );
   }
 

@@ -25,7 +25,7 @@ import {
   buildDefaultRecordData,
 } from './recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
-import DatePickerModal from '@/components/DatePickerModal';
+import RecordDatePopup from './RecordDatePopup';
 import ConfirmModal from '../home/_components/ConfirmModal';
 import Loading from '@/components/Loading';
 import PixelTabBar, { TAB_BAR_HEIGHT } from '../home/_components/PixelTabBar';
@@ -1388,10 +1388,10 @@ export default function GrowthRecordPage() {
         />
       )}
 
-      <DatePickerModal
+      <RecordDatePopup
         open={showDatePicker}
         value={todayString()}
-        min={earliestDate ?? undefined}
+        birthDate={selectedChild?.birthDate ?? null}
         max={todayString()}
         onClose={() => setShowDatePicker(false)}
         onConfirm={(d: string) => reload(d)}
