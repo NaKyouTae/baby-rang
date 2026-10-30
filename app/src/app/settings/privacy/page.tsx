@@ -10,7 +10,7 @@ import PixelDocPage, {
 export default function SettingsPrivacyPage() {
   return (
     <PixelDocPage title="개인정보처리방침">
-      <DocDate>시행일자: 2026년 10월 6일</DocDate>
+      <DocDate>시행일자: 2026년 11월 6일</DocDate>
 
       <DocLead>
         스펙트럼(이하 &quot;회사&quot;)은 「개인정보 보호법」 등 관련 법령을 준수하며, 회원의 개인정보를
@@ -122,9 +122,41 @@ export default function SettingsPrivacyPage() {
             ['Supabase', '데이터베이스, 인증, 스토리지'],
             ['PG사(토스페이먼츠 등)', '결제 처리 및 환불'],
             ['카카오, 구글', '소셜 로그인 인증'],
+            ['Render', '서버 호스팅 및 운영'],
+            ['Google', '서비스 이용 통계 분석(Google Analytics)'],
           ]}
         />
         <p className="text-[12px]">수탁업체 및 위탁 업무가 변경되는 경우 본 방침을 통해 고지합니다.</p>
+      </DocSection>
+
+      <DocSection title="5-1. 개인정보의 국외 이전">
+        <p>
+          회사는 서비스 제공을 위해 아래와 같이 개인정보를 국외로 이전하여 처리합니다. 이전은 서비스 이용 시
+          정보통신망을 통해 수시로 이루어집니다.
+        </p>
+        <DocTable
+          head={['구분', 'Render Services, Inc.']}
+          rows={[
+            ['이전 국가', '싱가포르'],
+            ['이전 항목', '서비스 이용 과정에서 처리되는 개인정보 (데이터는 국내 리전 데이터베이스에 저장)'],
+            ['이용 목적', '서버 호스팅 및 운영'],
+            ['보유 기간', '회원 탈퇴 또는 위탁 계약 종료 시까지'],
+          ]}
+        />
+        <DocTable
+          head={['구분', 'Google LLC']}
+          rows={[
+            ['이전 국가', '미국'],
+            ['이전 항목', '쿠키 식별자, 서비스 이용 기록, 기기·브라우저 정보, 대략적인 접속 지역'],
+            ['이용 목적', '서비스 이용 통계 분석 (Google Analytics)'],
+            ['보유 기간', 'Google Analytics 데이터 보존 기간 설정에 따름 (최대 14개월)'],
+          ]}
+        />
+        <p>
+          회원은 9항의 방법으로 Google Analytics 수집을 거부할 수 있으며, 거부하더라도 서비스 이용에는
+          제한이 없습니다. 서버 호스팅을 위한 이전은 서비스 제공에 필수적이므로, 이를 원하지 않는 경우
+          회원 탈퇴를 통해 처리를 중단할 수 있습니다.
+        </p>
       </DocSection>
 
       <DocSection title="6. 개인정보의 파기 절차 및 방법">
@@ -151,11 +183,45 @@ export default function SettingsPrivacyPage() {
       </DocSection>
 
       <DocSection title="9. 쿠키 및 유사 기술의 사용">
-        <p>
-          회사는 서비스 제공 및 사용자 경험 개선을 위해 쿠키 및 로컬 스토리지 등 유사 기술을 사용할 수
-          있습니다. 회원은 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 이 경우 일부 서비스 이용에
-          제약이 발생할 수 있습니다.
-        </p>
+        <DocOl>
+          <li>
+            회사는 회원의 이용 정보를 저장하고 수시로 불러오는 쿠키 및 로컬 스토리지 등 유사 기술(이하
+            &quot;쿠키&quot;)을 사용합니다.
+          </li>
+          <li>
+            사용 목적
+            <DocTable
+              head={['구분', '목적 / 거부 시 영향']}
+              rows={[
+                ['필수 쿠키', '로그인 상태 유지, 보안, 서비스 설정 저장 / 거부 시 로그인 등 서비스 이용 불가'],
+                [
+                  '분석 쿠키 (Google Analytics)',
+                  '방문 횟수, 이용 화면 등 서비스 이용 통계 분석 및 품질 개선 / 거부해도 서비스 이용에 영향 없음',
+                ],
+              ]}
+            />
+          </li>
+          <li>
+            회사는 맞춤형(행태) 광고를 위한 쿠키를 사용하지 않으며, 아기 정보를 Google Analytics로 전송하지
+            않습니다.
+          </li>
+          <li>
+            쿠키 거부 방법
+            <DocUl nested>
+              <li>Chrome: 설정 &gt; 개인정보 보호 및 보안 &gt; 서드 파티 쿠키</li>
+              <li>Safari (iOS): 설정 &gt; Safari &gt; 개인정보 보호 및 보안 &gt; 모든 쿠키 차단</li>
+              <li>Safari (macOS): Safari &gt; 설정 &gt; 개인정보 보호 &gt; 모든 쿠키 차단</li>
+              <li>
+                Google Analytics만 거부하려면 Google 애널리틱스 차단 브라우저 부가기능
+                (tools.google.com/dlpage/gaoptout)을 설치할 수 있습니다.
+              </li>
+            </DocUl>
+          </li>
+          <li>
+            Google의 개인정보 처리에 관한 자세한 내용은 Google 개인정보처리방침(policies.google.com/privacy)에서
+            확인할 수 있습니다.
+          </li>
+        </DocOl>
       </DocSection>
 
       <DocSection title="10. 개인정보 보호책임자">
@@ -197,7 +263,7 @@ export default function SettingsPrivacyPage() {
         <li>고객센터 : spectrum.mesh@gmail.com</li>
       </ul>
 
-      <DocDate>부칙: 본 개인정보처리방침은 2026년 10월 6일부터 시행됩니다. (직전 시행일 2026년 10월 3일)</DocDate>
+      <DocDate>부칙: 본 개인정보처리방침은 2026년 11월 6일부터 시행됩니다. (직전 시행일 2026년 10월 6일)</DocDate>
     </PixelDocPage>
   );
 }
