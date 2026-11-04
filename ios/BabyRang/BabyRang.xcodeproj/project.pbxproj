@@ -424,7 +424,7 @@
 				NAVER_CONSUMER_KEY = gY28TOe6qiGlXi4MvPFV;
 				NAVER_CONSUMER_SECRET = dXd_LpZocW;
 				"INFOPLIST_FILE[sdk=*]" = BabyRang/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
+				INFOPLIST_KEY_CFBundleDisplayName = "베이비룸";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -465,7 +465,7 @@
 				KAKAO_NATIVE_APP_KEY = 3cab8374c32c276f9ffeb4c824415544;
 				NAVER_CONSUMER_KEY = gY28TOe6qiGlXi4MvPFV;
 				NAVER_CONSUMER_SECRET = dXd_LpZocW;
-				INFOPLIST_KEY_CFBundleDisplayName = "아기랑";
+				INFOPLIST_KEY_CFBundleDisplayName = "베이비룸";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

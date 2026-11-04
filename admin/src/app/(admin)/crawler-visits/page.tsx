@@ -24,7 +24,7 @@ export default async function CrawlerVisitsPage() {
     <div>
       <PageHeader
         title="AI 크롤러 유입"
-        description="최근 30일 동안 ChatGPT·Claude·Perplexity 등의 크롤러가 아기랑 웹을 읽어간 횟수입니다. robots.txt 로 허용만 해두면 실제로 오는지 알 수 없어 따로 셉니다."
+        description="최근 30일 동안 ChatGPT·Claude·Perplexity 등의 크롤러가 베이비룸 웹을 읽어간 횟수입니다. robots.txt 로 허용만 해두면 실제로 오는지 알 수 없어 따로 셉니다."
       />
 
       <div className="space-y-6">

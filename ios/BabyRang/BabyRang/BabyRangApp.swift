@@ -68,7 +68,7 @@ struct BabyRangApp: App {
             naver.serviceUrlScheme = naverServiceUrlScheme
             naver.consumerKey = naverKey
             naver.consumerSecret = naverSecret
-            naver.appName = "아기랑"
+            naver.appName = "베이비룸"
         }
     }
 

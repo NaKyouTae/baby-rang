@@ -135,8 +135,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-sidebar-border bg-sidebar-background">
         <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/header-logo.png" alt="아기랑" width={32} height={32} />
-          <span className="font-bold text-base text-foreground">아기랑 어드민</span>
+          <img src="/header-logo.png" alt="베이비룸" width={32} height={32} />
+          <span className="font-bold text-base text-foreground">베이비룸 어드민</span>
         </div>
         <NavItems />
         <div className="border-t border-sidebar-border p-3">
@@ -158,8 +158,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </Button>
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/header-logo.png" alt="아기랑" width={28} height={28} />
-          <span className="font-semibold text-sm">아기랑 어드민</span>
+          <img src="/header-logo.png" alt="베이비룸" width={28} height={28} />
+          <span className="font-semibold text-sm">베이비룸 어드민</span>
         </div>
         <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground">
           <LogOut className="h-4 w-4" />
@@ -172,8 +172,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <SheetHeader className="px-6 py-4 border-b border-sidebar-border">
             <SheetTitle className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/header-logo.png" alt="아기랑" width={32} height={32} />
-              아기랑 어드민
+              <img src="/header-logo.png" alt="베이비룸" width={32} height={32} />
+              베이비룸 어드민
             </SheetTitle>
           </SheetHeader>
           <NavItems onNavigate={() => setOpen(false)} />

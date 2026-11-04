@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     '모유수유, 분유, 유축, 이유식, 수면, 기저귀, 목욕, 투약, 체온까지 하루 육아 기록을 간편하게 남기세요.',
   alternates: { canonical: '/growth-record' },
   openGraph: {
-    title: '성장 기록 - 수유·수면·기저귀 육아 기록 | 아기랑',
+    title: '성장 기록 - 수유·수면·기저귀 육아 기록 | 베이비룸',
     description:
       '모유수유, 분유, 유축, 이유식, 수면, 기저귀, 목욕, 투약, 체온까지 하루 육아 기록을 간편하게 남기세요.',
     url: PAGE_URL,

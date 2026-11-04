@@ -116,7 +116,7 @@ export default function LoginClient() {
           ))}
         </div>
         <h1 className="text-center text-[16px] leading-none font-normal" style={{ color: palette.black }}>
-          기록으로 완성하는 육아 성장 퀘스트, 아기랑
+          기록으로 완성하는 육아 성장 퀘스트, 베이비룸
         </h1>
       </div>
 

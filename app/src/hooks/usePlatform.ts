@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 /**
  * 실행 환경 감지 훅.
  *
- * - "app"   : 아기랑 네이티브 WebView 래퍼 안에서 실행 중
+ * - "app"   : 베이비룸 네이티브 WebView 래퍼 안에서 실행 중
  * - "web"   : 일반 모바일/PC 브라우저
  * - "unknown": 아직 판별 전 (SSR 혹은 마운트 직후 1프레임)
  *

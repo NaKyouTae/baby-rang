@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "하루 동안의 모유수유, 분유, 유축, 이유식, 수면, 목욕 기록을 시간대별 차트로 한눈에 봅니다. 수유 간격과 수면 리듬이 어떻게 자리잡고 있는지 확인하세요.",
   alternates: { canonical: "/growth-pattern" },
   openGraph: {
-    title: "패턴 - 아기 하루 수유·수면 기록 시간대별 차트 | 아기랑",
+    title: "패턴 - 아기 하루 수유·수면 기록 시간대별 차트 | 베이비룸",
     description:
       "하루 동안의 모유수유, 분유, 유축, 이유식, 수면, 목욕 기록을 시간대별 차트로 한눈에 봅니다.",
     url: PAGE_URL,
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 const faq = [
   {
-    q: "아기랑의 패턴 화면은 무엇을 보여주나요?",
+    q: "베이비룸의 패턴 화면은 무엇을 보여주나요?",
     a: "선택한 날짜 하루 동안 기록한 모유수유, 분유, 유축, 이유식, 수면, 목욕 등을 시간대별 차트로 보여줍니다. 언제 먹고 언제 잤는지가 한눈에 들어와 수유 간격과 수면 리듬을 파악할 수 있습니다.",
   },
   {
@@ -40,7 +40,7 @@ const jsonLd = [
   {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: "아기랑 하루 패턴 차트",
+    name: "베이비룸 하루 패턴 차트",
     description:
       "하루 동안 기록한 모유수유, 분유, 유축, 이유식, 수면, 목욕을 시간대별 차트로 시각화합니다. 수유 간격과 수면 리듬을 한눈에 파악할 수 있습니다.",
     provider: { "@type": "Organization", name: "Spectrify" },

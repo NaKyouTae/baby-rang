@@ -6,12 +6,12 @@ const SUPPORT_EMAIL = 'spectrum.mesh@gmail.com';
 export const metadata: Metadata = {
   title: '문의하기',
   description:
-    '아기랑 문의 방법, 자주 묻는 질문, 고객센터 연락처 및 사업자 정보를 안내합니다.',
+    '베이비룸 문의 방법, 자주 묻는 질문, 고객센터 연락처 및 사업자 정보를 안내합니다.',
   alternates: { canonical: '/support' },
   openGraph: {
-    title: '문의하기 | 아기랑',
+    title: '문의하기 | 베이비룸',
     description:
-      '아기랑 문의 방법, 자주 묻는 질문, 고객센터 연락처 및 사업자 정보를 안내합니다.',
+      '베이비룸 문의 방법, 자주 묻는 질문, 고객센터 연락처 및 사업자 정보를 안내합니다.',
     url: 'https://baby-rang.spectrify.kr/support',
   },
 };
@@ -20,7 +20,7 @@ export default function SupportPage() {
   return (
     <PixelDocPage title="문의하기">
       <p className="text-[#121212]" style={{ lineHeight: 1.6 }}>
-        아기랑을 이용해 주셔서 감사합니다. 서비스 이용 중 궁금한 점이나 불편한 점이 있으시면
+        베이비룸을 이용해 주셔서 감사합니다. 서비스 이용 중 궁금한 점이나 불편한 점이 있으시면
         아래 방법으로 문의해 주세요. 영업일 기준 1~2일 이내에 답변드립니다.
       </p>
 

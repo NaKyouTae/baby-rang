@@ -35,8 +35,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm p-8">
         <CardHeader className="p-0 mb-6 items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/header-logo.png" alt="아기랑" width={48} height={48} className="mb-3" />
-          <CardTitle className="text-xl">아기랑 어드민</CardTitle>
+          <img src="/header-logo.png" alt="베이비룸" width={48} height={48} className="mb-3" />
+          <CardTitle className="text-xl">베이비룸 어드민</CardTitle>
           <CardDescription>관리자 로그인</CardDescription>
         </CardHeader>
         <CardContent className="p-0">

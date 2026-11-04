@@ -1,5 +1,5 @@
 /**
- * 다른 육아 앱에서 내보낸 .txt 기록을 아기랑 성장 기록으로 바꾼다.
+ * 다른 육아 앱에서 내보낸 .txt 기록을 베이비룸 성장 기록으로 바꾼다.
  * /settings/import-data 와 다마고치 화면의 데이터 가져오기가 함께 쓴다.
  */
 import { TYPE_CONFIG, type GrowthType } from "@/app/growth-record/types";

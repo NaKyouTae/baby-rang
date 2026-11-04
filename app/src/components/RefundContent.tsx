@@ -3,7 +3,7 @@ import { DocDate, DocOl, DocSection, DocUl } from '@/components/PixelDocPage';
 const SUPPORT_EMAIL = 'spectrum.mesh@gmail.com';
 
 const MAILTO_HREF = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-  '[아기랑] 환불 요청',
+  '[베이비룸] 환불 요청',
 )}&body=${encodeURIComponent(
   '아래 내용을 작성해 주세요.\n\n- 결제 일시: \n- 결제 수단: \n- 결제 상품명: \n- 환불 사유: \n- 연락 가능한 이메일: \n',
 )}`;
@@ -24,7 +24,7 @@ export default function RefundContent({ company }: { company: string }) {
 
       <DocSection title="1. 기본 원칙">
         <p>
-          {company}(이하 &quot;회사&quot;)이 운영하는 &quot;아기랑&quot; 서비스는 「전자상거래 등에서의
+          {company}(이하 &quot;회사&quot;)이 운영하는 &quot;베이비룸&quot; 서비스는 「전자상거래 등에서의
           소비자보호에 관한 법률」 및 관련 법령에서 정한 회원의 권리를 보장하며, 본 환불정책에 따라 결제
           취소 및 환불을 처리합니다.
         </p>

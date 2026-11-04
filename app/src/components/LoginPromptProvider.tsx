@@ -109,7 +109,7 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
               </div>
             </div>
             <h3 className="text-center font-medium text-black" style={{ fontSize: 16 }}>
-              육아 동반자 아기랑과 함께해요 !
+              육아 동반자 베이비룸과 함께해요 !
             </h3>
             <p className="text-center font-medium leading-relaxed" style={{ fontSize: 12, color: palette.gray500, marginTop: 8 }}>
               {message ?? '로그인하고 편리한 맞춤 육아를 시작해 보세요.'}

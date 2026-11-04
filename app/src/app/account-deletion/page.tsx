@@ -5,12 +5,12 @@ import { palette } from '@/lib/colors';
 export const metadata: Metadata = {
   title: '계정 및 데이터 삭제',
   description:
-    '아기랑 계정 삭제 안내 - 회원 탈퇴 방법, 삭제되는 데이터와 법령에 따라 보관되는 데이터 및 보관 기간을 안내합니다.',
+    '베이비룸 계정 삭제 안내 - 회원 탈퇴 방법, 삭제되는 데이터와 법령에 따라 보관되는 데이터 및 보관 기간을 안내합니다.',
   alternates: { canonical: '/account-deletion' },
   openGraph: {
-    title: '계정 및 데이터 삭제 | 아기랑',
+    title: '계정 및 데이터 삭제 | 베이비룸',
     description:
-      '아기랑 계정 삭제 안내 - 회원 탈퇴 방법, 삭제되는 데이터와 법령에 따라 보관되는 데이터 및 보관 기간을 안내합니다.',
+      '베이비룸 계정 삭제 안내 - 회원 탈퇴 방법, 삭제되는 데이터와 법령에 따라 보관되는 데이터 및 보관 기간을 안내합니다.',
     url: 'https://baby-rang.spectrify.kr/account-deletion',
   },
 };
@@ -23,7 +23,7 @@ export default function AccountDeletionPage() {
       <article className="px-5 pt-6 pb-[41px] text-[14px] font-normal leading-relaxed space-y-4" style={{ color: palette.gray500 }}>
         <section>
           <p>
-            본 페이지는 모바일 애플리케이션 &quot;아기랑&quot;(개발자: 스펙트럼)의 계정 및 데이터 삭제
+            본 페이지는 모바일 애플리케이션 &quot;베이비룸&quot;(개발자: 스펙트럼)의 계정 및 데이터 삭제
             방법을 안내합니다. 회원은 아래 방법으로 언제든지 계정 삭제(회원 탈퇴)를 요청할 수 있습니다.
           </p>
         </section>
@@ -31,7 +31,7 @@ export default function AccountDeletionPage() {
         <section>
           <h2 className="text-[14px] font-medium mb-[10px]" style={{ color: palette.black }}>1. 앱에서 직접 탈퇴하기</h2>
           <ol className="list-decimal pl-5 space-y-1">
-            <li>아기랑 앱에 로그인합니다.</li>
+            <li>베이비룸 앱에 로그인합니다.</li>
             <li>하단 메뉴에서 <b>설정</b> 화면으로 이동합니다.</li>
             <li>화면 하단의 <b>회원탈퇴</b>를 누릅니다.</li>
             <li>안내 팝업에서 <b>탈퇴하기</b>를 눌러 확정합니다.</li>
@@ -49,7 +49,7 @@ export default function AccountDeletionPage() {
           </p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>이메일: spectrum.mesh@gmail.com</li>
-            <li>제목: [아기랑] 계정 삭제 요청</li>
+            <li>제목: [베이비룸] 계정 삭제 요청</li>
             <li>내용: 가입한 이메일 주소 또는 소셜 로그인 계정</li>
           </ul>
         </section>

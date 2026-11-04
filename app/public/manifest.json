@@ -1,7 +1,7 @@
 {
   "id": "/home",
-  "name": "아기랑",
-  "short_name": "아기랑",
+  "name": "베이비룸",
+  "short_name": "베이비룸",
   "description": "키·몸무게 성장 기록부터 WHO 성장 곡선 비교, 수면 추천, 수유실 찾기까지. 부모를 위한 올인원 육아 동반자 앱.",
   "start_url": "/home",
   "scope": "/",

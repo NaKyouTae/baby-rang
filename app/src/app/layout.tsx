@@ -26,20 +26,20 @@ const PLAY_STORE_URL =
 // 빈손으로 돌아오고, 그 탓에 '스펙트럼'이 엉뚱한 대상(자폐 스펙트럼 등)과 섞인다.
 // 실제로 내용이 있는 주소를 가리킨다. 회사 소개 페이지가 생기면 그때 바꾼다.
 const PUBLISHER_URL = SITE_URL;
-const SITE_NAME = "아기랑";
+const SITE_NAME = "베이비룸";
 const SITE_DESCRIPTION =
-  "아기랑은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아기의 매일을 더 잘 이해할 수 있도록 돕습니다.";
+  "베이비룸은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아기의 매일을 더 잘 이해할 수 있도록 돕습니다.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "아기랑 - 우리 아기의 모든 순간",
-    template: "%s | 아기랑",
+    default: "베이비룸 - 우리 아기의 모든 순간",
+    template: "%s | 베이비룸",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: [
-    "아기랑",
+    "베이비룸",
     "육아",
     "신생아",
     "영유아",
@@ -73,20 +73,20 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: "아기랑 - 우리 아기의 모든 순간",
+    title: "베이비룸 - 우리 아기의 모든 순간",
     description: SITE_DESCRIPTION,
     images: [
       {
         url: `${SITE_URL}/opengraph-image`,
         width: 1200,
         height: 630,
-        alt: "아기랑 - 우리 아기의 모든 순간",
+        alt: "베이비룸 - 우리 아기의 모든 순간",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "아기랑 - 우리 아기의 모든 순간",
+    title: "베이비룸 - 우리 아기의 모든 순간",
     description: SITE_DESCRIPTION,
     images: [`${SITE_URL}/opengraph-image`],
   },
@@ -121,7 +121,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  // 아기랑은 다크모드를 지원하지 않는다. OS/브라우저/WebView 가 다크모드를
+  // 베이비룸은 다크모드를 지원하지 않는다. OS/브라우저/WebView 가 다크모드를
   // 자동 적용해 색이 깨지는 것을 막기 위해 라이트로 고정한다. (globals.css :root 의 color-scheme 와 한 쌍)
   colorScheme: "light",
 };
@@ -134,7 +134,7 @@ export default function RootLayout({
   // JSON-LD 구조화 데이터
   // AEO (Answer Engine Optimization) 를 위해 여러 스키마를 동시에 제공합니다.
   // AI 검색 엔진(ChatGPT, Claude, Perplexity, Gemini 등)과 Google 이
-  // "아기랑" 서비스를 정확히 이해할 수 있도록 합니다.
+  // "베이비룸" 서비스를 정확히 이해할 수 있도록 합니다.
 
   const organizationLd = {
     "@context": "https://schema.org",
@@ -144,15 +144,15 @@ export default function RootLayout({
     url: PUBLISHER_URL,
     logo: `${SITE_URL}/icon.png`,
     description:
-      "Spectrify(스펙트럼)는 영유아 육아 앱 '아기랑'을 만드는 소프트웨어 회사입니다.",
+      "Spectrify(스펙트럼)는 영유아 육아 앱 '베이비룸'을 만드는 소프트웨어 회사입니다.",
     // 이름만 보고 엉뚱한 대상과 묶이는 것을 막는다.
     //
-    // 실측 결과(2026-10-02, Gemini) '스펙트럼이 만든 아기랑 앱'을 물으면
+    // 실측 결과(2026-10-02, Gemini) '스펙트럼이 만든 베이비룸 앱'을 물으면
     // 자폐 스펙트럼 장애 지원 기관으로 답했다. 육아 맥락에서는 그쪽이 훨씬
     // 자연스러운 연상이라 그냥 두면 계속 섞인다.
     // disambiguatingDescription 은 schema.org 가 바로 이 용도로 둔 필드다.
     disambiguatingDescription:
-      "자폐 스펙트럼(autism spectrum) 관련 기관이나 치료 서비스와 무관하며, 동명의 유축기 브랜드(Spectra)와도 다른 회사입니다. 영유아 육아 기록·기질 검사 앱 '아기랑'의 개발사입니다.",
+      "자폐 스펙트럼(autism spectrum) 관련 기관이나 치료 서비스와 무관하며, 동명의 유축기 브랜드(Spectra)와도 다른 회사입니다. 영유아 육아 기록·기질 검사 앱 '베이비룸'의 개발사입니다.",
     knowsAbout: [
       "영유아 육아",
       "아기 기질 검사",
@@ -164,15 +164,16 @@ export default function RootLayout({
 
   // 앱 자체를 설명하는 구조화 데이터.
   //
-  // Organization·WebSite 만으로는 "아기랑이 어떤 앱인가"를 말해주지 못한다.
-  // '아기랑'은 한국어에서 매우 흔한 표현이라("19개월 아기랑 나들이"), 앱으로
-  // 특정되지 않으면 검색·AI 답변에서 일반 문구에 묻힌다.
+  // Organization·WebSite 만으로는 "베이비룸이 어떤 앱인가"를 말해주지 못한다.
+  // '베이비룸'은 아기방을 뜻하는 일반 명사로도 쓰여(가구·인테리어 매장 등), 앱으로
+  // 특정되지 않으면 검색·AI 답변에서 엉뚱한 업종과 섞인다.
   // sameAs 로 스토어 등록정보를 묶어 같은 대상임을 명시한다.
   const appLd = {
     "@context": "https://schema.org",
     "@type": "MobileApplication",
-    name: "아기랑 - 육아 기록·기질 검사",
-    alternateName: ["아기랑", "Babyrang"],
+    name: "베이비룸 - 육아 기록·기질 검사",
+    // 이전 이름(아기랑)을 함께 둔다 — 쌓아 둔 검색·AI 인용이 새 이름으로 이어지도록.
+    alternateName: ["베이비룸", "Babyroom", "아기랑"],
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     applicationCategory: "HealthApplication",
@@ -209,7 +210,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    alternateName: "Babyrang",
+    alternateName: "Babyroom",
     url: SITE_URL,
     description: SITE_DESCRIPTION,
     inLanguage: "ko-KR",

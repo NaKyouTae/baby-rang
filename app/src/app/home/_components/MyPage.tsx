@@ -160,7 +160,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
           >
             <span className="flex flex-col gap-[4px] min-w-0">
               <span className="text-[#121212] text-[16px] leading-[1.4] truncate">
-                {isAuthenticated ? `${user?.name ?? '아기랑 회원'} 님` : '로그인하기'}
+                {isAuthenticated ? `${user?.name ?? '베이비룸 회원'} 님` : '로그인하기'}
               </span>
             </span>
             <Chevron />

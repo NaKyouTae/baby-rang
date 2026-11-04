@@ -275,7 +275,7 @@ private func ddayText(_ birth: Date?, now: Date) -> String {
 
 // MARK: - View
 
-// 아기랑 브랜드 팔레트 (globals.css / colors.ts 기준)
+// 베이비룸 브랜드 팔레트 (globals.css / colors.ts 기준)
 private extension Color {
     static let brand = Color(red: 48 / 255, green: 120 / 255, blue: 201 / 255)   // #3078C9
     static let ink   = Color(red: 18 / 255, green: 18 / 255, blue: 18 / 255)     // #121212
@@ -348,7 +348,7 @@ struct BabyRangWidgetEntryView: View {
 
     private func centered(_ text: String) -> some View {
         VStack {
-            Text("아기랑").font(.caption2).foregroundStyle(Color.sub)
+            Text("베이비룸").font(.caption2).foregroundStyle(Color.sub)
             Spacer()
             Text(text).font(.footnote).foregroundStyle(Color.sub)
             Spacer()
@@ -452,7 +452,7 @@ struct BabyRangWidget: Widget {
                     .padding()
             }
         }
-        .configurationDisplayName("아기랑 요약")
+        .configurationDisplayName("베이비룸 요약")
         .description("마지막 수유·수면·대변 시간을 보여줍니다. (아이 여러 명이면 탭으로 전환)")
         .supportedFamilies([.systemSmall, .systemMedium])   // 홈 화면 (탭 페이징)
     }
@@ -495,7 +495,7 @@ struct BabyRangLockWidget: Widget {
                     .padding()
             }
         }
-        .configurationDisplayName("아기랑 (잠금화면)")
+        .configurationDisplayName("베이비룸 (잠금화면)")
         .description("아이별 마지막 수유·수면·대변 시간. 위젯을 길게 눌러 아이를 선택하세요.")
         .supportedFamilies([.accessoryRectangular])
     }

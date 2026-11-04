@@ -28,8 +28,8 @@ def twaManifest = [
     applicationId: 'kr.spectrify.baby_rang',
     hostName: 'baby-rang.spectrify.kr', // The domain being opened in the TWA.
     launchUrl: '/home?src=twa', // The start path for the TWA. Must be relative to the domain.
-    name: '아기랑', // The application name.
-    launcherName: '아기랑', // The name shown on the Android Launcher.
+    name: '베이비룸', // The application name.
+    launcherName: '베이비룸', // The name shown on the Android Launcher.
     themeColor: '#3078C9', // The color used for the status bar.
     themeColorDark: '#000000', // The color used for the dark status bar.
     navigationColor: '#000000', // The color used for the navigation bar.

@@ -21,7 +21,7 @@ interface BottomSheetProps {
    * 'sheet': 화면 하단에 붙는 진짜 바텀시트(상단 모서리만 둥글고 좌우/하단 여백 없음)
    */
   variant?: Variant;
-  /** 픽셀 화면(아기랑 홈·기록 등)용 — 흰 바탕 #FDFDFE, 위 모서리 16px, 픽셀 폰트 */
+  /** 픽셀 화면(베이비룸 홈·기록 등)용 — 흰 바탕 #FDFDFE, 위 모서리 16px, 픽셀 폰트 */
   pixel?: boolean;
 }
 

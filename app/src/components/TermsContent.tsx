@@ -8,7 +8,7 @@ export default function TermsContent({ company }: { company: string }) {
 
       <DocSection title="제1조 (목적)">
         <p>
-          본 약관은 {company}(이하 &quot;회사&quot;)이 제공하는 모바일 웹 서비스 &quot;아기랑&quot;(이하
+          본 약관은 {company}(이하 &quot;회사&quot;)이 제공하는 모바일 웹 서비스 &quot;베이비룸&quot;(이하
           &quot;서비스&quot;)의 이용과 관련하여 회사와 이용자(이하 &quot;회원&quot;) 간의 권리, 의무
           및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.
         </p>

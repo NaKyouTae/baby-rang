@@ -20,7 +20,7 @@ object AdConfig {
             "ca-app-pub-6008464533427245/5442054978"
         }
 
-    /** 애드핏 하단 배너(320x50). 매체: 아기랑 AOS(kr.spectrify.baby_rang). */
+    /** 애드핏 하단 배너(320x50). 매체: 베이비룸 AOS(kr.spectrify.baby_rang). */
     const val adfitBottomBannerUnitId = "DAN-hxjZ4ij9pP2RuddW"
 
     /**

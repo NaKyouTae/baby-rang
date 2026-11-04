@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "아기랑 어드민",
+  title: "베이비룸 어드민",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

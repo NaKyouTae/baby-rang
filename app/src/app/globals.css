@@ -35,7 +35,7 @@ html {
 }
 
 :root {
-  /* 아기랑은 다크모드 미지원 — 라이트로 고정 (layout.tsx viewport.colorScheme 와 한 쌍).
+  /* 베이비룸은 다크모드 미지원 — 라이트로 고정 (layout.tsx viewport.colorScheme 와 한 쌍).
      브라우저 폼 컨트롤/스크롤바 등 네이티브 UI 까지 라이트로 강제한다. */
   color-scheme: light;
 

@@ -171,7 +171,7 @@ export default function AdditionalInfoClient() {
           <p className="text-[12px] leading-relaxed text-gray-600">
             인증했는데도 이 화면이 계속 보인다면, 동의 화면에서 이름·전화번호 항목이
             선택되지 않았을 수 있어요. 카카오는 <b>설정 &gt; 카카오계정 &gt; 연결된 서비스</b>,
-            네이버는 <b>내정보 &gt; 외부 사이트 연결</b>에서 아기랑 연결을 끊은 뒤 다시
+            네이버는 <b>내정보 &gt; 외부 사이트 연결</b>에서 베이비룸 연결을 끊은 뒤 다시
             인증하면 동의 화면이 처음부터 다시 떠요.
           </p>
         </div>

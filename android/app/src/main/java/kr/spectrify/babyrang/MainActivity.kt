@@ -259,7 +259,7 @@ class MainActivity : AppCompatActivity() {
                 this,
                 BuildConfig.NAVER_CLIENT_ID,
                 BuildConfig.NAVER_CLIENT_SECRET,
-                "아기랑",
+                "베이비룸",
             )
         } else {
             android.util.Log.w(TAG_AUTH, "NAVER_CLIENT_ID/SECRET 이 비어 있어 초기화를 건너뛴다.")

@@ -1,5 +1,5 @@
 services:
-  # ── 아기랑 NestJS Backend ──
+  # ── 베이비룸 NestJS Backend ──
   - type: web
     name: baby-rang-server
     env: docker

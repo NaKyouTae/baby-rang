@@ -398,7 +398,7 @@ async function seedNotices() {
   await prisma.notice.createMany({
     data: [
       {
-        title: '[샘플] 아기랑 업데이트 안내',
+        title: '[샘플] 베이비룸 업데이트 안내',
         content:
           '기록 화면과 성장 페이지가 새롭게 개선되었습니다. 최신 버전에서 달라진 기능을 확인해 주세요.',
         isPinned: true,

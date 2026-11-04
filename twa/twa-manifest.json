@@ -1,8 +1,8 @@
 {
   "packageId": "kr.spectrify.baby_rang",
   "host": "baby-rang.spectrify.kr",
-  "name": "아기랑",
-  "launcherName": "아기랑",
+  "name": "베이비룸",
+  "launcherName": "베이비룸",
   "display": "standalone",
   "themeColor": "#3078C9",
   "themeColorDark": "#000000",

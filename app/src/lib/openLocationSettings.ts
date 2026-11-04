@@ -78,7 +78,7 @@ export function getLocationSettingsGuide(): { title: string; description: string
   if (isIOS && pwa) {
     return {
       title: "위치 권한 변경 안내",
-      description: "아이폰 설정에서 위치 권한을 변경해 주세요.\n\n설정 > 아기랑 > 위치 > 허용",
+      description: "아이폰 설정에서 위치 권한을 변경해 주세요.\n\n설정 > 베이비룸 > 위치 > 허용",
     };
   }
   if (isIOS) {

@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     <div>
       <PageHeader
         title="대시보드"
-        description="아기랑 서비스의 핵심 지표를 한눈에 확인하세요."
+        description="베이비룸 서비스의 핵심 지표를 한눈에 확인하세요."
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

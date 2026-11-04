@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "아기랑 - 우리 아기의 모든 순간";
+export const alt = "베이비룸 - 우리 아기의 모든 순간";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -36,7 +36,7 @@ export default function OgImage() {
               letterSpacing: "-2px",
             }}
           >
-            아기랑
+            베이비룸
           </div>
           <div
             style={{

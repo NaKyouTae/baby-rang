@@ -150,8 +150,8 @@ export default function SharingScreen({ open, onBack }: Props) {
     }
     try {
       await navigator.share({
-        title: '아기랑 기록 공유',
-        text: `아기랑에서 기록을 함께 볼 수 있어요.\n공유 코드: ${code}`,
+        title: '베이비룸 기록 공유',
+        text: `베이비룸에서 기록을 함께 볼 수 있어요.\n공유 코드: ${code}`,
       });
     } catch {
       /* 취소 */
