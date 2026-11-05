@@ -1,6 +1,6 @@
 # Changelog
 
-아기랑의 모든 주요 변경사항을 기록한다.
+베이비룸의 모든 주요 변경사항을 기록한다.
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르고,
 버전 규칙은 [VERSIONING.md](./VERSIONING.md)(유의적 버전)를 따른다.
 
@@ -11,6 +11,21 @@
 ## [Unreleased]
 
 > 릴리스 시 `pnpm version:patch|minor|major`로 버전을 올리고, 아래 항목을 새 버전 헤더로 옮긴다.
+
+---
+
+## [1.2.20] - 2026-11-06
+
+### Changed
+- 서비스 도메인을 `baby-rang.spectrify.kr` 에서 `babyroom.spectrify.kr` 로 바꿨다.
+  앱이 WebView 로 띄우는 시작 주소, 웹 메타데이터(canonical·OG·사이트맵·robots),
+  llms.txt, 서버 CORS 허용 오리진, FAQ·공지 본문을 모두 새 도메인으로 옮겼다.
+
+### Fixed
+- 예전 도메인의 DNS 레코드가 사라져 1.2.19 를 받은 앱이 빈 화면만 뜨던 문제.
+  시작 주소는 각 빌드에 박혀 나가므로, 업데이트하지 않는 사용자를 위해
+  예전 호스트도 같은 앱을 띄우는 별칭으로 계속 열어 둔다. 서버 CORS 도
+  두 오리진을 모두 허용한다.
 
 ---
 
