@@ -1,6 +1,6 @@
 {
   "packageId": "kr.spectrify.baby_rang",
-  "host": "baby-rang.spectrify.kr",
+  "host": "babyroom.spectrify.kr",
   "name": "베이비룸",
   "launcherName": "베이비룸",
   "display": "standalone",
@@ -13,8 +13,8 @@
   "backgroundColor": "#F1F2F4",
   "enableNotifications": false,
   "startUrl": "/home?src=twa",
-  "iconUrl": "https://baby-rang.spectrify.kr/icon-512x512.png",
-  "maskableIconUrl": "https://baby-rang.spectrify.kr/icon-512x512.png",
+  "iconUrl": "https://babyroom.spectrify.kr/icon-512x512.png",
+  "maskableIconUrl": "https://babyroom.spectrify.kr/icon-512x512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "/Users/nakyutae/personal/프로젝트/아기랑/아기랑 - Google Play package/signing.keystore",
@@ -24,7 +24,7 @@
   "appVersionCode": 25,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://baby-rang.spectrify.kr/manifest.json",
+  "webManifestUrl": "https://babyroom.spectrify.kr/manifest.json",
   "fallbackType": "customtabs",
   "features": {
     "playBilling": {
@@ -37,7 +37,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://baby-rang.spectrify.kr/",
+  "fullScopeUrl": "https://babyroom.spectrify.kr/",
   "minSdkVersion": 23,
   "orientation": "portrait",
   "fingerprints": [],

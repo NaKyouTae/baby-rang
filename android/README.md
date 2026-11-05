@@ -1,6 +1,6 @@
 # 베이비룸 Android 네이티브 앱
 
-WebView 로 `https://baby-rang.spectrify.kr/home` 을 띄우고, 웹이 할 수 없는 일
+WebView 로 `https://babyroom.spectrify.kr/home` 을 띄우고, 웹이 할 수 없는 일
 (카카오톡·네이버 앱 로그인 · Play 결제 · AdMob 배너 · 위치 권한)만 네이티브가 맡는다.
 iOS 앱(`ios/`)과 같은 구조이고, 웹 쪽 짝은 `app/src/lib/*Bridge*`·`app/src/lib/kakaoNativeLogin.ts` 다.
 

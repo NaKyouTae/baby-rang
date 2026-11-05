@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import PhysicalGrowthClient from './PhysicalGrowthClient';
 
-const SITE_URL = 'https://baby-rang.spectrify.kr';
+const SITE_URL = 'https://babyroom.spectrify.kr';
 const PAGE_URL = `${SITE_URL}/physical-growth`;
 
 export const metadata: Metadata = {

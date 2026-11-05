@@ -114,7 +114,7 @@ struct BabyRangApp: App {
                 // .container 만 무시해 키보드 영역은 그대로 피한다.
                 // 예전에 사방을 무시했을 때 fixed 하단 바가 화면 밖으로 밀렸던 문제는
                 // 스크롤뷰 자동 인셋 때문이라 WebView.swift 에서 .never 로 끈다.
-                WebView(url: URL(string: "https://baby-rang.spectrify.kr/home")!, adSlot: adSlot) {
+                WebView(url: URL(string: "https://babyroom.spectrify.kr/home")!, adSlot: adSlot) {
                     isWebViewLoaded = true
                 }
                 .ignoresSafeArea(.container)

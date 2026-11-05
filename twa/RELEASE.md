@@ -1,7 +1,7 @@
 # Android(TWA) 릴리스 가이드
 
 베이비룸 안드로이드 앱은 **TWA(Trusted Web Activity)** 껍데기이고, 실제 화면은
-`https://baby-rang.spectrify.kr` 의 웹앱이 그대로 렌더링된다.
+`https://babyroom.spectrify.kr` 의 웹앱이 그대로 렌더링된다.
 
 즉 **웹만 배포하면 앱 내용은 즉시 반영된다.** AAB를 새로 올려야 하는 경우는 다음뿐이다.
 

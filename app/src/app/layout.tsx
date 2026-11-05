@@ -14,7 +14,7 @@ import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
 import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
 
-const SITE_URL = "https://baby-rang.spectrify.kr";
+const SITE_URL = "https://babyroom.spectrify.kr";
 // 스토어 등록정보. 구조화 데이터의 sameAs 로 묶어 같은 앱임을 알린다.
 const APP_STORE_URL = "https://apps.apple.com/kr/app/id6761984903";
 const PLAY_STORE_URL =

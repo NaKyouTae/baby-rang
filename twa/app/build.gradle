@@ -26,7 +26,7 @@ def ciKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
 
 def twaManifest = [
     applicationId: 'kr.spectrify.baby_rang',
-    hostName: 'baby-rang.spectrify.kr', // The domain being opened in the TWA.
+    hostName: 'babyroom.spectrify.kr', // The domain being opened in the TWA.
     launchUrl: '/home?src=twa', // The start path for the TWA. Must be relative to the domain.
     name: '베이비룸', // The application name.
     launcherName: '베이비룸', // The name shown on the Android Launcher.
@@ -80,12 +80,12 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://baby-rang.spectrify.kr/manifest.json'
+            resValue "string", "webManifestUrl", 'https://babyroom.spectrify.kr/manifest.json'
         
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://baby-rang.spectrify.kr/'
+            resValue "string", "fullScopeUrl", 'https://babyroom.spectrify.kr/'
         
 
         

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import GrowthPatternClient from "./GrowthPatternClient";
 
-const SITE_URL = "https://baby-rang.spectrify.kr";
+const SITE_URL = "https://babyroom.spectrify.kr";
 const PAGE_URL = `${SITE_URL}/growth-pattern`;
 
 // 이 화면은 h-[100dvh] + overflow-hidden 고정 레이아웃이라 아래에 본문을 붙여도

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: '계정 및 데이터 삭제 | 베이비룸',
     description:
       '베이비룸 계정 삭제 안내 - 회원 탈퇴 방법, 삭제되는 데이터와 법령에 따라 보관되는 데이터 및 보관 기간을 안내합니다.',
-    url: 'https://baby-rang.spectrify.kr/account-deletion',
+    url: 'https://babyroom.spectrify.kr/account-deletion',
   },
 };
 

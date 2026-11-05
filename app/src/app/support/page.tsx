@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: '문의하기 | 베이비룸',
     description:
       '베이비룸 문의 방법, 자주 묻는 질문, 고객센터 연락처 및 사업자 정보를 안내합니다.',
-    url: 'https://baby-rang.spectrify.kr/support',
+    url: 'https://babyroom.spectrify.kr/support',
   },
 };
 

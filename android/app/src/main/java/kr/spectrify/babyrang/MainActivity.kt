@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
         private set
 
     /** 웹이 실행되는 주소. iOS 앱과 동일하게 프로덕션을 본다. */
-    private val startUrl = "https://baby-rang.spectrify.kr/home"
+    private val startUrl = "https://babyroom.spectrify.kr/home"
 
     private var geoOrigin: String? = null
     private var geoCallback: GeolocationPermissions.Callback? = null

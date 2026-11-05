@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://baby-rang.spectrify.kr";
+const BASE_URL = "https://babyroom.spectrify.kr";
 
 /**
  * robots.txt 생성.

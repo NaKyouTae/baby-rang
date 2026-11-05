@@ -83,7 +83,7 @@ export default function OgImage() {
             color: "#999",
           }}
         >
-          baby-rang.spectrify.kr
+          babyroom.spectrify.kr
         </div>
       </div>
     ),

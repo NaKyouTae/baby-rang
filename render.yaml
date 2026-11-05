@@ -33,7 +33,7 @@ services:
         value: 7d
       # Client (웹앱 URL)
       - key: CLIENT_URL
-        value: https://baby-rang.spectrify.kr
+        value: https://babyroom.spectrify.kr
       # Kakao OAuth
       - key: KAKAO_CLIENT_ID
         sync: false

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://baby-rang.spectrify.kr";
+const BASE_URL = "https://babyroom.spectrify.kr";
 
 /**
  * 공개 페이지만 사이트맵에 포함합니다.
