@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSocialLogin } from '@/hooks/useSocialLogin';
 import { getLastLoginProvider, type LoginProvider } from '@/lib/lastLoginProvider';
 import { palette } from '@/lib/colors';
+import { useIsAndroidDevice } from '@/lib/isAndroidDevice';
 
 // 로그인/회원가입 진입 전용 화면.
 //
@@ -68,6 +69,9 @@ export default function LoginClient() {
   const { isAuthenticated, isLoaded } = useAuth();
   const { login, loading, error } = useSocialLogin();
   const lastProvider = useSyncExternalStore(noopSubscribe, getLastLoginProvider, () => null);
+  // Apple 로그인은 안드로이드에서 필요 없다. 기기가 확정되기 전에는 감춰서 한 프레임 스치지 않게 한다.
+  const isAndroid = useIsAndroidDevice();
+  const buttons = BUTTONS.filter((b) => b.provider !== 'apple' || isAndroid === false);
 
   useEffect(() => {
     // 이미 로그인한 사람에게 로그인 화면을 보여줄 이유가 없다.
@@ -121,7 +125,7 @@ export default function LoginClient() {
       </div>
 
       <div className="flex w-full flex-col gap-[8px]">
-        {BUTTONS.map((b) => (
+        {buttons.map((b) => (
           <div key={b.provider} className="relative">
             <button
               type="button"
