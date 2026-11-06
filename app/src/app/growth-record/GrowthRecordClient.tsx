@@ -24,7 +24,8 @@ import {
   setCachedDays,
   buildDefaultRecordData,
 } from './recordDefaults';
-import { reloadWidget } from '@/lib/widgetBridge';
+import { reloadNativeWidget, reloadWidget } from '@/lib/widgetBridge';
+import { realtimeHeaders, useGrowthRecordChanges } from '@/lib/realtime';
 import RecordDatePopup from './RecordDatePopup';
 import ConfirmModal from '../home/_components/ConfirmModal';
 import Loading from '@/components/Loading';
@@ -465,6 +466,20 @@ const PAGE_SIZE = 30;
 
 type DayGroup = { date: string; records: GrowthRecord[] };
 
+/** 기록이 속한 날(기기 시간대) — 목록을 날짜로 묶는 기준 */
+function localDateOf(iso: string) {
+  const dt = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
+
+/** 서버 목록과 같은 순서 — 시작 시각, 같으면 만든 시각이 늦은 것부터 */
+function byNewest(a: GrowthRecord, b: GrowthRecord) {
+  return (
+    b.startAt.localeCompare(a.startAt) || (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+  );
+}
+
 export default function GrowthRecordPage() {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const { openLoginPrompt } = useLoginPrompt();
@@ -786,6 +801,7 @@ export default function GrowthRecordPage() {
         const res = await fetch('/api/growth-records', {
           method: 'POST',
           body: fd,
+          headers: realtimeHeaders(),
         });
         if (res.ok) {
           reloadWidget();
@@ -804,7 +820,10 @@ export default function GrowthRecordPage() {
     async (id: string) => {
       beginBusy();
       try {
-        const res = await fetch(`/api/growth-records/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/growth-records/${id}`, {
+          method: 'DELETE',
+          headers: realtimeHeaders(),
+        });
         if (res.ok) {
           reloadWidget();
           setDays((prev) => {
@@ -821,6 +840,42 @@ export default function GrowthRecordPage() {
       }
     },
     [selectedChild, beginBusy, endBusy],
+  );
+
+  // 다른 기기에서 바뀐 기록 — 받은 기록을 id 로 빼고 다시 넣는다(API 를 다시 부르지 않는다).
+  // 날짜가 바뀐 수정도 같은 방식으로 옮겨진다. 아직 불러오지 않은 날짜면 더 불러올 때 함께 온다.
+  useGrowthRecordChanges(
+    selectedChild?.id,
+    (change) => {
+      if (!selectedChild) return;
+      reloadNativeWidget();
+      const record = change.record as GrowthRecord | null;
+      const date = record ? localDateOf(record.startAt) : null;
+      // 불러온 범위는 (cursor, listStart] — 그 밖의 날짜는 지금 목록에 넣지 않는다.
+      const inLoadedRange = date !== null && date > cursor && date <= listStart;
+      setDays((prev) => {
+        let next = prev.map((g) => ({
+          ...g,
+          records: g.records.filter((r) => r.id !== change.recordId),
+        }));
+        if (record && date && inLoadedRange) {
+          const group = next.find((g) => g.date === date);
+          if (group) group.records = [...group.records, record].sort(byNewest);
+          else next.push({ date, records: [record] });
+        }
+        next = next
+          .filter((g) => g.records.length > 0)
+          .sort((a, b) => b.date.localeCompare(a.date));
+        setCachedDays(selectedChild.id, next);
+        return next;
+      });
+      // 가장 이른 기록보다 앞선 날짜에 기록이 생기면 더 불러오기가 그 날짜까지 닿게 한다.
+      if (date && earliestDate && date < earliestDate) {
+        setEarliestDate(date);
+        setHasMore(true);
+      }
+    },
+    () => void reload(undefined, { silent: true }),
   );
 
   // 스와이프 열린 행 — 다른 곳(다른 행 포함)을 탭/클릭하거나 스크롤 시 닫기

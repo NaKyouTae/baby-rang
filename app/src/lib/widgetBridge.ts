@@ -14,6 +14,14 @@ interface WidgetBridgeWindow {
  */
 export function reloadWidget(): void {
   window.dispatchEvent(new Event('growth-records-updated'));
+  reloadNativeWidget();
+}
+
+/**
+ * 네이티브 위젯만 새로고침한다. 다른 기기의 변경을 소켓으로 받아 화면은 이미 맞춘 경우에 쓴다
+ * ('growth-records-updated' 를 쏘면 화면들이 같은 값을 API 로 다시 받는다).
+ */
+export function reloadNativeWidget(): void {
   try {
     const w = window as unknown as WidgetBridgeWindow;
     const ios = w.webkit?.messageHandlers?.reloadWidget;

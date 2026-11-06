@@ -24,6 +24,7 @@ import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
 import { TestsModule } from './tests/tests.module';
 import { ScreenPreferenceModule } from './screen-preference/screen-preference.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AppSettingsModule } from './app-settings/app-settings.module';
     TestsModule,
     ScreenPreferenceModule,
     AppSettingsModule,
+    RealtimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,7 +13,8 @@ import DecorateSheet, { type RoomItem } from './DecorateSheet';
 import { loadRoomItems, refreshRoomItems } from './roomItems';
 import { TYPE_CONFIG, type GrowthType } from '../../growth-record/types';
 import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
-import { reloadWidget } from '@/lib/widgetBridge';
+import { reloadNativeWidget, reloadWidget } from '@/lib/widgetBridge';
+import { realtimeHeaders, useGrowthRecordChanges } from '@/lib/realtime';
 import RemoveSheet from './RemoveSheet';
 import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { ROOM_W_TILES, VIEW_MARGIN_TILES, WALL_SHIFT, WALL_TILES } from './tiles';
@@ -266,6 +267,18 @@ const GROWTH_TYPE_OF: Record<Exclude<ActionId, 'settings'>, GrowthType> = {
   etc: 'ETC',
 };
 
+/** 기록 종류 → 방의 반응 id. 홈 버튼이 없는 종류(터미타임)는 반응이 없다. */
+const ACTION_OF_TYPE = Object.fromEntries(
+  Object.entries(GROWTH_TYPE_OF).map(([action, type]) => [type, action]),
+) as Partial<Record<GrowthType, Exclude<ActionId, 'settings'>>>;
+
+/** 받침 유무로 조사를 고른다 — '엄마가', '할아버지가', '민준님이' */
+function josa(word: string, withBatchim: string, withoutBatchim: string) {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasBatchim = code >= 0 && code <= 11171 && code % 28 !== 0;
+  return word + (hasBatchim ? withBatchim : withoutBatchim);
+}
+
 export default function HomeClient() {
   // 홈은 스크롤이 없는 전체화면이다. 셸 스크롤 컨테이너가 움직여 화면이 흔들리지 않게 잠근다.
   useLockAppScroll();
@@ -354,7 +367,7 @@ export default function HomeClient() {
 
   // 디자인은 횟수가 아니라 '마지막 기록으로부터 지난 시간'을 보여준다.
   // 데모(아이 없음)는 고정 예시값, 실제 아이는 그 아이의 마지막 기록 시각.
-  const { records: lastRecords, now, refresh: refreshLastRecords } = useLastRecords(
+  const { records: lastRecords, now, refresh: refreshLastRecords, applySummary } = useLastRecords(
     selectedChild?.id,
   );
   const stats = useMemo(() => {
@@ -687,7 +700,11 @@ export default function HomeClient() {
       try {
         const res = await fetch(
           pendingSleepRecordId ? `/api/growth-records/${pendingSleepRecordId}` : '/api/growth-records',
-          { method: pendingSleepRecordId ? 'PATCH' : 'POST', body: fd },
+          {
+            method: pendingSleepRecordId ? 'PATCH' : 'POST',
+            body: fd,
+            headers: realtimeHeaders(),
+          },
         );
         if (res.ok) {
           succeeded = true;
@@ -731,6 +748,39 @@ export default function HomeClient() {
     [childId, lastRecords, refreshLastRecords, reloadInventory, showToast],
   );
   createQuickRecordRef.current = createQuickRecord;
+
+  // 같은 아이를 함께 보는 다른 기기(공동 양육자·내 다른 기기)의 기록 — 서버가 보낸 요약을 그대로 쓰고,
+  // 새 기록이면 내가 기록했을 때와 같은 반응을 보여 준다.
+  useGrowthRecordChanges(
+    childId,
+    (change) => {
+      applySummary(change.summary);
+      // 진행 중이던 수면을 다른 기기가 끝냈거나 지웠으면, 다음 수면 탭이 그 기록을 다시 종료하지 않게 한다.
+      if (
+        pendingSleepRecordRef.current &&
+        pendingSleepRecordRef.current.recordId !== change.summary.pendingSleepRecordId
+      ) {
+        pendingSleepRecordRef.current = null;
+      }
+      reloadNativeWidget();
+      if (change.action === 'created') reloadInventory();
+      const record = change.record as { type: GrowthType; data?: { kind?: string } | null } | null;
+      if (!change.react || !record) return;
+      const sleepEnded = change.action === 'updated';
+      const who = josa(change.actor.label, '이', '가');
+      const what = sleepEnded ? '수면 종료' : TYPE_CONFIG[record.type].label;
+      showToast(`${who} ${josa(what, '을', '를')} 기록했어요`);
+      const action = ACTION_OF_TYPE[record.type];
+      if (!action) return;
+      const kind = record.data?.kind;
+      setReaction({
+        key: Date.now(),
+        id: action,
+        variant: kind === 'POO' || kind === 'BOTH' ? kind : 'PEE',
+      });
+    },
+    () => void refreshLastRecords(),
+  );
 
   const handleAction = useCallback((id: ActionId) => {
     // 설정은 입력 폼이 아니라 마이페이지로 간다.

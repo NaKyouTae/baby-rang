@@ -23,6 +23,7 @@ import {
   isWithinNightRange,
 } from './recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
+import { realtimeHeaders } from '@/lib/realtime';
 import Loading from '@/components/Loading';
 
 function rangeFor(
@@ -562,7 +563,7 @@ export default function EntrySheet({
 
       const url = initial ? `/api/growth-records/${initial.id}` : '/api/growth-records';
       const method = initial ? 'PATCH' : 'POST';
-      const res = await fetch(url, { method, body: fd });
+      const res = await fetch(url, { method, body: fd, headers: realtimeHeaders() });
       if (res.ok) {
         reloadWidget();
         onSaved();
@@ -583,6 +584,7 @@ export default function EntrySheet({
     setDeleteConfirmOpen(false);
     const res = await fetch(`/api/growth-records/${initial.id}`, {
       method: 'DELETE',
+      headers: realtimeHeaders(),
     });
     if (res.ok) {
       reloadWidget();

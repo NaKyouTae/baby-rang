@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { fetchAndCache, peekCached } from '@/hooks/appCache';
+import { fetchAndCache, peekCached, updateCached } from '@/hooks/appCache';
+import type { GrowthRecordChange } from '@/lib/realtime';
 
 interface LastRecords {
   childId: string;
@@ -110,11 +111,29 @@ export function useLastRecords(childId: string | undefined) {
     };
   }, [refresh]);
 
+  // 다른 기기에서 받은 변경 — 서버가 계산해 보낸 요약을 API 를 다시 부르지 않고 그대로 쓴다.
+  const applySummary = useCallback(
+    (summary: GrowthRecordChange['summary']) => {
+      if (!childId) return;
+      const patch = {
+        canEndSleep: summary.canEndSleep,
+        pendingSleepRecordId: summary.pendingSleepRecordId,
+        lastSleepAt: summary.lastSleepAt,
+        lastFeedingAt: summary.lastFeedingAt,
+        lastDiaperAt: summary.lastDiaperAt,
+      };
+      updateCached<WidgetSummary>(summaryUrl(childId), (prev) => ({ ...prev, ...patch }));
+      setRecords(toLastRecords(childId, { childId, ...patch }));
+      setNow(Date.now());
+    },
+    [childId],
+  );
+
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);
 
   // 아이를 바꾼 직후 새 응답이 오기 전까지 이전 아이 값이 보이지 않게 거른다.
-  return { records: records?.childId === childId ? records : null, now, refresh };
+  return { records: records?.childId === childId ? records : null, now, refresh, applySummary };
 }

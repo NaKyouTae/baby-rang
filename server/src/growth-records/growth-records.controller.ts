@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -27,6 +28,8 @@ const IMAGE_FILTER = (
   cb(null, true);
 };
 const MAX_IMAGES = 5;
+// 저장한 기기의 소켓 id. 그 기기에는 변경 알림을 다시 보내지 않는다.
+const SOCKET_ID_HEADER = 'x-socket-id';
 
 @Controller('growth-records')
 @UseGuards(AuthGuard('jwt'))
@@ -87,6 +90,7 @@ export class GrowthRecordsController {
     @Body('source') source?: string,
     @Body('quickRecord') quickRecord?: string,
     @UploadedFiles() files?: Express.Multer.File[],
+    @Headers(SOCKET_ID_HEADER) originSocketId?: string,
   ) {
     return this.service.create(
       req.user.id,
@@ -95,6 +99,8 @@ export class GrowthRecordsController {
       {
         reward: source !== 'import',
         quickRecord: source !== 'import' && quickRecord === 'true',
+        notify: source !== 'import',
+        originSocketId,
       },
     );
   }
@@ -113,6 +119,7 @@ export class GrowthRecordsController {
     @Body('data') data?: string,
     @Body('keepImageUrls') keepImageUrls?: string,
     @UploadedFiles() files?: Express.Multer.File[],
+    @Headers(SOCKET_ID_HEADER) originSocketId?: string,
   ) {
     return this.service.update(
       req.user.id,
@@ -120,11 +127,16 @@ export class GrowthRecordsController {
       { type, startAt, endAt, memo, data },
       files,
       keepImageUrls,
+      { originSocketId },
     );
   }
 
   @Delete(':id')
-  remove(@Req() req, @Param('id') id: string) {
-    return this.service.remove(req.user.id, id);
+  remove(
+    @Req() req,
+    @Param('id') id: string,
+    @Headers(SOCKET_ID_HEADER) originSocketId?: string,
+  ) {
+    return this.service.remove(req.user.id, id, { originSocketId });
   }
 }

@@ -1,13 +1,16 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import { GrowthRecordType, Prisma } from '@prisma/client';
+import { GrowthRecord, GrowthRecordType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { ChildrenService } from '../children/children.service';
 import { rewardRecord } from '../coins/coin-rewards';
+import { RealtimeService } from '../realtime/realtime.service';
 
 const ALLOWED_TYPES = new Set<GrowthRecordType>([
   'BREASTFEEDING',
@@ -29,6 +32,42 @@ const ALLOWED_TYPES = new Set<GrowthRecordType>([
   'ETC',
 ] as GrowthRecordType[]);
 
+/** 보호자 역할 → 다른 기기 토스트에 쓰는 호칭 */
+const PARENT_ROLE_LABEL: Record<string, string> = {
+  mom: '엄마',
+  dad: '아빠',
+  grandmother: '할머니',
+  grandfather: '할아버지',
+  caregiver: '돌보미',
+};
+
+/** 받는 기기가 API 를 다시 부르지 않고 그대로 쓰는 변경 알림 — 이벤트 이름 'growth-record' */
+export interface GrowthRecordChange {
+  childId: string;
+  action: 'created' | 'updated' | 'deleted';
+  recordId: string;
+  /** created·updated 의 저장된 기록. deleted 면 null. */
+  record: GrowthRecord | null;
+  /** 홈의 '마지막 수면·수유·기저귀'. 아이 기준 값이라 누가 받든 같다. */
+  summary: ChildSummary;
+  /** 홈에서 반응 애니메이션을 보여 줄 변경인가 — 새 기록, 또는 진행 중이던 수면의 종료 */
+  react: boolean;
+  actor: { userId: string; label: string };
+}
+
+export interface ChildSummary {
+  lastFeedingAt: Date | null;
+  lastSleepAt: Date | null;
+  lastDiaperAt: Date | null;
+  canEndSleep: boolean;
+  pendingSleepRecordId: string | null;
+}
+
+/** 변경을 만든 요청의 정보. originSocketId 기기에는 알림을 보내지 않는다. */
+export interface ChangeOrigin {
+  originSocketId?: string;
+}
+
 interface UpsertInput {
   childId: string;
   type: string;
@@ -40,10 +79,13 @@ interface UpsertInput {
 
 @Injectable()
 export class GrowthRecordsService {
+  private readonly logger = new Logger(GrowthRecordsService.name);
+
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
     private children: ChildrenService,
+    @Optional() private realtime?: RealtimeService,
   ) {}
 
   private validateType(type: string): GrowthRecordType {
@@ -115,7 +157,24 @@ export class GrowthRecordsService {
 
     // 요청된 아이가 접근 가능 목록에 있으면 그 아이, 아니면 첫 아이.
     const selected = (childId && all.find((c) => c.id === childId)) || all[0];
+    const summary = await this.childSummary(selected.id);
 
+    // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
+    const b = selected.birthDate;
+    const birthDate = `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, '0')}-${String(b.getUTCDate()).padStart(2, '0')}`;
+
+    return {
+      childId: selected.id,
+      childName: selected.name,
+      birthDate,
+      ...summary,
+      // 전체 아이 목록(순서 고정) — 위젯 페이징용
+      children: all.map((c) => ({ id: c.id, name: c.name })),
+    };
+  }
+
+  /** 홈·위젯의 마지막 기록 시각. 보는 사람과 무관한 아이 기준 값이라 알림에 그대로 싣는다. */
+  async childSummary(childId: string): Promise<ChildSummary> {
     // 홈·위젯의 '수유' 칸은 먹은 기록 전체 중 가장 최근 것이다. 마지막이 이유식이면 이유식 시각을 보여준다.
     const FEEDING_TYPES: GrowthRecordType[] = [
       'BREASTFEEDING',
@@ -127,7 +186,7 @@ export class GrowthRecordsService {
     // 수유·기저귀: 시작 시각 기준
     const latestByStart = (where: Prisma.GrowthRecordWhereInput) =>
       this.prisma.growthRecord.findFirst({
-        where: { childId: selected.id, ...where },
+        where: { childId, ...where },
         orderBy: { startAt: 'desc' },
         select: { startAt: true },
       });
@@ -135,7 +194,7 @@ export class GrowthRecordsService {
     // 수면: 종료 시각 기준(진행 중이면 시작). 최근 수면 몇 건에서 endAt(없으면 startAt)이 가장 늦은 것.
     const latestSleepEnd = async (): Promise<Date | null> => {
       const rows = await this.prisma.growthRecord.findMany({
-        where: { childId: selected.id, type: 'SLEEP' },
+        where: { childId, type: 'SLEEP' },
         orderBy: { startAt: 'desc' },
         take: 20,
         select: { startAt: true, endAt: true },
@@ -153,19 +212,12 @@ export class GrowthRecordsService {
       latestSleepEnd(),
       latestByStart({ type: 'DIAPER' }),
       this.prisma.growthRecord.findFirst({
-        where: { childId: selected.id },
+        where: { childId },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       }),
     ]);
 
-    // birthDate는 @db.Date(UTC 정오 저장) — UTC 파트로 YYYY-MM-DD 추출.
-    const b = selected.birthDate;
-    const birthDate = `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, '0')}-${String(b.getUTCDate()).padStart(2, '0')}`;
-
     return {
-      childId: selected.id,
-      childName: selected.name,
-      birthDate,
       lastFeedingAt: feeding?.startAt ?? null,
       lastSleepAt: sleepAt ?? null,
       canEndSleep: this.canFinishHomeSleep(latestRecord),
@@ -173,9 +225,48 @@ export class GrowthRecordsService {
         ? (latestRecord?.id ?? null)
         : null,
       lastDiaperAt: diaper?.startAt ?? null,
-      // 전체 아이 목록(순서 고정) — 위젯 페이징용
-      children: all.map((c) => ({ id: c.id, name: c.name })),
     };
+  }
+
+  /**
+   * 같은 아이를 보는 다른 기기들에 변경을 알린다. 저장이 끝난 뒤 응답을 늦추지 않게 기다리지 않고,
+   * 실패해도 저장 결과에는 영향이 없다 — 받는 쪽은 화면에 돌아올 때 다시 받아 맞춘다.
+   */
+  private notifyChange(
+    userId: string,
+    change: Pick<
+      GrowthRecordChange,
+      'childId' | 'action' | 'recordId' | 'record' | 'react'
+    >,
+    origin?: ChangeOrigin,
+  ) {
+    const realtime = this.realtime;
+    if (!realtime) return;
+    void (async () => {
+      const [summary, actor] = await Promise.all([
+        this.childSummary(change.childId),
+        this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { parentRole: true, name: true },
+        }),
+      ]);
+      const label =
+        (actor?.parentRole && PARENT_ROLE_LABEL[actor.parentRole]) ||
+        (actor?.name ? `${actor.name}님` : '가족');
+      const payload: GrowthRecordChange = {
+        ...change,
+        summary,
+        actor: { userId, label },
+      };
+      realtime.emitToChild(
+        change.childId,
+        'growth-record',
+        payload,
+        origin?.originSocketId,
+      );
+    })().catch((err) =>
+      this.logger.warn(`notifyChange failed: ${(err as Error).message}`),
+    );
   }
 
   async findByRange(userId: string, childId: string, from: string, to: string) {
@@ -323,7 +414,14 @@ export class GrowthRecordsService {
     {
       reward = true,
       quickRecord = false,
-    }: { reward?: boolean; quickRecord?: boolean } = {},
+      notify = true,
+      originSocketId,
+    }: {
+      reward?: boolean;
+      quickRecord?: boolean;
+      /** 가져오기처럼 한꺼번에 들어오는 기록은 하나하나 알리지 않는다 */
+      notify?: boolean;
+    } & ChangeOrigin = {},
   ) {
     await this.assertChildAccess(userId, input.childId);
     const type = this.validateType(input.type);
@@ -335,7 +433,7 @@ export class GrowthRecordsService {
       limited.map((file) => this.storage.upload(file, 'growth-records')),
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 같은 아기의 동시 기록 요청도 순서대로 처리해 중복 수면 생성을 막는다.
       await tx.$queryRaw`SELECT id FROM children WHERE id = ${input.childId} FOR UPDATE`;
       if (quickRecord && type === 'SLEEP') {
@@ -349,7 +447,7 @@ export class GrowthRecordsService {
           previous &&
           startAt.getTime() >= previous.startAt.getTime()
         ) {
-          return tx.growthRecord.update({
+          const ended = await tx.growthRecord.update({
             where: { id: previous.id },
             data: {
               endAt: startAt,
@@ -360,6 +458,7 @@ export class GrowthRecordsService {
               },
             },
           });
+          return { record: ended, action: 'updated' as const };
         }
       }
       const record = await tx.growthRecord.create({
@@ -392,8 +491,22 @@ export class GrowthRecordsService {
       if (reward) await this.rememberRecordAmounts(tx, record);
       // 가져오기는 수천 건이 한 번에 들어온다. 그만큼 보석을 주면 재화가 무너진다.
       if (reward) await rewardRecord(tx, input.childId);
-      return record;
+      return { record, action: 'created' as const };
     });
+    if (notify) {
+      this.notifyChange(
+        userId,
+        {
+          childId: result.record.childId,
+          action: result.action,
+          recordId: result.record.id,
+          record: result.record,
+          react: true,
+        },
+        { originSocketId },
+      );
+    }
+    return result.record;
   }
 
   async update(
@@ -402,6 +515,7 @@ export class GrowthRecordsService {
     input: Partial<UpsertInput>,
     files?: Express.Multer.File[],
     keepImageUrlsRaw?: string,
+    origin?: ChangeOrigin,
   ) {
     const existing = await this.prisma.growthRecord.findUnique({
       where: { id },
@@ -470,7 +584,7 @@ export class GrowthRecordsService {
       };
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       // 덮어쓰기 전 값도 이력으로 보존한다.
       await this.rememberRecordAmounts(tx, existing, false);
       const record = await tx.growthRecord.update({
@@ -493,9 +607,26 @@ export class GrowthRecordsService {
       await this.rememberRecordAmounts(tx, record);
       return record;
     });
+    // 홈에서 수면 종료를 누른 것처럼, 진행 중이던 수면이 끝났으면 반응을 보여 준다.
+    const sleepEnded =
+      updated.type === 'SLEEP' &&
+      this.canFinishHomeSleep(existing) &&
+      !this.canFinishHomeSleep(updated);
+    this.notifyChange(
+      userId,
+      {
+        childId: updated.childId,
+        action: 'updated',
+        recordId: updated.id,
+        record: updated,
+        react: sleepEnded,
+      },
+      origin,
+    );
+    return updated;
   }
 
-  async remove(userId: string, id: string) {
+  async remove(userId: string, id: string, origin?: ChangeOrigin) {
     const existing = await this.prisma.growthRecord.findUnique({
       where: { id },
     });
@@ -506,6 +637,17 @@ export class GrowthRecordsService {
       urls.map((url) => this.storage.delete(url).catch(() => {})),
     );
     await this.prisma.growthRecord.delete({ where: { id } });
+    this.notifyChange(
+      userId,
+      {
+        childId: existing.childId,
+        action: 'deleted',
+        recordId: id,
+        record: null,
+        react: false,
+      },
+      origin,
+    );
     return { ok: true };
   }
 }

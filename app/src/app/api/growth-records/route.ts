@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:18080';
 
+// 저장한 기기의 소켓 id 를 넘겨, 서버가 그 기기에는 변경 알림을 다시 보내지 않게 한다.
+function withSocketId(request: NextRequest, headers: Record<string, string>) {
+  const socketId = request.headers.get('x-socket-id');
+  return socketId ? { ...headers, 'x-socket-id': socketId } : headers;
+}
+
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies();
   const token = cookieStore.get('access_token')?.value;
@@ -31,7 +37,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const res = await fetch(`${API_URL}/growth-records`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: withSocketId(request, { Authorization: `Bearer ${token}` }),
     body: formData,
   });
   const data = await res.json();

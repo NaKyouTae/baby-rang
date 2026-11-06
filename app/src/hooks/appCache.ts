@@ -220,6 +220,15 @@ export function fetchAndCache<T>(url: string): Promise<T | undefined> {
   return p;
 }
 
+/** 캐시된 응답을 고쳐 넣는다(받은 적 없으면 아무것도 안 한다). 소켓으로 받은 변경을 캐시에도 반영할 때 쓴다. */
+export function updateCached<T>(url: string, update: (prev: T) => T) {
+  const prev = peekCached<T>(url);
+  if (prev === undefined) return;
+  const next = update(prev);
+  swrMem.set(url, next);
+  swrPersist(url, next);
+}
+
 /** 미리 받아 둔다. maxAgeMs 안에 받은 적이 있으면 건너뛴다. */
 export function prefetchCached(urls: string[], maxAgeMs = 30_000) {
   const now = Date.now();
