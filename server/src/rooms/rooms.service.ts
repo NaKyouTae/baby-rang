@@ -1,6 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildrenService } from '../children/children.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 /**
  * 방(12칸) 좌우 밖으로 받는 칸 수. 앱이 방을 줄여 보여 주면(VIEW_ZOOM) 화면 끝까지 방 밖 여백이 생기고
@@ -32,13 +38,21 @@ type PlacementInput = {
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     private prisma: PrismaService,
     private children: ChildrenService,
+    @Optional() private realtime?: RealtimeService,
   ) {}
 
   async find(userId: string, childId: string) {
     await this.children.assertAccess(userId, childId);
+    return this.roomOf(childId);
+  }
+
+  /** GET 응답과 같은 모양. 저장 알림('room' 이벤트)에도 그대로 실어 보낸다. */
+  private async roomOf(childId: string) {
     const room = await this.prisma.room.findUnique({
       where: { childId },
       include: {
@@ -79,6 +93,7 @@ export class RoomsService {
       flooringItemId?: string | null;
       placements: PlacementInput[];
     },
+    originSocketId?: string,
   ) {
     await this.children.assertAccess(userId, childId);
 
@@ -161,7 +176,7 @@ export class RoomsService {
 
     await this.assertOwnsPaidItems(childId, input, byId, existing);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const room = existing
         ? await tx.room.update({
             where: { id: existing.id },
@@ -198,6 +213,29 @@ export class RoomsService {
       }
       return { ok: true, version: room.version };
     });
+    this.notifyChange(childId, originSocketId);
+    return result;
+  }
+
+  /**
+   * 같은 아이를 보는 다른 기기들에 저장된 방을 보낸다. 받는 기기는 API 를 다시 부르지 않고 그대로 그린다.
+   * 응답을 늦추지 않게 기다리지 않고, 실패해도 저장 결과에는 영향이 없다.
+   */
+  private notifyChange(childId: string, originSocketId?: string) {
+    const realtime = this.realtime;
+    if (!realtime) return;
+    void this.roomOf(childId)
+      .then((room) =>
+        realtime.emitToChild(
+          childId,
+          'room',
+          { childId, ...room },
+          originSocketId,
+        ),
+      )
+      .catch((err) =>
+        this.logger.warn(`notifyChange failed: ${(err as Error).message}`),
+      );
   }
 
   /**

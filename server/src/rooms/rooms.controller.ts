@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Put,
@@ -12,6 +13,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { RoomsService } from './rooms.service';
 import { InventoryService } from './inventory.service';
+
+// 저장한 기기의 소켓 id. 그 기기에는 변경 알림을 다시 보내지 않는다.
+const SOCKET_ID_HEADER = 'x-socket-id';
 
 @Controller('rooms')
 @UseGuards(AuthGuard('jwt'))
@@ -83,12 +87,22 @@ export class RoomsController {
 
   /** 방 전체를 한 번에 덮어쓴다. 부분 수정은 받지 않는다 — 겹침 검사 때문. */
   @Put(':childId')
-  replace(@Req() req, @Param('childId') childId: string, @Body() body: any) {
-    return this.service.replaceLayout(req.user.id, childId, {
-      version: Number(body?.version ?? 0),
-      wallpaperItemId: body?.wallpaperItemId ?? null,
-      flooringItemId: body?.flooringItemId ?? null,
-      placements: Array.isArray(body?.placements) ? body.placements : [],
-    });
+  replace(
+    @Req() req,
+    @Param('childId') childId: string,
+    @Body() body: any,
+    @Headers(SOCKET_ID_HEADER) originSocketId?: string,
+  ) {
+    return this.service.replaceLayout(
+      req.user.id,
+      childId,
+      {
+        version: Number(body?.version ?? 0),
+        wallpaperItemId: body?.wallpaperItemId ?? null,
+        flooringItemId: body?.flooringItemId ?? null,
+        placements: Array.isArray(body?.placements) ? body.placements : [],
+      },
+      originSocketId,
+    );
   }
 }

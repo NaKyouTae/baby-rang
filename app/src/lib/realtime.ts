@@ -25,7 +25,25 @@ export interface GrowthRecordChange<R = unknown> {
   actor: { userId: string; label: string };
 }
 
-type ChangeHandler = (change: GrowthRecordChange) => void;
+/** 서버 rooms.service 의 'room' 이벤트 — 다른 기기가 저장한 방. GET /api/rooms/:childId 응답과 같은 모양에 childId 가 붙는다. */
+export interface RoomChange<P = unknown> {
+  childId: string;
+  room: {
+    id: string;
+    wallpaper: { id: string; imageUrl: string | null } | null;
+    flooring: { id: string; imageUrl: string | null } | null;
+  } | null;
+  placements: P[];
+  version: number;
+}
+
+/** 아이 방으로 오는 이벤트 이름 → 실어 오는 값 */
+interface ChildEvents {
+  'growth-record': GrowthRecordChange;
+  room: RoomChange;
+}
+type ChildEvent = keyof ChildEvents;
+type Listener = { event: ChildEvent; fn: (payload: never) => void };
 
 /**
  * 같은 아이를 보는 기기끼리 기록 변경을 실시간으로 나눈다.
@@ -33,7 +51,7 @@ type ChangeHandler = (change: GrowthRecordChange) => void;
  * 연결이 끊겼다 다시 붙으면 그 사이 놓친 변경이 있을 수 있어 onResync 로 다시 받게 한다.
  */
 let socket: Socket | null = null;
-const watchers = new Map<string, Set<ChangeHandler>>();
+const watchers = new Map<string, Set<Listener>>();
 const resyncHandlers = new Set<() => void>();
 let connectedOnce = false;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,9 +87,13 @@ function ensureSocket() {
       if (watchers.size > 0) socket?.connect();
     }, 10_000);
   });
-  socket.on('growth-record', (change: GrowthRecordChange) => {
-    watchers.get(change.childId)?.forEach((h) => h(change));
-  });
+  for (const event of ['growth-record', 'room'] as const) {
+    socket.on(event, (payload: { childId: string }) => {
+      watchers.get(payload.childId)?.forEach((l) => {
+        if (l.event === event) (l.fn as (p: unknown) => void)(payload);
+      });
+    });
+  }
 }
 
 /** 저장 요청에 실어 보낼 헤더 — 서버가 이 기기에는 같은 변경을 다시 보내지 않는다 */
@@ -79,15 +101,15 @@ export function realtimeHeaders(): Record<string, string> {
   return socket?.id ? { 'x-socket-id': socket.id } : {};
 }
 
-function watchChild(childId: string, handler: ChangeHandler) {
+function watchChild(childId: string, listener: Listener) {
   ensureSocket();
   let set = watchers.get(childId);
   const isNew = !set;
   if (!set) watchers.set(childId, (set = new Set()));
-  set.add(handler);
+  set.add(listener);
   if (isNew) sendWatch();
   return () => {
-    set.delete(handler);
+    set.delete(listener);
     if (set.size === 0 && watchers.get(childId) === set) {
       watchers.delete(childId);
       sendWatch();
@@ -95,13 +117,11 @@ function watchChild(childId: string, handler: ChangeHandler) {
   };
 }
 
-/**
- * 그 아이의 기록이 다른 기기에서 바뀌면 handler 를 부른다(이 기기에서 저장한 것은 오지 않는다).
- * onResync — 연결이 끊겼다 다시 붙었을 때. 그동안 놓친 변경이 있을 수 있으니 다시 받는다.
- */
-export function useGrowthRecordChanges(
+/** 그 아이의 event 를 받는다. 연결이 끊겼다 다시 붙으면 onResync 를 부른다. */
+function useChildEvent<E extends ChildEvent>(
+  event: E,
   childId: string | undefined,
-  handler: ChangeHandler,
+  handler: (payload: ChildEvents[E]) => void,
   onResync?: () => void,
 ) {
   const handlerRef = useRef(handler);
@@ -113,12 +133,36 @@ export function useGrowthRecordChanges(
 
   useEffect(() => {
     if (!childId) return;
-    const stop = watchChild(childId, (change) => handlerRef.current(change));
+    const stop = watchChild(childId, {
+      event,
+      fn: (payload: ChildEvents[E]) => handlerRef.current(payload),
+    });
     const resync = () => resyncRef.current?.();
     resyncHandlers.add(resync);
     return () => {
       stop();
       resyncHandlers.delete(resync);
     };
-  }, [childId]);
+  }, [event, childId]);
+}
+
+/**
+ * 그 아이의 기록이 다른 기기에서 바뀌면 handler 를 부른다(이 기기에서 저장한 것은 오지 않는다).
+ * onResync — 연결이 끊겼다 다시 붙었을 때. 그동안 놓친 변경이 있을 수 있으니 다시 받는다.
+ */
+export function useGrowthRecordChanges(
+  childId: string | undefined,
+  handler: (change: GrowthRecordChange) => void,
+  onResync?: () => void,
+) {
+  useChildEvent('growth-record', childId, handler, onResync);
+}
+
+/** 그 아이의 방이 다른 기기에서 저장되면 handler 를 부른다. onResync 는 useGrowthRecordChanges 와 같다. */
+export function useRoomChanges(
+  childId: string | undefined,
+  handler: (change: RoomChange) => void,
+  onResync?: () => void,
+) {
+  useChildEvent('room', childId, handler, onResync);
 }

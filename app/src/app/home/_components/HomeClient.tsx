@@ -14,7 +14,7 @@ import { loadRoomItems, refreshRoomItems } from './roomItems';
 import { TYPE_CONFIG, type GrowthType } from '../../growth-record/types';
 import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadNativeWidget, reloadWidget } from '@/lib/widgetBridge';
-import { realtimeHeaders, useGrowthRecordChanges } from '@/lib/realtime';
+import { realtimeHeaders, useGrowthRecordChanges, useRoomChanges, type RoomChange } from '@/lib/realtime';
 import RemoveSheet from './RemoveSheet';
 import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
 import { ROOM_W_TILES, VIEW_MARGIN_TILES, WALL_SHIFT, WALL_TILES } from './tiles';
@@ -495,68 +495,80 @@ export default function HomeClient() {
       });
   }, []);
 
+  // 서버의 방(GET /api/rooms 응답, 또는 다른 기기가 저장해 소켓으로 온 방)을 화면에 그린다.
+  const applyRoom = useCallback(
+    (data: Pick<RoomChange<unknown>, 'room' | 'placements' | 'version'>) => {
+      type ServerPlacement = {
+        id: string;
+        itemId: string;
+        tileX: number;
+        tileY: number;
+        flipX: boolean;
+        facing?: Placement['facing'];
+        scale?: number;
+        item: RoomItem;
+      };
+      const loaded: Placement[] = ((data.placements ?? []) as ServerPlacement[]).map((sp) => ({
+        id: sp.id,
+        itemId: sp.itemId,
+        name: sp.item.name,
+        spriteKey: sp.item.spriteKey,
+        imageUrl: sp.item.imageUrl,
+        category: sp.item.category,
+        tileX: sp.tileX,
+        tileY: sp.tileY,
+        tileW: sp.item.tileW,
+        tileH: sp.item.tileH,
+        flipX: sp.flipX ?? false,
+        facing: sp.facing ?? 'FRONT',
+        scale: sp.scale ?? 1,
+        affordances: sp.item.affordances,
+        dynamicSlot: sp.item.dynamicSlot ?? null,
+        sideImageUrl: sp.item.sideImageUrl ?? null,
+        sideTileW: sp.item.sideTileW ?? null,
+        sideTileH: sp.item.sideTileH ?? null,
+        backImageUrl: sp.item.backImageUrl ?? null,
+      }));
+      const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
+        it ? { id: it.id, imageUrl: it.imageUrl } : null;
+      const nextSlots: Slots = {
+        wallpaper: toSlot(data.room?.wallpaper),
+        flooring: toSlot(data.room?.flooring),
+      };
+      setPlacements(loaded);
+      setSlots(nextSlots);
+      persistRoom(loaded, nextSlots);
+      setVersion(data.version ?? 0);
+      preloadSprites([
+        ...loaded.map(imageOf),
+        ...Object.values(nextSlots).map((v) => v?.imageUrl ?? null),
+      ]);
+    },
+    [],
+  );
+
   // 서버에 저장된 방을 불러온다. 데모(비로그인)는 브라우저 저장만 쓴다.
   const childId = selectedChild?.id;
+  const loadRoom = useCallback(
+    (id: string, isAlive: () => boolean = () => true) =>
+      fetch(`/api/rooms/${id}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (isAlive() && data) applyRoom(data);
+        })
+        .catch(() => {
+          /* 불러오기 실패는 빈 방으로 둔다 — 저장은 여전히 가능하다 */
+        }),
+    [applyRoom],
+  );
   useEffect(() => {
     if (!childId) return;
     let alive = true;
-    fetch(`/api/rooms/${childId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!alive || !data) return;
-        type ServerPlacement = {
-          id: string;
-          itemId: string;
-          tileX: number;
-          tileY: number;
-          flipX: boolean;
-          facing?: Placement['facing'];
-          scale?: number;
-          item: RoomItem;
-        };
-        const loaded: Placement[] = (data.placements ?? []).map((sp: ServerPlacement) => ({
-          id: sp.id,
-          itemId: sp.itemId,
-          name: sp.item.name,
-          spriteKey: sp.item.spriteKey,
-          imageUrl: sp.item.imageUrl,
-          category: sp.item.category,
-          tileX: sp.tileX,
-          tileY: sp.tileY,
-          tileW: sp.item.tileW,
-          tileH: sp.item.tileH,
-          flipX: sp.flipX ?? false,
-          facing: sp.facing ?? 'FRONT',
-          scale: sp.scale ?? 1,
-          affordances: sp.item.affordances,
-          dynamicSlot: sp.item.dynamicSlot ?? null,
-          sideImageUrl: sp.item.sideImageUrl ?? null,
-          sideTileW: sp.item.sideTileW ?? null,
-          sideTileH: sp.item.sideTileH ?? null,
-          backImageUrl: sp.item.backImageUrl ?? null,
-        }));
-        const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
-          it ? { id: it.id, imageUrl: it.imageUrl } : null;
-        const nextSlots: Slots = {
-          wallpaper: toSlot(data.room?.wallpaper),
-          flooring: toSlot(data.room?.flooring),
-        };
-        setPlacements(loaded);
-        setSlots(nextSlots);
-        persistRoom(loaded, nextSlots);
-        setVersion(data.version ?? 0);
-        preloadSprites([
-          ...loaded.map(imageOf),
-          ...Object.values(nextSlots).map((v) => v?.imageUrl ?? null),
-        ]);
-      })
-      .catch(() => {
-        /* 불러오기 실패는 빈 방으로 둔다 — 저장은 여전히 가능하다 */
-      });
+    void loadRoom(childId, () => alive);
     return () => {
       alive = false;
     };
-  }, [childId]);
+  }, [childId, loadRoom]);
 
   // 보유 목록과 재화 잔액. 결제한 충전분도 서버가 여기서 메워 준다.
   const loadInventory = useCallback(async (id: string) => {
@@ -782,6 +794,24 @@ export default function HomeClient() {
     () => void refreshLastRecords(),
   );
 
+  // 다른 기기가 저장한 방. 편집 중에는 꾸미던 것을 덮지 않게 미뤄 두고, 저장하지 않고 나갈 때 그린다.
+  // 버전은 그대로 두므로 편집한 채로 저장하면 지금처럼 '다른 기기에서 먼저 바뀌었다'고 거절된다.
+  const editingRef = useRef(false);
+  useEffect(() => {
+    editingRef.current = editing;
+  }, [editing]);
+  const pendingRoomRef = useRef<RoomChange | null>(null);
+  useRoomChanges(
+    childId,
+    (change) => {
+      if (editingRef.current) pendingRoomRef.current = change;
+      else applyRoom(change);
+    },
+    () => {
+      if (childId && !editingRef.current) void loadRoom(childId);
+    },
+  );
+
   const handleAction = useCallback((id: ActionId) => {
     // 설정은 입력 폼이 아니라 마이페이지로 간다.
     if (id === 'settings') {
@@ -819,10 +849,14 @@ export default function HomeClient() {
       setSlots(snap.slots);
     }
     editSnapshotRef.current = null;
+    // 편집하는 사이 다른 기기가 저장한 방이 있으면 이제 그린다.
+    const pending = pendingRoomRef.current;
+    pendingRoomRef.current = null;
+    if (pending) applyRoom(pending);
     setConfirmDiscard(false);
     setDecorating(false);
     setEditing(false);
-  }, []);
+  }, [applyRoom]);
 
   // X — 저장은 저장하기 버튼으로만 한다. 바꾼 게 있으면 버릴지 먼저 묻는다.
   const handleExitEdit = useCallback(() => {
@@ -851,7 +885,7 @@ export default function HomeClient() {
     try {
       const res = await fetch(`/api/rooms/${childId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...realtimeHeaders() },
         body: JSON.stringify({
           version,
           wallpaperItemId: slots.wallpaper?.id ?? null,
@@ -876,6 +910,7 @@ export default function HomeClient() {
       setVersion(data.version ?? version + 1);
       persistRoom(placements, slots);
       editSnapshotRef.current = null;
+      pendingRoomRef.current = null;
       setDecorating(false);
       setEditing(false);
     } finally {
