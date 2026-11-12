@@ -8,7 +8,7 @@ export const RECORD_REWARD_COINS = 1;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /** 지금이 속한 KST 날짜의 00:00 을 UTC 시각으로. */
-function startOfKstDay(now = new Date()) {
+export function startOfKstDay(now = new Date()) {
   const kst = new Date(now.getTime() + KST_OFFSET_MS);
   kst.setUTCHours(0, 0, 0, 0);
   return new Date(kst.getTime() - KST_OFFSET_MS);

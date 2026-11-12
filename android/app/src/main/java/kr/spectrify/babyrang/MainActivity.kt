@@ -53,6 +53,10 @@ class MainActivity : AppCompatActivity() {
     lateinit var billing: BillingManager
         private set
 
+    /** 보석함 보상형 광고. AndroidBridge 가 웹 요청을 여기로 넘긴다. */
+    lateinit var rewardedAd: RewardedAdManager
+        private set
+
     /** 카카오 로그인. AndroidBridge 가 웹 요청을 여기로 넘긴다. */
     lateinit var kakaoLogin: KakaoLoginManager
     lateinit var naverLogin: NaverLoginManager
@@ -272,9 +276,18 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread { binding.webView.evaluateJavascript(js, null) }
         }
 
+        rewardedAd = RewardedAdManager(this) { requestId, payload ->
+            val js = "window.__rewardedAdBridge && window.__rewardedAdBridge.resolve(" +
+                org.json.JSONObject.quote(requestId) + "," + payload.toString() + ")"
+            runOnUiThread { binding.webView.evaluateJavascript(js, null) }
+        }
+
         binding.webView.addJavascriptInterface(AndroidBridge(this), "Android")
 
-        MobileAds.initialize(this)
+        MobileAds.initialize(this) {
+            // 보석함을 열 때 바로 띄울 수 있게 미리 받아 둔다.
+            rewardedAd.preload()
+        }
         // 배너는 웹이 네트워크를 알려줄 때(applyAdSlot) 만든다.
 
         if (savedInstanceState == null) {

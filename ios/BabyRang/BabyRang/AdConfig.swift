@@ -23,6 +23,20 @@ enum AdConfig {
         #endif
     }
 
+    /// 보석함 '광고 보고 보석 받기' 보상형 단위.
+    ///
+    /// 보석은 서버가 SSV 콜백을 확인하고 준다(server/src/ad-rewards). 서버의 허용 단위
+    /// 목록에도 같은 값이 있어야 한다.
+    /// ⚠️ 테스트 단위로는 SSV 콜백이 오지 않는다 — DEBUG 에서는 광고만 뜨고 보석은 안 들어온다.
+    static var rewardedUnitID: String {
+        #if DEBUG
+        // Google 공식 테스트 보상형 단위.
+        "ca-app-pub-3940256099942544/1712485313"
+        #else
+        "ca-app-pub-6008464533427245/9205023206"
+        #endif
+    }
+
     /// 카카오 애드핏 하단 배너 단위(매체: 베이비룸 iOS, 번들 kr.spectrify.baby-rang, 320x50).
     ///
     /// 갱신 주기(60초)는 애드핏 플랫폼의 광고 단위 설정에서 정한다. 앱에서 따로 타이머를

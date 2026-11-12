@@ -25,6 +25,7 @@ import { TestsModule } from './tests/tests.module';
 import { ScreenPreferenceModule } from './screen-preference/screen-preference.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { AdRewardsModule } from './ad-rewards/ad-rewards.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     ScreenPreferenceModule,
     AppSettingsModule,
     RealtimeModule,
+    AdRewardsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

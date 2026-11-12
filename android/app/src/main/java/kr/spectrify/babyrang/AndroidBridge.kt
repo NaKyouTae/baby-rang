@@ -99,6 +99,19 @@ class AndroidBridge(private val activity: MainActivity) {
     }
 
     /**
+     * 보상형 광고를 띄운다. 결과는 window.__rewardedAdBridge.resolve 로 돌아간다.
+     * rewardId·userId 는 서버가 만든 시청 건으로, SSV 콜백에 실려 서버로 돌아간다.
+     */
+    @JavascriptInterface
+    fun showRewardedAd(json: String) {
+        val o = JSONObject(json)
+        val requestId = o.optString("requestId")
+        val rewardId = o.optString("rewardId")
+        val userId = o.optString("userId")
+        activity.runOnUiThread { activity.rewardedAd.request(requestId, rewardId, userId) }
+    }
+
+    /**
      * 배너 슬롯 위치 보고. 웹의 AppAdSlotReporter 가 호출한다.
      *
      * @JavascriptInterface 는 JS 객체를 그대로 못 받아서 JSON 문자열로 주고받는다.

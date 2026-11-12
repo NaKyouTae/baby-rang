@@ -20,6 +20,21 @@ object AdConfig {
             "ca-app-pub-6008464533427245/5442054978"
         }
 
+    /**
+     * 보석함 '광고 보고 보석 받기' 보상형 단위. 보석은 서버가 SSV 콜백을 확인하고 준다
+     * (server/src/ad-rewards). 서버의 허용 단위 목록에도 같은 값이 있어야 한다.
+     *
+     * ⚠️ 테스트 단위로는 SSV 콜백이 오지 않는다 — 디버그 빌드에서는 광고는 뜨지만
+     *    보석은 들어오지 않는다.
+     */
+    val rewardedUnitId: String
+        get() = if (BuildConfig.DEBUG) {
+            // Google 공식 테스트 보상형 단위.
+            "ca-app-pub-3940256099942544/5224354917"
+        } else {
+            "ca-app-pub-6008464533427245/1670148112"
+        }
+
     /** 애드핏 하단 배너(320x50). 매체: 베이비룸 AOS(kr.spectrify.baby_rang). */
     const val adfitBottomBannerUnitId = "DAN-hxjZ4ij9pP2RuddW"
 

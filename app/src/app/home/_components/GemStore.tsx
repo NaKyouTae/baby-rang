@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { GemIcon } from './icons';
 import { useCoinCheckout, type CoinPack, type PayRoute } from './useCoinCheckout';
+import { useAdReward } from './useAdReward';
 import Loading from '@/components/Loading';
 
 type Tab = 'charge' | 'charges' | 'spends';
@@ -98,6 +99,7 @@ export default function GemStore({
     onCharged();
   }, [onCharged]);
   const checkout = useCoinCheckout({ packs, childId, onCharged: handleCharged });
+  const adReward = useAdReward({ open, childId, onCharged });
 
   // 닫을 때 탭을 처음으로 되돌린다 — 다시 열었을 때 '사용 내역'이 떠 있으면
   // 충전하러 들어온 사람이 길을 잃는다.
@@ -168,7 +170,7 @@ export default function GemStore({
       </div>
 
       <div className={`${BOX} flex-1 min-h-0 overflow-y-auto`}>
-        {tab === 'charge' && <ChargeList packs={packs} checkout={checkout} />}
+        {tab === 'charge' && <ChargeList packs={packs} checkout={checkout} adReward={adReward} />}
         {tab === 'charges' && <ChargeHistory rows={childId ? charges : []} />}
         {tab === 'spends' && <SpendHistory rows={childId ? spends : []} />}
       </div>
@@ -185,24 +187,46 @@ const ROW = 'border-b border-[#121212] w-full p-[10px]';
 function ChargeList({
   packs,
   checkout,
+  adReward,
 }: {
   packs: CoinPack[] | null;
   checkout: ReturnType<typeof useCoinCheckout>;
+  adReward: ReturnType<typeof useAdReward>;
 }) {
   if (packs === null) return <Notice><Loading /></Notice>;
 
+  const adUsed = adReward.remaining === 0;
+  const adBlocked = !adReward.available || adReward.busy || adUsed;
+
   return (
     <>
-      {/* 보석 1개는 광고 보상이라 결제 상품이 아니다 — 서버 카탈로그에 없다. */}
-      <div className={`${ROW} h-[66px] flex items-center justify-between`}>
+      {/* 보석 1개는 광고 보상이라 결제 상품이 아니다 — 서버 카탈로그에 없다.
+          광고는 네이티브 앱에서만 띄울 수 있다. 웹·TWA·예전 앱 빌드에서는 막아 둔다. */}
+      <button
+        type="button"
+        onClick={() => void adReward.watch()}
+        disabled={adBlocked}
+        className={`${ROW} h-[66px] flex items-center justify-between active:translate-y-px disabled:active:translate-y-0`}
+      >
         <span className="flex gap-[10px] items-center">
           <GemIcon size={20} />
           <span className="text-[#121212] text-[16px] leading-none tracking-[2px]">보석 1개</span>
+          {adReward.available && adReward.remaining !== null && (
+            <span className="text-[#808991] text-[12px] leading-none tabular-nums">
+              {adUsed ? '내일 다시' : `오늘 ${adReward.remaining}번 남음`}
+            </span>
+          )}
         </span>
-        <span className="h-[36px] px-[12px] rounded-[4px] bg-[#EEF0F1] border border-[#BBC0C5] flex items-center justify-center text-[#BBC0C5] text-[14px] leading-none">
+        <span
+          className={`h-[36px] px-[12px] rounded-[4px] border flex items-center justify-center text-[14px] leading-none ${
+            adBlocked
+              ? 'bg-[#EEF0F1] border-[#BBC0C5] text-[#BBC0C5]'
+              : 'bg-[#FFD200] border-black text-[#121212]'
+          }`}
+        >
           AD
         </span>
-      </div>
+      </button>
 
       {packs.map((p) => {
         const route: PayRoute = checkout.routeFor(p);

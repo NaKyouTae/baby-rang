@@ -43,6 +43,8 @@ struct WebView: UIViewRepresentable {
         contentController.add(context.coordinator, name: KakaoLoginBridge.handlerName)
         // 네이버앱 로그인 브릿지
         contentController.add(context.coordinator, name: NaverLoginBridge.handlerName)
+        // 보석함 보상형 광고 브릿지
+        contentController.add(context.coordinator, name: RewardedAdBridge.handlerName)
 
         // 이 빌드가 띄울 수 있는 배너 네트워크를 웹에 알린다.
         // 웹은 이 값을 보고 adSlot 메시지의 network 를 고른다. 이 스크립트가 없는
@@ -72,6 +74,7 @@ struct WebView: UIViewRepresentable {
         context.coordinator.storeKit.webView = webView
         context.coordinator.kakaoLogin.webView = webView
         context.coordinator.naverLogin.webView = webView
+        context.coordinator.rewardedAd.webView = webView
         context.coordinator.numberPicker.webView = webView
         context.coordinator.dateTimePicker.webView = webView
         // 앱 밖에서 확정된 거래(보호자 승인, 중단 후 복구)를 받아 웹에 넘긴다.
@@ -96,6 +99,8 @@ struct WebView: UIViewRepresentable {
         let kakaoLogin = KakaoLoginBridge()
         /// 네이버앱 로그인을 처리한다.
         let naverLogin = NaverLoginBridge()
+        /// 보석함 보상형 광고를 처리한다.
+        let rewardedAd = RewardedAdBridge()
         let numberPicker = NumberPickerBridge()
         let dateTimePicker = DateTimePickerBridge()
 
@@ -129,6 +134,10 @@ struct WebView: UIViewRepresentable {
             }
             if message.name == NaverLoginBridge.handlerName {
                 MainActor.assumeIsolated { naverLogin.handle(message) }
+                return
+            }
+            if message.name == RewardedAdBridge.handlerName {
+                MainActor.assumeIsolated { rewardedAd.handle(message) }
                 return
             }
 

@@ -497,6 +497,7 @@ model Group {
   children           Child[]
   roomItemOwnerships RoomItemOwnership[]
   coinLedgers        CoinLedger[]
+  adRewards          AdReward[]
 
   @@index([ownerId])
   @@map("groups")
@@ -743,7 +744,7 @@ model CoinLedger {
   groupId   String
   /// 적립은 양수, 사용은 음수.
   delta     Int
-  /// 'PURCHASE'(충전) | 'SPEND'(아이템 구매) | 'REWARD'(기록 보상) 등
+  /// 'PURCHASE'(충전) | 'SPEND'(아이템 구매) | 'REWARD'(기록 보상) | 'AD_REWARD'(광고 시청) 등
   reason    String
   paymentId String?  @unique
   itemId    String?
@@ -753,6 +754,29 @@ model CoinLedger {
 
   @@index([groupId, createdAt])
   @@map("coin_ledgers")
+}
+
+/// 보상형 광고 시청 한 건.
+///
+/// 앱이 광고를 띄우기 전에 만들고(PENDING), AdMob 서버 콜백(SSV)이 서명을 확인해 주면
+/// REWARDED 로 바꾸면서 보석을 준다. 클라이언트의 "다 봤어요" 신호로는 주지 않는다 —
+/// 그 요청만 반복하면 보석을 찍어낼 수 있다.
+/// id 가 광고 요청의 custom_data 로 실려 콜백에 그대로 돌아온다.
+model AdReward {
+  id            String    @id @default(uuid())
+  groupId       String
+  userId        String
+  /// 'PENDING'(시청 전·중) | 'REWARDED'(지급) | 'LIMITED'(하루 한도 초과로 미지급)
+  status        String    @default("PENDING")
+  /// AdMob 이 시청마다 붙이는 거래 id. 같은 콜백이 두 번 와도 한 번만 주려고 유니크를 건다.
+  transactionId String?   @unique
+  createdAt     DateTime  @default(now())
+  rewardedAt    DateTime?
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("ad_rewards")
 }
 
 /// 네이티브 앱(iOS/Android) 하단 배너에 띄울 광고 네트워크.
