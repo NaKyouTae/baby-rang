@@ -16,6 +16,7 @@ import ChildSwitcher from '../home/_components/ChildSwitcher';
 import { BOX, NoChildBox, PIXEL_FONT, PIXEL_FONT_HREF } from '../growth-record/pixelUi';
 import { calcChildAge } from '@/lib/childAge';
 import { groupTwins } from '@/lib/twins';
+import { track } from '@/lib/analytics';
 
 /** 선택된 칸 — #FFD200 10% 를 흰 바탕 위에 겹쳐 불투명하게 칠한다(패턴 탭과 같은 색). */
 const SELECTED_BG = 'linear-gradient(rgba(255,210,0,0.1), rgba(255,210,0,0.1)), #FDFDFE';
@@ -203,11 +204,12 @@ export default function PhysicalGrowthClient() {
           body: JSON.stringify(body),
         });
       } else {
-        await fetch('/api/physical-growth', {
+        const res = await fetch('/api/physical-growth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
+        if (res.ok) track('record_create', { record_type: 'PHYSICAL_GROWTH', source: 'physical_growth' });
       }
       resetForm();
       setShowForm(false);

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIsAndroidApp } from '@/lib/isAndroidApp';
 import { useIsIosApp } from '@/lib/isNativeApp';
+import { track } from '@/lib/analytics';
 import { purchaseWithPlay, usePlayProducts } from '@/lib/playBilling';
 import {
   IOS_LEGACY_TOSS_ENABLED,
@@ -39,6 +40,20 @@ export type CoinPack = {
  *    외부 결제 유도는 Play·App Store 양쪽 모두에서 그 자체로 정책 위반이다.
  */
 export type PayRoute = 'pending' | 'none' | 'toss' | 'play' | 'appStore';
+
+/**
+ * GA4 purchase 이벤트. 금액은 서버 상품가(원) 기준이다 — 스토어 가격표와
+ * 어긋날 수 있지만 매출의 정확한 값은 스토어·결제 내역에서 본다.
+ */
+function trackPurchase(orderId: string, pack: CoinPack, paymentType: string) {
+  track('purchase', {
+    transaction_id: orderId,
+    value: pack.price,
+    currency: 'KRW',
+    item_name: pack.name,
+    payment_type: paymentType,
+  });
+}
 
 /** 토스 결제를 마치고 돌아올 곳. 돌아오면 보석함을 다시 연다(HomeClient). */
 const TOSS_RETURN = '/home?gems=1';
@@ -159,6 +174,7 @@ export function useCoinCheckout({
     if (!res.ok || !data.orderId) throw new Error(data?.message ?? '결제 승인에 실패했습니다.');
 
     clearPendingPurchase();
+    trackPurchase(data.orderId, pack, 'google_play');
     onCharged();
   };
 
@@ -189,6 +205,7 @@ export function useCoinCheckout({
     // StoreKit 이 막아주지 않는다). 미완료로 두면 같은 거래가 재사용된다.
     finishAppStoreTransaction(transactionId);
     clearPendingPurchase();
+    trackPurchase(data.orderId, pack, 'app_store');
     onCharged();
   };
 

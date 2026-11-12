@@ -10,6 +10,7 @@ import LoginErrorNotice from "@/components/LoginErrorNotice";
 import SplashProvider from "@/components/SplashProvider";
 import BottomAdBar from "@/components/BottomAdBar";
 import AppAdSlotReporter from "@/components/ads/AppAdSlotReporter";
+import AnalyticsBridge from "@/components/AnalyticsBridge";
 import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
 import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
@@ -305,6 +306,7 @@ export default function RootLayout({
             </div>
             <BottomAdBar />
             <AppAdSlotReporter />
+            <AnalyticsBridge />
             <AppStorePurchaseRecovery />
             <AndroidPurchaseRecovery />
           </div>

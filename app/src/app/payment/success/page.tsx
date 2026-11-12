@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Loading from '@/components/Loading';
+import { track } from '@/lib/analytics';
 
 export default function PaymentSuccessPage() {
   return (
@@ -61,6 +62,13 @@ function PaymentSuccessContent() {
         }
 
         const data = await res.json();
+        track('purchase', {
+          transaction_id: data.orderId,
+          value: amount,
+          currency: 'KRW',
+          item_name: productName || productType,
+          payment_type: 'toss',
+        });
         const url = new URL(redirectTo, window.location.origin);
         url.searchParams.set('paymentStatus', 'success');
         url.searchParams.set('orderId', data.orderId);

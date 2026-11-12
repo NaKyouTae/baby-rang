@@ -34,6 +34,7 @@ import { useLockAppScroll } from '@/hooks/useLockAppScroll';
 import ChildSwitcher from '../home/_components/ChildSwitcher';
 import { calcChildAge } from '@/lib/childAge';
 import { groupTwins } from '@/lib/twins';
+import { track } from '@/lib/analytics';
 import { BOX, NoChildBox, PIXEL_FONT, PIXEL_FONT_HREF, RECORD_EMOJI } from './pixelUi';
 
 // 삭제 버튼은 기록 행 높이만큼 정사각형(Figma 66px)
@@ -804,6 +805,7 @@ export default function GrowthRecordPage() {
           headers: realtimeHeaders(),
         });
         if (res.ok) {
+          track('record_create', { record_type: type, source: 'record_quick' });
           reloadWidget();
           // 오버레이가 이미 떠 있으므로 목록 갱신은 조용히
           await reload(undefined, { silent: true });

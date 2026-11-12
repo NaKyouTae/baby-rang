@@ -25,6 +25,8 @@ export type AuthUser = {
   profileImage: string | null;
   parentRole?: string | null;
   onboardedAt?: string | null;
+  /** 가입 시각(ISO). GA 가입 이벤트 판별에 쓴다. */
+  createdAt?: string;
   providers?: string[];
   /** 이름·전화번호 동의항목 도입 전에 가입해 추가 정보가 필요한 회원인지. */
   needsAdditionalInfo?: boolean;

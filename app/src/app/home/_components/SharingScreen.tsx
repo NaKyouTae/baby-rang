@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { refreshChildrenCache } from '@/hooks/useChildren';
+import { track } from '@/lib/analytics';
 import ConfirmModal from './ConfirmModal';
 
 /** 디자인의 공통 상자 — 흰 바탕에 1px 검정 테두리, 모서리 4px. */
@@ -134,6 +135,7 @@ export default function SharingScreen({ open, onBack }: Props) {
     if (!code) return;
     try {
       await copyToClipboard(code);
+      track('share', { method: 'copy', content_type: 'family_code' });
       setCopied(true);
       if (copyToastTimerRef.current) clearTimeout(copyToastTimerRef.current);
       copyToastTimerRef.current = setTimeout(() => setCopied(false), 1500);
@@ -153,6 +155,7 @@ export default function SharingScreen({ open, onBack }: Props) {
         title: '베이비룸 기록 공유',
         text: `베이비룸에서 기록을 함께 볼 수 있어요.\n공유 코드: ${code}`,
       });
+      track('share', { method: 'native_share', content_type: 'family_code' });
     } catch {
       /* 취소 */
     }
@@ -174,6 +177,7 @@ export default function SharingScreen({ open, onBack }: Props) {
         return;
       }
       setJoinCode('');
+      track('join_group');
       // 볼 수 있는 아이가 늘었으니 전역 아이 목록도 새로 받는다
       await Promise.all([fetchGroups(), refreshChildrenCache()]);
     } catch {

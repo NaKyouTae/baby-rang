@@ -35,6 +35,7 @@ import MyPage from './MyPage';
 import { formatElapsed, useLastRecords } from './useLastRecords';
 import { useHistoryPanels } from './useHistoryPanels';
 import { useWindowSky } from './useWindowSky';
+import { track } from '@/lib/analytics';
 
 type DemoChild = { id: string; name: string; gender: string; birthDate: string };
 
@@ -720,6 +721,8 @@ export default function HomeClient() {
         );
         if (res.ok) {
           succeeded = true;
+          // 수면 종료는 기존 기록을 닫는 것이라 새 기록으로 세지 않는다.
+          if (!pendingSleepRecordId) track('record_create', { record_type: type, source: 'home_quick' });
           const savedRecord = await res.json().catch(() => null);
           if (type === 'SLEEP') {
             if (pendingSleepRecordId) {

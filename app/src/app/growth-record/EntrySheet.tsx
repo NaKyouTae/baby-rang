@@ -24,6 +24,7 @@ import {
 } from './recordDefaults';
 import { reloadWidget } from '@/lib/widgetBridge';
 import { realtimeHeaders } from '@/lib/realtime';
+import { track } from '@/lib/analytics';
 import Loading from '@/components/Loading';
 
 function rangeFor(
@@ -565,6 +566,7 @@ export default function EntrySheet({
       const method = initial ? 'PATCH' : 'POST';
       const res = await fetch(url, { method, body: fd, headers: realtimeHeaders() });
       if (res.ok) {
+        if (!initial) track('record_create', { record_type: type, source: 'entry_sheet' });
         reloadWidget();
         onSaved();
         onClose();

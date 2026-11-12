@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { useLoginPrompt } from '@/components/LoginPromptProvider';
 import { toKstYmd } from '@/lib/childAge';
+import { track } from '@/lib/analytics';
 import {
   cachedChildren,
   childrenCacheLoaded,
@@ -152,7 +153,10 @@ export function useChildren() {
         method: 'POST',
         body: formData,
       });
-      if (res.ok) await fetchChildren();
+      if (res.ok) {
+        track('child_register', { has_due_date: !!dueDate });
+        await fetchChildren();
+      }
     },
     [fetchChildren, requireLogin],
   );
