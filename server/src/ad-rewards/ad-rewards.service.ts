@@ -12,7 +12,7 @@ import { startOfKstDay } from '../coins/coin-rewards';
 /** 광고 한 편을 끝까지 보면 주는 보석. */
 export const AD_REWARD_COINS = 1;
 /** 그룹당 하루(KST) 광고 보상 횟수. */
-export const AD_REWARD_DAILY_LIMIT = 5;
+export const AD_REWARD_DAILY_LIMIT = 3;
 
 /**
  * 보석을 줄 수 있는 보상형 광고 단위(AdMob 광고 단위 ID 의 '/' 뒤 숫자).
