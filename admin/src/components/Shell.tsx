@@ -9,6 +9,7 @@ import {
   Brain,
   ClipboardList,
   CreditCard,
+  Gem,
   HelpCircle,
   Image,
   LayoutDashboard,
@@ -71,6 +72,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/users", label: "사용자", icon: Users },
       { href: "/payments", label: "결제 내역", icon: CreditCard },
+      { href: "/coins", label: "보석함", icon: Gem },
       { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
       { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
     ],

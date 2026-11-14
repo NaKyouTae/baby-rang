@@ -417,6 +417,71 @@ export class AdminController {
     });
   }
 
+  // ===== Coins =====
+  /**
+   * 보석 적립 내역(사용은 빼고). 보석은 가족(그룹) 단위라 원장에 받은 사람이 없다 —
+   * 결제는 결제한 사람, 나머지는 가족 대표를 사용자로 보여준다.
+   */
+  @Get('coin-ledgers')
+  async coinLedgers(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('reason') reason?: string,
+  ) {
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const where = { delta: { gt: 0 }, ...(reason ? { reason } : {}) };
+    const user = { select: { id: true, name: true, email: true } };
+    const [rows, total] = await Promise.all([
+      this.prisma.coinLedger.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (p - 1) * l,
+        take: l,
+        include: {
+          group: {
+            select: {
+              id: true,
+              coins: true,
+              owner: user,
+              _count: { select: { members: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.coinLedger.count({ where }),
+    ]);
+
+    const paymentIds = rows.flatMap((r) => (r.paymentId ? [r.paymentId] : []));
+    const payments = paymentIds.length
+      ? await this.prisma.payment.findMany({
+          where: { id: { in: paymentIds } },
+          select: { id: true, productName: true, amount: true, user },
+        })
+      : [];
+    const paymentById = new Map(payments.map((pm) => [pm.id, pm]));
+
+    const items = rows.map((r) => {
+      const payment = r.paymentId ? paymentById.get(r.paymentId) : undefined;
+      return {
+        id: r.id,
+        delta: r.delta,
+        reason: r.reason,
+        createdAt: r.createdAt,
+        user: payment?.user ?? r.group.owner,
+        payment: payment
+          ? { productName: payment.productName, amount: payment.amount }
+          : null,
+        group: {
+          id: r.group.id,
+          coins: r.group.coins,
+          memberCount: r.group._count.members,
+        },
+      };
+    });
+    return { items, total, page: p, limit: l };
+  }
+
   // ===== Banners =====
   @Get('banners')
   async listBanners() {
