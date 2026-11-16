@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/utils";
 
 type PaymentRow = {
   id: string;
@@ -91,7 +92,7 @@ export default async function PaymentsPage({
             </div>
             <div className="mt-3 flex justify-between text-xs text-muted-foreground">
               <span>{p.amount.toLocaleString()}원</span>
-              <span>{new Date(p.createdAt).toLocaleString()}</span>
+              <span>{formatDateTime(p.createdAt)}</span>
             </div>
             <div className="mt-3 flex gap-2">
               {p.receiptUrl && (
@@ -147,7 +148,7 @@ export default async function PaymentsPage({
                 </TableCell>
                 <TableCell className="text-muted-foreground">{p.method ?? p.provider}</TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  {new Date(p.createdAt).toLocaleString()}
+                  {formatDateTime(p.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">

@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
 import { adminFetch } from "@/lib/api";
+import { formatDateTime } from "@/lib/utils";
 
 type Summary = {
   days: number;
@@ -47,7 +48,7 @@ export default async function CrawlerVisitsPage() {
                   <p className="truncate text-sm font-semibold">{b.bot}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                     {b.lastSeenAt
-                      ? `마지막 방문 ${new Date(b.lastSeenAt).toLocaleString("ko-KR")}`
+                      ? `마지막 방문 ${formatDateTime(b.lastSeenAt)}`
                       : "방문 기록 없음"}
                   </p>
                 </div>

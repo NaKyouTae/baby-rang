@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/Modal";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
 export type UserRow = {
   id: string;
@@ -131,13 +132,6 @@ function ageRangeLabel(ageRange: string | null | undefined) {
   return ageRange.endsWith("-") ? `${start}대 이상` : `${start}대`;
 }
 
-function fmtDate(v: string | null | undefined) {
-  return v ? new Date(v).toLocaleDateString() : "-";
-}
-
-function fmtDateTime(v: string | null | undefined) {
-  return v ? new Date(v).toLocaleString() : "-";
-}
 
 // "3일 전"처럼 상대 시각으로 표기. 7일 이상은 날짜로.
 function fmtRelative(v: string | null | undefined) {
@@ -152,7 +146,7 @@ function fmtRelative(v: string | null | undefined) {
   if (hr < 24) return `${hr}시간 전`;
   const day = Math.floor(hr / 24);
   if (day < 7) return `${day}일 전`;
-  return new Date(v).toLocaleDateString();
+  return formatDate(v);
 }
 
 export default function UsersClient({
@@ -304,7 +298,7 @@ export default function UsersClient({
                   {fmtRelative(u.lastActiveAt)}
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  {fmtDate(u.createdAt)}
+                  {formatDate(u.createdAt)}
                 </TableCell>
               </TableRow>
             ))}
@@ -356,8 +350,8 @@ export default function UsersClient({
                 <Field label="전화번호" value={fmtPhone(detail.phone)} />
                 <Field label="성별" value={genderLabel(detail.gender)} />
                 <Field label="연령대" value={ageRangeLabel(detail.ageRange)} />
-                <Field label="가입일" value={fmtDateTime(detail.createdAt)} />
-                <Field label="온보딩" value={fmtDateTime(detail.onboardedAt)} />
+                <Field label="가입일" value={formatDateTime(detail.createdAt)} />
+                <Field label="온보딩" value={formatDateTime(detail.onboardedAt)} />
                 <Field
                   label="마지막 활동"
                   value={
@@ -365,7 +359,7 @@ export default function UsersClient({
                       <>
                         {fmtRelative(detail.lastActiveAt)}
                         <span className="ml-1 text-xs font-normal text-muted-foreground">
-                          ({fmtDateTime(detail.lastActiveAt)})
+                          ({formatDateTime(detail.lastActiveAt)})
                         </span>
                       </>
                     ) : (
@@ -440,7 +434,7 @@ export default function UsersClient({
                       <div className="min-w-0">
                         <div className="font-medium">{c.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {GENDER_LABELS[c.gender] ?? c.gender} · {fmtDate(c.birthDate)}
+                          {GENDER_LABELS[c.gender] ?? c.gender} · {formatDate(c.birthDate)}
                         </div>
                       </div>
                     </div>
@@ -468,7 +462,7 @@ export default function UsersClient({
                         <div className="min-w-0">
                           <div className="truncate text-sm font-medium">{p.productName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {fmtDate(p.createdAt)}
+                            {formatDate(p.createdAt)}
                           </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-2">

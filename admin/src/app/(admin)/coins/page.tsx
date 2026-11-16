@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDateTime } from "@/lib/utils";
 
 type CoinRow = {
   id: string;
@@ -93,7 +94,7 @@ export default async function CoinsPage({
               </div>
               <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground">+{c.delta}개</span>
-                <span>{new Date(c.createdAt).toLocaleString()}</span>
+                <span>{formatDateTime(c.createdAt)}</span>
               </div>
             </Card>
           );
@@ -139,7 +140,7 @@ export default async function CoinsPage({
                     {c.group.coins.toLocaleString()}개
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {new Date(c.createdAt).toLocaleString()}
+                    {formatDateTime(c.createdAt)}
                   </TableCell>
                 </TableRow>
               );

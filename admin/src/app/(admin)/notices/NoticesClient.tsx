@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { formatDateTime } from "@/lib/utils";
 
 type Notice = {
   id: string;
@@ -135,7 +136,7 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground truncate mt-1 tabular-nums">
-                {new Date(n.publishedAt).toLocaleString("ko-KR")}
+                {formatDateTime(n.publishedAt)}
               </p>
             </div>
             <div className="flex gap-1.5 self-end sm:self-auto">
