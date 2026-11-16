@@ -419,8 +419,8 @@ export class AdminController {
 
   // ===== Coins =====
   /**
-   * 보석 적립 내역(사용은 빼고). 보석은 가족(그룹) 단위라 원장에 받은 사람이 없다 —
-   * 결제는 결제한 사람, 나머지는 가족 대표를 사용자로 보여준다.
+   * 보석 적립 내역(사용은 빼고). 보석은 가족(그룹) 것이고, 사용자는 받게 한 사람
+   * (기록·광고·결제한 사람)이다. 그게 비어 있는 옛 행은 결제한 사람, 그다음 가족 대표로 보여준다.
    */
   @Get('coin-ledgers')
   async coinLedgers(
@@ -439,6 +439,7 @@ export class AdminController {
         skip: (p - 1) * l,
         take: l,
         include: {
+          user,
           group: {
             select: {
               id: true,
@@ -468,7 +469,7 @@ export class AdminController {
         delta: r.delta,
         reason: r.reason,
         createdAt: r.createdAt,
-        user: payment?.user ?? r.group.owner,
+        user: r.user ?? payment?.user ?? r.group.owner,
         payment: payment
           ? { productName: payment.productName, amount: payment.amount }
           : null,

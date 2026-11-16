@@ -57,7 +57,7 @@ export class PhysicalGrowthService {
           memo: input.memo ?? null,
         },
       });
-      await rewardRecord(tx, input.childId);
+      await rewardRecord(tx, input.childId, userId);
       return record;
     });
   }

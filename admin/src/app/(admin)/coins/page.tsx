@@ -56,7 +56,7 @@ export default async function CoinsPage({
     <div>
       <PageHeader
         title="보석함"
-        description="결제·광고·기록 보상·가입으로 보석을 받은 내역입니다. 보석은 가족 단위라, 결제가 아니면 가족 대표를 사용자로 표시합니다."
+        description="결제·광고·기록 보상·가입으로 보석을 받은 내역입니다. 사용자는 기록·광고·결제를 한 사람이고, 보석은 그 가족이 함께 씁니다."
       />
 
       <div className="flex flex-wrap gap-2 mb-4">

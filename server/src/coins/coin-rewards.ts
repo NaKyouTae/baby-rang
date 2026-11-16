@@ -31,6 +31,7 @@ export const signupCoins = {
 export async function rewardRecord(
   tx: Prisma.TransactionClient,
   childId: string,
+  userId: string,
 ) {
   const child = await tx.child.findUnique({
     where: { id: childId },
@@ -54,6 +55,7 @@ export async function rewardRecord(
       groupId: child.groupId,
       delta: RECORD_REWARD_COINS,
       reason: 'REWARD',
+      userId,
     },
   });
   await tx.group.update({

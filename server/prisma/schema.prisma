@@ -51,6 +51,7 @@ model User {
   groupMemberships       GroupMember[]
   // 본인이 owner인 그룹들. owner 탈퇴 시 다른 멤버에게 자동 이양된다.
   ownedGroups            Group[]                 @relation("groupOwner")
+  coinLedgers            CoinLedger[]
 
   @@map("users")
 }
@@ -748,9 +749,12 @@ model CoinLedger {
   reason    String
   paymentId String?  @unique
   itemId    String?
+  /// 보석을 받게 한 사람(기록한 사람·광고 본 사람·결제한 사람). 보석은 가족 것이라 참고용이다.
+  userId    String?
   createdAt DateTime @default(now())
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([groupId, createdAt])
   @@map("coin_ledgers")

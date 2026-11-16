@@ -490,7 +490,7 @@ export class GrowthRecordsService {
       });
       if (reward) await this.rememberRecordAmounts(tx, record);
       // 가져오기는 수천 건이 한 번에 들어온다. 그만큼 보석을 주면 재화가 무너진다.
-      if (reward) await rewardRecord(tx, input.childId);
+      if (reward) await rewardRecord(tx, input.childId, userId);
       return { record, action: 'created' as const };
     });
     if (notify) {

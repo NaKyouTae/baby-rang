@@ -64,7 +64,7 @@ export class InventoryService {
         status: 'PAID',
         productType: { in: COIN_PRODUCT_TYPES },
       },
-      select: { id: true, productType: true },
+      select: { id: true, productType: true, userId: true },
     });
     if (!paid.length) return;
 
@@ -89,6 +89,7 @@ export class InventoryService {
               delta: coins,
               reason: 'PURCHASE',
               paymentId: payment.id,
+              userId: payment.userId,
             },
           }),
           this.prisma.group.update({

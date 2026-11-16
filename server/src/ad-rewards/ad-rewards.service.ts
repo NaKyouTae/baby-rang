@@ -172,6 +172,7 @@ export class AdRewardsService {
             groupId: reward.groupId,
             delta: AD_REWARD_COINS,
             reason: 'AD_REWARD',
+            userId: reward.userId,
           },
         });
         await tx.group.update({
