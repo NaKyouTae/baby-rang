@@ -8,7 +8,7 @@ import type { GrowthRecord } from '@/app/growth-record/types';
 /** 디자인의 공통 상자 — 흰 바탕에 1px 검정 테두리, 모서리 4px. */
 const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 
-const PERIODS = [3, 7, 14] as const;
+const PERIODS = [1, 3, 7] as const;
 
 const LoadingContext = createContext(false);
 type Period = (typeof PERIODS)[number];
@@ -224,12 +224,12 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                   onClick={() => setPeriod(p)}
                   className={`${BOX} h-[36px] text-[14px] ${p === period ? 'bg-[#FFF6CC]' : ''}`}
                 >
-                  최근 {p}일
+                  {p === 1 ? '오늘 하루' : `최근 ${p}일`}
                 </button>
               ))}
             </div>
             <p className="text-[#808991] text-[12px] text-center tabular-nums">
-              {from} ~ {to} · 하루 평균
+              {period === 1 ? `${to} · 오늘 합계` : `${from} ~ ${to} · 하루 평균`}
             </p>
 
             {error ? (
