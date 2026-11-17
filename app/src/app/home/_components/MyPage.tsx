@@ -221,7 +221,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
         <Section title="활동 관리">
           <LinkRow label="기록 공유" onClick={() => setSharingOpen(true)} />
           <LinkRow label="데이터 가져오기" onClick={() => setImportOpen(true)} />
-          <LinkRow label="진료 요약" onClick={() => setClinicOpen(true)} />
+          <LinkRow label="기록 요약" onClick={() => setClinicOpen(true)} />
         </Section>
 
         <Section title="고객 지원">
