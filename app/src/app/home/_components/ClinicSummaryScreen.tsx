@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useSelectedChild } from '@/hooks/useChildren';
 import { formatChildAge, todayKstYmd } from '@/lib/childAge';
 import type { GrowthRecord } from '@/app/growth-record/types';
@@ -9,6 +9,8 @@ import type { GrowthRecord } from '@/app/growth-record/types';
 const BOX = 'bg-[#FDFDFE] border border-[#121212] rounded-[4px]';
 
 const PERIODS = [3, 7, 14] as const;
+
+const LoadingContext = createContext(false);
 type Period = (typeof PERIODS)[number];
 
 /** 이 이상이면 열로 본다(℃). */
@@ -103,7 +105,7 @@ function summarize(records: GrowthRecord[], days: number) {
  * 숫자 위주로 한 화면에 담아, 진료실에서 바로 훑어볼 수 있게 한다.
  */
 export default function ClinicSummaryScreen({ open, onBack }: Props) {
-  const { children, selectedChild, selectChild } = useSelectedChild();
+  const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
   const [period, setPeriod] = useState<Period>(7);
   const [records, setRecords] = useState<GrowthRecord[] | null>(null);
   const [growth, setGrowth] = useState<PhysicalGrowth | null>(null);
@@ -144,7 +146,9 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
     };
   }, [open, childId, from, to]);
 
-  const s = useMemo(() => (records ? summarize(records, period) : null), [records, period]);
+  // 기록을 받기 전에도 화면 틀은 바로 그린다. 값 자리는 받을 때까지 '-' 로 둔다.
+  const loading = records === null;
+  const s = useMemo(() => summarize(records ?? [], period), [records, period]);
 
   if (!open) return null;
 
@@ -184,19 +188,19 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
           </div>
         )}
 
-        {!selectedChild ? (
+        {isLoaded && !selectedChild ? (
           <p className={`${BOX} p-[16px] text-center text-[#808991] text-[14px]`}>등록된 아기가 없습니다.</p>
         ) : (
           <>
             <div className={`${BOX} p-[12px] flex flex-col gap-[4px]`}>
               <p className="text-[#121212] text-[18px] leading-[1.4]">
-                {selectedChild.name}
+                {selectedChild?.name ?? '-'}
                 <span className="ml-[6px] text-[#808991] text-[14px]">
-                  {selectedChild.gender === 'male' ? '남아' : selectedChild.gender === 'female' ? '여아' : ''}
+                  {selectedChild?.gender === 'male' ? '남아' : selectedChild?.gender === 'female' ? '여아' : ''}
                 </span>
               </p>
               <p className="text-[#808991] text-[13px] leading-[1.4] tabular-nums">
-                {selectedChild.birthDate} 출생 · {formatChildAge(selectedChild.birthDate)}
+                {selectedChild ? `${selectedChild.birthDate} 출생 · ${formatChildAge(selectedChild.birthDate)}` : '-'}
               </p>
               {growth && (
                 <p className="text-[#121212] text-[13px] leading-[1.4] tabular-nums">
@@ -228,13 +232,13 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
               {from} ~ {to} · 하루 평균
             </p>
 
-            {!s ? null : error ? (
+            {error ? (
               <p className={`${BOX} p-[16px] text-center text-[#808991] text-[14px]`}>
                 기록을 불러오지 못했습니다.
               </p>
             ) : (
               <>
-                <Card title="먹기">
+                <Card title="먹기" loading={loading}>
                   <Stat label="수유" value={`${s.perDay(s.feedCount)}회`} />
                   <Stat label="모유" value={`${s.perDay(s.breastCount)}회`} />
                   <Stat
@@ -248,19 +252,19 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                   {s.babyFoodCount > 0 && <Stat label="이유식" value={`${s.perDay(s.babyFoodCount)}회`} />}
                 </Card>
 
-                <Card title="잠">
+                <Card title="잠" loading={loading}>
                   <Stat
                     label="총 수면"
                     value={`${Math.floor(s.sleepMin / period / 60)}시간 ${Math.round((s.sleepMin / period) % 60)}분`}
                   />
                 </Card>
 
-                <Card title="배변">
+                <Card title="배변" loading={loading}>
                   <Stat label="소변" value={`${s.perDay(s.pee)}회`} />
                   <Stat label="대변" value={`${s.perDay(s.poo)}회`} />
                 </Card>
 
-                <Card title="체온">
+                <Card title="체온" loading={loading}>
                   <Stat label="최고 체온" value={s.maxTemp === null ? '기록 없음' : `${s.maxTemp}℃`} />
                   {s.fevers.map((f) => (
                     <Stat key={f.at} label={shortTime(f.at)} value={`${f.c}℃`} accent />
@@ -287,20 +291,26 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+/** 받는 중이면 안의 숫자를 '-' 로 가린다(Stat 이 LoadingContext 를 본다). */
+function Card({ title, loading = false, children }: { title: string; loading?: boolean; children: React.ReactNode }) {
   return (
-    <div className={`${BOX} p-[12px] flex flex-col gap-[8px]`}>
-      <p className="text-[#808991] text-[12px] leading-[1.4]">{title}</p>
-      {children}
-    </div>
+    <LoadingContext.Provider value={loading}>
+      <div className={`${BOX} p-[12px] flex flex-col gap-[8px]`}>
+        <p className="text-[#808991] text-[12px] leading-[1.4]">{title}</p>
+        {children}
+      </div>
+    </LoadingContext.Provider>
   );
 }
 
 function Stat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  const loading = useContext(LoadingContext);
   return (
     <div className="flex items-center justify-between text-[15px] leading-[1.4]">
       <span className="text-[#121212]">{label}</span>
-      <span className={`tabular-nums ${accent ? 'text-[#FF4040]' : 'text-[#121212]'}`}>{value}</span>
+      <span className={`tabular-nums ${accent ? 'text-[#FF4040]' : loading ? 'text-[#808991]' : 'text-[#121212]'}`}>
+        {loading ? '-' : value}
+      </span>
     </div>
   );
 }
