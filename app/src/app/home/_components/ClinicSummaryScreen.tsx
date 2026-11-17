@@ -21,9 +21,6 @@ const PERIODS: { value: ClinicPeriod; label: string }[] = [
   { value: 7, label: '최근 7일' },
 ];
 
-/** 이보다 오래된 키·몸무게 측정은 날짜를 강조한다(일). */
-const STALE_MEASURE_DAYS = 30;
-
 const LoadingContext = createContext(false);
 
 interface PhysicalGrowth {
@@ -58,8 +55,6 @@ function latest(list: PhysicalGrowth[], key: 'heightCm' | 'weightKg' | 'headCirc
   return g ? { value: g[key] as number, date: g.measuredAt.slice(0, 10) } : null;
 }
 
-const memoKey = (childId: string) => `clinicMemo:${childId}`;
-
 /**
  * 기록 요약 — 소아과에서 의료진에게 최근 생활을 빠르게 전하는 한 장.
  * 집계 기준은 lib/clinicSummary 에 있다. 화면은 받기 전에도 틀을 먼저 그린다.
@@ -71,7 +66,6 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
   const [growth, setGrowth] = useState<PhysicalGrowth[]>([]);
   const [error, setError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [memo, setMemo] = useState('');
 
   const childId = selectedChild?.id;
 
@@ -112,42 +106,20 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
     };
   }, [open, childId, period]);
 
-  // 내원 사유 메모는 이 기기에만 둔다(진료 때 보여 주는 용도)
-  useEffect(() => {
-    if (!open || !childId) return;
-    try {
-      setMemo(localStorage.getItem(memoKey(childId)) ?? '');
-    } catch {
-      setMemo('');
-    }
-  }, [open, childId]);
-  const saveMemo = (v: string) => {
-    setMemo(v);
-    if (!childId) return;
-    try {
-      if (v) localStorage.setItem(memoKey(childId), v);
-      else localStorage.removeItem(memoKey(childId));
-    } catch {
-      // 저장 못 해도 화면에는 남는다
-    }
-  };
-
   const loading = records === null;
   const s = useMemo(() => summarizeClinic(records ?? [], period, now), [records, period, now]);
-  const { start } = periodWindow(period, now);
   const avg = period === '24h' ? '' : ' (하루 평균)';
   const perDay = (n: number) => (period === '24h' ? n : n / s.days);
   const height = latest(growth, 'heightCm');
   const weight = latest(growth, 'weightKg');
   const head = latest(growth, 'headCircumCm');
-  const stale = (date: string) => now - Date.parse(`${date}T00:00:00+09:00`) > STALE_MEASURE_DAYS * 86400_000;
 
   if (!open) return null;
 
   return (
     <div
       // 마이페이지(z-20) 는 덮고 하단 광고(z-50) 아래로 깔린다
-      className="absolute inset-0 z-[25] bg-[#F7F8F9] flex flex-col gap-[10px] px-[20px]"
+      className="absolute inset-0 z-[25] bg-[#F7F8F9] flex flex-col gap-[10px] px-[20px] overflow-x-hidden"
       style={{
         paddingTop: 'calc(var(--safe-area-top) + 20px)',
         paddingBottom: 'calc(var(--bottom-nav-space) + 20px)',
@@ -162,7 +134,8 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
         <span className="size-[24px]" />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col gap-[10px]">
+      {/* 손그림 테두리가 상자 밖으로 조금 삐져나와 가로 스크롤이 생긴다 — 가로는 막고, 잘리지 않게 양옆 4px 여유를 둔다 */}
+      <div className="flex-1 min-h-0 min-w-0 -mx-[4px] px-[4px] overflow-y-auto overflow-x-hidden overscroll-contain flex flex-col gap-[10px]">
         {children.length > 1 && (
           <div className="flex gap-[6px] overflow-x-auto shrink-0">
             {children.map((c) => (
@@ -206,9 +179,7 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                       {label} {m ? `${m.value}${unit}` : '기록 없음'}
                     </span>
                     {m && (
-                      <span className={stale(m.date) ? 'text-[#E07000]' : 'text-[#808991]'}>
-                        {m.date} 측정{stale(m.date) ? ' (오래됨)' : ''}
-                      </span>
+                      <span className="text-[#808991]">{m.date} 측정</span>
                     )}
                   </p>
                 ))}
@@ -228,13 +199,9 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                 </button>
               ))}
             </div>
-            <div className="text-[#808991] text-[12px] leading-[1.5] text-center tabular-nums">
-              <p>
-                {shortTime(start)} ~ {shortTime(now)}
-                {period === '24h' ? ' · 합계' : ` · 하루 평균(${fmt1(s.days)}일 기준)`}
-              </p>
-              <p>{shortTime(now)} 생성{period !== '24h' && ' · 오늘 기록은 집계 중'}</p>
-            </div>
+            <p className="text-[#808991] text-[12px] leading-[1.5] text-center">
+              {period === '24h' ? '합계' : '하루 평균'}
+            </p>
 
             {error ? (
               <p className={`${BOX} p-[16px] text-center text-[#808991] text-[14px]`}>기록을 불러오지 못했습니다.</p>
@@ -294,7 +261,6 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                     <>
                       <Stat label="소변" value={`${fmt1(perDay(s.diaper.pee))}회`} />
                       <Stat label="대변" value={`${fmt1(perDay(s.diaper.poo))}회`} />
-                      <Note>기저귀를 기록한 횟수라 실제 횟수와 다를 수 있어요.</Note>
                     </>
                   ) : (
                     <Stat label="기저귀" value="기록 없음" muted />
@@ -343,22 +309,6 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                   </Card>
                 )}
 
-                <div className={`${BOX} p-[12px] flex flex-col gap-[8px]`}>
-                  <p className="text-[#808991] text-[12px] leading-[1.4]">내원 사유 · 보호자 메모</p>
-                  <textarea
-                    value={memo}
-                    onChange={(e) => saveMemo(e.target.value)}
-                    rows={3}
-                    maxLength={500}
-                    placeholder="예) 어제 밤부터 열이 나고 분유를 평소보다 덜 먹어요."
-                    className="w-full resize-none bg-transparent text-[#121212] text-[16px] leading-[1.4] outline-none placeholder:text-[#B0B8C1]"
-                  />
-                </div>
-
-                <p className="px-[4px] pb-[8px] text-[#808991] text-[11px] leading-[1.5]">
-                  보호자가 남긴 기록을 그대로 모은 요약이에요. 의학적 판단이나 진단이 아닙니다.
-                  평균은 조회 시작부터 지금까지 지난 시간으로 나누고, 체온·복용약은 실제 기록을 보여줘요.
-                </p>
               </>
             )}
           </>
