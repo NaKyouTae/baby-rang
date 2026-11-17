@@ -106,7 +106,7 @@ function summarize(records: GrowthRecord[], days: number) {
  */
 export default function ClinicSummaryScreen({ open, onBack }: Props) {
   const { children, isLoaded, selectedChild, selectChild } = useSelectedChild();
-  const [period, setPeriod] = useState<Period>(7);
+  const [period, setPeriod] = useState<Period>(3);
   const [records, setRecords] = useState<GrowthRecord[] | null>(null);
   const [growth, setGrowth] = useState<PhysicalGrowth | null>(null);
   const [error, setError] = useState(false);
