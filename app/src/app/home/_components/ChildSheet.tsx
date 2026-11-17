@@ -110,7 +110,13 @@ export default function ChildSheet({ open, child, onClose }: Props) {
     setBusy(true);
     try {
       const res = await fetch(`/api/children/${child.id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        // 서버가 이유를 알려 주면(공유받은 아기 등) 그대로 보여준다
+        const data = await res.json().catch(() => null);
+        setConfirmOpen(false);
+        alert(data?.message ?? '삭제하지 못했어요.\n잠시 후 다시 시도해 주세요.');
+        return;
+      }
       await refreshChildrenCache();
       onClose();
     } catch {
@@ -224,7 +230,14 @@ export default function ChildSheet({ open, child, onClose }: Props) {
             {isEdit && (
               <button
                 type="button"
-                onClick={() => setConfirmOpen(true)}
+                onClick={() =>
+                  // 공유받은 아기는 처음 등록한 가족(그룹 소유자)만 지울 수 있다 — 확인 창을 띄우기 전에 알린다
+                  child?.isShared
+                    ? alert(
+                        `공유받은 아기는 ${child.ownerNickname ? `${child.ownerNickname}님만` : '처음 등록한 사람만'} 삭제할 수 있어요.`,
+                      )
+                    : setConfirmOpen(true)
+                }
                 disabled={busy}
                 className="flex-1 min-w-0 h-[52px] px-[20px] rounded-[4px] border border-[#121212] bg-[#EEF0F1] text-[#121212] text-[16px] leading-none active:translate-y-px disabled:opacity-60"
               >

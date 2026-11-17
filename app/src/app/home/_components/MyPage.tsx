@@ -9,6 +9,7 @@ import { clearAuthCaches } from '@/hooks/appCache';
 import { openLocationSettings, getLocationSettingsGuide } from '@/lib/openLocationSettings';
 import SharingScreen from './SharingScreen';
 import ImportScreen from './ImportScreen';
+import ClinicSummaryScreen from './ClinicSummaryScreen';
 import NoticesScreen from './NoticesScreen';
 import ChildSheet from './ChildSheet';
 import ProfileSheet from './ProfileSheet';
@@ -37,6 +38,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
   const { children } = useChildren();
   const [sharingOpen, setSharingOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [clinicOpen, setClinicOpen] = useState(false);
   const [noticesOpen, setNoticesOpen] = useState(false);
   // 아기 정보 시트. null 이면 닫힘, child 가 null 이면 새로 등록.
   const [childSheet, setChildSheet] = useState<{ child: Child | null } | null>(null);
@@ -219,6 +221,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
         <Section title="활동 관리">
           <LinkRow label="기록 공유" onClick={() => setSharingOpen(true)} />
           <LinkRow label="데이터 가져오기" onClick={() => setImportOpen(true)} />
+          <LinkRow label="진료 요약" onClick={() => setClinicOpen(true)} />
         </Section>
 
         <Section title="고객 지원">
@@ -281,6 +284,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
     {/* 스크롤되는 설정 화면 밖에 둬야 스크롤 위치와 상관없이 화면을 꽉 채운다 */}
     <SharingScreen open={sharingOpen} onBack={() => setSharingOpen(false)} />
     <ImportScreen open={importOpen} onBack={() => setImportOpen(false)} />
+    <ClinicSummaryScreen open={clinicOpen} onBack={() => setClinicOpen(false)} />
     <NoticesScreen open={noticesOpen} onBack={() => setNoticesOpen(false)} />
     <ChildSheet
       open={childSheet !== null}
