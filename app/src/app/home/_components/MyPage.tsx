@@ -272,6 +272,7 @@ export default function MyPage({ open, onClose, onOpenGems }: Props) {
               <p className="leading-none">･</p>
               <p className="leading-none">사업자 등록 번호 224-20-02381</p>
             </div>
+            <p className="leading-none">통신판매업 신고번호 2026-다산-0719</p>
             <p className="leading-none">고객센터 spectrum.mesh@gmail.com</p>
           </div>
         </div>
