@@ -247,15 +247,35 @@ export default function PixelScreen(props: Props) {
   // 어느 기기든 같은 무대(VIEW_W × VIEW_H, tiles.ts)가 화면에 꼭 들어가게 배율을 정한다(viewScaleFor).
   // 무대가 화면보다 작으면 남는 곳은 방 양옆·아래에 벽·바닥을 이어 그려 채운다(늘리지 않는다).
   // 콘텐츠 영역(상태바 아래) 맨 위에는 어느 기기든 방의 TOP_HIDDEN 높이가 온다. 그래서 웹·앱이 같은 칸, 같은 벽 경계를 보여 준다.
+  //
+  // 상태바 높이는 앱(WKWebView·안드로이드 WebView)에서 첫 화면 때 0 이었다가 나중에 제 값이 되기도 한다.
+  // 위쪽 카드는 CSS 변수로 바로 따라가는데 방만 예전 값으로 남으면 상단이 줄었다 늘었다 한다.
+  // 그래서 화면 크기뿐 아니라 상태바 높이를 재는 요소도 계속 지켜보고, 앱이 다시 보일 때도 다시 잰다.
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    // env() 는 커스텀 속성 값으로 읽으면 풀리지 않을 수 있어 요소 높이로 잰다.
+    const probe = document.createElement('div');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:var(--safe-area-top)';
+    document.body.appendChild(probe);
+    let last: { width: number; height: number; safeTop: number } | null = null;
     const measure = () => {
       const r = host.getBoundingClientRect();
       if (!r.width || !r.height) return;
+      const safeTop = probe.getBoundingClientRect().height;
+      // 1px 미만 흔들림(주소창·소수점 반올림)으로는 다시 그리지 않는다
+      if (
+        last &&
+        Math.abs(last.width - r.width) < 1 &&
+        Math.abs(last.height - r.height) < 1 &&
+        Math.abs(last.safeTop - safeTop) < 1
+      ) {
+        return;
+      }
+      last = { width: r.width, height: r.height, safeTop };
       const dpr = window.devicePixelRatio || 1;
       const snap = (v: number) => Math.round(v * dpr) / dpr;
-      const safeTop = measureSafeTop();
       const scale = viewScaleFor(r.width, r.height - safeTop);
       // 상태바가 덮는 만큼은 이미 가려져 있으니, 모자란 만큼만 방을 위로 올린다(웹은 상태바가 0).
       const shift = Math.max(0, snap(TOP_HIDDEN * scale - safeTop));
@@ -272,7 +292,21 @@ export default function PixelScreen(props: Props) {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(host);
-    return () => ro.disconnect();
+    ro.observe(probe);
+    // 백그라운드에서 돌아오거나 뒤로가기 캐시로 다시 보일 때는 크기 변화 알림이 안 올 수 있다
+    const onShow = () => {
+      if (document.visibilityState === 'visible') requestAnimationFrame(measure);
+    };
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('pageshow', onShow);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      document.removeEventListener('visibilitychange', onShow);
+      window.removeEventListener('pageshow', onShow);
+      window.visualViewport?.removeEventListener('resize', measure);
+      probe.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -945,16 +979,6 @@ export default function PixelScreen(props: Props) {
       )}
     </div>
   );
-}
-
-/** 상태바 높이(CSS px). env() 는 커스텀 속성 값으로 읽으면 풀리지 않을 수 있어 요소 높이로 잰다. */
-function measureSafeTop() {
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;top:0;visibility:hidden;pointer-events:none;height:var(--safe-area-top)';
-  document.body.appendChild(probe);
-  const h = probe.getBoundingClientRect().height;
-  probe.remove();
-  return h;
 }
 
 /** 가구를 놓을 수 있는 칸 범위. minX·maxX 는 가로 칸(방 왼쪽 끝이 0), rows 는 세로 칸 수. */
