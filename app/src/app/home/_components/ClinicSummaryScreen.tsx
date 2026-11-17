@@ -199,9 +199,6 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
                 </button>
               ))}
             </div>
-            <p className="text-[#808991] text-[12px] leading-[1.5] text-center">
-              {period === '24h' ? '합계' : '하루 평균'}
-            </p>
 
             {error ? (
               <p className={`${BOX} p-[16px] text-center text-[#808991] text-[14px]`}>기록을 불러오지 못했습니다.</p>
