@@ -6,7 +6,7 @@
 // - 하루 평균은 "조회 시작부터 지금까지 지난 시간(일)" 으로 나눈다. 오늘은 아직 끝나지 않아
 //   날짜 수(3·7)로 나누면 평균이 낮게 나온다.
 // - 체온·투약·병원은 평균이 아니라 기간 안의 실제 기록을 보여준다.
-// - 기록이 하나도 없으면 0 이 아니라 null(기록 없음)이다.
+// - 항목에 기록이 하나도 없으면 0 이 아니라 null(기록 없음)이다.
 import type { GrowthRecord } from '@/app/growth-record/types';
 
 export type ClinicPeriod = '24h' | 3 | 7;
@@ -44,10 +44,6 @@ const at = (r: GrowthRecord) => new Date(r.startAt).getTime();
 export interface ClinicSummary {
   /** 하루 평균을 낼 때 나눈 일수(지난 시간 기준, 소수). 24시간은 1. */
   days: number;
-  /** 기간 안 기록이 전혀 없다. */
-  empty: boolean;
-  /** 기록 수가 적어 실제와 다를 수 있다. */
-  sparse: boolean;
   feed: null | {
     count: number;
     breastCount: number;
@@ -197,9 +193,5 @@ export function summarizeClinic(records: GrowthRecord[], period: ClinicPeriod, n
     })
     .sort((a, b) => b.at.localeCompare(a.at));
 
-  const empty = inWindow.length === 0 && !sleepSeen;
-  // 하루 평균 기록이 3건도 안 되면 생활 전체를 담았다고 보기 어렵다
-  const sparse = !empty && inWindow.length / days < 3;
-
-  return { days, empty, sparse, feed, sleep, diaper, temp, meds, hospital };
+  return { days, feed, sleep, diaper, temp, meds, hospital };
 }

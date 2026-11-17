@@ -207,14 +207,6 @@ export default function ClinicSummaryScreen({ open, onBack }: Props) {
               <p className={`${BOX} p-[16px] text-center text-[#808991] text-[14px]`}>기록을 불러오지 못했습니다.</p>
             ) : (
               <>
-                {!loading && (s.empty || s.sparse) && (
-                  <p className="px-[4px] text-[#E07000] text-[12px] leading-[1.5]">
-                    {s.empty
-                      ? '이 기간에 남긴 기록이 없어요.'
-                      : '기록이 적어 실제 생활과 다를 수 있어요. 남긴 기록만 집계합니다.'}
-                  </p>
-                )}
-
                 <Card title={`먹기${avg}`} loading={loading}>
                   {s.feed ? (
                     <>
