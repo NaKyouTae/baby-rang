@@ -34,7 +34,8 @@ import { cn } from "@/lib/utils";
 
 type NavSection = {
   title: string;
-  items: { href: string; label: string; icon: typeof LayoutDashboard }[];
+  /** unused: 어드민에서 관리는 되지만 지금 앱에는 노출되지 않는 기능 */
+  items: { href: string; label: string; icon: typeof LayoutDashboard; unused?: boolean }[];
 };
 
 const NAV_SECTIONS: NavSection[] = [
@@ -45,11 +46,11 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "콘텐츠",
     items: [
-      { href: "/banners", label: "배너 관리", icon: Image },
-      { href: "/tests", label: "테스트 관리", icon: ListChecks },
+      { href: "/banners", label: "배너 관리", icon: Image, unused: true },
+      { href: "/tests", label: "테스트 관리", icon: ListChecks, unused: true },
       { href: "/notices", label: "공지사항", icon: Megaphone },
-      { href: "/faqs", label: "자주 묻는 질문", icon: HelpCircle },
-      { href: "/nursing-rooms", label: "수유실 관리", icon: Baby },
+      { href: "/faqs", label: "자주 묻는 질문", icon: HelpCircle, unused: true },
+      { href: "/nursing-rooms", label: "수유실 관리", icon: Baby, unused: true },
       { href: "/room-items", label: "방 꾸미기 아이템", icon: Sofa },
     ],
   },
@@ -63,8 +64,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "기질 검사",
     items: [
-      { href: "/temperament/questions", label: "검사 문항", icon: ClipboardList },
-      { href: "/temperament/results", label: "검사 결과", icon: Brain },
+      { href: "/temperament/questions", label: "검사 문항", icon: ClipboardList, unused: true },
+      { href: "/temperament/results", label: "검사 결과", icon: Brain, unused: true },
     ],
   },
   {
@@ -121,7 +122,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                       active ? "text-sidebar-primary" : "text-sidebar-foreground/70"
                     )}
                   />
-                  <span className="truncate">{n.label}</span>
+                  {n.unused && (
+                    <span className="shrink-0 rounded border px-1 py-px text-[10px] font-medium leading-none text-muted-foreground">
+                      미사용
+                    </span>
+                  )}
+                  <span className={cn("truncate", n.unused && "text-sidebar-foreground/60")}>{n.label}</span>
                 </Link>
               );
             })}
