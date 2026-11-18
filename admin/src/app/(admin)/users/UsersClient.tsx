@@ -1,20 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/Modal";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { cn, formatDate, formatDateTime } from "@/lib/utils";
+import { DataTable, SortHeader, StatStrip } from "@/components/data-table";
 
 export type UserRow = {
   id: string;
@@ -149,6 +142,102 @@ function fmtRelative(v: string | null | undefined) {
   return formatDate(v);
 }
 
+const DAY = 86_400_000;
+
+type ActivityStatus = "active" | "dormant" | "none";
+
+/** 7일 안에 활동 = 활동 중, 30일 안 = 휴면 위험, 그 밖·기록 없음 = 활동 없음 */
+function activityStatus(lastActiveAt: string | null): ActivityStatus {
+  if (!lastActiveAt) return "none";
+  const ago = Date.now() - new Date(lastActiveAt).getTime();
+  if (ago <= 7 * DAY) return "active";
+  if (ago <= 30 * DAY) return "dormant";
+  return "none";
+}
+
+const STATUS_META: Record<ActivityStatus, { label: string; variant: "success" | "warning" | "secondary" }> = {
+  active: { label: "활동 중", variant: "success" },
+  dormant: { label: "휴면 위험", variant: "warning" },
+  none: { label: "활동 없음", variant: "secondary" },
+};
+
+const STATUS_FILTERS: { value: "all" | ActivityStatus; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "active", label: "활동 중" },
+  { value: "dormant", label: "휴면 위험" },
+  { value: "none", label: "활동 없음" },
+];
+
+const columns: ColumnDef<UserRow>[] = [
+  {
+    id: "user",
+    accessorFn: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.phone ?? ""}`,
+    header: ({ column }) => <SortHeader label="사용자" column={column} />,
+    sortingFn: (a, b) => (a.original.name ?? "").localeCompare(b.original.name ?? "", "ko"),
+    enableHiding: false,
+    meta: { label: "사용자" },
+    cell: ({ row: { original: u } }) => (
+      <div className="flex items-center gap-3">
+        <Avatar className="h-8 w-8">
+          {u.profileImage && <AvatarImage src={u.profileImage} alt="" />}
+          <AvatarFallback className="text-xs">{(u.name ?? "?")[0]}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="font-medium">{u.name ?? "(이름없음)"}</div>
+          <div className="text-xs text-muted-foreground">{u.email ?? "-"}</div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "phone",
+    accessorFn: (u) => fmtPhone(u.phone),
+    header: "전화번호",
+    enableSorting: false,
+    meta: { label: "전화번호", className: "text-muted-foreground tabular-nums" },
+  },
+  { id: "gender", accessorFn: (u) => genderLabel(u.gender), header: "성별", meta: { label: "성별", className: "text-muted-foreground" } },
+  { id: "ageRange", accessorFn: (u) => ageRangeLabel(u.ageRange), header: "연령대", meta: { label: "연령대", className: "text-muted-foreground" } },
+  { id: "role", accessorFn: (u) => roleLabel(u.parentRole), header: "역할", meta: { label: "역할", className: "text-muted-foreground" } },
+  {
+    id: "groups",
+    accessorFn: (u) => u._count.groupMemberships,
+    header: ({ column }) => <SortHeader label="그룹" column={column} align="right" />,
+    meta: { label: "그룹", align: "right" },
+  },
+  {
+    id: "payments",
+    accessorFn: (u) => u._count.payments,
+    header: ({ column }) => <SortHeader label="결제" column={column} align="right" />,
+    meta: { label: "결제", align: "right" },
+  },
+  {
+    id: "status",
+    accessorFn: (u) => STATUS_META[activityStatus(u.lastActiveAt)].label,
+    header: "상태",
+    enableSorting: false,
+    meta: { label: "상태" },
+    cell: ({ row: { original: u } }) => {
+      const m = STATUS_META[activityStatus(u.lastActiveAt)];
+      return <Badge variant={m.variant}>{m.label}</Badge>;
+    },
+  },
+  {
+    id: "lastActive",
+    accessorFn: (u) => (u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0),
+    header: ({ column }) => <SortHeader label="마지막 활동" column={column} align="right" />,
+    meta: { label: "마지막 활동", align: "right", className: "text-muted-foreground" },
+    cell: ({ row: { original: u } }) => fmtRelative(u.lastActiveAt),
+  },
+  {
+    id: "createdAt",
+    accessorFn: (u) => new Date(u.createdAt).getTime(),
+    header: ({ column }) => <SortHeader label="가입일" column={column} align="right" />,
+    meta: { label: "가입일", align: "right", className: "text-muted-foreground" },
+    cell: ({ row: { original: u } }) => formatDate(u.createdAt),
+  },
+];
+
 export default function UsersClient({
   items,
   page,
@@ -162,6 +251,22 @@ export default function UsersClient({
   const [detail, setDetail] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [status, setStatus] = useState<"all" | ActivityStatus>("all");
+  const counts = useMemo(() => {
+    const c = { active: 0, dormant: 0, none: 0 };
+    for (const u of items) c[activityStatus(u.lastActiveAt)]++;
+    return c;
+  }, [items]);
+  const visible = useMemo(
+    () => (status === "all" ? items : items.filter((u) => activityStatus(u.lastActiveAt) === status)),
+    [items, status],
+  );
+  const newIn30 = useMemo(
+    () => items.filter((u) => Date.now() - new Date(u.createdAt).getTime() <= 30 * DAY).length,
+    [items],
+  );
+  const payers = useMemo(() => items.filter((u) => u._count.payments > 0).length, [items]);
 
   const openDetail = useCallback((id: string) => {
     setSelectedId(id);
@@ -215,105 +320,46 @@ export default function UsersClient({
 
   return (
     <>
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {items.map((u) => (
-          <Card
-            key={u.id}
-            className="cursor-pointer p-4 transition-colors active:bg-accent"
-            onClick={() => openDetail(u.id)}
-          >
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                {u.profileImage && <AvatarImage src={u.profileImage} alt="" />}
-                <AvatarFallback>{(u.name ?? "?")[0]}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <div className="truncate font-medium">{u.name ?? "(이름없음)"}</div>
-                <div className="truncate text-xs text-muted-foreground">{u.email ?? "-"}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {fmtPhone(u.phone)} · {genderLabel(u.gender)} · {ageRangeLabel(u.ageRange)}
-                </div>
-              </div>
+      <div className="space-y-4">
+        <StatStrip
+          items={[
+            { label: "전체 가입", value: items.length },
+            { label: "최근 7일 활동", value: counts.active, hint: "기록·결제 등 활동 기준" },
+            { label: "최근 30일 신규 가입", value: newIn30 },
+            { label: "결제한 사용자", value: payers },
+          ]}
+        />
+        <DataTable
+          columns={columns}
+          data={visible}
+          searchPlaceholder="이름, 이메일, 전화번호 검색"
+          onRowClick={(u) => openDetail(u.id)}
+          emptyText="조건에 맞는 사용자가 없습니다."
+          initialHidden={{ gender: false, ageRange: false }}
+          toolbar={
+            <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => setStatus(f.value)}
+                  className={cn(
+                    "h-7 rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors",
+                    status === f.value && "bg-background text-foreground shadow-xs",
+                  )}
+                >
+                  {f.label}
+                  <span className="ml-1 tabular-nums opacity-60">
+                    {f.value === "all" ? items.length : counts[f.value]}
+                  </span>
+                </button>
+              ))}
             </div>
-            <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-              <span>그룹 {u._count.groupMemberships}</span>
-              <span>결제 {u._count.payments}</span>
-              <span>활동 {fmtRelative(u.lastActiveAt)}</span>
-            </div>
-          </Card>
-        ))}
-        {items.length === 0 && (
-          <Card className="p-8 text-center text-sm text-muted-foreground">
-            사용자가 없습니다.
-          </Card>
-        )}
+          }
+        />
       </div>
 
-      {/* Desktop table */}
-      <Card className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>사용자</TableHead>
-              <TableHead>이메일</TableHead>
-              <TableHead>전화번호</TableHead>
-              <TableHead>성별</TableHead>
-              <TableHead>연령대</TableHead>
-              <TableHead>역할</TableHead>
-              <TableHead className="text-right">그룹</TableHead>
-              <TableHead className="text-right">결제</TableHead>
-              <TableHead className="text-right">마지막 활동</TableHead>
-              <TableHead className="text-right">가입일</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((u) => (
-              <TableRow
-                key={u.id}
-                className="cursor-pointer"
-                onClick={() => openDetail(u.id)}
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      {u.profileImage && <AvatarImage src={u.profileImage} alt="" />}
-                      <AvatarFallback className="text-xs">
-                        {(u.name ?? "?")[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{u.name ?? "(이름없음)"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{u.email ?? "-"}</TableCell>
-                <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">
-                  {fmtPhone(u.phone)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{genderLabel(u.gender)}</TableCell>
-                <TableCell className="text-muted-foreground">{ageRangeLabel(u.ageRange)}</TableCell>
-                <TableCell className="text-muted-foreground">{roleLabel(u.parentRole)}</TableCell>
-                <TableCell className="text-right">{u._count.groupMemberships}</TableCell>
-                <TableCell className="text-right">{u._count.payments}</TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {fmtRelative(u.lastActiveAt)}
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {formatDate(u.createdAt)}
-                </TableCell>
-              </TableRow>
-            ))}
-            {items.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
-                  사용자가 없습니다.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-
-      <Pagination current={page} total={totalPages} basePath="/users" />
+      {totalPages > 1 && <Pagination current={page} total={totalPages} basePath="/users" />}
 
       {/* 상세 팝업 */}
       <Modal open={!!selectedId} onClose={close}>

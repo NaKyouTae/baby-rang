@@ -366,7 +366,7 @@ export default function RoomItemsClient({ initial }: { initial: RoomItem[] }) {
               type="button"
               onClick={() => startEdit(item)}
               aria-label={`${item.name} 수정`}
-              className="relative aspect-square w-full bg-[hsl(212_25%_96%)] border-b flex items-center justify-center"
+              className="relative aspect-square w-full bg-muted border-b flex items-center justify-center"
             >
               {item.imageUrl ? (
                 // 칸 크기는 aspect-square 가 정한다. 그림은 그 안을 꽉 채운 상자에 contain 으로 넣어
@@ -806,7 +806,7 @@ function ViewSlot({
       <p className="text-xs font-medium">{label}</p>
       <div className="relative aspect-square w-full">
         <label
-          className={`flex h-full w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg ring-1 ring-border bg-[hsl(212_25%_96%)] hover:ring-primary ${uploading ? "pointer-events-none opacity-60" : ""}`}
+          className={`flex h-full w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg ring-1 ring-border bg-muted hover:ring-primary ${uploading ? "pointer-events-none opacity-60" : ""}`}
           aria-label={`${label} 그림 올리기`}
         >
           {url ? (

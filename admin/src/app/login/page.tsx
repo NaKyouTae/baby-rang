@@ -31,7 +31,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[hsl(212_25%_97%)]">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-muted/40">
       <Card className="w-full max-w-sm p-8">
         <CardHeader className="p-0 mb-6 items-center text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}

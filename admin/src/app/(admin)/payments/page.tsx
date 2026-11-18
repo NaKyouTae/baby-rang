@@ -1,41 +1,12 @@
+import Link from "next/link";
 import { adminFetch } from "@/lib/api";
-import { RefundButton } from "./RefundButton";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { StatStrip } from "@/components/data-table";
+import { cn } from "@/lib/utils";
+import { PaymentsTable, type PaymentRow } from "./PaymentsTable";
+import { PAYMENT_STATUS } from "./status";
 
-type PaymentRow = {
-  id: string;
-  orderId: string;
-  productName: string;
-  productType: string;
-  amount: number;
-  status: string;
-  provider: string;
-  method: string | null;
-  receiptUrl: string | null;
-  createdAt: string;
-  user: { id: string; name: string | null; email: string | null } | null;
-};
-
-const STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "purple"> = {
-  PAID: "success",
-  PENDING: "warning",
-  FAILED: "destructive",
-  CANCELLED: "secondary",
-  REFUNDED: "purple",
-  PARTIAL_REFUNDED: "purple",
-};
+const FILTERS = ["", "PAID", "PENDING", "FAILED", "CANCELLED", "REFUNDED"];
 
 export default async function PaymentsPage({
   searchParams,
@@ -45,145 +16,66 @@ export default async function PaymentsPage({
   const sp = await searchParams;
   const page = sp.page ?? "1";
   const status = sp.status ?? "";
-  let data = { items: [] as PaymentRow[], total: 0, page: 1, limit: 20 };
+  let data = { items: [] as PaymentRow[], total: 0, page: 1, limit: 100 };
   try {
+    // 표에서 바로 검색·정렬하도록 100건씩 받는다
     data = await adminFetch(
-      `/admin/payments?page=${page}&limit=20${status ? `&status=${status}` : ""}`,
+      `/admin/payments?page=${page}&limit=100${status ? `&status=${status}` : ""}`,
     );
   } catch {}
   const totalPages = Math.max(1, Math.ceil(data.total / data.limit));
 
-  const filters = ["", "PAID", "PENDING", "FAILED", "CANCELLED", "REFUNDED"];
+  const paid = data.items.filter((p) => p.status === "PAID");
+  const revenue = paid.reduce((s, p) => s + p.amount, 0);
+  const payers = new Set(paid.map((p) => p.user?.id).filter(Boolean)).size;
+  const refunded = data.items.filter((p) => p.status === "REFUNDED" || p.status === "PARTIAL_REFUNDED").length;
 
   return (
-    <div>
-      <PageHeader
-        title="결제 내역"
-        description="결제·환불 내역을 확인하고 환불 처리를 진행합니다."
+    <div className="space-y-4">
+      <PageHeader title="결제 내역" description="결제·환불 내역을 확인하고 토스 결제는 여기서 환불합니다." />
+
+      <StatStrip
+        items={[
+          { label: "결제 건수", value: data.total, hint: status ? PAYMENT_STATUS[status]?.label : "전체 상태" },
+          { label: "결제완료 금액", value: `${revenue.toLocaleString()}원`, hint: "이 화면에 받은 건 기준" },
+          { label: "결제한 사용자", value: payers },
+          { label: "환불", value: refunded },
+        ]}
       />
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {filters.map((f) => (
-          <Button
-            key={f || "all"}
-            variant={status === f ? "default" : "outline"}
-            size="sm"
-            asChild
-          >
-            <a href={`/payments${f ? `?status=${f}` : ""}`}>{f || "전체"}</a>
-          </Button>
-        ))}
-      </div>
-
-      {/* Mobile cards */}
-      <div className="space-y-3 md:hidden">
-        {data.items.map((p) => (
-          <Card key={p.id} className="p-4">
-            <div className="flex justify-between items-start">
-              <div className="min-w-0">
-                <div className="font-medium truncate">{p.productName}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {p.user?.name ?? p.user?.email ?? "-"}
-                </div>
-              </div>
-              <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"} className="text-[10px]">
-                {p.status}
-              </Badge>
-            </div>
-            <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-              <span>{p.amount.toLocaleString()}원</span>
-              <span>{formatDateTime(p.createdAt)}</span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              {p.receiptUrl && (
-                <Button variant="outline" size="sm" className="flex-1" asChild>
-                  <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
-                    영수증
-                  </a>
-                </Button>
-              )}
-              <RefundButton
-                orderId={p.orderId}
-                amount={p.amount}
-                status={p.status}
-                provider={p.provider}
-                variant="card"
-              />
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Desktop table */}
-      <Card className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>상품</TableHead>
-              <TableHead>사용자</TableHead>
-              <TableHead className="text-right">금액</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>결제수단</TableHead>
-              <TableHead className="text-right">일시</TableHead>
-              <TableHead className="text-right">관리</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.items.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>
-                  <div className="font-medium">{p.productName}</div>
-                  <div className="text-xs text-muted-foreground">{p.productType}</div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {p.user?.name ?? p.user?.email ?? "-"}
-                </TableCell>
-                <TableCell className="text-right font-semibold">
-                  {p.amount.toLocaleString()}원
-                </TableCell>
-                <TableCell>
-                  <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"} className="text-[10px]">
-                    {p.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{p.method ?? p.provider}</TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  {formatDateTime(p.createdAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    {p.receiptUrl && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer">
-                          영수증
-                        </a>
-                      </Button>
-                    )}
-                    <RefundButton
-                      orderId={p.orderId}
-                      amount={p.amount}
-                      status={p.status}
-                      provider={p.provider}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
+      <PaymentsTable
+        items={data.items}
+        toolbar={
+          <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+            {FILTERS.map((f) => (
+              <Link
+                key={f || "all"}
+                href={`/payments${f ? `?status=${f}` : ""}`}
+                className={cn(
+                  "inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  status === f && "bg-background text-foreground shadow-xs",
+                )}
+              >
+                {f ? PAYMENT_STATUS[f]?.label ?? f : "전체"}
+              </Link>
             ))}
-          </TableBody>
-        </Table>
-      </Card>
+          </div>
+        }
+      />
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-1 mt-6">
+        <div className="flex justify-center gap-1">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-            <Button
+            <Link
               key={pg}
-              variant={pg === data.page ? "default" : "outline"}
-              size="sm"
-              asChild
+              href={`/payments?page=${pg}${status ? `&status=${status}` : ""}`}
+              className={cn(
+                "inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-sm",
+                pg === data.page ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent",
+              )}
             >
-              <a href={`/payments?page=${pg}${status ? `&status=${status}` : ""}`}>{pg}</a>
-            </Button>
+              {pg}
+            </Link>
           ))}
         </div>
       )}
