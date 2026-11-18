@@ -114,7 +114,12 @@ export const metadata: Metadata = {
     // Naver Search Advisor 등록 후 발급받은 인증 코드를 여기에 입력하세요
     // https://searchadvisor.naver.com → 사이트 추가 → HTML 태그 인증
     other: {
-      "naver-site-verification": "e195fb3c87061effb7d804eac319ede8bb92c95f",
+      // 앞은 예전 주소(baby-rang.spectrify.kr), 뒤는 새 주소(babyroom.spectrify.kr) 등록 코드다.
+      // 두 주소가 같은 사이트를 보여 주는 동안은 둘 다 둔다.
+      "naver-site-verification": [
+        "e195fb3c87061effb7d804eac319ede8bb92c95f",
+        "7e86119e6923d49973a91ac2e13e5535e767244b",
+      ],
       "msvalidate.01": "86D1577698DC11E106738B976A2F460E",
     },
   },
