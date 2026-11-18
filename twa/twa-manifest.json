@@ -20,8 +20,8 @@
     "path": "/Users/nakyutae/personal/프로젝트/아기랑/아기랑 - Google Play package/signing.keystore",
     "alias": "my-key-alias"
   },
-  "appVersionName": "1.2.21",
-  "appVersionCode": 27,
+  "appVersionName": "1.2.22",
+  "appVersionCode": 28,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://babyroom.spectrify.kr/manifest.json",
@@ -44,5 +44,5 @@
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "displayOverride": [],
-  "appVersion": "1.2.21"
+  "appVersion": "1.2.22"
 }
