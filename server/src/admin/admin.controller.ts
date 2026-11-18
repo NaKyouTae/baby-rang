@@ -22,6 +22,7 @@ import { StorageService } from '../storage/storage.service';
 import { CrawlerVisitsService } from '../crawler-visits/crawler-visits.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AdminGuard } from './admin.guard';
+import { startOfKstDay } from '../coins/coin-rewards';
 import {
   DIMENSIONS,
   DimensionKey,
@@ -214,6 +215,169 @@ export class AdminController {
       moms,
       dads,
       weekSignups,
+    };
+  }
+
+  // ===== Metrics =====
+  /** 대시보드 실시간 카운터용. 몇 초마다 부르므로 가벼운 count 만 한다. */
+  @Get('metrics/live')
+  async liveMetrics() {
+    const dayStart = startOfKstDay();
+    const [growth, physical, todayGrowth, todayPhysical, latest] =
+      await Promise.all([
+        this.prisma.growthRecord.count(),
+        this.prisma.physicalGrowth.count(),
+        this.prisma.growthRecord.count({
+          where: { createdAt: { gte: dayStart } },
+        }),
+        this.prisma.physicalGrowth.count({
+          where: { createdAt: { gte: dayStart } },
+        }),
+        this.prisma.growthRecord.findFirst({
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true, type: true },
+        }),
+      ]);
+    return {
+      records: growth + physical,
+      recordsToday: todayGrowth + todayPhysical,
+      latestRecord: latest,
+      at: new Date(),
+    };
+  }
+
+  /**
+   * 대시보드 지표. 날짜 경계는 KST.
+   * 활동 사용자(DAU·WAU·MAU)는 기록·성장·결제·공지 읽기 중 가장 최근 시각 기준이다.
+   */
+  @Get('metrics')
+  async metrics() {
+    const DAY = 86_400_000;
+    const now = Date.now();
+    const today = startOfKstDay();
+    const days14 = new Date(today.getTime() - 13 * DAY);
+    const d7 = new Date(now - 7 * DAY);
+    const d30 = new Date(now - 30 * DAY);
+    const prevD30 = new Date(now - 60 * DAY);
+
+    const [
+      users,
+      children,
+      groups,
+      newToday,
+      new7,
+      new30,
+      newPrev30,
+      revenueAll,
+      revenue30,
+      revenuePrev30,
+      paidCount,
+      payers,
+      adRewardsToday,
+      coinsIssued30,
+      recordsByType,
+      recordSeries,
+      signupSeries,
+      lastActive,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.child.count(),
+      this.prisma.group.count(),
+      this.prisma.user.count({ where: { createdAt: { gte: today } } }),
+      this.prisma.user.count({ where: { createdAt: { gte: d7 } } }),
+      this.prisma.user.count({ where: { createdAt: { gte: d30 } } }),
+      this.prisma.user.count({
+        where: { createdAt: { gte: prevD30, lt: d30 } },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: 'PAID' },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: 'PAID', approvedAt: { gte: d30 } },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: 'PAID', approvedAt: { gte: prevD30, lt: d30 } },
+      }),
+      this.prisma.payment.count({ where: { status: 'PAID' } }),
+      this.prisma.payment.groupBy({
+        by: ['userId'],
+        where: { status: 'PAID' },
+      }),
+      this.prisma.adReward.count({
+        where: { status: 'REWARDED', rewardedAt: { gte: today } },
+      }),
+      this.prisma.coinLedger.aggregate({
+        _sum: { delta: true },
+        where: { delta: { gt: 0 }, createdAt: { gte: d30 } },
+      }),
+      this.prisma.growthRecord.groupBy({
+        by: ['type'],
+        where: { createdAt: { gte: d7 } },
+        _count: { _all: true },
+      }),
+      this.prisma.$queryRaw<{ day: string; n: bigint }[]>`
+        SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS day,
+               count(*) AS n
+        FROM (
+          SELECT "createdAt" FROM "growth_records" WHERE "createdAt" >= ${days14}
+          UNION ALL
+          SELECT "createdAt" FROM "physical_growths" WHERE "createdAt" >= ${days14}
+        ) r
+        GROUP BY 1`,
+      this.prisma.$queryRaw<{ day: string; n: bigint }[]>`
+        SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS day,
+               count(*) AS n
+        FROM "users" WHERE "createdAt" >= ${days14}
+        GROUP BY 1`,
+      this.lastActivityMap(),
+    ]);
+
+    const activeSince = (since: number) =>
+      [...lastActive.values()].filter((d) => d.getTime() >= since).length;
+
+    // 14일을 빈 날까지 채워 돌려준다(그래프 x축이 빠지지 않게)
+    const series = (rows: { day: string; n: bigint }[]) => {
+      const byDay = new Map(rows.map((r) => [r.day, Number(r.n)]));
+      return Array.from({ length: 14 }, (_, i) => {
+        const day = new Date(days14.getTime() + i * DAY + 9 * 3600_000)
+          .toISOString()
+          .slice(0, 10);
+        return { day, n: byDay.get(day) ?? 0 };
+      });
+    };
+
+    return {
+      users: {
+        total: users,
+        newToday,
+        new7,
+        new30,
+        newPrev30,
+        dau: activeSince(today.getTime()),
+        wau: activeSince(d7.getTime()),
+        mau: activeSince(d30.getTime()),
+      },
+      children,
+      groups,
+      revenue: {
+        total: revenueAll._sum.amount ?? 0,
+        last30: revenue30._sum.amount ?? 0,
+        prev30: revenuePrev30._sum.amount ?? 0,
+        paidCount,
+        payers: payers.length,
+      },
+      coins: {
+        adRewardsToday,
+        issued30: coinsIssued30._sum.delta ?? 0,
+      },
+      recordsByType7d: recordsByType
+        .map((r) => ({ type: r.type, n: r._count._all }))
+        .sort((a, b) => b.n - a.n),
+      recordSeries: series(recordSeries),
+      signupSeries: series(signupSeries),
     };
   }
 

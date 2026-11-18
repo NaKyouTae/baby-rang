@@ -1,106 +1,175 @@
 import { adminFetch } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/PageHeader";
-import { Users, Baby, Image, CreditCard, Banknote, User, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { LiveRecords, type LiveMetrics } from "./LiveRecords";
 
-type Stats = {
-  users: number;
+type Point = { day: string; n: number };
+type Metrics = {
+  users: { total: number; newToday: number; new7: number; new30: number; newPrev30: number; dau: number; wau: number; mau: number };
   children: number;
-  banners: number;
-  payments: { paid: number; total: number };
-  revenue: number;
-  moms: number;
-  dads: number;
-  weekSignups: number;
+  groups: number;
+  revenue: { total: number; last30: number; prev30: number; paidCount: number; payers: number };
+  coins: { adRewardsToday: number; issued30: number };
+  recordsByType7d: { type: string; n: number }[];
+  recordSeries: Point[];
+  signupSeries: Point[];
 };
 
-export default async function DashboardPage() {
-  let stats: Stats | null = null;
-  try {
-    stats = await adminFetch<Stats>("/admin/stats");
-  } catch {}
+const TYPE_LABEL: Record<string, string> = {
+  BREASTFEEDING: "모유",
+  FORMULA: "분유",
+  BABY_FOOD: "이유식",
+  SLEEP: "수면",
+  PUMPED_FEEDING: "유축수유",
+  PUMPING: "유축",
+  BATH: "목욕",
+  HOSPITAL: "병원",
+  TEMPERATURE: "체온",
+  MEDICATION: "투약",
+  DIAPER: "기저귀",
+  SNACK: "간식",
+  MILK: "우유",
+  WATER: "물",
+  PLAY: "놀이",
+  TUMMY_TIME: "터미타임",
+  ETC: "기타",
+};
 
-  const cards = [
-    {
-      label: "전체 사용자",
-      value: stats?.users ?? "-",
-      icon: Users,
-      tone: "bg-blue-50 text-blue-600",
-    },
-    {
-      label: "이번주 가입",
-      value: stats?.weekSignups ?? "-",
-      icon: UserPlus,
-      tone: "bg-teal-50 text-teal-600",
-    },
-    {
-      label: "엄마",
-      value: stats?.moms ?? "-",
-      icon: User,
-      tone: "bg-rose-50 text-rose-600",
-    },
-    {
-      label: "아빠",
-      value: stats?.dads ?? "-",
-      icon: User,
-      tone: "bg-sky-50 text-sky-600",
-    },
-    {
-      label: "등록된 아기",
-      value: stats?.children ?? "-",
-      icon: Baby,
-      tone: "bg-pink-50 text-pink-600",
-    },
-    {
-      label: "활성 배너",
-      value: stats?.banners ?? "-",
-      icon: Image,
-      tone: "bg-amber-50 text-amber-600",
-    },
-    {
-      label: "결제 완료",
-      value: stats ? `${stats.payments.paid} / ${stats.payments.total}` : "-",
-      icon: CreditCard,
-      tone: "bg-emerald-50 text-emerald-600",
-    },
-    {
-      label: "총 매출 (KRW)",
-      value: stats ? stats.revenue.toLocaleString() + "원" : "-",
-      icon: Banknote,
-      tone: "bg-violet-50 text-violet-600",
-    },
-  ];
+const won = (n: number) => `${n.toLocaleString()}원`;
+
+/** 이전 기간 대비 증감. 이전이 0 이면 비교하지 않는다. */
+function Delta({ now, prev, unit = "%" }: { now: number; prev: number; unit?: string }) {
+  if (prev === 0) return <span className="text-xs text-muted-foreground">이전 30일 데이터 없음</span>;
+  const pct = Math.round(((now - prev) / prev) * 100);
+  const up = pct >= 0;
+  return (
+    <span className={cn("text-xs font-medium", up ? "text-emerald-600" : "text-rose-600")}>
+      {up ? "▲" : "▼"} {Math.abs(pct)}
+      {unit} <span className="font-normal text-muted-foreground">이전 30일 대비</span>
+    </span>
+  );
+}
+
+function Kpi({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
+  return (
+    <Card className="flex min-w-0 flex-col gap-1 p-5">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-3xl font-semibold tracking-tight tabular-nums">{value}</span>
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+    </Card>
+  );
+}
+
+/** 14일 막대. 오늘 막대만 진하게, 최댓값 기준으로 높이를 맞춘다. */
+function Bars({ title, total, points, tone }: { title: string; total: string; points: Point[]; tone: string }) {
+  const max = Math.max(1, ...points.map((p) => p.n));
+  return (
+    <Card className="min-w-0 p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium">{title}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">{total}</span>
+      </div>
+      <div className="mt-4 flex h-28 items-end gap-1.5" role="img" aria-label={`${title} 최근 14일`}>
+        {points.map((p, i) => (
+          <div key={p.day} className="group relative flex h-full flex-1 flex-col justify-end">
+            <div
+              className={cn("w-full rounded-sm", tone, i === points.length - 1 ? "opacity-100" : "opacity-40")}
+              style={{ height: `${Math.max(p.n ? 4 : 1, (p.n / max) * 100)}%` }}
+            />
+            <span className="pointer-events-none absolute -top-6 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-foreground px-1.5 py-0.5 text-[10px] text-background group-hover:block">
+              {p.day.slice(5)} · {p.n}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground tabular-nums">
+        <span>{points[0]?.day.slice(5)}</span>
+        <span>오늘</span>
+      </div>
+    </Card>
+  );
+}
+
+export default async function DashboardPage() {
+  const [metrics, live] = await Promise.all([
+    adminFetch<Metrics>("/admin/metrics").catch(() => null),
+    adminFetch<LiveMetrics>("/admin/metrics/live").catch(() => null),
+  ]);
+  const m = metrics;
+  const typeTotal = m?.recordsByType7d.reduce((s, r) => s + r.n, 0) ?? 0;
+  const sum = (pts?: Point[]) => (pts ?? []).reduce((s, p) => s + p.n, 0);
 
   return (
-    <div>
-      <PageHeader
-        title="대시보드"
-        description="베이비룸 서비스의 핵심 지표를 한눈에 확인하세요."
-      />
+    <div className="space-y-6">
+      <PageHeader title="대시보드" description="날짜는 한국 시간 기준이고, 활동 사용자는 기록·결제 등 마지막 활동 시각으로 셉니다." />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {cards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <Card
-              key={c.label}
-              className="p-5 transition-shadow hover:shadow-md"
-            >
-              <div
-                className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${c.tone}`}
-              >
-                <Icon className="h-4 w-4" />
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">
-                {c.label}
-              </p>
-              <p className="mt-1 text-2xl font-bold tracking-tight tabular-nums">
-                {c.value}
-              </p>
-            </Card>
-          );
-        })}
-      </div>
+      <LiveRecords initial={live} typeLabel={TYPE_LABEL} />
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">사용자</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Kpi label="전체 가입" value={m?.users.total ?? "-"} sub={m && `오늘 +${m.users.newToday} · 7일 +${m.users.new7}`} />
+          <Kpi
+            label="최근 30일 신규"
+            value={m?.users.new30 ?? "-"}
+            sub={m && <Delta now={m.users.new30} prev={m.users.newPrev30} />}
+          />
+          <Kpi label="MAU" value={m?.users.mau ?? "-"} sub={m && `WAU ${m.users.wau} · DAU ${m.users.dau}`} />
+          <Kpi
+            label="활성 비율 (MAU / 가입)"
+            value={m && m.users.total ? `${Math.round((m.users.mau / m.users.total) * 100)}%` : "-"}
+            sub={m && `아기 ${m.children}명 · 가족 ${m.groups}개`}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">매출·보석</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Kpi label="누적 매출" value={m ? won(m.revenue.total) : "-"} sub={m && `결제 ${m.revenue.paidCount}건`} />
+          <Kpi
+            label="최근 30일 매출"
+            value={m ? won(m.revenue.last30) : "-"}
+            sub={m && <Delta now={m.revenue.last30} prev={m.revenue.prev30} />}
+          />
+          <Kpi
+            label="결제 전환"
+            value={m && m.users.total ? `${((m.revenue.payers / m.users.total) * 100).toFixed(1)}%` : "-"}
+            sub={m && `결제한 사용자 ${m.revenue.payers}명`}
+          />
+          <Kpi label="오늘 광고 보상" value={m?.coins.adRewardsToday ?? "-"} sub={m && `30일 지급 보석 ${m.coins.issued30.toLocaleString()}개`} />
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Bars title="일별 기록" total={`14일 합계 ${sum(m?.recordSeries).toLocaleString()}건`} points={m?.recordSeries ?? []} tone="bg-primary" />
+        <Bars title="일별 가입" total={`14일 합계 ${sum(m?.signupSeries).toLocaleString()}명`} points={m?.signupSeries ?? []} tone="bg-emerald-500" />
+        <Card className="min-w-0 p-5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-sm font-medium">최근 7일 기록 종류</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{typeTotal.toLocaleString()}건</span>
+          </div>
+          <ul className="mt-4 space-y-2.5">
+            {(m?.recordsByType7d ?? []).slice(0, 6).map((r) => (
+              <li key={r.type} className="text-sm">
+                <div className="flex justify-between gap-2">
+                  <span>{TYPE_LABEL[r.type] ?? r.type}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {r.n.toLocaleString()} · {typeTotal ? Math.round((r.n / typeTotal) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary/70" style={{ width: `${typeTotal ? (r.n / typeTotal) * 100 : 0}%` }} />
+                </div>
+              </li>
+            ))}
+            {m && m.recordsByType7d.length === 0 && <li className="text-sm text-muted-foreground">최근 7일 기록이 없습니다.</li>}
+          </ul>
+        </Card>
+      </section>
+
+      {!m && <p className="text-sm text-destructive">지표를 불러오지 못했습니다. 서버 연결을 확인하세요.</p>}
     </div>
   );
 }
