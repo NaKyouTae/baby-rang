@@ -316,8 +316,9 @@ export function summarizeRecord(r: GrowthRecord): string {
       break;
     case 'BABY_FOOD':
       if (data.menu) parts.push(String(data.menu));
-      if (data.amount) parts.push(`${data.amount}ml`);
-      else if (data.amountG) parts.push(`${data.amountG}ml`);
+      // 지금은 mL 로만 저장하지만, 예전 기록은 g(amountUnit 'g' 또는 amountG)일 수 있다
+      if (data.amount) parts.push(`${data.amount}${data.amountUnit === 'g' ? 'g' : 'ml'}`);
+      else if (data.amountG) parts.push(`${data.amountG}g`);
       else if (data.amountMl) parts.push(`${data.amountMl}ml`);
       break;
     case 'SLEEP':

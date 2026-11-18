@@ -34,7 +34,7 @@ const SITE_DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "베이비룸 - 우리 아기의 모든 순간",
+    default: "베이비룸 - 수유·수면 육아 기록",
     template: "%s | 베이비룸",
   },
   description: SITE_DESCRIPTION,
@@ -81,20 +81,20 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: "베이비룸 - 우리 아기의 모든 순간",
+    title: "베이비룸 - 수유·수면 육아 기록",
     description: SITE_DESCRIPTION,
     images: [
       {
         url: `${SITE_URL}/opengraph-image`,
         width: 1200,
         height: 630,
-        alt: "베이비룸 - 우리 아기의 모든 순간",
+        alt: "베이비룸 - 수유·수면 육아 기록",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "베이비룸 - 우리 아기의 모든 순간",
+    title: "베이비룸 - 수유·수면 육아 기록",
     description: SITE_DESCRIPTION,
     images: [`${SITE_URL}/opengraph-image`],
   },

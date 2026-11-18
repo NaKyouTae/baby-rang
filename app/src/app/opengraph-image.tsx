@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "베이비룸 - 우리 아기의 모든 순간";
+export const alt = "베이비룸 - 수유·수면 육아 기록";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
