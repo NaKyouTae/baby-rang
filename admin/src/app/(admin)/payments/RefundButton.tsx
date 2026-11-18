@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -56,20 +57,32 @@ export function RefundButton({ orderId, amount, status, provider, variant = "tab
 
   if (!refundable) return null;
 
-  // 스토어 결제는 여기서 환불할 수 없다. 버튼을 그대로 두면 눌렀을 때
-  // Toss API 가 호출되어 실패하므로, 어디서 처리하는지만 알려준다.
+  // 스토어 결제는 여기서 환불할 수 없다. 누르면 Toss API 가 호출되어 실패하므로
+  // 버튼은 막아 두고, 어디서 처리하는지는 마우스를 올리면 보여준다.
+  // (막힌 버튼은 마우스 이벤트를 받지 않아 span 으로 감싸 툴팁을 단다)
   const notice = storeRefundNotice(provider);
   if (notice) {
     return (
-      <span
-        className={
-          variant === "card"
-            ? "flex-1 text-xs text-muted-foreground"
-            : "text-xs text-muted-foreground"
-        }
-      >
-        {notice}
-      </span>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0} className={variant === "card" ? "flex-1" : "inline-flex"}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                className={variant === "card" ? "w-full" : ""}
+                aria-label={`환불 불가: ${notice}`}
+              >
+                환불
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="max-w-64">
+            {notice}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

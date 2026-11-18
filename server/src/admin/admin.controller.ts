@@ -406,13 +406,27 @@ export class AdminController {
       where: { id: { in: pageIds } },
       include: {
         _count: { select: { groupMemberships: true, payments: true } },
+        // 아이 수 — 속한 가족(그룹)들의 아이를 더한다. 아이는 한 그룹에만 속해 겹치지 않는다.
+        groupMemberships: {
+          select: {
+            group: { select: { _count: { select: { children: true } } } },
+          },
+        },
       },
     });
     // in 조회는 순서를 보장하지 않으므로 정렬 순서대로 다시 배열한다.
     const byId = new Map(items.map((u) => [u.id, u]));
     const withActivity = pageIds.flatMap((id) => {
       const u = byId.get(id);
-      return u ? [{ ...u, lastActiveAt: lastActiveMap.get(id) ?? null }] : [];
+      if (!u) return [];
+      const { groupMemberships, ...rest } = u;
+      const childCount = groupMemberships.reduce(
+        (sum, m) => sum + m.group._count.children,
+        0,
+      );
+      return [
+        { ...rest, childCount, lastActiveAt: lastActiveMap.get(id) ?? null },
+      ];
     });
 
     return { items: withActivity, total: all.length, page: p, limit: l };

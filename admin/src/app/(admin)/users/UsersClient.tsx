@@ -21,6 +21,8 @@ export type UserRow = {
   parentRole: string | null;
   createdAt: string;
   lastActiveAt: string | null;
+  /** 속한 가족(그룹)들의 아이 수 합계. 목록 응답에만 있다. */
+  childCount?: number;
   _count: { groupMemberships: number; payments: number };
 };
 
@@ -199,6 +201,12 @@ const columns: ColumnDef<UserRow>[] = [
   { id: "gender", accessorFn: (u) => genderLabel(u.gender), header: "성별", meta: { label: "성별", className: "text-muted-foreground" } },
   { id: "ageRange", accessorFn: (u) => ageRangeLabel(u.ageRange), header: "연령대", meta: { label: "연령대", className: "text-muted-foreground" } },
   { id: "role", accessorFn: (u) => roleLabel(u.parentRole), header: "역할", meta: { label: "역할", className: "text-muted-foreground" } },
+  {
+    id: "children",
+    accessorFn: (u) => u.childCount ?? 0,
+    header: ({ column }) => <SortHeader label="아이" column={column} align="right" />,
+    meta: { label: "아이", align: "right" },
+  },
   {
     id: "groups",
     accessorFn: (u) => u._count.groupMemberships,
