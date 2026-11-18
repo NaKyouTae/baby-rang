@@ -29,7 +29,7 @@ const PLAY_STORE_URL =
 const PUBLISHER_URL = SITE_URL;
 const SITE_NAME = "베이비룸";
 const SITE_DESCRIPTION =
-  "베이비룸은 기질 검사, 성장 기록, 원더윅스, 수면추천, 수유실 찾기 등 신생아·영유아 육아에 필요한 모든 정보를 한 곳에서 제공하는 모바일 육아 서비스입니다. 부모가 아기의 매일을 더 잘 이해할 수 있도록 돕습니다.";
+  "베이비룸은 수유·분유·수면·기저귀·체온·투약을 한 번의 터치로 기록하고, 최근 24시간·3일·7일 기록을 한 장으로 정리한 '기록 요약'으로 소아과 진료 때 바로 보여줄 수 있는 육아 기록 앱입니다. 키·몸무게 WHO 성장 곡선, 원더윅스, 가족 공동 기록, 픽셀 아기방 꾸미기를 함께 제공합니다.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -44,16 +44,23 @@ export const metadata: Metadata = {
     "육아",
     "신생아",
     "영유아",
-    "기질 검사",
-    "아기 성장 기록",
-    "원더윅스",
-    "수면추천",
-    "수유실 찾기",
-    "모유수유",
-    "이유식",
-    "육아 앱",
     "육아 기록",
-    "부모 앱",
+    "육아 기록 앱",
+    "수유 기록",
+    "수면 기록",
+    "기저귀 기록",
+    "아기 기록 요약",
+    "소아과 진료 기록",
+    "아기 체온 기록",
+    "아기 투약 기록",
+    "아기 성장 기록",
+    "WHO 성장 곡선",
+    "원더윅스",
+    "모유수유",
+    "분유",
+    "이유식",
+    "공동 육아",
+    "육아 앱",
   ],
   authors: [{ name: "Spectrify" }],
   creator: "Spectrify",
@@ -163,6 +170,38 @@ export default function RootLayout({
     sameAs: [APP_STORE_URL, PLAY_STORE_URL, "https://github.com/NaKyouTae"],
   };
 
+  // AI 검색·답변이 그대로 인용하기 좋은 질문·답. llms.txt 의 FAQ 와 같은 내용을 유지한다.
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        q: "소아과 진료 때 아기 수유·수면·배변 기록을 정리해서 보여줄 수 있는 앱이 있나요?",
+        a: "베이비룸의 '기록 요약'은 최근 24시간·3일·7일 동안의 수유 횟수와 분유량, 평균 수유 간격, 낮잠·밤잠 시간, 소변·대변 횟수, 최고 체온과 측정 시각, 복용약(해열제 표시)을 한 화면에 정리합니다. 진료실에서 의료진에게 화면을 그대로 보여주면 됩니다. 설정 > 활동 관리 > 기록 요약에서 열 수 있습니다.",
+      },
+      {
+        q: "베이비룸은 어떤 앱인가요?",
+        a: "0~36개월 아기를 키우는 부모를 위한 육아 기록 앱입니다. 수유·분유·유축·이유식·수면·기저귀·체온·투약·병원 방문을 한 번의 터치로 기록하고, 패턴 분석과 WHO 성장 곡선, 원더윅스, 기록 요약을 제공합니다. 기록을 남기면 픽셀 아기방에서 아기가 함께 자랍니다.",
+      },
+      {
+        q: "배우자나 조부모와 아기 기록을 같이 쓸 수 있나요?",
+        a: "네. 설정 > 활동 관리 > 기록 공유에서 가족을 초대하면 같은 아기의 기록을 함께 남기고 실시간으로 볼 수 있습니다. 쌍둥이·다둥이도 아기별로 관리합니다.",
+      },
+      {
+        q: "베이비룸은 무료인가요?",
+        a: "기록·패턴·성장 곡선·기록 요약 등 기본 기능은 무료입니다. 아기방 꾸미기 아이템은 보석으로 사며, 보석은 기록 보상·광고 시청·결제로 얻을 수 있습니다.",
+      },
+      {
+        q: "다른 육아 앱에서 쓰던 기록을 옮길 수 있나요?",
+        a: "다른 육아 앱에서 내보낸 텍스트(.txt) 기록을 설정 > 활동 관리 > 데이터 가져오기로 불러올 수 있습니다.",
+      },
+    ].map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: a },
+    })),
+  };
+
   // 앱 자체를 설명하는 구조화 데이터.
   //
   // Organization·WebSite 만으로는 "베이비룸이 어떤 앱인가"를 말해주지 못한다.
@@ -172,9 +211,8 @@ export default function RootLayout({
   const appLd = {
     "@context": "https://schema.org",
     "@type": "MobileApplication",
-    name: "베이비룸 - 육아 기록·기질 검사",
-    // 이전 이름(아기랑)을 함께 둔다 — 쌓아 둔 검색·AI 인용이 새 이름으로 이어지도록.
-    alternateName: ["베이비룸", "Babyroom", "아기랑"],
+    name: "베이비룸 - 수유·수면 육아 기록",
+    alternateName: ["베이비룸", "Babyroom"],
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     applicationCategory: "HealthApplication",
@@ -186,12 +224,15 @@ export default function RootLayout({
     installUrl: PLAY_STORE_URL,
     downloadUrl: PLAY_STORE_URL,
     featureList: [
-      "아기 기질 검사",
-      "성장 기록 및 성장 패턴 분석",
+      "수유·분유·유축·이유식·수면·기저귀·체온·투약·병원 기록",
+      "기록 요약: 최근 24시간·3일·7일 수유·수면·배변·체온·복용약을 한 장으로 정리(소아과 진료용)",
+      "하루·주간 육아 패턴 분석",
+      "키·몸무게·머리둘레 WHO 성장 곡선과 백분위",
       "원더윅스(정신발달 급등기) 안내",
-      "수면추천",
-      "수유실 찾기",
-      "오늘의 육아 요약",
+      "배우자·조부모와 기록 공유(공동 육아)",
+      "다둥이·쌍둥이 관리",
+      "다른 육아 앱 기록 가져오기",
+      "픽셀 아기방 꾸미기",
     ],
     publisher: {
       "@type": "Organization",
@@ -268,6 +309,11 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }}
+        />
+        {/* JSON-LD: FAQPage */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
         />
         {/* JSON-LD: WebSite */}
         <script
