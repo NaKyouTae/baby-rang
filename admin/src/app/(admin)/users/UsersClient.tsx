@@ -104,13 +104,13 @@ function roleLabel(role: string | null) {
 }
 
 // 소셜에서 받은 값의 표기. 저장 형식은 서버에서 한 가지로 통일해 둔다
-// (server/src/auth/social-profile.ts).
+// (server/src/auth/social-profile.ts). 가운데 자리는 가려서 보여준다(010-****-5678).
 function fmtPhone(phone: string | null | undefined) {
   if (!phone) return "-";
   const d = phone.replace(/\D/g, "");
-  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
-  return phone;
+  if (d.length === 11) return `${d.slice(0, 3)}-****-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-***-${d.slice(6)}`;
+  return phone.replace(/\d(?=\d{4})/g, "*");
 }
 
 function genderLabel(gender: string | null | undefined) {
@@ -173,7 +173,7 @@ const STATUS_FILTERS: { value: "all" | ActivityStatus; label: string }[] = [
 const columns: ColumnDef<UserRow>[] = [
   {
     id: "user",
-    accessorFn: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.phone ?? ""}`,
+    accessorFn: (u) => `${u.name ?? ""} ${u.email ?? ""} ${u.phone?.slice(-4) ?? ""}`,
     header: ({ column }) => <SortHeader label="사용자" column={column} />,
     sortingFn: (a, b) => (a.original.name ?? "").localeCompare(b.original.name ?? "", "ko"),
     enableHiding: false,
