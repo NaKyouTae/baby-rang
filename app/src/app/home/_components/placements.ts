@@ -1,4 +1,5 @@
 import { paintWindowSky, type WindowSky } from './windowSky';
+import type { RoomItem } from './DecorateSheet';
 
 /**
  * 방에 놓인 가구 한 개.
@@ -49,6 +50,41 @@ export type Placement = {
    */
   dynamicSlot?: string | null;
 };
+
+/** 서버(GET /rooms/:childId)가 주는 배치 한 개. 아이템 정보가 함께 붙어 온다. */
+export type ServerPlacement = {
+  id: string;
+  itemId: string;
+  tileX: number;
+  tileY: number;
+  flipX: boolean;
+  facing?: Facing;
+  scale?: number;
+  item: RoomItem;
+};
+
+/** 서버 배치를 화면에서 쓰는 모양으로 펼친다. 홈과 어드민용 방 보기가 같이 쓴다. */
+export const fromServerPlacement = (sp: ServerPlacement): Placement => ({
+  id: sp.id,
+  itemId: sp.itemId,
+  name: sp.item.name,
+  spriteKey: sp.item.spriteKey,
+  imageUrl: sp.item.imageUrl,
+  category: sp.item.category,
+  tileX: sp.tileX,
+  tileY: sp.tileY,
+  tileW: sp.item.tileW,
+  tileH: sp.item.tileH,
+  flipX: sp.flipX ?? false,
+  facing: sp.facing ?? 'FRONT',
+  scale: sp.scale ?? 1,
+  affordances: sp.item.affordances,
+  dynamicSlot: sp.item.dynamicSlot ?? null,
+  sideImageUrl: sp.item.sideImageUrl ?? null,
+  sideTileW: sp.item.sideTileW ?? null,
+  sideTileH: sp.item.sideTileH ?? null,
+  backImageUrl: sp.item.backImageUrl ?? null,
+});
 
 export type Facing = 'FRONT' | 'SIDE' | 'BACK';
 

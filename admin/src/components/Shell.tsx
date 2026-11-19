@@ -22,6 +22,7 @@ import {
   Smile,
   Users,
   Sofa,
+  BedDouble,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +50,6 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/users", label: "사용자", icon: Users },
       { href: "/payments", label: "결제 내역", icon: CreditCard },
       { href: "/coins", label: "보석함", icon: Gem },
-      { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
       { href: "/notices", label: "공지사항", icon: Megaphone },
       { href: "/room-items", label: "방 꾸미기 아이템", icon: Sofa },
     ],
@@ -57,13 +57,17 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "모델링",
     items: [
+      { href: "/rooms", label: "아기방", icon: BedDouble },
       { href: "/modeling", label: "아기 모델", icon: PersonStanding },
       { href: "/record-modeling", label: "기록 모델", icon: Smile },
     ],
   },
   {
     title: "시스템",
-    items: [{ href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot }],
+    items: [
+      { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
+      { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
+    ],
   },
   {
     // 어드민에서 관리는 되지만 지금 앱에는 노출되지 않는 기능

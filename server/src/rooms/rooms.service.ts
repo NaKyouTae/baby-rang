@@ -52,7 +52,7 @@ export class RoomsService {
   }
 
   /** GET 응답과 같은 모양. 저장 알림('room' 이벤트)에도 그대로 실어 보낸다. */
-  private async roomOf(childId: string) {
+  async roomOf(childId: string) {
     const room = await this.prisma.room.findUnique({
       where: { childId },
       include: {

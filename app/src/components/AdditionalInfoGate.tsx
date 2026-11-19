@@ -27,6 +27,7 @@ const EXEMPT_PREFIXES = [
   '/settings/privacy',
   '/settings/marketing',
   '/settings/third-party',
+  '/room-view', // 어드민이 띄우는 방 보기. 보는 사람의 로그인 상태와 상관없다.
 ];
 
 export default function AdditionalInfoGate() {

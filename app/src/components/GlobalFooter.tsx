@@ -11,6 +11,7 @@ const EXCLUDED_PREFIXES = [
   "/login", // 로그인 진입 (전체화면 흐름)
   "/auth", // OAuth 콜백 (리다이렉트 전용 화면)
   "/home", // 픽셀 홈 (전체화면). 사업자정보는 홈의 설정 화면 하단에 있다.
+  "/room-view", // 어드민이 띄우는 방 보기 (전체화면)
   "/growth-pattern", // h-[100dvh] + overflow-hidden
   "/physical-growth", // 화면 높이에 고정, 목록만 내부 스크롤
   "/wonder-weeks", // 픽셀 원더윅스 (전체화면, 안쪽만 스크롤)

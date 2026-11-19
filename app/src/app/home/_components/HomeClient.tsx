@@ -16,7 +16,17 @@ import { buildDefaultRecordData } from '../../growth-record/recordDefaults';
 import { reloadNativeWidget, reloadWidget } from '@/lib/widgetBridge';
 import { realtimeHeaders, useGrowthRecordChanges, useRoomChanges, type RoomChange } from '@/lib/realtime';
 import RemoveSheet from './RemoveSheet';
-import { facingOf, hOf, imageOf, nextTurn, preloadSprites, wOf, type Placement } from './placements';
+import {
+  facingOf,
+  fromServerPlacement,
+  hOf,
+  imageOf,
+  nextTurn,
+  preloadSprites,
+  wOf,
+  type Placement,
+  type ServerPlacement,
+} from './placements';
 import { ROOM_W_TILES, VIEW_MARGIN_TILES, WALL_SHIFT, WALL_TILES } from './tiles';
 import RoomChrome, {
   ACTION_LABEL,
@@ -499,37 +509,7 @@ export default function HomeClient() {
   // 서버의 방(GET /api/rooms 응답, 또는 다른 기기가 저장해 소켓으로 온 방)을 화면에 그린다.
   const applyRoom = useCallback(
     (data: Pick<RoomChange<unknown>, 'room' | 'placements' | 'version'>) => {
-      type ServerPlacement = {
-        id: string;
-        itemId: string;
-        tileX: number;
-        tileY: number;
-        flipX: boolean;
-        facing?: Placement['facing'];
-        scale?: number;
-        item: RoomItem;
-      };
-      const loaded: Placement[] = ((data.placements ?? []) as ServerPlacement[]).map((sp) => ({
-        id: sp.id,
-        itemId: sp.itemId,
-        name: sp.item.name,
-        spriteKey: sp.item.spriteKey,
-        imageUrl: sp.item.imageUrl,
-        category: sp.item.category,
-        tileX: sp.tileX,
-        tileY: sp.tileY,
-        tileW: sp.item.tileW,
-        tileH: sp.item.tileH,
-        flipX: sp.flipX ?? false,
-        facing: sp.facing ?? 'FRONT',
-        scale: sp.scale ?? 1,
-        affordances: sp.item.affordances,
-        dynamicSlot: sp.item.dynamicSlot ?? null,
-        sideImageUrl: sp.item.sideImageUrl ?? null,
-        sideTileW: sp.item.sideTileW ?? null,
-        sideTileH: sp.item.sideTileH ?? null,
-        backImageUrl: sp.item.backImageUrl ?? null,
-      }));
+      const loaded = ((data.placements ?? []) as ServerPlacement[]).map(fromServerPlacement);
       const toSlot = (it?: { id: string; imageUrl: string | null } | null): Slot =>
         it ? { id: it.id, imageUrl: it.imageUrl } : null;
       const nextSlots: Slots = {
