@@ -23,6 +23,7 @@ import {
   Users,
   Sofa,
   BedDouble,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: "시스템",
     items: [
       { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
+      { href: "/launch-ads", label: "런치 광고", icon: Rocket },
       { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
     ],
   },

@@ -107,6 +107,31 @@ model ConsentLog {
   @@map("consent_logs")
 }
 
+/// 런치 광고. 앱을 새로 켤 때 스플래시 다음에 잠깐 띄우는 홍보 이미지.
+/// 앱은 목록을 미리 받아 두고(이미지까지) 다음 실행 때 보여 준다 — 실행을 기다리게 하지 않으려고.
+model LaunchAd {
+  id          String   @id @default(uuid())
+  /// 어드민에서 구분하는 이름. 앱에는 보이지 않는다.
+  title       String
+  imageUrl    String
+  /// 이미지를 눌렀을 때 갈 곳. '/' 로 시작하면 앱 안 화면, 아니면 외부 주소. 비우면 눌러도 닫히기만 한다.
+  linkUrl     String?
+  startsAt    DateTime
+  endsAt      DateTime
+  /// 자동으로 닫히기까지 초
+  durationSec Int      @default(3)
+  /// 한 기기에서 하루(KST)에 보여 줄 최대 횟수
+  maxPerDay   Int      @default(1)
+  isActive    Boolean  @default(true)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, endsAt])
+  @@map("launch_ads")
+}
+
 model Banner {
   id        String    @id @default(uuid())
   title     String

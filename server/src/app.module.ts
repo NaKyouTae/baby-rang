@@ -24,6 +24,7 @@ import { PhysicalGrowthModule } from './physical-growth/physical-growth.module';
 import { TestsModule } from './tests/tests.module';
 import { ScreenPreferenceModule } from './screen-preference/screen-preference.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
+import { LaunchAdsModule } from './launch-ads/launch-ads.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AdRewardsModule } from './ad-rewards/ad-rewards.module';
 
@@ -52,6 +53,7 @@ import { AdRewardsModule } from './ad-rewards/ad-rewards.module';
     TestsModule,
     ScreenPreferenceModule,
     AppSettingsModule,
+    LaunchAdsModule,
     RealtimeModule,
     AdRewardsModule,
   ],

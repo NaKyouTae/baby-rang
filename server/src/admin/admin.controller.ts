@@ -114,6 +114,11 @@ const AGE_GROUP_LABELS: Record<AgeGroup, string> = {
   after_first: '돌 이후 (13개월~)',
 };
 
+const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+};
+
 @Controller('admin')
 export class AdminAuthController {
   // ===== Login (public, credential-based) =====
@@ -150,6 +155,14 @@ export class AdminController {
   async uploadBannerImage(@UploadedFile() file?: Express.Multer.File) {
     if (!file) throw new BadRequestException('파일이 필요합니다.');
     const url = await this.storage.upload(file, 'banners');
+    return { url };
+  }
+
+  @Post('launch-ads/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLaunchAdImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('파일이 필요합니다.');
+    const url = await this.storage.upload(file, 'launch-ads');
     return { url };
   }
 
@@ -733,6 +746,63 @@ export class AdminController {
   @Delete('banners/:id')
   async deleteBanner(@Param('id') id: string) {
     await this.prisma.banner.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ===== Launch Ads (런치 광고) =====
+  @Get('launch-ads')
+  async listLaunchAds() {
+    const items = await this.prisma.launchAd.findMany({
+      orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }],
+    });
+    return { items };
+  }
+
+  @Post('launch-ads')
+  async createLaunchAd(@Body() body: any) {
+    if (!body?.title || !body?.imageUrl || !body?.startsAt || !body?.endsAt) {
+      throw new BadRequestException('이름, 이미지, 기간은 필수입니다.');
+    }
+    return this.prisma.launchAd.create({
+      data: {
+        title: body.title,
+        imageUrl: body.imageUrl,
+        linkUrl: body.linkUrl || null,
+        startsAt: new Date(body.startsAt),
+        endsAt: new Date(body.endsAt),
+        durationSec: clampInt(body.durationSec, 1, 10, 3),
+        maxPerDay: clampInt(body.maxPerDay, 1, 10, 1),
+        isActive: body.isActive ?? true,
+      },
+    });
+  }
+
+  @Patch('launch-ads/:id')
+  async updateLaunchAd(@Param('id') id: string, @Body() body: any) {
+    return this.prisma.launchAd.update({
+      where: { id },
+      data: {
+        ...(body.title !== undefined && { title: body.title }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.linkUrl !== undefined && { linkUrl: body.linkUrl || null }),
+        ...(body.startsAt !== undefined && {
+          startsAt: new Date(body.startsAt),
+        }),
+        ...(body.endsAt !== undefined && { endsAt: new Date(body.endsAt) }),
+        ...(body.durationSec !== undefined && {
+          durationSec: clampInt(body.durationSec, 1, 10, 3),
+        }),
+        ...(body.maxPerDay !== undefined && {
+          maxPerDay: clampInt(body.maxPerDay, 1, 10, 1),
+        }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
+      },
+    });
+  }
+
+  @Delete('launch-ads/:id')
+  async deleteLaunchAd(@Param('id') id: string) {
+    await this.prisma.launchAd.delete({ where: { id } });
     return { ok: true };
   }
 

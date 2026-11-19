@@ -14,6 +14,7 @@ import AnalyticsBridge from "@/components/AnalyticsBridge";
 import AppStorePurchaseRecovery from "@/components/AppStorePurchaseRecovery";
 import AndroidPurchaseRecovery from "@/components/AndroidPurchaseRecovery";
 import GlobalFooter from "@/components/GlobalFooter";
+import LaunchAd from "@/components/LaunchAd";
 
 const SITE_URL = "https://babyroom.spectrify.kr";
 // 스토어 등록정보. 구조화 데이터의 sameAs 로 묶어 같은 앱임을 알린다.
@@ -328,6 +329,8 @@ export default function RootLayout({
         <ViewportHeightSetter />
         <NavigationBaseline />
         <WidgetBridge />
+        {/* 런치 광고 — 앱을 켤 때 스플래시 다음에 잠깐. 어드민 시스템 > 런치 광고에서 관리 */}
+        <LaunchAd />
         {/* 이름·전화번호가 비어 있는 기존 회원을 추가 정보 화면으로 보낸다. */}
         <AdditionalInfoGate />
         <LoginPromptProvider>
