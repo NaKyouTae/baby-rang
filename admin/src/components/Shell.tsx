@@ -63,9 +63,12 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/users", label: "사용자", icon: Users },
       { href: "/payments", label: "결제 내역", icon: CreditCard },
       { href: "/coins", label: "보석함", icon: Gem },
-      { href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot },
       { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
     ],
+  },
+  {
+    title: "시스템",
+    items: [{ href: "/crawler-visits", label: "AI 크롤러 유입", icon: Bot }],
   },
   {
     // 어드민에서 관리는 되지만 지금 앱에는 노출되지 않는 기능
