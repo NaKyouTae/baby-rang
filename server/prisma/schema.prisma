@@ -35,6 +35,9 @@ model User {
   // 그때는 앱이 기기 구성(없으면 기본 구성)을 한 번 올린다.
   // 기기가 아니라 사용자마다 저장해 어느 기기에서나 같게 보인다.
   recordMenu             String[]                @default(["pumping", "pumped", "diaper", "breast", "sleep", "formula", "babyfood"])
+  // 마지막 앱 사용 시각. 인증된 요청이 들어올 때 갱신한다(쓰기를 줄이려 5분 간격).
+  // 어드민 DAU·MAU 를 기록하지 않고 앱만 연 사용자까지 세기 위한 값.
+  lastSeenAt             DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   accounts               Account[]

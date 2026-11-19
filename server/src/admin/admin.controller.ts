@@ -248,7 +248,7 @@ export class AdminController {
 
   /**
    * 대시보드 지표. 날짜 경계는 KST.
-   * 활동 사용자(DAU·WAU·MAU)는 기록·성장·결제·공지 읽기 중 가장 최근 시각 기준이다.
+   * 활동 사용자(DAU·WAU·MAU)는 앱 사용(lastSeenAt)·기록·성장·결제·공지 읽기 중 가장 최근 시각 기준이다.
    */
   @Get('metrics')
   async metrics() {
@@ -264,6 +264,8 @@ export class AdminController {
       users,
       children,
       groups,
+      groupsWithChild,
+      sharedGroups,
       newToday,
       new7,
       new30,
@@ -283,6 +285,11 @@ export class AdminController {
       this.prisma.user.count(),
       this.prisma.child.count(),
       this.prisma.group.count(),
+      this.prisma.group.count({ where: { children: { some: {} } } }),
+      this.prisma.groupMember.groupBy({
+        by: ['groupId'],
+        having: { groupId: { _count: { gt: 1 } } },
+      }),
       this.prisma.user.count({ where: { createdAt: { gte: today } } }),
       this.prisma.user.count({ where: { createdAt: { gte: d7 } } }),
       this.prisma.user.count({ where: { createdAt: { gte: d30 } } }),
@@ -362,6 +369,9 @@ export class AdminController {
       },
       children,
       groups,
+      // 아이를 1명 이상 등록한 가족, 2명 이상이 함께 쓰는 가족
+      groupsWithChild,
+      sharedGroups: sharedGroups.length,
       revenue: {
         total: revenueAll._sum.amount ?? 0,
         last30: revenue30._sum.amount ?? 0,
@@ -460,8 +470,8 @@ export class AdminController {
   }
 
   // 여러 사용자의 "마지막 활동 시각"을 한 번에 조회한다.
-  // 앱 접속 시각을 따로 저장하지 않으므로, 사용자가 남긴 실제 기록들의
-  // 최신 타임스탬프를 활동 시각으로 본다.
+  // 앱 사용 시각(lastSeenAt)과 사용자가 남긴 실제 기록들의 최신 타임스탬프 중
+  // 가장 늦은 값을 활동 시각으로 본다. lastSeenAt 은 2026-11 에 추가돼 그 전 사용자는 비어 있다.
   private async lastActivityMap(
     userIds?: string[],
   ): Promise<Map<string, Date>> {
@@ -470,7 +480,7 @@ export class AdminController {
     // userIds 를 주지 않으면 전체 사용자를 대상으로 한다(목록 정렬용).
     // 전체 id 를 in 으로 넘기면 쿼리가 비대해지므로 조건을 아예 빼는 편이 낫다.
     const where = userIds ? { userId: { in: userIds } } : {};
-    const [growth, physical, temperament, payment, noticeRead] =
+    const [growth, physical, temperament, payment, noticeRead, seen] =
       await Promise.all([
         this.prisma.growthRecord.groupBy({
           by: ['userId'],
@@ -497,6 +507,13 @@ export class AdminController {
           where,
           _max: { readAt: true },
         }),
+        this.prisma.user.findMany({
+          where: {
+            lastSeenAt: { not: null },
+            ...(userIds ? { id: { in: userIds } } : {}),
+          },
+          select: { id: true, lastSeenAt: true },
+        }),
       ]);
     const merge = <T extends { userId: string | null }>(
       rows: T[],
@@ -514,6 +531,10 @@ export class AdminController {
     merge(temperament, (r) => r._max.createdAt);
     merge(payment, (r) => r._max.requestedAt);
     merge(noticeRead, (r) => r._max.readAt);
+    merge(
+      seen.map((u) => ({ userId: u.id, lastSeenAt: u.lastSeenAt })),
+      (r) => r.lastSeenAt,
+    );
     return map;
   }
 

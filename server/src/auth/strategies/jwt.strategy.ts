@@ -4,6 +4,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
+/** 마지막 사용 시각은 이 간격보다 오래됐을 때만 갱신한다 */
+const LAST_SEEN_INTERVAL_MS = 5 * 60_000;
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -25,8 +28,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     ) {
       throw new UnauthorizedException();
     }
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });
+    if (
+      user &&
+      (!user.lastSeenAt ||
+        Date.now() - user.lastSeenAt.getTime() > LAST_SEEN_INTERVAL_MS)
+    ) {
+      // 응답을 기다리게 하지 않는다. updatedAt 이 바뀌지 않도록 raw 로 갱신한다.
+      this.prisma
+        .$executeRaw`UPDATE "users" SET "lastSeenAt" = ${new Date()} WHERE "id" = ${user.id}`.catch(
+        () => {},
+      );
+    }
+    return user;
   }
 }

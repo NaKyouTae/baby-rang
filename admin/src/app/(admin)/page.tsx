@@ -9,6 +9,8 @@ type Metrics = {
   users: { total: number; newToday: number; new7: number; new30: number; newPrev30: number; dau: number; wau: number; mau: number };
   children: number;
   groups: number;
+  groupsWithChild: number;
+  sharedGroups: number;
   revenue: { total: number; last30: number; prev30: number; paidCount: number; payers: number };
   coins: { adRewardsToday: number; issued30: number };
   recordsByType7d: { type: string; n: number }[];
@@ -102,7 +104,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="대시보드" description="날짜는 한국 시간 기준이고, 활동 사용자는 기록·결제 등 마지막 활동 시각으로 셉니다." />
+      <PageHeader title="대시보드" description="날짜는 한국 시간 기준이고, 활동 사용자는 앱을 쓴 시각(로그인 상태로 연 시각)과 기록·결제 중 가장 최근 시각으로 셉니다." />
 
       <LiveRecords initial={live} typeLabel={TYPE_LABEL} />
 
@@ -119,7 +121,25 @@ export default async function DashboardPage() {
           <Kpi
             label="활성 비율 (MAU / 가입)"
             value={m && m.users.total ? `${Math.round((m.users.mau / m.users.total) * 100)}%` : "-"}
-            sub={m && `아기 ${m.children}명 · 가족 ${m.groups}개`}
+            sub={m && `가입 ${m.users.total}명 중 ${m.users.mau}명이 최근 30일 사용`}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Kpi label="등록된 아기" value={m?.children ?? "-"} sub={m && `가족당 평균 ${m.groupsWithChild ? (m.children / m.groupsWithChild).toFixed(1) : 0}명`} />
+          <Kpi
+            label="아기 등록 가족"
+            value={m?.groupsWithChild ?? "-"}
+            sub={m && `전체 가족 ${m.groups}개 중 아기를 1명 이상 등록`}
+          />
+          <Kpi
+            label="공동 육아 가족"
+            value={m?.sharedGroups ?? "-"}
+            sub={m && `2명 이상이 함께 기록 · ${m.groupsWithChild ? Math.round((m.sharedGroups / m.groupsWithChild) * 100) : 0}%`}
+          />
+          <Kpi
+            label="아기 미등록 가족"
+            value={m ? Math.max(0, m.groups - m.groupsWithChild) : "-"}
+            sub="가입 후 아기를 등록하지 않은 가족"
           />
         </div>
       </section>

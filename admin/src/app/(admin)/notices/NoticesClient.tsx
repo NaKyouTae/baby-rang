@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Card } from "@/components/ui/card";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable, SortHeader } from "@/components/data-table";
 import { PageHeader } from "@/components/PageHeader";
 import {
   Dialog,
@@ -101,6 +102,69 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
 
   const dialogOpen = creating || !!editing;
 
+  const columns: ColumnDef<Notice>[] = [
+    {
+      id: "title",
+      accessorFn: (n) => `${n.title} ${n.content}`,
+      header: ({ column }) => <SortHeader label="제목" column={column} />,
+      sortingFn: (a, b) => a.original.title.localeCompare(b.original.title, "ko"),
+      enableHiding: false,
+      meta: { label: "제목" },
+      cell: ({ row: { original: n } }) => (
+        <div className="flex min-w-0 items-center gap-2">
+          {n.isPinned && <Badge variant="warning">고정</Badge>}
+          <span className="truncate font-medium">{n.title}</span>
+        </div>
+      ),
+    },
+    {
+      id: "isPublished",
+      accessorFn: (n) => (n.isPublished ? "공개" : "비공개"),
+      header: ({ column }) => <SortHeader label="상태" column={column} />,
+      meta: { label: "상태" },
+      cell: ({ row: { original: n } }) => (
+        <Badge variant={n.isPublished ? "success" : "secondary"}>{n.isPublished ? "공개" : "비공개"}</Badge>
+      ),
+    },
+    {
+      id: "publishedAt",
+      accessorFn: (n) => new Date(n.publishedAt).getTime(),
+      header: ({ column }) => <SortHeader label="게시일" column={column} align="right" />,
+      meta: { label: "게시일", align: "right", className: "text-muted-foreground" },
+      cell: ({ row: { original: n } }) => formatDateTime(n.publishedAt),
+    },
+    {
+      id: "updatedAt",
+      accessorFn: (n) => new Date(n.updatedAt).getTime(),
+      header: ({ column }) => <SortHeader label="수정일" column={column} align="right" />,
+      meta: { label: "수정일", align: "right", className: "text-muted-foreground" },
+      cell: ({ row: { original: n } }) => formatDateTime(n.updatedAt),
+    },
+    {
+      id: "actions",
+      header: "",
+      enableSorting: false,
+      enableHiding: false,
+      meta: { align: "right" },
+      cell: ({ row: { original: n } }) => (
+        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" onClick={() => startEdit(n)} aria-label="수정">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => remove(n.id)}
+            aria-label="삭제"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -114,49 +178,13 @@ export default function NoticesClient({ initial }: { initial: Notice[] }) {
         }
       />
 
-      <div className="space-y-3">
-        {initial.map((n) => (
-          <Card
-            key={n.id}
-            className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 transition-shadow hover:shadow-md"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {n.isPinned && (
-                  <Badge variant="warning" className="text-[10px]">고정</Badge>
-                )}
-                <p className="font-semibold text-sm text-foreground truncate">
-                  {n.title}
-                </p>
-                <Badge
-                  variant={n.isPublished ? "success" : "secondary"}
-                  className="text-[10px]"
-                >
-                  {n.isPublished ? "공개" : "비공개"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground truncate mt-1 tabular-nums">
-                {formatDateTime(n.publishedAt)}
-              </p>
-            </div>
-            <div className="flex gap-1.5 self-end sm:self-auto">
-              <Button variant="outline" size="sm" onClick={() => startEdit(n)}>
-                <Pencil className="h-3 w-3" />
-                수정
-              </Button>
-              <Button variant="destructive" size="sm" onClick={() => remove(n.id)}>
-                <Trash2 className="h-3 w-3" />
-                삭제
-              </Button>
-            </div>
-          </Card>
-        ))}
-        {initial.length === 0 && (
-          <Card className="py-12 text-center text-muted-foreground text-sm">
-            등록된 공지사항이 없습니다
-          </Card>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        data={initial}
+        searchPlaceholder="제목, 내용 검색"
+        emptyText="등록된 공지사항이 없습니다."
+        onRowClick={startEdit}
+      />
 
       <Dialog open={dialogOpen} onOpenChange={(v) => !v && close()}>
         <DialogContent className="max-w-lg max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
