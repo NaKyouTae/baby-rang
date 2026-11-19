@@ -18,7 +18,7 @@ export default async function RoomsPage() {
     <div className="space-y-4">
       <PageHeader
         title="아기방"
-        description="사용자들이 꾸민 아기방을 앱 화면 그대로 봅니다. 행을 누르면 방이 열리고, 보기만 할 수 있습니다."
+        description="사용자들이 꾸민 아기방을 앱 화면 그대로 봅니다. 아기를 고르면 오른쪽에 방이 보이고, 보기만 할 수 있습니다."
       />
       <StatStrip
         items={[

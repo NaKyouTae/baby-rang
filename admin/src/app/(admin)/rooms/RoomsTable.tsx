@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { DataTable, SortHeader } from "@/components/data-table";
 import { formatDateTime } from "@/lib/utils";
 
@@ -98,7 +98,7 @@ export function RoomsTable({ items }: { items: RoomRow[] }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
-  const show = async (r: RoomRow) => {
+  const show = useCallback(async (r: RoomRow) => {
     setOpen(r);
     setSrc(null);
     setFailed(false);
@@ -110,44 +110,57 @@ export function RoomsTable({ items }: { items: RoomRow[] }) {
     } catch {
       setFailed(true);
     }
-  };
+  }, []);
+
+  // 들어오면 맨 위(최근 수정) 방을 바로 열어 둔다
+  const first = items[0];
+  useEffect(() => {
+    if (first) void show(first);
+  }, [first, show]);
 
   return (
-    <>
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
       <DataTable
         columns={columns}
         data={items}
         searchPlaceholder="아기, 보호자 검색"
         emptyText="아직 꾸민 방이 없습니다."
         onRowClick={show}
+        initialHidden={{ createdAt: false }}
       />
 
-      <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent className="w-auto max-w-none gap-3 sm:max-w-none">
-          <DialogHeader>
-            <DialogTitle>{open?.childName}의 방</DialogTitle>
-            <DialogDescription>
-              {open?.owner?.name ?? "-"} · 가구 {open?.placements ?? 0}개 · 마지막 수정 {formatDateTime(open?.updatedAt)}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="relative mx-auto h-[min(760px,80vh)] w-[min(390px,85vw)] overflow-hidden rounded-[28px] border-8 border-foreground/90 bg-muted">
-            {src ? (
-              <iframe key={src} src={src} title="아기방" className="h-full w-full border-0" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                {failed ? "방을 열지 못했습니다." : <Loader2 className="h-5 w-5 animate-spin" />}
+      <Card className="gap-3 p-4 xl:sticky xl:top-6">
+        {open ? (
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate font-semibold">{open.childName}의 방</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {open.owner?.name ?? "-"} · 가구 {open.placements}개 · {formatDateTime(open.updatedAt)}
+                </div>
               </div>
-            )}
-          </div>
-          {src && (
-            <Button variant="ghost" size="sm" asChild className="mx-auto">
-              <a href={src} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" />새 창으로 열기
-              </a>
-            </Button>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+              {src && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={src} target="_blank" rel="noreferrer" aria-label="새 창으로 열기">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              )}
+            </div>
+            <div className="relative mx-auto mt-3 h-[min(720px,calc(100vh-11rem))] w-full max-w-[368px] overflow-hidden rounded-[28px] border-8 border-foreground/90 bg-muted">
+              {src ? (
+                <iframe key={src} src={src} title="아기방" className="h-full w-full border-0" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  {failed ? "방을 열지 못했습니다." : <Loader2 className="h-5 w-5 animate-spin" />}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="py-16 text-center text-sm text-muted-foreground">목록에서 아기를 고르면 방이 보입니다.</div>
+        )}
+      </Card>
+    </div>
   );
 }
