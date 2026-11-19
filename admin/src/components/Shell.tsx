@@ -44,8 +44,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [{ href: "/", label: "대시보드", icon: LayoutDashboard }],
   },
   {
-    title: "콘텐츠",
+    title: "운영",
     items: [
+      { href: "/users", label: "사용자", icon: Users },
+      { href: "/payments", label: "결제 내역", icon: CreditCard },
+      { href: "/coins", label: "보석함", icon: Gem },
+      { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
       { href: "/notices", label: "공지사항", icon: Megaphone },
       { href: "/room-items", label: "방 꾸미기 아이템", icon: Sofa },
     ],
@@ -55,15 +59,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/modeling", label: "아기 모델", icon: PersonStanding },
       { href: "/record-modeling", label: "기록 모델", icon: Smile },
-    ],
-  },
-  {
-    title: "운영",
-    items: [
-      { href: "/users", label: "사용자", icon: Users },
-      { href: "/payments", label: "결제 내역", icon: CreditCard },
-      { href: "/coins", label: "보석함", icon: Gem },
-      { href: "/ads", label: "광고 설정", icon: RectangleHorizontal },
     ],
   },
   {
