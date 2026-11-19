@@ -74,6 +74,8 @@ struct BabyRangApp: App {
 
     @State private var isWebViewLoaded = false
     @State private var minimumElapsed = false
+    /// 지난 실행에서 받아 둔 스플래시 홍보 이미지(어드민 시스템 > 스플래시). 없으면 기본 스플래시만 보인다.
+    @State private var splashPromo = SplashPromo.current()
     /// 웹이 알려주는 배너 슬롯 위치.
     @StateObject private var adSlot = AdSlotModel()
     /// ATT 응답 + SDK 초기화 완료 여부. 이 전에는 광고를 요청하지 않는다.
@@ -126,7 +128,7 @@ struct BabyRangApp: App {
                 BottomBannerSlot(slot: adSlot, canLoad: isAdSDKReady)
                     .ignoresSafeArea(.container)
 
-                SplashView()
+                SplashView(promo: splashPromo?.image)
                     .ignoresSafeArea()
                     .opacity(shouldHideSplash ? 0 : 1)
                     .allowsHitTesting(!shouldHideSplash)
@@ -160,12 +162,16 @@ struct BabyRangApp: App {
                 }
             }
             .onAppear {
-                // 브랜드 노출 최소 1초 보장
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                // 브랜드 노출 최소 1초 보장. 홍보 이미지가 있으면 볼 틈이 있도록 2초.
+                let hasPromo = splashPromo != nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + (hasPromo ? 2.0 : 1.0)) {
                     minimumElapsed = true
                 }
-                // didCommit이 안 떨어지는 경우(네트워크 오류 등) 대비 2초 후 강제 dismiss
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                if let id = splashPromo?.id { SplashPromo.reportImpression(id: id) }
+                // 다음 실행을 위해 새 홍보 목록·이미지를 받아 둔다
+                Task { await SplashPromo.refresh() }
+                // didCommit이 안 떨어지는 경우(네트워크 오류 등) 대비 강제 dismiss
+                DispatchQueue.main.asyncAfter(deadline: .now() + (hasPromo ? 3.0 : 2.0)) {
                     if !isWebViewLoaded {
                         isWebViewLoaded = true
                     }
@@ -283,6 +289,10 @@ private struct SlotGeometry: ViewModifier {
 }
 
 private struct SplashView: View {
+    /// 스플래시 홍보 이미지. 기본 스플래시에서 바로 바꾸면 깜빡여 보여서 짧게 겹쳐 바꾼다.
+    let promo: UIImage?
+    @State private var showPromo = false
+
     var body: some View {
         // Launch Screen storyboard와 동일한 렌더링(scaleAspectFill + clip)을 유지해야
         // 시스템 런치 → SwiftUI splash 전환 시 이미지 크기가 점프하지 않음.
@@ -295,6 +305,20 @@ private struct SplashView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             )
+            .overlay(
+                Group {
+                    if let promo {
+                        Image(uiImage: promo)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .opacity(showPromo ? 1 : 0)
+                    }
+                }
+            )
             .clipped()
+            .onAppear {
+                guard promo != nil else { return }
+                withAnimation(.easeIn(duration: 0.25)) { showPromo = true }
+            }
     }
 }

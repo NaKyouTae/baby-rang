@@ -40,11 +40,8 @@ export type LaunchAd = {
 type Form = {
   title: string;
   imageUrl: string;
-  linkUrl: string;
   startsAt: string;
   endsAt: string;
-  durationSec: number;
-  maxPerDay: number;
   isActive: boolean;
 };
 
@@ -58,11 +55,8 @@ function emptyForm(): Form {
   return {
     title: "",
     imageUrl: "",
-    linkUrl: "",
     startsAt: toInput(start.toISOString()),
     endsAt: toInput(end.toISOString()),
-    durationSec: 3,
-    maxPerDay: 1,
     isActive: true,
   };
 }
@@ -75,10 +69,8 @@ function statusOf(a: Pick<LaunchAd, "isActive" | "startsAt" | "endsAt">, now = D
   return { label: "노출 중", variant: "success" };
 }
 
-const ctr = (a: LaunchAd) => (a.impressions ? `${((a.clicks / a.impressions) * 100).toFixed(1)}%` : "-");
-
 /** 앱 화면과 같은 모양의 미리보기. 점선 안쪽은 어떤 폰에서도 잘리지 않는 영역이다. */
-function PhonePreview({ imageUrl, durationSec }: { imageUrl: string; durationSec: number }) {
+function PhonePreview({ imageUrl }: { imageUrl: string }) {
   return (
     <div className="relative mx-auto aspect-[9/19.5] w-[240px] overflow-hidden rounded-[28px] border-[6px] border-foreground/90 bg-[#F1F2F4]">
       {imageUrl ? (
@@ -88,8 +80,6 @@ function PhonePreview({ imageUrl, durationSec }: { imageUrl: string; durationSec
         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">이미지를 올려 주세요</div>
       )}
       <div className="pointer-events-none absolute inset-x-[7%] inset-y-[9%] rounded-md border border-dashed border-white/80 mix-blend-difference" />
-      <span className="absolute right-2.5 top-7 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white">건너뛰기 {durationSec}</span>
-      <span className="absolute bottom-4 left-2.5 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white">오늘 하루 보지 않기</span>
     </div>
   );
 }
@@ -116,11 +106,8 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
     setForm({
       title: a.title,
       imageUrl: a.imageUrl,
-      linkUrl: a.linkUrl ?? "",
       startsAt: toInput(a.startsAt),
       endsAt: toInput(a.endsAt),
-      durationSec: a.durationSec,
-      maxPerDay: a.maxPerDay,
       isActive: a.isActive,
     });
     setCreating(false);
@@ -146,16 +133,11 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
   const save = async () => {
     if (!form.title.trim() || !form.imageUrl) return alert("이름과 이미지를 넣어 주세요.");
     if (!form.startsAt || !form.endsAt || form.startsAt >= form.endsAt) return alert("노출 기간을 확인해 주세요.");
-    const link = form.linkUrl.trim();
-    if (link && !link.startsWith("/") && !/^https?:\/\//.test(link)) {
-      return alert("링크는 /로 시작하는 앱 화면 경로나 https:// 주소로 넣어 주세요.");
-    }
     setBusy(true);
     try {
       const body = {
         ...form,
         title: form.title.trim(),
-        linkUrl: link,
         startsAt: fromInput(form.startsAt),
         endsAt: fromInput(form.endsAt),
       };
@@ -184,7 +166,7 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
   };
 
   const remove = async (a: LaunchAd) => {
-    if (!confirm(`'${a.title}' 런치 광고를 삭제할까요? 노출·클릭 기록도 함께 사라집니다.`)) return;
+    if (!confirm(`'${a.title}' 스플래시를 삭제할까요? 노출 기록도 함께 사라집니다.`)) return;
     await fetch(`/api/launch-ads/${a.id}`, { method: "DELETE" });
     router.refresh();
   };
@@ -192,19 +174,16 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
   const columns: ColumnDef<LaunchAd>[] = [
     {
       id: "title",
-      accessorFn: (a) => `${a.title} ${a.linkUrl ?? ""}`,
-      header: ({ column }) => <SortHeader label="광고" column={column} />,
+      accessorFn: (a) => a.title,
+      header: ({ column }) => <SortHeader label="이미지" column={column} />,
       sortingFn: (x, y) => x.original.title.localeCompare(y.original.title, "ko"),
       enableHiding: false,
-      meta: { label: "광고" },
+      meta: { label: "이미지" },
       cell: ({ row: { original: a } }) => (
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={a.imageUrl} alt="" className="h-14 w-[26px] shrink-0 rounded object-cover ring-1 ring-border" />
-          <div className="min-w-0">
-            <div className="truncate font-medium">{a.title}</div>
-            <div className="truncate text-xs text-muted-foreground">{a.linkUrl || "링크 없음"}</div>
-          </div>
+          <div className="min-w-0 truncate font-medium">{a.title}</div>
         </div>
       ),
     },
@@ -231,30 +210,11 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
       ),
     },
     {
-      id: "rule",
-      accessorFn: (a) => a.maxPerDay,
-      header: "노출 규칙",
-      enableSorting: false,
-      meta: { label: "노출 규칙", className: "text-muted-foreground" },
-      cell: ({ row: { original: a } }) => `${a.durationSec}초 · 하루 ${a.maxPerDay}회`,
-    },
-    {
       id: "impressions",
       accessorFn: (a) => a.impressions,
       header: ({ column }) => <SortHeader label="노출" column={column} align="right" />,
       meta: { label: "노출", align: "right" },
-      cell: ({ row: { original: a } }) => a.impressions.toLocaleString(),
-    },
-    {
-      id: "clicks",
-      accessorFn: (a) => a.clicks,
-      header: ({ column }) => <SortHeader label="클릭" column={column} align="right" />,
-      meta: { label: "클릭", align: "right" },
-      cell: ({ row: { original: a } }) => (
-        <span>
-          {a.clicks.toLocaleString()} <span className="text-xs text-muted-foreground">({ctr(a)})</span>
-        </span>
-      ),
+      cell: ({ row: { original: a } }) => `${a.impressions.toLocaleString()}회`,
     },
     {
       id: "actions",
@@ -284,16 +244,16 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
 
   const live = initial.filter((a) => statusOf(a).label === "노출 중");
   const totalImp = initial.reduce((s, a) => s + a.impressions, 0);
-  const totalClk = initial.reduce((s, a) => s + a.clicks, 0);
+  const upcoming = initial.filter((a) => statusOf(a).label === "예정").length;
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="런치 광고"
-        description="앱을 켤 때 스플래시 다음에 잠깐 보여 주는 홍보 이미지입니다. 앱 배포 없이 바뀌고, 새로 올린 광고는 사용자가 앱을 한 번 더 열 때부터 보입니다."
+        title="스플래시"
+        description="앱을 켤 때 기본 스플래시 대신 보여 주는 홍보 이미지입니다. 앱이 미리 받아 두었다가 다음 실행 때 보여 주므로, 새 이미지는 사용자가 앱을 한 번 더 열 때부터 보입니다. 걸린 이미지가 없으면 기본 스플래시가 나옵니다."
         actions={
           <Button size="sm" onClick={startCreate}>
-            <Plus className="h-4 w-4" />새 런치 광고
+            <Plus className="h-4 w-4" />새 스플래시
           </Button>
         }
       />
@@ -301,34 +261,34 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
       <StatStrip
         items={[
           { label: "지금 노출 중", value: live.length, hint: live[0]?.title },
-          { label: "전체 광고", value: initial.length },
+          { label: "예정", value: upcoming },
+          { label: "전체", value: initial.length },
           { label: "누적 노출", value: totalImp.toLocaleString() },
-          { label: "누적 클릭", value: totalClk.toLocaleString(), hint: totalImp ? `클릭률 ${((totalClk / totalImp) * 100).toFixed(1)}%` : undefined },
         ]}
       />
 
       <DataTable
         columns={columns}
         data={initial}
-        searchPlaceholder="광고 이름, 링크 검색"
-        emptyText="등록된 런치 광고가 없습니다. 비어 있으면 앱은 스플래시만 보여 줍니다."
+        searchPlaceholder="이름 검색"
+        emptyText="등록된 스플래시 이미지가 없습니다. 비어 있으면 앱은 기본 스플래시를 보여 줍니다."
         onRowClick={startEdit}
       />
 
       <Dialog open={open} onOpenChange={(v) => !v && close()}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editing ? "런치 광고 수정" : "새 런치 광고"}</DialogTitle>
+            <DialogTitle>{editing ? "스플래시 수정" : "새 스플래시"}</DialogTitle>
             <DialogDescription>
-              기간이 겹치면 시작이 가장 늦은 광고 하나만 보입니다. 하루 횟수는 기기마다 한국 시간 자정에 초기화됩니다.
+              기간이 겹치면 시작이 가장 늦은 이미지 하나만 보입니다. 앱이 미리 받아 두도록 시작 하루 전쯤 등록해 두세요.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-6 sm:grid-cols-[240px_minmax(0,1fr)]">
             <div className="space-y-2">
-              <PhonePreview imageUrl={form.imageUrl} durationSec={form.durationSec} />
+              <PhonePreview imageUrl={form.imageUrl} />
               <p className="text-center text-[11px] leading-4 text-muted-foreground">
-                권장 1080×2340 (9:19.5). 기기 비율에 따라 위아래나 양옆이 잘리니 글자·로고는 점선 안에 두세요.
+                권장 1080×2340 (9:19.5). 화면을 꽉 채우고 넘치는 부분은 잘리니 글자·로고는 점선 안에 두세요. 누를 수 없고 2초쯤 보입니다.
               </p>
             </div>
 
@@ -338,7 +298,7 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
                 <Input
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="예: 11월 보석 할인 이벤트 (앱에는 보이지 않음)"
+                  placeholder="예: 11월 새 가구 홍보 (앱에는 보이지 않음)"
                 />
               </div>
               <div className="space-y-2">
@@ -359,15 +319,6 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
                   />
                 </label>
               </div>
-              <div className="space-y-2">
-                <Label>누르면 갈 곳</Label>
-                <Input
-                  value={form.linkUrl}
-                  onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
-                  placeholder="/home 처럼 앱 화면 경로, 또는 https:// 주소"
-                />
-                <p className="text-xs text-muted-foreground">비우면 눌러도 닫히기만 합니다. 외부 주소는 iOS 에서 사파리로 열립니다.</p>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>시작</Label>
@@ -378,32 +329,10 @@ export default function LaunchAdsClient({ initial }: { initial: LaunchAd[] }) {
                   <Input type="datetime-local" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>보여 줄 시간(초)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={form.durationSec}
-                    onChange={(e) => setForm({ ...form, durationSec: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>하루 최대 횟수</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={form.maxPerDay}
-                    onChange={(e) => setForm({ ...form, maxPerDay: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
               <div className="flex items-center gap-2">
                 <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
                 <Label>켜기</Label>
-                <span className="text-xs text-muted-foreground">끄면 앱이 다음에 목록을 받는 즉시 내려갑니다.</span>
+                <span className="text-xs text-muted-foreground">끄면 앱이 다음에 목록을 받은 뒤부터 나오지 않습니다.</span>
               </div>
             </div>
           </div>

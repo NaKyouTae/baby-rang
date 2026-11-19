@@ -41,4 +41,18 @@
         android:contentDescription="@null"
         android:scaleType="centerCrop"
         android:src="@drawable/splash" />
+
+    <!--
+      스플래시 홍보 이미지(어드민 시스템 > 스플래시). 받아 둔 이미지가 있을 때만
+      기본 스플래시 위로 서서히 나타난다. 걷을 때는 기본 스플래시와 함께 걷는다.
+    -->
+    <ImageView
+        android:id="@+id/splashPromoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="@color/splash_background"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
 </FrameLayout>

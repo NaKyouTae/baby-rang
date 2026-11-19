@@ -107,8 +107,9 @@ model ConsentLog {
   @@map("consent_logs")
 }
 
-/// 런치 광고. 앱을 새로 켤 때 스플래시 다음에 잠깐 띄우는 홍보 이미지.
+/// 스플래시 홍보 이미지(어드민 시스템 > 스플래시). 앱을 켤 때 기본 스플래시 대신 보여 준다.
 /// 앱은 목록을 미리 받아 두고(이미지까지) 다음 실행 때 보여 준다 — 실행을 기다리게 하지 않으려고.
+/// linkUrl·durationSec·maxPerDay·clicks 는 처음 만든 팝업형에서 쓰던 값으로 지금은 쓰지 않는다.
 model LaunchAd {
   id          String   @id @default(uuid())
   /// 어드민에서 구분하는 이름. 앱에는 보이지 않는다.

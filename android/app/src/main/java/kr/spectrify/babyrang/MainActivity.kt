@@ -78,6 +78,9 @@ class MainActivity : AppCompatActivity() {
     /** 스플래시를 이미 걷었는지(또는 걷기로 예약했는지). 중복 호출을 막는다. */
     private var splashHidden = false
 
+    /** 이번 실행에 스플래시 홍보 이미지를 띄웠는지 */
+    private var promoShown = false
+
     /** 스플래시가 화면에 뜬 시각. 최소 노출 시간을 재는 기준이다. */
     private val splashStartedAt = SystemClock.elapsedRealtime()
 
@@ -94,16 +97,35 @@ class MainActivity : AppCompatActivity() {
         // 웹이 캐시에서 바로 그려지면 onPageCommitVisible 이 수백 ms 안에 떨어져,
         // 스플래시가 몇 프레임 만에 사라진다. 사용자 눈에는 시스템 스플래시에서
         // 곧장 홈으로 튀는 것처럼 보인다. iOS 와 같이 최소 노출 시간을 보장한다.
+        // 홍보 이미지가 떠 있으면 볼 틈이 있도록 조금 더 둔다.
         val shown = SystemClock.elapsedRealtime() - splashStartedAt
-        val wait = (MIN_SPLASH_MS - shown).coerceAtLeast(0L)
+        val min = if (promoShown) MIN_PROMO_SPLASH_MS else MIN_SPLASH_MS
+        val wait = (min - shown).coerceAtLeast(0L)
 
         binding.splashView.postDelayed({
-            binding.splashView.animate()
-                .alpha(0f)
-                .setDuration(200)
-                .withEndAction { binding.splashView.visibility = android.view.View.GONE }
-                .start()
+            for (v in listOf(binding.splashView, binding.splashPromoView)) {
+                v.animate()
+                    .alpha(0f)
+                    .setDuration(200)
+                    .withEndAction { v.visibility = android.view.View.GONE }
+                    .start()
+            }
         }, wait)
+    }
+
+    /**
+     * 받아 둔 스플래시 홍보 이미지가 있으면 기본 스플래시 위로 띄우고, 다음 실행을 위해 새 목록을 받는다.
+     * 기본 스플래시에서 바로 바꾸면 깜빡여 보여서 짧게 겹쳐 바꾼다.
+     */
+    private fun showSplashPromo() {
+        SplashPromo.current(this)?.let { (id, bitmap) ->
+            promoShown = true
+            binding.splashPromoView.setImageBitmap(bitmap)
+            binding.splashPromoView.visibility = android.view.View.VISIBLE
+            binding.splashPromoView.animate().alpha(1f).setDuration(250).start()
+            SplashPromo.reportImpression(id)
+        }
+        SplashPromo.refresh(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,6 +148,8 @@ class MainActivity : AppCompatActivity() {
         numberPicker = NativeNumberPicker(this) { script ->
             binding.webView.evaluateJavascript(script, null)
         }
+
+        showSplashPromo()
 
         // onPageCommitVisible 이 오지 않는 경우(네트워크 오류 등) 대비.
         // 스플래시가 영원히 남아 앱이 멈춘 것처럼 보이는 것을 막는다.
@@ -554,6 +578,8 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         /** 스플래시 최소 노출 시간(ms). iOS 의 브랜드 노출 1초와 맞춘다. */
         const val MIN_SPLASH_MS = 1000L
+        /** 스플래시 홍보 이미지가 있을 때의 최소 노출 시간 */
+        const val MIN_PROMO_SPLASH_MS = 2000L
 
         const val REQ_LOCATION = 1001
         const val TAG = "BabyRangAd"

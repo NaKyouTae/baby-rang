@@ -5,14 +5,15 @@ import { PrismaService } from '../prisma/prisma.service';
 const PREFETCH_MS = 7 * 86_400_000;
 
 /**
- * 런치 광고 — 앱(로그인 여부와 상관없이)이 부른다.
- * 관리는 어드민(admin/launch-ads)에서 한다.
+ * 스플래시 홍보 이미지 — iOS·Android 앱이 로그인 여부와 상관없이 부른다(웹 /api/launch-ads 경유).
+ * 앱은 목록과 이미지를 받아 두었다가 다음 실행 때 스플래시로 보여 준다.
+ * 관리는 어드민 시스템 > 스플래시(admin/launch-ads)에서 한다.
  */
 @Controller('launch-ads')
 export class LaunchAdsController {
   constructor(private prisma: PrismaService) {}
 
-  /** 지금 걸려 있거나 곧 시작할 광고. 앱은 이 목록을 저장해 두고 다음 실행 때 쓴다. */
+  /** 지금 걸려 있거나 곧 시작할 이미지. 앱은 이 목록을 저장해 두고 다음 실행 때 쓴다. */
   @Get()
   async list() {
     const now = new Date();
@@ -36,7 +37,7 @@ export class LaunchAdsController {
     return { items, at: now };
   }
 
-  /** 노출·클릭 집계. 실패해도 앱 동작에는 상관없다. */
+  /** 노출 집계(clicks 는 예전 팝업형에서 쓰던 값). 실패해도 앱 동작에는 상관없다. */
   @Post(':id/events')
   async event(@Param('id') id: string, @Body() body: { type?: string }) {
     const field =
