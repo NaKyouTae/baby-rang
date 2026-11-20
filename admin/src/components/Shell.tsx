@@ -10,6 +10,7 @@ import {
   ClipboardList,
   CreditCard,
   Gem,
+  HeartHandshake,
   HelpCircle,
   Image,
   LayoutDashboard,
@@ -60,6 +61,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/rooms", label: "아기방", icon: BedDouble },
       { href: "/modeling", label: "아기 모델", icon: PersonStanding },
+      { href: "/mom-modeling", label: "엄마 모델", icon: HeartHandshake },
       { href: "/record-modeling", label: "기록 모델", icon: Smile },
     ],
   },
