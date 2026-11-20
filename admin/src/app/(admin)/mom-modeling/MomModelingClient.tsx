@@ -21,8 +21,8 @@ const BED = { x0: 112, x1: 162, y0: 52, y1: 84 };
 const FREE = { x0: 14, x1: ROOM_W - 14, y0: ROOM_WALL + 14, y1: ROOM_H - 4 };
 /** 엄마가 나간 뒤 다음에 들어오기까지(ms) */
 const NEXT_TRIP_MS = 2500;
-/** 업는 시안은 아직 기지 못하는 아기만 — 홈의 보호자 손과 같은 대상 */
-const MAX_MONTH = 7;
+/** 엄마는 아직 기지 못하는 아기(0~5개월)만 옮긴다 — 6개월부터는 스스로 긴다 */
+const MAX_MONTH = 5;
 
 const GENDERS: { key: Gender; label: string }[] = [
   { key: "female", label: "여아" },
@@ -82,7 +82,7 @@ export default function MomModelingClient() {
 
 /** 방에서 엄마가 아기를 업어 옮기는 모습 */
 function CarryCard({ playing }: { playing: boolean }) {
-  const [month, setMonth] = useState(4);
+  const [month, setMonth] = useState(3);
   const [gender, setGender] = useState<Gender>("female");
   const [night, setNight] = useState(false);
   const [label, setLabel] = useState("");
@@ -234,7 +234,7 @@ function CarryCard({ playing }: { playing: boolean }) {
             <li>아기와 가까운 벽 쪽에서 걸어 들어와, 아기에게 등을 대고 쪼그려 앉아 포대기로 업습니다.</li>
             <li>낮에는 놀이매트·침대·빈 바닥 중 한 곳, 밤에는 침대로 옮깁니다(홈과 같은 규칙).</li>
             <li>침대에 눕힐 때는 침대 앞에 서서 내려놓고, 다 옮기면 가까운 벽 쪽으로 걸어 나갑니다.</li>
-            <li>여기서는 나간 뒤 몇 초 만에 다시 들어옵니다. 홈에서는 10~20분 간격이고, 엄마는 한 번에 한 아이만 옮깁니다.</li>
+            <li>여기서는 나간 뒤 몇 초 만에 다시 들어옵니다. 홈에서는 3~5분 간격이고, 엄마는 한 번에 한 아이만 옮깁니다.</li>
           </ul>
         </div>
       </CardContent>
