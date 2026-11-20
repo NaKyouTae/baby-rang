@@ -178,7 +178,7 @@ function Simulation({
   return (
     <Card className="mb-4">
       <CardContent className="flex flex-wrap gap-5 p-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {GENDERS.map((g) => (
             <figure key={g.key} className="flex flex-col items-center gap-1">
               <SimRoom

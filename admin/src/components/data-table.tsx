@@ -60,11 +60,14 @@ export type ColumnMeta = {
   label?: string;
   align?: "left" | "right";
   className?: string;
+  /** 폰 카드에서 뺄 덜 중요한 열 */
+  mobileHidden?: boolean;
 };
 
 /**
  * 어드민 공통 표. 검색·정렬·열 보기·페이지를 브라우저에서 처리한다(한 번에 받은 행 기준).
  * 위쪽 toolbar 자리에 화면마다 필터 버튼을 넣는다.
+ * 폰(md 미만)에서는 표 대신 행마다 카드로 그린다. 첫 열이 제목, id 가 "actions" 인 열은 오른쪽 위 버튼이 된다.
  */
 export function DataTable<TData, TValue>({
   columns,
@@ -109,6 +112,7 @@ export function DataTable<TData, TValue>({
   const { pageIndex } = table.getState().pagination;
   const from = filtered === 0 ? 0 : pageIndex * pageSize + 1;
   const to = Math.min(filtered, (pageIndex + 1) * pageSize);
+  const sortable = table.getAllLeafColumns().filter((c) => c.getCanSort() && c.getIsVisible() && c.id !== "actions");
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
@@ -124,10 +128,31 @@ export function DataTable<TData, TValue>({
           />
         </div>
         {toolbar}
+        {sortable.length > 0 && (
+          <select
+            value={sorting[0] ? `${sorting[0].id}:${sorting[0].desc ? "desc" : "asc"}` : ""}
+            onChange={(e) => {
+              const [sid, dir] = e.target.value.split(":");
+              setSorting(sid ? [{ id: sid, desc: dir === "desc" }] : []);
+            }}
+            className="h-9 min-w-0 rounded-md border bg-background px-2 text-sm md:hidden"
+            aria-label="정렬"
+          >
+            <option value="">기본 순서</option>
+            {sortable.flatMap((c) => {
+              const label = (c.columnDef.meta as ColumnMeta | undefined)?.label ?? c.id;
+              return [
+                <option key={`${c.id}:desc`} value={`${c.id}:desc`}>{label} ↓</option>,
+                <option key={`${c.id}:asc`} value={`${c.id}:asc`}>{label} ↑</option>,
+              ];
+            })}
+          </select>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="ml-auto h-9">
-              <Settings2 />열 보기
+            <Button variant="outline" size="sm" className="ml-auto h-9" aria-label="열 보기">
+              <Settings2 />
+              <span className="hidden sm:inline">열 보기</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
@@ -150,7 +175,49 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
       </div>
 
-      <Table>
+      {/* 폰: 행마다 카드 */}
+      <ul className="divide-y md:hidden">
+        {table.getRowModel().rows.map((row) => {
+          const cells = row.getVisibleCells();
+          const [head, ...rest] = cells;
+          const actions = rest.find((c) => c.column.id === "actions");
+          const fields = rest.filter((c) => c !== actions && !(c.column.columnDef.meta as ColumnMeta | undefined)?.mobileHidden);
+          return (
+            <li
+              key={row.id}
+              className={cn("px-4 py-3", onRowClick && "cursor-pointer active:bg-muted/50")}
+              onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1 text-sm">{head && flexRender(head.column.columnDef.cell, head.getContext())}</div>
+                {actions && (
+                  <div className="-mt-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {flexRender(actions.column.columnDef.cell, actions.getContext())}
+                  </div>
+                )}
+              </div>
+              {fields.length > 0 && (
+                <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+                  {fields.map((c) => {
+                    const meta = c.column.columnDef.meta as ColumnMeta | undefined;
+                    return (
+                      <React.Fragment key={c.id}>
+                        <dt className="text-xs leading-5 text-muted-foreground">{meta?.label ?? c.column.id}</dt>
+                        <dd className={cn("min-w-0 break-words text-right", meta?.className)}>
+                          {flexRender(c.column.columnDef.cell, c.getContext())}
+                        </dd>
+                      </React.Fragment>
+                    );
+                  })}
+                </dl>
+              )}
+            </li>
+          );
+        })}
+        {filtered === 0 && <li className="py-10 text-center text-sm text-muted-foreground">{emptyText}</li>}
+      </ul>
+
+      <Table className="max-md:hidden">
         <TableHeader className="bg-muted/40">
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="hover:bg-transparent">

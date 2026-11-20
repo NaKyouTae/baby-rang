@@ -198,8 +198,8 @@ const columns: ColumnDef<UserRow>[] = [
     enableSorting: false,
     meta: { label: "전화번호", className: "text-muted-foreground tabular-nums" },
   },
-  { id: "gender", accessorFn: (u) => genderLabel(u.gender), header: "성별", meta: { label: "성별", className: "text-muted-foreground" } },
-  { id: "ageRange", accessorFn: (u) => ageRangeLabel(u.ageRange), header: "연령대", meta: { label: "연령대", className: "text-muted-foreground" } },
+  { id: "gender", accessorFn: (u) => genderLabel(u.gender), header: "성별", meta: { label: "성별", className: "text-muted-foreground", mobileHidden: true } },
+  { id: "ageRange", accessorFn: (u) => ageRangeLabel(u.ageRange), header: "연령대", meta: { label: "연령대", className: "text-muted-foreground", mobileHidden: true } },
   { id: "role", accessorFn: (u) => roleLabel(u.parentRole), header: "역할", meta: { label: "역할", className: "text-muted-foreground" } },
   {
     id: "children",
@@ -211,7 +211,7 @@ const columns: ColumnDef<UserRow>[] = [
     id: "groups",
     accessorFn: (u) => u._count.groupMemberships,
     header: ({ column }) => <SortHeader label="그룹" column={column} align="right" />,
-    meta: { label: "그룹", align: "right" },
+    meta: { label: "그룹", align: "right", mobileHidden: true },
   },
   {
     id: "payments",

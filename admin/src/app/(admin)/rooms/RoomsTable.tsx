@@ -6,6 +6,7 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, SortHeader } from "@/components/data-table";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { formatDateTime } from "@/lib/utils";
 
 export type RoomRow = {
@@ -112,11 +113,46 @@ export function RoomsTable({ items }: { items: RoomRow[] }) {
     }
   }, []);
 
-  // 들어오면 맨 위(최근 수정) 방을 바로 열어 둔다
+  // 넓은 화면은 오른쪽 패널, 그보다 좁으면(폰·태블릿) 아래에서 올라오는 시트로 보인다
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1280px)");
+    const sync = () => setWide(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  // 넓은 화면은 들어오면 맨 위(최근 수정) 방을 바로 열어 둔다
   const first = items[0];
   useEffect(() => {
-    if (first) void show(first);
-  }, [first, show]);
+    if (wide && first) void show(first);
+  }, [wide, first, show]);
+
+  const head = open && (
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="truncate font-semibold">{open.childName}의 방</div>
+        <div className="truncate text-xs text-muted-foreground">
+          {open.owner?.name ?? "-"} · 가구 {open.placements}개 · {formatDateTime(open.updatedAt)}
+        </div>
+      </div>
+      {src && (
+        <Button variant="ghost" size="sm" asChild>
+          <a href={src} target="_blank" rel="noreferrer" aria-label="새 창으로 열기">
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      )}
+    </div>
+  );
+  const screen = src ? (
+    <iframe key={src} src={src} title="아기방" className="h-full w-full border-0" />
+  ) : (
+    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      {failed ? "방을 열지 못했습니다." : <Loader2 className="h-5 w-5 animate-spin" />}
+    </div>
+  );
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -129,38 +165,28 @@ export function RoomsTable({ items }: { items: RoomRow[] }) {
         initialHidden={{ createdAt: false }}
       />
 
-      <Card className="gap-3 p-4 xl:sticky xl:top-6">
-        {open ? (
-          <>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="truncate font-semibold">{open.childName}의 방</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {open.owner?.name ?? "-"} · 가구 {open.placements}개 · {formatDateTime(open.updatedAt)}
-                </div>
+      {wide ? (
+        <Card className="sticky top-6 gap-3 p-4">
+          {open ? (
+            <>
+              {head}
+              <div className="relative mx-auto mt-3 h-[min(720px,calc(100vh-11rem))] w-full max-w-[368px] overflow-hidden rounded-[28px] border-8 border-foreground/90 bg-muted">
+                {screen}
               </div>
-              {src && (
-                <Button variant="ghost" size="sm" asChild>
-                  <a href={src} target="_blank" rel="noreferrer" aria-label="새 창으로 열기">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </Button>
-              )}
-            </div>
-            <div className="relative mx-auto mt-3 h-[min(720px,calc(100vh-11rem))] w-full max-w-[368px] overflow-hidden rounded-[28px] border-8 border-foreground/90 bg-muted">
-              {src ? (
-                <iframe key={src} src={src} title="아기방" className="h-full w-full border-0" />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  {failed ? "방을 열지 못했습니다." : <Loader2 className="h-5 w-5 animate-spin" />}
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="py-16 text-center text-sm text-muted-foreground">목록에서 아기를 고르면 방이 보입니다.</div>
-        )}
-      </Card>
+            </>
+          ) : (
+            <div className="py-16 text-center text-sm text-muted-foreground">목록에서 아기를 고르면 방이 보입니다.</div>
+          )}
+        </Card>
+      ) : (
+        <Sheet open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
+          <SheetContent side="bottom" className="flex h-[92dvh] flex-col gap-3 rounded-t-2xl p-0 pt-4">
+            <SheetTitle className="sr-only">{open?.childName}의 방</SheetTitle>
+            <div className="px-4 pr-12">{head}</div>
+            <div className="mx-auto w-full max-w-[420px] flex-1 overflow-hidden bg-muted">{screen}</div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
