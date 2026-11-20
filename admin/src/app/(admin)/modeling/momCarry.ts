@@ -1,11 +1,12 @@
 /**
- * 엄마가 업어 옮기기 — caretaker(위에서 내려오는 팔)를 대신할 시안.
+ * 엄마가 업어 옮기기 — 아직 기지 못하는 아기를 엄마가 포대기로 업어 다른 자리로 옮겨 준다.
  *
  * 방 옆에서 걸어 들어와 아기 옆에 등을 대고 쪼그려 앉아 업고, 일어나 옮길 자리까지 걸어간 뒤
  * 다시 쪼그려 내려놓고 걸어 나간다. 내려놓은 뒤의 행동은 dropActor 가 정한다.
  *   enter 걸어 들어온다 → turn 등을 돌린다 → kneel 쪼그린다 → load 아기를 업는다 → rise 일어난다
  *   → carry 옮긴다 → turn2 → kneel2 → unload 내려놓는다 → rise2 → leave 걸어 나간다
- * 아직 어드민 엄마 모델 화면에서만 쓴다.
+ *
+ * 앱 홈(app/src/app/home/_components/momCarry.ts)과 같은 파일이다. 한쪽을 고치면 다른 쪽에도 그대로 복사한다.
  */
 
 import { dropActor, moveHeldActor, pickUpActor, type Actor, type World } from './babyActor';
@@ -55,12 +56,13 @@ const OFF = 16;
 const ease = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
 const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), Math.max(a, b));
 
-/** 엄마가 밟고 지나가면 안 되는 가구(침대) — 몸 폭만큼 넓힌 상자 */
+/** 엄마가 밟고 지나가면 안 되는 가구(침대·붙잡는 가구·의자·미끄럼틀) — 몸 폭만큼 넓힌 상자. 러그·장난감은 밟고 지나간다. */
 type Box = { x0: number; x1: number; y0: number; y1: number };
 const BODY = 6;
+const SOLID = ['bed', 'hold', 'seat', 'slide'];
 function obstacles(world: World): Box[] {
   return world.spots
-    .filter((sp) => sp.box)
+    .filter((sp) => sp.box && sp.aff.some((a) => SOLID.includes(a)))
     .map((sp) => ({ x0: sp.box!.x0 - BODY, x1: sp.box!.x1 + BODY, y0: sp.box!.y0 - 8, y1: sp.box!.y1 + 2 }));
 }
 const inside = (p: Point, b: Box) => p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1;
@@ -164,7 +166,8 @@ function walk(m: MomTrip, target: Point, dt: number, world: World) {
       m.path = [];
       return true;
     }
-    m.path.shift();
+    // 모서리를 돌았으면 남은 길을 다시 잡는다 — 가구가 둘 이상 놓여 있을 수 있다
+    m.path = route({ x: m.x, y: m.y }, target, world);
   }
   return false;
 }

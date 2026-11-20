@@ -40,8 +40,10 @@ import {
   type Spot,
   type World,
 } from './babyActor';
-import { RES, type Affordance, type DiaperVariant, type RecordId } from './babySprite';
-import { carryTarget, drawHands, startCarry, updateCarry, type Carry } from './caretaker';
+import { RES, type Affordance, type Buf, type DiaperVariant, type Gender, type RecordId } from './babySprite';
+import { carryTarget } from './caretaker';
+import { startTrip, tripPose, updateTrip, type MomTrip } from './momCarry';
+import { MOM_CX, MOM_G, MOM_H, MOM_W, momFrame, type MomPose } from './momSprite';
 
 /** 방에 나오는 아이 한 명. 다둥이면 여러 명이 같은 방에 함께 있다. */
 export interface RoomKid {
@@ -90,11 +92,27 @@ const isProp = (aff: Affordance[]) => aff.includes('ball') || aff.includes('walk
 /** 방금 놓은 아이템으로 치는 시간 — 이 동안 그 아이템을 쓰는 행동이 2.5배 자주 나온다 */
 const NOVEL_MS = 30 * 60 * 1000;
 /**
- * 보호자 손이 기지 못하는 아기를 옮겨 주는 간격(ms) — [처음, 그다음 최소, 그다음 최대].
+ * 엄마가 기지 못하는 아기를 업어 옮겨 주는 간격(ms) — [처음, 그다음 최소, 그다음 최대].
  * 로컬에서 바로 보려면 주소에 ?carry=fast 를 붙인다.
  */
 const CARRY_GAP = [3 * 60_000, 10 * 60_000, 20 * 60_000] as const;
 const CARRY_GAP_FAST = [5_000, 15_000, 25_000] as const;
+
+/** 엄마 그림 — 자세마다 한 번 구워 둔다 */
+const momCache = new Map<string, HTMLCanvasElement>();
+function momImage(p: MomPose) {
+  const key = `${p.facing}:${p.step}:${p.squat ?? 0}:${p.baby ?? ''}:${p.blink ? 1 : 0}`;
+  let img = momCache.get(key);
+  if (!img) {
+    const buf: Buf = momFrame(p);
+    img = document.createElement('canvas');
+    img.width = buf.w;
+    img.height = buf.h;
+    img.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(buf.data), buf.w, buf.h), 0, 0);
+    momCache.set(key, img);
+  }
+  return img;
+}
 
 /** 아기를 이만큼 꾹 누르면 들어 올린다(ms). 쓰다듬기(짧게 누르기)와 헷갈리지 않을 만큼. */
 const PICK_UP_MS = 350;
@@ -418,11 +436,12 @@ export default function PixelScreen(props: Props) {
     const cheered = new WeakMap<Actor, number>();
     const dust = new Dust();
     /**
-     * 보호자 손 — 아직 기지 못하는 아기를 때맞춰 다른 자리로 옮겨 준다(caretaker).
+     * 엄마 — 아직 기지 못하는 아기를 때맞춰 포대기로 업어 다른 자리로 옮겨 준다(momCarry).
      *   낮에는 10~20분마다 러그·침대·빈 바닥 중 한 곳으로, 밤에는 침대로.
      *   잠 기록을 저장하면 반응이 끝난 뒤 바로 침대로 옮긴다(이건 기어다니는 아기도).
+     *   엄마는 한 명이라 한 번에 한 아이만 옮긴다. 그동안 옮길 차례가 된 아이는 엄마가 나간 뒤 옮긴다.
      */
-    const carries = new Map<Actor, Carry>();
+    const carries = new Map<Actor, MomTrip>();
     const fastCarry = new URLSearchParams(location.search).get('carry') === 'fast';
     const gap = fastCarry ? CARRY_GAP_FAST : CARRY_GAP;
     const carryNext = new Map<Actor, number>();
@@ -430,9 +449,9 @@ export default function PixelScreen(props: Props) {
     const t0 = performance.now();
     for (const b of babies) carryNext.set(b, t0 + gap[0] * (0.7 + Math.random() * 0.6));
     const scheduleCarries = (now: number) => {
-      if (editingRef.current) return;
+      if (editingRef.current || carries.size) return;
       for (const b of babies) {
-        if (carries.has(b) || b.held || b.reaction) continue;
+        if (b.held || b.reaction) continue;
         const sleepy = wantBed.has(b);
         const due = !b.locomotion && now >= (carryNext.get(b) ?? Infinity);
         if (!sleepy && !due) continue;
@@ -441,7 +460,10 @@ export default function PixelScreen(props: Props) {
         const to = bedOnly && b.inBed ? null : carryTarget(b, world, bedOnly);
         wantBed.delete(b);
         carryNext.set(b, now + gap[1] + Math.random() * (gap[2] - gap[1]));
-        if (to) carries.set(b, startCarry(b, to, now));
+        if (to) {
+          carries.set(b, startTrip(b, to, now, world, L.w));
+          return;
+        }
       }
     };
     /** 가구별 지금 불투명도 — 아이를 가리면 서서히 흐려졌다가 아이가 나오면 서서히 돌아온다 */
@@ -516,11 +538,16 @@ export default function PixelScreen(props: Props) {
         attractActor(near, itemId);
         return;
       }
-      // 아직 못 기는 아기는 보호자 손이 아이템 위로 옮겨 준다. 내려놓으면 그 아이템을 쓰고 하트가 뜬다.
-      // 손이 내려오는 동안 다른 행동으로 넘어가지 않게 붙잡아 둔다.
+      // 아직 못 기는 아기는 엄마가 아이템 위로 업어 옮겨 준다. 내려놓으면 그 아이템을 쓰고 하트가 뜬다.
+      // 엄마가 다른 아이를 옮기는 중이면 하트만 띄운다.
+      if (carries.size) {
+        hearts.push({ x: near.x, y: near.y, at: now });
+        return;
+      }
+      // 엄마가 걸어오는 동안 다른 행동으로 넘어가지 않게 붙잡아 둔다
       near.prefer = itemId;
-      near.until = now + 5000;
-      carries.set(near, startCarry(near, { x: cx, y: (p.tileY + hOf(p) * 0.6) * TILE }, now));
+      near.until = now + 12000;
+      carries.set(near, startTrip(near, { x: cx, y: (p.tileY + hOf(p) * 0.6) * TILE }, now, world, L.w));
     };
     reactRef.current = (r) => {
       const now = performance.now();
@@ -547,7 +574,7 @@ export default function PixelScreen(props: Props) {
       // 꾸미는 동안에도 아이들은 논다. 공·보행기만 놓인 자리에 고정해 집어 옮길 수 있게 한다(syncWorld).
       updateWorld(world, dt);
       scheduleCarries(now);
-      for (const [b, c] of carries) if (updateCarry(c, now, world)) carries.delete(b);
+      for (const [b, c] of carries) if (updateTrip(c, now, dt, world)) carries.delete(b);
       for (const b of babies) {
         updateActor(b, now, dt, world);
         // 방금 놓은 아이템에 도착했다 — 하트
@@ -608,8 +635,9 @@ export default function PixelScreen(props: Props) {
       // 아이 몸이 차지하는 자리(그림 칸보다 좁게 — 머리부터 발까지). 앞쪽 가구가 이 자리를 덮으면 그 가구를 흐리게 한다.
       // 스타듀밸리처럼 캐릭터를 가리는 앞쪽 물체만 반투명해져, 가구 뒤로 간 아이가 사라지지 않는다.
       const bodies = babies
-        .filter((b) => !b.inBed)
-        .map((b) => ({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 24, y1: b.y, depth: actorDepth(b), spot: b.spot?.id }));
+        .filter((b) => !b.inBed && !carries.get(b)?.loaded)
+        .map((b) => ({ x0: b.x - 7, x1: b.x + 7, y0: b.y - 24, y1: b.y, depth: actorDepth(b), spot: b.spot?.id as string | undefined }));
+      for (const m of carries.values()) bodies.push({ x0: m.x - 8, x1: m.x + 8, y0: m.y - 50, y1: m.y, depth: m.y, spot: undefined });
 
       for (const p of ordered) {
         // 공·보행기는 지금 위치에 따로 그린다
@@ -694,6 +722,9 @@ export default function PixelScreen(props: Props) {
 
       // 아이 — 발 위치가 기준점이다
       for (const b of babies) {
+        const trip = carries.get(b);
+        // 엄마 등에 업힌 아이는 엄마 그림에 들어 있다
+        if (trip?.loaded) continue;
         const { img, left, top, width, height, flip } = actorSprite(b);
         // 침대에서 자면 침대 앞 난간을 아기 위에 한 번 더 그려 몸이 침대 안에 들어가 보이게 한다
         const bed = b.inBed && b.spot ? all.find((p) => p.id === b.spot!.id) : null;
@@ -704,7 +735,8 @@ export default function PixelScreen(props: Props) {
           ? getSpriteAt(bedSrc, Math.round(wOf(bed!) * TILE), Math.round(hOf(bed!) * TILE))
           : null;
         dynamics.push({
-          depth: actorDepth(b),
+          // 엄마가 업고 내리는 동안 들린 아이는 엄마 등 뒤에 그린다
+          depth: trip && b.held ? trip.y - 0.5 : actorDepth(b),
           rect: { x0: left, y0: top, x1: left + width, y1: top + height },
           // 자는 아기는 그 침대, 올라탄 아기는 그 의자·미끄럼틀 바로 위에 그린다
           after: bed ? bed.id : seat ? seat.id : undefined,
@@ -723,6 +755,25 @@ export default function PixelScreen(props: Props) {
             drawFlipped(ctx, bedImg, bx, by, bw, bed.flipX, bh);
             ctx.restore();
           },
+        });
+      }
+
+      // 엄마 — 발 위치가 기준점이다. 업은 아이는 엄마 그림에 함께 그린다.
+      for (const m of carries.values()) {
+        const pose = tripPose(m);
+        const img = momImage({
+          facing: pose.facing,
+          step: pose.step,
+          squat: Math.round(pose.squat * 8) / 8,
+          baby: pose.loaded ? (m.actor.gender as Gender) : null,
+          blink: now % 3200 < 140,
+        });
+        const left = Math.round(m.x) - MOM_CX;
+        const top = Math.round(m.y) - MOM_G;
+        dynamics.push({
+          depth: m.y,
+          rect: { x0: left, y0: top, x1: left + MOM_W, y1: top + MOM_H },
+          draw: () => drawFlipped(ctx, img, left, top, MOM_W, pose.flip, MOM_H),
         });
       }
 
@@ -761,9 +812,6 @@ export default function PixelScreen(props: Props) {
         if (late) for (const f of late.sort((a, b) => a.base - b.base)) f.draw();
         if (i < furniture.length && !deferTo.has(i)) furniture[i].draw();
       }
-
-      // 보호자 손 — 가구·아기 위에 그린다
-      for (const c of carries.values()) drawHands(ctx, c, now);
 
       // 하트 — 쓰다듬으면 머리 위로 떠오른다
       for (let i = hearts.length - 1; i >= 0; i--) {

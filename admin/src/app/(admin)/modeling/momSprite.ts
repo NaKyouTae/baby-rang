@@ -7,7 +7,8 @@
  *   - 걷기 4프레임(왼발 → 디딤 → 오른발 → 디딤)
  *   - 쪼그려 앉기(squat 0~1) — 아기를 업고 내릴 때. 옆모습만 쓴다.
  *   - baby 를 주면 포대기로 업은 아기를 함께 그린다.
- * 아직 어드민 엄마 모델 화면에서만 쓴다.
+ *
+ * 앱 홈(app/src/app/home/_components/momSprite.ts)과 같은 파일이다. 한쪽을 고치면 다른 쪽에도 그대로 복사한다.
  */
 
 import type { Buf, Facing, Gender } from './babySprite';

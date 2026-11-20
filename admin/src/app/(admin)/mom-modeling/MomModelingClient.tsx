@@ -66,7 +66,7 @@ export default function MomModelingClient() {
     <div className="space-y-4">
       <PageHeader
         title="엄마 모델"
-        description="아직 기지 못하는 아기를 엄마가 포대기로 업어(어부바) 다른 자리로 옮겨 주는 시안입니다. 홈의 '위에서 내려오는 팔'을 대신할 모습이며, 아직 앱에는 적용되지 않았습니다."
+        description="아직 기지 못하는 아기를 엄마가 포대기로 업어(어부바) 다른 자리로 옮겨 주는 시안입니다. 앱 홈에서도 이 엄마가 아기를 옮깁니다."
         actions={
           <Button variant="outline" size="sm" onClick={() => setPlaying((p) => !p)}>
             {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -232,9 +232,9 @@ function CarryCard({ playing }: { playing: boolean }) {
           </div>
           <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
             <li>아기와 가까운 벽 쪽에서 걸어 들어와, 아기에게 등을 대고 쪼그려 앉아 포대기로 업습니다.</li>
-            <li>낮에는 놀이매트·침대·빈 바닥 중 한 곳, 밤에는 침대로 옮깁니다(홈의 보호자 손과 같은 규칙).</li>
+            <li>낮에는 놀이매트·침대·빈 바닥 중 한 곳, 밤에는 침대로 옮깁니다(홈과 같은 규칙).</li>
             <li>침대에 눕힐 때는 침대 앞에 서서 내려놓고, 다 옮기면 가까운 벽 쪽으로 걸어 나갑니다.</li>
-            <li>시안에서는 나간 뒤 몇 초 만에 다시 들어옵니다. 홈에서는 지금처럼 10~20분 간격입니다.</li>
+            <li>여기서는 나간 뒤 몇 초 만에 다시 들어옵니다. 홈에서는 10~20분 간격이고, 엄마는 한 번에 한 아이만 옮깁니다.</li>
           </ul>
         </div>
       </CardContent>
