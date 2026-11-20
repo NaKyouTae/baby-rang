@@ -40,6 +40,9 @@ const TYPE_LABEL: Record<string, string> = {
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 
+/** 활동 사용자 카드 아래 줄 — 전체 가입자 중 비율 */
+const activeSub = (n: number, total: number) => `전체 가입의 ${total ? Math.round((n / total) * 100) : 0}%`;
+
 /** 이전 기간 대비 증감. 이전이 0 이면 비교하지 않는다. */
 function Delta({ now, prev, unit = "%" }: { now: number; prev: number; unit?: string }) {
   if (prev === 0) return <span className="text-xs text-muted-foreground">이전 30일 데이터 없음</span>;
@@ -111,18 +114,14 @@ export default async function DashboardPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">사용자</h2>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <Kpi label="전체 가입" value={m?.users.total ?? "-"} sub={m && `오늘 +${m.users.newToday} · 7일 +${m.users.new7}`} />
           <Kpi
-            label="최근 30일 신규"
-            value={m?.users.new30 ?? "-"}
-            sub={m && <Delta now={m.users.new30} prev={m.users.newPrev30} />}
+            label="전체 가입"
+            value={m?.users.total ?? "-"}
+            sub={m && `신규 오늘 +${m.users.newToday} · 7일 +${m.users.new7} · 30일 +${m.users.new30}`}
           />
-          <Kpi label="MAU" value={m?.users.mau ?? "-"} sub={m && `WAU ${m.users.wau} · DAU ${m.users.dau}`} />
-          <Kpi
-            label="활성 비율 (MAU / 가입)"
-            value={m && m.users.total ? `${Math.round((m.users.mau / m.users.total) * 100)}%` : "-"}
-            sub={m && `가입 ${m.users.total}명 중 ${m.users.mau}명이 최근 30일 사용`}
-          />
+          <Kpi label="오늘 활동 (DAU)" value={m?.users.dau ?? "-"} sub={m && activeSub(m.users.dau, m.users.total)} />
+          <Kpi label="최근 7일 활동 (WAU)" value={m?.users.wau ?? "-"} sub={m && activeSub(m.users.wau, m.users.total)} />
+          <Kpi label="최근 30일 활동 (MAU)" value={m?.users.mau ?? "-"} sub={m && activeSub(m.users.mau, m.users.total)} />
         </div>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <Kpi label="등록된 아기" value={m?.children ?? "-"} sub={m && `가족당 평균 ${m.groupsWithChild ? (m.children / m.groupsWithChild).toFixed(1) : 0}명`} />
