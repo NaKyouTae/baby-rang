@@ -335,20 +335,27 @@ function drawSide(buf: Buf, step: number, squat: number, baby: Gender | null, bl
   limb(buf, [s, elbow, hand], [1.7, 1.5, 1.4], SKIN);
   limb(buf, [s, [s[0] + (elbow[0] - s[0]) * 0.55, s[1] + (elbow[1] - s[1]) * 0.55]], [2.2, 2.0], SHIRT);
 
-  // 목·머리 — 얼굴은 오른쪽, 머리카락이 뒤쪽 절반을 덮는다
+  // 목·머리 — 얼굴은 오른쪽. 머리카락이 정수리부터 이마·뒤통수까지 덮고, 얼굴은 앞쪽 아래만 보인다.
   rect(buf, sh[0] - 1, head[1] + 5, 3, 3, SKIN.dark);
+  // 뒷머리 — 목덜미까지 내려온다(머리 외곽선 밖으로 살짝 나온다)
+  ell(buf, head[0] - 3.2, head[1] + 0.5, 4.4, 5.6, HAIR.line);
+  ell(buf, head[0] - 3.2, head[1] + 0.3, 3.6, 4.8, HAIR.dark);
   blob(buf, head[0], head[1], 6.3, 6.4, SKIN);
-  ell(buf, head[0] - 2.4, head[1] - 2.6, 5.4, 4.6, HAIR.line);
-  ell(buf, head[0] - 2.4, head[1] - 2.8, 4.7, 3.9, HAIR.dark);
-  ell(buf, head[0] - 3, head[1] - 3.6, 2.6, 1.8, HAIR.light);
-  rect(buf, head[0] - 6.5, head[1] - 2, 3, 6, HAIR.dark);
-  // 앞머리 — 이마 위로 한 줄
-  rect(buf, head[0] + 1, head[1] - 4, 3, 1, HAIR.dark);
+  // 정수리를 덮는 머리 — 이마까지 앞으로 나온다
+  ell(buf, head[0] - 0.6, head[1] - 2.9, 7.2, 4.9, HAIR.line);
+  ell(buf, head[0] - 0.6, head[1] - 3.1, 6.4, 4.2, HAIR.dark);
+  // 옆머리 — 귀 앞까지 덮는다
+  rect(buf, head[0] - 6.4, head[1] - 2, 5, 6, HAIR.dark);
+  rect(buf, head[0] - 7.2, head[1] - 1, 1, 5, HAIR.line);
+  // 윤기 — 정수리 위쪽으로 밝은 띠
+  ell(buf, head[0] - 1.6, head[1] - 4.6, 3.2, 1.3, HAIR.light);
+  // 앞머리 끝 — 이마 쪽으로 내려온 한 가닥
+  rect(buf, head[0] + 3, head[1] - 1, 2, 1, HAIR.dark);
   // 귀
-  dot(buf, Math.round(head[0] - 1), Math.round(head[1] + 1), SKIN.dark);
+  dot(buf, Math.round(head[0] - 1), Math.round(head[1] + 2), SKIN.dark);
   // 눈·볼·입
   const ex = Math.round(head[0] + 3);
-  const ey = Math.round(head[1] + 1);
+  const ey = Math.round(head[1] + 1.5);
   if (blink) rect(buf, ex, ey + 1, 2, 1, EYE);
   else rect(buf, ex, ey, 1, 2, EYE);
   dot(buf, ex, ey + 3, BLUSH);
