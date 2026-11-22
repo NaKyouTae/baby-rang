@@ -43,11 +43,11 @@ export type MomTrip = {
   side: 1 | -1;
 };
 
-/** 걷는 속도(방 픽셀/초) */
-const WALK = 26;
-const TURN_MS = 250;
-const KNEEL_MS = 450;
-const LOAD_MS = 450;
+/** 걷는 속도(방 픽셀/초). 처음 값(26)의 1.8배 — 동작 시간도 같은 비율로 줄였다. */
+const WALK = 47;
+const TURN_MS = 140;
+const KNEEL_MS = 250;
+const LOAD_MS = 250;
 /** 엄마 발에서 아기 발까지 옆으로 떨어진 거리 */
 const BESIDE = 9;
 /** 방 밖으로 나가 숨는 거리 */
