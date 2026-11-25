@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { consentKeyOfTag } from './service-terms';
 
 // 카카오 간편가입(카카오싱크)에서 받은 서비스 약관 동의 내역을 읽어 온다.
 //
@@ -9,9 +10,8 @@ import { Injectable, Logger } from '@nestjs/common';
 //    그때는 앱의 약관 동의 화면으로 되돌아가야 하므로, 실패를 로그인 실패로 번지게
 //    하지 않고 "받은 동의 없음"으로 다룬다.
 //
-// 태그는 카카오 개발자 콘솔 > 카카오 로그인 > 간편가입 에 등록한 값이고,
-// 우리가 정한 규칙은 `{키워드}_{시행일}` 이다(예: service_20260408).
-// 시행일이 바뀌어도 키워드는 그대로이므로 접두사로 분류한다.
+// 태그는 카카오 개발자 콘솔 > 카카오 로그인 > 간편가입 에 등록한 값이다.
+// 분류 규칙은 service-terms.ts 에 있다(네이버와 같이 쓴다).
 
 const SERVICE_TERMS_URL =
   'https://kapi.kakao.com/v2/user/service_terms?result=agreed_service_terms';
@@ -22,13 +22,6 @@ export type KakaoConsents = {
   marketing?: boolean;
   thirdParty?: boolean;
 };
-
-const TAG_PREFIXES: Array<[string, keyof KakaoConsents]> = [
-  ['service', 'terms'],
-  ['privacy', 'privacy'],
-  ['marketing', 'marketing'],
-  ['third_party', 'thirdParty'],
-];
 
 interface ServiceTermsResponse {
   // 응답 필드명이 버전에 따라 다르다. 둘 다 "동의한 약관" 목록이다.
@@ -76,19 +69,19 @@ export class KakaoTermsService {
 
     const consents: KakaoConsents = {};
     for (const item of items) {
-      const tag = item?.tag?.toLowerCase();
+      const tag = item?.tag;
       if (!tag) continue;
       // agreed 가 명시적으로 false 면 동의하지 않은 것이다(필드가 없으면 동의 목록).
       if (item.agreed === false) continue;
 
-      const matched = TAG_PREFIXES.find(([prefix]) => tag.startsWith(prefix));
-      if (!matched) {
+      const key = consentKeyOfTag(tag);
+      if (!key) {
         // 콘솔에 새 약관을 등록했는데 여기 분류를 안 넣은 경우. 조용히 흘리면
         // "동의했는데 앱이 또 묻는" 증상만 남고 원인이 드러나지 않는다.
         this.logger.warn(`분류되지 않은 카카오 약관 태그: ${tag}`);
         continue;
       }
-      consents[matched[1]] = true;
+      consents[key] = true;
     }
     return consents;
   }

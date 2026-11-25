@@ -86,7 +86,10 @@ export class AuthController {
     this.authService.verifyOAuthState(state);
 
     const tokens = await this.naverService.exchangeCode(code, state!);
-    const profile = await this.naverService.fetchProfile(tokens.accessToken);
+    const [profile, consents] = await Promise.all([
+      this.naverService.fetchProfile(tokens.accessToken),
+      this.naverService.fetchConsents(tokens.accessToken),
+    ]);
     const result = await this.authService.resolveOAuthLogin({
       provider: AuthProvider.NAVER,
       providerId: profile.providerId,
@@ -97,6 +100,7 @@ export class AuthController {
       email: profile.email,
       profileImage: profile.profileImage,
       refreshToken: tokens.refreshToken,
+      consents,
     });
     return this.redirectWithResult(res, result);
   }
@@ -115,7 +119,10 @@ export class AuthController {
     const tokens = await this.naverService.verifyNativeTokens(
       body.refreshToken,
     );
-    const profile = await this.naverService.fetchProfile(tokens.accessToken);
+    const [profile, consents] = await Promise.all([
+      this.naverService.fetchProfile(tokens.accessToken),
+      this.naverService.fetchConsents(tokens.accessToken),
+    ]);
     const result = await this.authService.resolveOAuthLogin({
       provider: AuthProvider.NAVER,
       providerId: profile.providerId,
@@ -126,6 +133,7 @@ export class AuthController {
       email: profile.email,
       profileImage: profile.profileImage,
       refreshToken: tokens.refreshToken,
+      consents,
     });
 
     return this.authService.generateToken(result.userId);

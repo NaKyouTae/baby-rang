@@ -11,6 +11,8 @@ import {
   normalizeName,
   normalizePhone,
 } from './social-profile';
+import type { ConsentInput } from './auth.service';
+import { consentKeyOfTag } from './service-terms';
 
 // 네이버 아이디로 로그인.
 //
@@ -24,6 +26,7 @@ import {
 const AUTHORIZE_URL = 'https://nid.naver.com/oauth2.0/authorize';
 const TOKEN_URL = 'https://nid.naver.com/oauth2.0/token';
 const PROFILE_URL = 'https://openapi.naver.com/v1/nid/me';
+const AGREEMENT_URL = 'https://openapi.naver.com/v1/nid/agreement';
 
 export interface NaverProfile {
   providerId: string;
@@ -60,6 +63,12 @@ interface ProfileResponse {
     mobile?: string;
     profile_image?: string;
   };
+}
+
+interface AgreementResponse {
+  result?: string;
+  // 사용자가 동의한 약관만 담긴다. termCode 는 개발자센터에 등록한 약관 태그다.
+  agreementInfos?: Array<{ termCode?: string; agreeDate?: string }>;
 }
 
 @Injectable()
@@ -173,6 +182,52 @@ export class NaverService {
       email: profile.email,
       profileImage: profile.profile_image,
     };
+  }
+
+  /**
+   * 네이버 로그인 동의 화면에서 받은 서비스 약관 동의를 우리 동의 항목으로 돌려준다.
+   *
+   * 약관은 네이버 개발자센터 > 네이버 로그인 > 약관 동의 에 카카오와 같은 태그로 등록해 두었다.
+   * 실패하면 빈 객체 — 로그인을 막지 않는다. 그때 신규 회원은 로그인 화면의
+   * 약관 고지만 근거로 필수 약관에 동의한 것으로 가입된다(createUserFromSocial).
+   */
+  async fetchConsents(accessToken: string): Promise<ConsentInput> {
+    let res: Response;
+    try {
+      res = await fetch(AGREEMENT_URL, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (error) {
+      this.logger.warn(`네이버 약관 동의내역 조회 실패: ${error}`);
+      return {};
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      this.logger.warn(`네이버 약관 동의내역 없음: ${res.status} ${body}`);
+      return {};
+    }
+
+    const data = (await res.json().catch(() => ({}))) as AgreementResponse;
+    const items = data.agreementInfos ?? [];
+    // 콘솔 설정이 맞는지 확인할 방법이 이 로그뿐이다(카카오와 같다).
+    this.logger.log(
+      items.length > 0
+        ? `네이버 약관 동의내역: ${items.map((i) => i?.termCode).join(', ')}`
+        : `네이버 약관 동의내역이 비어 있다 — 약관 동의 설정을 확인할 것. result=${data.result}`,
+    );
+
+    const consents: ConsentInput = {};
+    for (const item of items) {
+      if (!item?.termCode) continue;
+      const key = consentKeyOfTag(item.termCode);
+      if (!key) {
+        this.logger.warn(`분류되지 않은 네이버 약관 태그: ${item.termCode}`);
+        continue;
+      }
+      consents[key] = true;
+    }
+    return consents;
   }
 
   /**

@@ -239,9 +239,9 @@ export default function LoginPromptProvider({ children }: { children: ReactNode 
 
             {/* 약관 고지.
                 가입 화면을 없애면서 앱에서 약관 동의를 받는 단계가 사라졌다.
-                카카오는 간편가입 동의 화면에서 약관 동의를 받아오지만, 네이버는
-                약관 동의 기능 자체가 없어 받아올 값이 없다. 그래서 이 고지가
-                네이버 가입자의 필수 약관 동의 근거가 된다 — 지우면 안 된다. */}
+                카카오(간편가입)·네이버(약관 동의)는 동의 화면에서 약관 동의를 받아오지만,
+                애플은 약관 동의 기능 자체가 없어 받아올 값이 없다. 그래서 이 고지가
+                애플 가입자의 필수 약관 동의 근거가 된다 — 지우면 안 된다. */}
             <p
               className="text-center leading-relaxed"
               style={{ fontSize: 11, color: palette.gray400, marginTop: 12 }}
