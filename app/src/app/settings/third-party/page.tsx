@@ -15,7 +15,7 @@ export default function SettingsThirdPartyPage() {
           <li>보유 및 이용 기간: 관련 법령에 따른 보관 기간까지</li>
         </DocUl>
         <DocUl>
-          <li>제공받는 자: 카카오, 구글 등 소셜 로그인 제공자</li>
+          <li>제공받는 자: 소셜 로그인 제공자(주식회사 카카오, 네이버 주식회사, Apple Inc.)</li>
           <li>제공 목적: 간편 로그인 인증</li>
           <li>제공 항목: 소셜 로그인 식별자 및 기본 프로필 정보</li>
           <li>보유 및 이용 기간: 회원 탈퇴 시까지</li>
