@@ -71,6 +71,16 @@ export class RoomsController {
     );
   }
 
+  /** 꾸미기에서 놓은 유료 아이템을 한 번에 산다. 전부 사거나 하나도 안 산다. */
+  @Post('purchase')
+  purchaseMany(@Req() req, @Body() body: any) {
+    return this.inventory.purchaseMany(
+      req.user.id,
+      String(body?.childId ?? ''),
+      Array.isArray(body?.itemIds) ? body.itemIds : [],
+    );
+  }
+
   @Post('purchase/:itemId')
   purchase(
     @Req() req,

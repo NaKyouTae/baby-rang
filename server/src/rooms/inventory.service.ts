@@ -178,6 +178,102 @@ export class InventoryService {
   }
 
   /**
+   * 꾸미기에서 놓은 유료 아이템을 한 번에 산다.
+   *
+   * 꾸미기는 고르고 배치하는 동안 사지 않고, 마지막에 모아서 계산한다.
+   * 하나씩 사면 중간에 보석이 떨어졌을 때 일부만 사진 채로 남는다 — 전부 사거나 하나도 안 산다.
+   * 이미 가진 것·무료가 된 것은 빼고 계산한다. 잔액이 모자라면 얼마나 모자란지 함께 돌려준다.
+   */
+  async purchaseMany(userId: string, childId: string, itemIds: string[]) {
+    const groupId = await this.groupOf(userId, childId);
+    const ids = [
+      ...new Set(itemIds.filter((id) => typeof id === 'string' && id)),
+    ];
+    if (!ids.length) throw new BadRequestException('구매할 아이템이 없습니다.');
+
+    const items = await this.prisma.roomItem.findMany({
+      where: { id: { in: ids } },
+    });
+    const gone = items.filter((i) => !i.isActive);
+    if (items.length !== ids.length || gone.length) {
+      throw new NotFoundException(
+        gone.length
+          ? `${gone.map((i) => `'${i.name}'`).join(', ')} 은(는) 판매가 끝났습니다. 방에서 치운 뒤 다시 시도해 주세요.`
+          : '판매 중이 아닌 아이템이 있습니다.',
+      );
+    }
+    const paid = items.filter((i) => i.priceCoins > 0);
+
+    return this.prisma.$transaction(async (tx) => {
+      const already = new Set(
+        (
+          await tx.roomItemOwnership.findMany({
+            where: { groupId, itemId: { in: paid.map((i) => i.id) } },
+            select: { itemId: true },
+          })
+        ).map((o) => o.itemId),
+      );
+      const toBuy = paid.filter((i) => !already.has(i.id));
+      const total = toBuy.reduce((sum, i) => sum + i.priceCoins, 0);
+
+      if (total > 0) {
+        // 잔액 확인과 차감을 한 문장으로 — 두 기기에서 동시에 사도 잔액 아래로 내려가지 않는다
+        const { count } = await tx.group.updateMany({
+          where: { id: groupId, coins: { gte: total } },
+          data: { coins: { decrement: total } },
+        });
+        if (!count) {
+          const group = await tx.group.findUnique({
+            where: { id: groupId },
+            select: { coins: true },
+          });
+          const coins = group?.coins ?? 0;
+          throw new BadRequestException({
+            statusCode: 400,
+            message: `보석이 ${total - coins}개 모자랍니다.`,
+            coins,
+            total,
+            shortage: total - coins,
+          });
+        }
+        await tx.roomItemOwnership.createMany({
+          data: toBuy.map((i) => ({
+            groupId,
+            itemId: i.id,
+            pricePaid: i.priceCoins,
+          })),
+        });
+        // 사용 내역에 아이템마다 한 줄씩 보이도록 원장도 나눠 적는다
+        await tx.coinLedger.createMany({
+          data: toBuy.map((i) => ({
+            groupId,
+            delta: -i.priceCoins,
+            reason: 'SPEND',
+            itemId: i.id,
+            userId,
+          })),
+        });
+      }
+
+      const [group, owned] = await Promise.all([
+        tx.group.findUnique({
+          where: { id: groupId },
+          select: { coins: true },
+        }),
+        tx.roomItemOwnership.findMany({
+          where: { groupId },
+          select: { itemId: true },
+        }),
+      ]);
+      return {
+        coins: group?.coins ?? 0,
+        ownedItemIds: owned.map((o) => o.itemId),
+        spent: total,
+      };
+    });
+  }
+
+  /**
    * 보석 충전 내역.
    *
    * 원장이 아니라 결제를 읽는다. 원장의 충전 행은 reconcile 이 뒤늦게 메우기도 하고
